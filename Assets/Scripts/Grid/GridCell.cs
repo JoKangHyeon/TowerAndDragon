@@ -1,10 +1,10 @@
-using System;
 using UnityEngine;
 
-
 public class Building {}
+public class Tower : Building {}
+public class FarmField : Building {}
 public class Enemy {}
-public enum ExistType 
+public enum ExistType
 {
      Building,
      Enemy,
@@ -32,6 +32,14 @@ public class GridCell
     private Enemy _enemyOnCell;
     public bool HasBuilding => _occupantBuilding != null;
     public bool HasEnemy => _enemyOnCell != null;
+
+    public ExistType ExistType =>
+        HasEnemy ? ExistType.Enemy
+        : _occupantBuilding is Tower ? ExistType.Tower
+        : _occupantBuilding is FarmField ? ExistType.FarmField
+        : HasBuilding ? ExistType.Building
+        : ExistType.None;
+
     public GridCell(Vector3Int coord, TerrainType terrainType)
     {
         Coord = coord;
@@ -42,4 +50,15 @@ public class GridCell
     }
 
     public void SetState(State newState) => CurrentState = newState;
+
+    public bool PlaceBuilding(Building building)
+    {
+        if (HasBuilding)
+            return false;
+
+        _occupantBuilding = building;
+        return true;
+    }
+
+    public void RemoveBuilding() => _occupantBuilding = null;
 }
