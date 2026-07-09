@@ -1,0 +1,53 @@
+%%{init: {"theme": "dark", "themeVariables": {"primaryColor": "#1E2534", "primaryTextColor": "#EDE9E0", "primaryBorderColor": "#E8834F", "lineColor": "#9AA3B5", "clusterBkg": "#141824", "clusterBorder": "#2A3347", "edgeLabelBackground": "#141824"}}}%%
+flowchart LR
+    subgraph SRC["생산 (Source)"]
+        A["중앙 초원<br/>기본 자원 4종 · 식량/목재/석재/광물<br/>(연구 없이 생산)"]
+        B["외곽 특화 영역<br/>지역별 특화 자원 4종<br/>(점령 필요)"]
+        C["점령 보상<br/>대각선 자원 지대 · 지역 인구"]
+    end
+
+    T{{"낮 종료<br/>자원 정산 — 낮이 끝나야 자원이 들어온다"}}
+
+    S[("보유 자원<br/>기본 4종 + 특화 4종")]
+
+    subgraph SINK["소모 (Sink)"]
+        D["건설<br/>타워 · 생산 시설 · 주둔지 강화"]
+        E["연구<br/>용 / 타워 / 생산 / 편의"]
+        F["점령 출격<br/>인구 + 재료(말·나무·돌)"]
+        G["봉인석 건설 · 성 수리<br/>다량 재화 소모"]
+        H["인구 유지비<br/>식량 소모 (보유 인구에 비례)"]
+    end
+
+    W(("승리<br/>4포탈<br/>동시 봉인"))
+    R["적 난이도 상승<br/>밤 방어 부담 증가"]
+
+    A --> T
+    B --> T
+    C --> T
+    T --> S
+    S --> D
+    S --> E
+    S --> F
+    S --> G
+    S --> H
+
+    C -. "점령으로 인구가 늘수록 유지비 증가" .-> H
+    D -. "생산 시설 확충 → 생산량 증가" .-> A
+    E -. "외곽 기초 생산 해금 · 효율 강화" .-> B
+    F -. "새 지역 점령 → 자원지/인구 확장" .-> C
+    F -. "땅의 가치에 비례" .-> R
+    G --> W
+
+    classDef src fill:#1E3324,stroke:#8FBF7F,color:#EDE9E0
+    classDef sink fill:#33241C,stroke:#E8834F,color:#EDE9E0
+    classDef stock fill:#252D40,stroke:#7FB3D1,color:#EDE9E0
+    classDef win fill:#332B1C,stroke:#D9A94F,color:#EDE9E0
+    classDef risk fill:#331C1C,stroke:#C96A6A,color:#E39A9A
+    classDef time fill:#2B2140,stroke:#B08FD8,color:#EDE9E0
+
+    class T time
+    class A,B,C src
+    class D,E,F,G,H sink
+    class S stock
+    class W win
+    class R risk
