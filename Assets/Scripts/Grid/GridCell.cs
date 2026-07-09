@@ -24,12 +24,12 @@ public class GridCell
         : HasBuilding ? ExistTypeOnCell.Building
         : ExistTypeOnCell.None;
 
-    public GridCell(Vector3Int coord, TerrainType terrainType)
+    public GridCell(Vector3Int coord, TerrainType terrainType, bool canConstruct)
     {
         Coord = coord;
         TerrainType = terrainType;
         CurrentState = State.Unknown;
-        CanConstruct = terrainType != TerrainType.Volcano;
+        CanConstruct = canConstruct;
         CanFarmField = terrainType == TerrainType.Grass;
     }
 
