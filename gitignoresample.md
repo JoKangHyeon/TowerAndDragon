@@ -1,10 +1,16 @@
-# This .gitignore file should be placed at the root of your Unity project directory
-#
-# Get latest from https://github.com/github/gitignore/blob/main/Unity.gitignore
-#
-# Recommended: add any editor/OS/tool-specific ignore rules from the Global/ templates as needed.
-# See: https://github.com/github/gitignore/tree/main/Global
-#
+# ==========================================================================
+# Unity + Visual Studio .gitignore
+# ==========================================================================
+# Unity: https://github.com/github/gitignore/blob/main/Unity.gitignore
+# VS:    https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
+# ==========================================================================
+
+# --------------------------------------------------------------------------
+# Unity
+# --------------------------------------------------------------------------
+
+
+
 .utmp/
 /[Ll]ibrary/
 /[Tt]emp/
@@ -15,7 +21,7 @@
 /[Uu]ser[Ss]ettings/
 *.log
 
-# By default unity supports Blender asset imports, *.blend1 blender files do not need to be commited to version control.
+# Blender asset imports
 *.blend1
 *.blend1.meta
 
@@ -34,9 +40,6 @@
 # Jetbrains Rider personal-layer settings
 *.DotSettings.user
 
-# Visual Studio cache directory
-.vs/
-
 # Gradle cache directory
 .gradle/
 
@@ -48,6 +51,7 @@ ExportedObj/
 *.sln
 *.slnx
 *.suo
+*.vsconfig
 *.tmp
 *.user
 *.userprefs
@@ -83,14 +87,11 @@ crashlytics-build.properties
 # TestRunner generated files
 InitTestScene*.unity*
 
-# Addressables default ignores, before user customizations
+# Addressables
 /ServerData
 /[Aa]ssets/StreamingAssets/aa*
 /[Aa]ssets/AddressableAssetsData/link.xml*
 /[Aa]ssets/Addressables_Temp*
-# By default, Addressables content builds will generate addressables_content_state.bin
-# files in platform-specific subfolders, for example:
-# /Assets/AddressableAssetsData/OSX/addressables_content_state.bin
 /[Aa]ssets/AddressableAssetsData/*/*.bin*
 
 # Visual Scripting auto-generated files
@@ -101,10 +102,6 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
-
-# Auto-generated cache in Assets folder
-/[Aa]ssets/[Ss]ceneDependencyCache*
-
 
 # --------------------------------------------------------------------------
 # Visual Studio
@@ -148,8 +145,24 @@ _ReSharper*/
 .vscode/*
 
 
+# --------------------------------------------------------------------------
+# OS
+# --------------------------------------------------------------------------
 
-##CUSTOM
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
-/[Aa]ssets/[Ii]mported
-/[Aa]ssets/[Ii]mported/*
+# macOS
+.DS_Store
+
+# Imported Assets
+Assets/Imported/
+Assets/Imported_mini/
+
+
+# 클로드 관련
+/.claude/settings.local.json
+/.claude/CLAUDE.local.md
