@@ -1,113 +1,257 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+/// <summary>
+/// 2D 아이소메트릭 타워 디펜스 카메라 컨트롤러
+/// 지원 기능: (모두 Input Action 시스템 사용하는걸로 변경)
+///   - WASD / 방향키 이동
+///   - 마우스 엣지 스크롤 (토글 가능)
+///   - 미들 마우스 드래그 이동
+///   - 마우스 휠 줌 (Orthographic Size)
+///   - 카메라 위치 북마크 (Ctrl+1~5 저장, 1~5 복귀)
+///   - MinimapController 연동 (MoveTo 공개 메서드)
+///   - 맵 경계 클램프 + 부드러운 이동(SmoothDamp)
+///
+/// </summary>
 [RequireComponent(typeof(Camera))]
 public class CameraController : MonoBehaviour
 {
-    public static CameraController Instance { get; private set; }
+    private const float SCROLL_DEADZONE     = 0.01f;
+    private const float SCROLL_TO_ZOOM_SCALE = 0.01f;
+    private const int   BOOKMARK_COUNT      = 5;
 
-    [Header("Zoom Setting")]
-    [SerializeField] private float zoomSpeed     = 30f;
-    [SerializeField] private float smoothness    = 10f;
-    [SerializeField] private float minZoom       = 8f;
-    [SerializeField] private float maxZoom       = 15f;
+    // ─────────────────────────────────────────────
+    // Inspector 설정
+    // ─────────────────────────────────────────────
 
-    [Header("Pan Setting")]
-    [SerializeField] private float panSmoothness = 10f;
-    [SerializeField] private LayerMask tableMask = ~0; // LayerMask 이용해서 드래그영역 설정
+    [Header("Input Actions")]
+    [SerializeField] private InputActionReference _cameraMoveAction;
 
-    private Camera cam;
-    private float targetZoom;
-    private Vector3 targetPosition;
+    [Header("이동 속도")]
+    [SerializeField] private float _wasdSpeed      = 12f;
+    [SerializeField] private float _edgeScrollSpeed = 12f;
+    [SerializeField] private float _dragSensitivity = 1f;  // 드래그 배율 (1 = 1:1)
 
-    private bool isPanning;
-    private Vector3 panStartWorld;
-    private Vector3 panStartCamPos;
+    [Header("엣지 스크롤")]
+    [SerializeField] private bool  _edgeScrollEnabled   = true;
+    [SerializeField] private float _edgeScrollThreshold = 20f; // 픽셀
+
+    [Header("줌")]
+    [SerializeField] private float _zoomSpeed    = 3f;
+    [SerializeField] private float _minZoom      = 3f;
+    [SerializeField] private float _maxZoom      = 18f;
+    [SerializeField] private float _zoomSmoothing = 8f;
+
+    [Header("이동 스무딩")]
+    [SerializeField] private float _moveSmoothTime = 0.08f;
+
+    [Header("맵 경계 (World 좌표)")]
+    [SerializeField] private Vector2 _mapMin = new Vector2(-60f, -60f);
+    [SerializeField] private Vector2 _mapMax = new Vector2( 60f,  60f);
+
+    // ─────────────────────────────────────────────
+    // 내부 상태
+    // ─────────────────────────────────────────────
+
+    private Camera   _cam;
+    private Vector3  _targetPos;          // 목표 위치 (SmoothDamp 대상)
+    private float    _targetZoom;         // 목표 줌
+    private Vector3  _smoothVelocity;     // SmoothDamp 내부 velocity
+
+    // 미들 마우스 드래그
+    private bool    _isDragging;
+    private Vector3 _dragWorldOrigin;
+
+    // 북마크 (0~4 = 단축키 1~5)
+    private Vector3?[] _bookmarks = new Vector3?[BOOKMARK_COUNT];
+
+    // ─────────────────────────────────────────────
+    // Unity 생명주기
+    // ─────────────────────────────────────────────
 
     private void Awake()
     {
-        Instance = this;
-        cam = GetComponent<Camera>();
-        targetZoom = cam.orthographicSize;
-        targetPosition = transform.position;
+        _cam        = GetComponent<Camera>();
+        _targetPos  = transform.position;
+        _targetZoom = _cam.orthographicSize;
+    }
+
+    private void OnEnable()
+    {
+        if (_cameraMoveAction != null)
+            _cameraMoveAction.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        if (_cameraMoveAction != null)
+            _cameraMoveAction.action.Disable();
     }
 
     private void Update()
     {
-        CameraZoom();
-        HandlePan();
-        ApplySmoothing();
+        HandleWASD();
+        HandleEdgeScroll();
+        HandleMouseLeftButtonDrag();
+        HandleZoom();
+        HandleBookmarks();
+
+        ClampTargetPosition();
+        ApplyMovement();
     }
 
-    private void CameraZoom()
+    // ─────────────────────────────────────────────
+    // 입력 처리
+    // ─────────────────────────────────────────────
+
+    /// WASD / 방향키 — 화면 기준 상하좌우 (Player/CameraMove Action)
+    private void HandleWASD()
     {
-        if (Mouse.current == null) 
-            return;
-        float scroll = Mouse.current.scroll.ReadValue().y;
-        if (Mathf.Abs(scroll) < 0.01f) 
-            return;
+        if (_cameraMoveAction == null) return;
 
-        Vector2 mouseScreen = Mouse.current.position.ReadValue();
-        Vector3 before = cam.ScreenToWorldPoint(new Vector3(mouseScreen.x, mouseScreen.y, 0));
+        Vector2 moveInput = _cameraMoveAction.action.ReadValue<Vector2>();
+        if (moveInput == Vector2.zero) return;
 
-        targetZoom = Mathf.Clamp(targetZoom - scroll * zoomSpeed * 0.01f, minZoom, maxZoom);
-
-        // 줌 전후 월드 좌표 차이만큼 targetPosition을 보정해 마우스 포인터 기준으로 확대
-        float prevSize = cam.orthographicSize;
-        cam.orthographicSize = targetZoom;
-        Vector3 after = cam.ScreenToWorldPoint(new Vector3(mouseScreen.x, mouseScreen.y, 0));
-        cam.orthographicSize = prevSize;
-
-        Vector3 offset = before - after;
-        targetPosition += offset;
-
-        if (isPanning) 
-            panStartCamPos += offset;
+        Vector3 dir = new Vector3(moveInput.x, moveInput.y, 0f).normalized;
+        _targetPos += dir * _wasdSpeed * Time.deltaTime;
     }
 
-    public void StartPan(Vector2 screenPosition)
+    /// 마우스를 화면 가장자리로 가져가면 카메라 이동 (스타크래프트 방식)
+    private void HandleEdgeScroll()
     {
-        Ray ray = cam.ScreenPointToRay(screenPosition);
-
-        if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, tableMask))
-        {
-            panStartWorld  = hit.point;
-            panStartCamPos = transform.position;
-            isPanning      = true;
-        }
-    }
-
-    private void HandlePan()
-    {
-        if (!isPanning || Mouse.current == null)
-            return;
+        if (!_edgeScrollEnabled)    return;
+        if (!Application.isFocused) return;
+        if (Mouse.current == null) return;
 
         Vector2 mousePos = Mouse.current.position.ReadValue();
-        Ray ray = cam.ScreenPointToRay(mousePos);
+        Vector3 dir      = Vector3.zero;
 
-        if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, tableMask))
+        if (mousePos.x < _edgeScrollThreshold)                 dir.x -= 1f;
+        if (mousePos.x > Screen.width  - _edgeScrollThreshold) dir.x += 1f;
+        if (mousePos.y < _edgeScrollThreshold)                 dir.y -= 1f;
+        if (mousePos.y > Screen.height - _edgeScrollThreshold) dir.y += 1f;
+
+        if (dir == Vector3.zero) return;
+
+        _targetPos += dir.normalized * _edgeScrollSpeed * Time.deltaTime;
+    }
+
+    /// 마우스 좌클릭 드래그로 카메라 이동
+    private void HandleMouseLeftButtonDrag()
+    {
+        if (Mouse.current == null) return;
+
+        // 드래그 시작
+        if (Mouse.current.leftButton.wasPressedThisFrame)
         {
-            Vector3 delta  = panStartWorld - hit.point;
-            targetPosition = panStartCamPos + delta;
+            _dragWorldOrigin = ScreenToWorld(Mouse.current.position.ReadValue());
+            _isDragging      = true;
+        }
+
+        // 드래그 중 — 월드 좌표 차이만큼 targetPos 이동
+        if (_isDragging && Mouse.current.leftButton.isPressed)
+        {
+            Vector3 currentWorld = ScreenToWorld(Mouse.current.position.ReadValue());
+            Vector3 delta        = (_dragWorldOrigin - currentWorld) * _dragSensitivity;
+
+            _targetPos      += delta;
+            // 드래그 기준점을 현재 위치로 갱신해야 누적 오차가 없음
+            _dragWorldOrigin = ScreenToWorld(Mouse.current.position.ReadValue());
+        }
+
+        // 드래그 종료
+        if (Mouse.current.leftButton.wasReleasedThisFrame)
+            _isDragging = false;
+    }
+
+    /// 마우스 휠 — Orthographic Size 줌
+    private void HandleZoom()
+    {
+        if (Mouse.current == null) return;
+
+        float scroll = Mouse.current.scroll.ReadValue().y;
+        if (Mathf.Abs(scroll) < SCROLL_DEADZONE) return;
+
+        _targetZoom -= scroll * _zoomSpeed * SCROLL_TO_ZOOM_SCALE;
+        _targetZoom  = Mathf.Clamp(_targetZoom, _minZoom, _maxZoom);
+    }
+
+
+    /// 북마크 Ctrl 1 메인성 하나만 사용
+    /// 일단 여러 북마크 가능하게 해놓고 후에 하나만 사용하는거로 변경 가능성 있음
+    private void HandleBookmarks()
+    {
+        if (Keyboard.current == null) return;
+
+        bool ctrl = Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed;
+
+        for (int i = 0; i < BOOKMARK_COUNT; i++)
+        {
+            Key key = Key.Digit1 + i;
+            bool pressedThisFrame = Keyboard.current[key].wasPressedThisFrame;
+
+            if (ctrl && pressedThisFrame)
+            {
+                // 저장
+                _bookmarks[i] = _targetPos;
+                Debug.Log($"[Camera] Bookmark {i + 1} 저장: {_targetPos}");
+            }
+            else if (!ctrl && pressedThisFrame && _bookmarks[i].HasValue)
+            {
+                // 복귀
+                _targetPos = _bookmarks[i].Value;
+                Debug.Log($"[Camera] Bookmark {i + 1} 복귀");
+            }
         }
     }
 
-    public void EndPan()
+    // ─────────────────────────────────────────────
+    // 위치 보정 & 적용
+    // ─────────────────────────────────────────────
+
+    /// 맵 경계 밖으로 나가지 않도록 targetPos 클램프
+    private void ClampTargetPosition()
     {
-        isPanning = false;
+        _targetPos.x = Mathf.Clamp(_targetPos.x, _mapMin.x, _mapMax.x);
+        _targetPos.y = Mathf.Clamp(_targetPos.y, _mapMin.y, _mapMax.y);
     }
 
-    public bool IsPanning => isPanning;
-
-    private void ApplySmoothing()
+    /// SmoothDamp으로 부드럽게 이동 + 줌 Lerp
+    private void ApplyMovement()
     {
-        cam.orthographicSize = Mathf.Lerp(
-            cam.orthographicSize, targetZoom, Time.deltaTime * smoothness);
+        // Z축은 카메라 고유 깊이 유지
+        Vector3 goal = new Vector3(_targetPos.x, _targetPos.y, transform.position.z);
+        transform.position = Vector3.SmoothDamp(
+            transform.position, goal, ref _smoothVelocity, _moveSmoothTime);
 
-        transform.position = Vector3.Lerp(
-                transform.position, targetPosition, Time.deltaTime * panSmoothness);
+        _cam.orthographicSize = Mathf.Lerp(
+            _cam.orthographicSize, _targetZoom, _zoomSmoothing * Time.deltaTime);
     }
 
-   
+    // ─────────────────────────────────────────────
+    // 외부 공개 API
+    // ─────────────────────────────────────────────
+
+    /// 미니맵 클릭 등 외부에서 카메라 위치를 즉시 설정할 때 사용
+    public void MoveTo(Vector2 worldPosition)
+    {
+        _targetPos = new Vector3(worldPosition.x, worldPosition.y, _targetPos.z);
+    }
+
+    /// 엣지 스크롤 토글 (설정 화면 연동)
+    public void SetEdgeScrollEnabled(bool enabled)
+    {
+        _edgeScrollEnabled = enabled;
+    }
+
+    // ─────────────────────────────────────────────
+    // 유틸리티
+    // ─────────────────────────────────────────────
+
+    /// 스크린 좌표 → 월드 좌표 (2D Orthographic 전용)
+    private Vector3 ScreenToWorld(Vector3 screenPos)
+    {
+        screenPos.z = 0f;
+        return _cam.ScreenToWorldPoint(screenPos);
+    }
 }
