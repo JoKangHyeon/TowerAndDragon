@@ -62,6 +62,8 @@ public class CameraController : MonoBehaviour
     private bool    _isDragging;
     private Vector3 _dragWorldOrigin;
 
+    private bool _isDragEndInEdge;
+
     // 북마크 (0~4 = 단축키 1~5)
     private Vector3?[] _bookmarks = new Vector3?[BOOKMARK_COUNT];
 
@@ -121,6 +123,7 @@ public class CameraController : MonoBehaviour
     {
         if (!_edgeScrollEnabled)    return;
         if (!Application.isFocused) return;
+        if (_isDragging) return;
         if (Mouse.current == null) return;
 
         Vector2 mousePos = Mouse.current.position.ReadValue();
@@ -131,8 +134,19 @@ public class CameraController : MonoBehaviour
         if (mousePos.y < _edgeScrollThreshold)                 dir.y -= 1f;
         if (mousePos.y > Screen.height - _edgeScrollThreshold) dir.y += 1f;
 
+        if (_isDragEndInEdge)
+        {
+            if(dir == Vector3.zero)
+            {
+                _isDragEndInEdge = false;
+            }
+            else
+            {
+                return;
+            }
+        }
         if (dir == Vector3.zero) return;
-
+        
         _targetPos += dir.normalized * _edgeScrollSpeed * Time.deltaTime;
     }
 
@@ -161,7 +175,16 @@ public class CameraController : MonoBehaviour
 
         // 드래그 종료
         if (Mouse.current.leftButton.wasReleasedThisFrame)
+        {
             _isDragging = false;
+            Vector2 mousePos = Mouse.current.position.ReadValue();
+
+            if (mousePos.x < _edgeScrollThreshold
+                || mousePos.x > Screen.width - _edgeScrollThreshold
+                || mousePos.y < _edgeScrollThreshold
+                || mousePos.y > Screen.height - _edgeScrollThreshold)
+                _isDragEndInEdge = true;
+        }
     }
 
     /// 마우스 휠 — Orthographic Size 줌
