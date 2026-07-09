@@ -14,7 +14,11 @@ public class GridMap : MonoBehaviour
     
     public Action<GridCell> OnCellChanged; // 그리드 셀의 상태 변경 이벤트 - 건물 배치 / 건물 파괴 / 적 진입
 
-    private void Awake() => GenerateGridFromTilemap();
+    private void Awake()
+    {
+        GenerateGridFromTilemap();
+        Debug.Log($"[GridMap] 셀 개수: {_cells.Count}");
+    }
 
     private void GenerateGridFromTilemap()
     {
@@ -24,13 +28,12 @@ public class GridMap : MonoBehaviour
                 continue;
 
             TileBase tile = _tilemap.GetTile(pos);
-            TerrainType terrain = ResolveTerrainType(tile);
+            TerrainType terrain = _terrainTileMap.Resolve(tile);
             Debug.Log($"[GirdMap] {pos} 타일의 터레인타입: {terrain}");
             _cells[pos] = new GridCell(pos, terrain);
+            Debug.Log($"[GridMap] 셀 현재 상태: {_cells[pos].CurrentState}");
         }
     }
-
-    private TerrainType ResolveTerrainType(TileBase tile) => _terrainTileMap.Resolve(tile);
 
     public State GetCellState(Vector3Int coord)
     {
@@ -43,10 +46,10 @@ public class GridMap : MonoBehaviour
     public Vector3Int ConvertWorldToGrid(Vector3 worldCoord) => _tilemap.WorldToCell(worldCoord);
 
     public bool CanConstructBuilding(Vector3Int coord) =>
-        _cells.TryGetValue(coord, out var cell) && cell.CanConstruct && cell.ExistType == ExistType.None;
+        _cells.TryGetValue(coord, out var cell) && cell.CanConstruct && cell.ExistTypeOnCell == ExistTypeOnCell.None;
 
-    public ExistType ExamExistType(Vector3Int coord) =>
-        _cells.TryGetValue(coord, out var cell) ? cell.ExistType : ExistType.None;
+    public ExistTypeOnCell ExamExist(Vector3Int coord) =>
+        _cells.TryGetValue(coord, out var cell) ? cell.ExistTypeOnCell : ExistTypeOnCell.None;
 
     public void ConstructBuilding(Vector3Int coord)
     {

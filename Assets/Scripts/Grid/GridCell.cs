@@ -1,18 +1,5 @@
 using UnityEngine;
 
-public class Building {}
-public class Tower : Building {}
-public class FarmField : Building {}
-public class Enemy {}
-public enum ExistType
-{
-     Building,
-     Enemy,
-     FarmField,
-     Tower,
-     None
- }
-
 public enum State
 {
         Active, // 점령 = 활성화
@@ -29,16 +16,13 @@ public class GridCell
     public bool CanFarmField { get; }
 
     private Building _occupantBuilding;  
-    private Enemy _enemyOnCell;
     public bool HasBuilding => _occupantBuilding != null;
-    public bool HasEnemy => _enemyOnCell != null;
 
-    public ExistType ExistType =>
-        HasEnemy ? ExistType.Enemy
-        : _occupantBuilding is Tower ? ExistType.Tower
-        : _occupantBuilding is FarmField ? ExistType.FarmField
-        : HasBuilding ? ExistType.Building
-        : ExistType.None;
+    public ExistTypeOnCell ExistTypeOnCell =>
+        _occupantBuilding is Tower ? ExistTypeOnCell.Tower
+        : _occupantBuilding is FarmField ? ExistTypeOnCell.FarmField
+        : HasBuilding ? ExistTypeOnCell.Building
+        : ExistTypeOnCell.None;
 
     public GridCell(Vector3Int coord, TerrainType terrainType)
     {
