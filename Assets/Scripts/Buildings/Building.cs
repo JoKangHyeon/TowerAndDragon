@@ -2,15 +2,10 @@ using UnityEngine;
 
 public class Building : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    [SerializeField]
+    private Sprite _sprite;
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+    [SerializeField]
+    private int _cellSize = 1;
+    public int CellSize => _cellSize;
 }
