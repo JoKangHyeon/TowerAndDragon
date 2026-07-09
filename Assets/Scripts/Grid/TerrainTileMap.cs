@@ -25,4 +25,17 @@ public class TerrainTileMap : ScriptableObject
 
         return TerrainType.Default;
     }
+
+    public bool ResolveCanConstruct(TileBase tile)
+    {
+        foreach (var entry in _entries)
+        {
+            if (entry.Tile == tile)
+            {
+                if (entry.CanConstruct)
+                    return true;
+            }
+        }
+        return false;
+    }
 }
