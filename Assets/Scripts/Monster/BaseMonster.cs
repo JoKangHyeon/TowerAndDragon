@@ -48,7 +48,7 @@ public class BaseMonster : MonoBehaviour, IDamageable
 
         if (_attack != null && _data.IsAttacker)
         {
-            _attack.Initialize(_data.AttackDamage, _data.AttackRange, _data.AttackInterval);
+            _attack.Initialize(_data.Attack);
         }
 
         ConfigureMovement(path, mainCastle);

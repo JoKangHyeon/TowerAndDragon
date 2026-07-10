@@ -22,10 +22,8 @@ public class MonsterData : ScriptableObject
     [SerializeField] private float _shieldAmount;
 
     [Header("Attack (optional)")]
-    [SerializeField] private bool _isAttacker;
-    [SerializeField] private float _attackDamage;
-    [SerializeField] private float _attackRange;
-    [SerializeField] private float _attackInterval;
+    [Tooltip("공격형이면 AttackSO를 지정한다. 비워 두면 비공격형으로 간주한다.")]
+    [SerializeField] private AttackSO _attack;
 
     public string NameLocKey => _nameLocKey;
     public float MaxHealth => _maxHealth;
@@ -35,8 +33,6 @@ public class MonsterData : ScriptableObject
     public bool HasShield => _hasShield;
     public float ShieldAmount => _shieldAmount;
 
-    public bool IsAttacker => _isAttacker;
-    public float AttackDamage => _attackDamage;
-    public float AttackRange => _attackRange;
-    public float AttackInterval => _attackInterval;
+    public AttackSO Attack => _attack;
+    public bool IsAttacker => _attack != null;
 }
