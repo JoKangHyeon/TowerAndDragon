@@ -9,6 +9,9 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private GridMap _gridMap;
 
+    [SerializeField]
+    private float _yOffset = 0.7f;
+
     private Camera _cam;
 
     private void Awake()
@@ -20,9 +23,12 @@ public class MouseSelectController : MonoBehaviour
     {
         Vector3 worldPos = _cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         worldPos.z = 0f;
+        worldPos.y -= _yOffset;
 
         Vector3Int cellCoord = _gridMap.ConvertWorldToGrid(worldPos);
-        transform.position = _gridMap.ConvertGridToWorld(cellCoord);
+        var currentPos = _gridMap.ConvertGridToWorld(cellCoord);
+        currentPos.y += _yOffset;
+        transform.position = currentPos;
 
         _spriteRenderer.color = _gridMap.CanConstructBuilding(cellCoord) ? Color.green : Color.red;
     }
