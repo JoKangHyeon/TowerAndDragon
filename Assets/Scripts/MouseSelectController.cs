@@ -24,34 +24,60 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private Color _ghostBlockedTint = new Color(1f, 0.4f, 0.4f);
 
+    [SerializeField]
+    private Color _selectionHighlightColor = Color.yellow;
+
+    [SerializeField]
+    private Color _occupiedOverlayColor = new Color(1f, 0f, 0f, 0.35f);
+
     private Camera _cam;
     private readonly List<SpriteRenderer> _highlightPool = new();
+    private readonly List<SpriteRenderer> _occupiedOverlayPool = new();
     private FootprintShape _footprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private Vector3 _ghostLocalOffset;
+    private bool _isPlacementActive;
+    private Building _selectedBuildingRef; // 재배치 중이면 실제 인스턴스 - 자기 자신과 겹치는 위치도 유효하게 판정하기 위함
 
     public Vector3Int CurrentAnchor { get; private set; }
     public bool CanConstruct { get; private set; }
+    public Color SelectionHighlightColor => _selectionHighlightColor;
 
 
     private void Awake()
     {
         _cam = Camera.main;
         _highlightPool.Add(_spriteRenderer);
-
-        if (_ghostRenderer != null)
-            _ghostRenderer.gameObject.SetActive(false);
+        Deactivate();
     }
 
-    private void Update()
+    public void SetPlacementActive(bool isActive)
+    {
+        _isPlacementActive = isActive;
+
+        if (!_isPlacementActive)
+            Deactivate();
+    }
+
+    public Vector3Int GetHoveredCell()
     {
         Vector3 worldPos = _cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         worldPos.z = 0f;
         worldPos.y -= _yOffset;
 
-        Vector3Int hoveredCell = _gridMap.ConvertWorldToGrid(worldPos);
+        return _gridMap.ConvertWorldToGrid(worldPos);
+    }
+
+    public Vector3Int GetHoveredAnchor(FootprintShape shape) => GetFootprintAnchor(GetHoveredCell(), shape);
+
+    private void Update()
+    {
+        if (!_isPlacementActive)
+            return;
+
+        Vector3Int hoveredCell = GetHoveredCell();
         Vector3Int anchor = GetFootprintAnchor(hoveredCell, _footprintShape);
         List<Vector3Int> footprint = _gridMap.GetFootprintCoords(anchor, _footprintShape);
-        bool canConstruct = _gridMap.CanConstructFootPrint(anchor, _footprintShape);
+        bool canConstruct = _gridMap.CanConstructFootPrint(anchor, _footprintShape, _selectedBuildingRef);
 
         CurrentAnchor = anchor;
         CanConstruct = canConstruct;
@@ -60,19 +86,23 @@ public class MouseSelectController : MonoBehaviour
         DrawGhost(anchor, canConstruct);
     }
 
-    public void SetSelectedBuilding(Building prefab)
+    public void BeginPlacementPreview(Building prefab) => SetPreviewTarget(prefab);
+    public void BeginRepositionPreview(Building building) => SetPreviewTarget(building);
+
+    private void SetPreviewTarget(Building building)
     {
-        _footprintShape = prefab.FootprintShape;
-        _ghostLocalOffset = prefab.transform.localPosition;
+        _selectedBuildingRef = building;
+        _footprintShape = building.FootprintShape;
+        _ghostLocalOffset = building.PlacementOffset;
 
         if (_ghostRenderer == null)
             return;
 
-        SpriteRenderer prefabRenderer = prefab.GetComponent<SpriteRenderer>();
+        SpriteRenderer prefabRenderer = building.GetComponent<SpriteRenderer>();
         Sprite ghostSprite = prefabRenderer != null ? prefabRenderer.sprite : null;
 
         _ghostRenderer.sprite = ghostSprite;
-        _ghostRenderer.transform.localScale = prefab.transform.localScale;
+        _ghostRenderer.transform.localScale = building.transform.localScale;
         _ghostRenderer.gameObject.SetActive(ghostSprite != null);
     }
 
@@ -86,19 +116,42 @@ public class MouseSelectController : MonoBehaviour
     private void DrawFootprint(List<Vector3Int> footprint, bool canConstruct)
     {
         Color highlightColor = canConstruct ? Color.green : Color.red;
+        HighlightCells(footprint, highlightColor);
+    }
 
-        for (int i = 0; i < footprint.Count; i++)
+    public void HighlightCells(List<Vector3Int> coords, Color color) => HighlightCells(coords, color, _highlightPool);
+
+    private void HighlightCells(List<Vector3Int> coords, Color color, List<SpriteRenderer> pool)
+    {
+        for (int i = 0; i < coords.Count; i++)
         {
-            SpriteRenderer highlight = GetPooledHighlight(i);
-            Vector3 cellPos = _gridMap.ConvertGridToWorld(footprint[i]);
+            SpriteRenderer highlight = GetPooledHighlight(i, pool);
+            Vector3 cellPos = _gridMap.ConvertGridToWorld(coords[i]);
             cellPos.y += _yOffset;
             highlight.transform.position = cellPos;
-            highlight.color = highlightColor;
+            highlight.color = color;
         }
 
-        for (int i = footprint.Count; i < _highlightPool.Count; i++)
+        for (int i = coords.Count; i < pool.Count; i++)
         {
-            _highlightPool[i].gameObject.SetActive(false);
+            pool[i].gameObject.SetActive(false);
+        }
+    }
+
+    public void HighlightSelection(List<Vector3Int> coords) => HighlightCells(coords, _selectionHighlightColor);
+
+    // 건설 모드에서 이미 건물이 배치된 타일을 표시 - 어떤 땅이 비어있는지 한눈에 파악 가능
+    public void ShowOccupiedOverlay(List<Vector3Int> coords) => HighlightCells(coords, _occupiedOverlayColor, _occupiedOverlayPool);
+
+    public void ClearOccupiedOverlay() => ClearHighlights(_occupiedOverlayPool);
+
+    public void ClearHighlights() => ClearHighlights(_highlightPool);
+
+    private void ClearHighlights(List<SpriteRenderer> pool)
+    {
+        foreach (SpriteRenderer highlight in pool)
+        {
+            highlight.gameObject.SetActive(false);
         }
     }
 
@@ -114,14 +167,23 @@ public class MouseSelectController : MonoBehaviour
         _ghostRenderer.color = color;
     }
 
-    private SpriteRenderer GetPooledHighlight(int index)
+    private void Deactivate()
     {
-        if (index >= _highlightPool.Count)
+        if (_ghostRenderer != null)
+            _ghostRenderer.gameObject.SetActive(false);
+
+        ClearHighlights();
+        CanConstruct = false;
+    }
+
+    private SpriteRenderer GetPooledHighlight(int index, List<SpriteRenderer> pool)
+    {
+        if (index >= pool.Count)
         {
-            _highlightPool.Add(Instantiate(_spriteRenderer, transform));
+            pool.Add(Instantiate(_spriteRenderer, transform));
         }
 
-        SpriteRenderer pooled = _highlightPool[index];
+        SpriteRenderer pooled = pool[index];
         pooled.gameObject.SetActive(true);
         return pooled;
     }
