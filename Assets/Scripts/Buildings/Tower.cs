@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 [RequireComponent(typeof(Health))]
@@ -9,6 +10,8 @@ public class Tower : Building, IDamageable
 
     private Health _health;
     private TowerAttack _attack;
+    private Coroutine _reviveCoroutine;
+    private bool _isInitialized;
 
     public bool IsDead => _health == null || _health.IsDead;
 
@@ -20,30 +23,90 @@ public class Tower : Building, IDamageable
         _attack = GetComponent<TowerAttack>();
     }
 
-    private void Setup(TowerData data)
+    private void Start()
     {
-        data = _towerData;
-        _health.Initialize(data.MaxHealth);
+        if (!_isInitialized && _towerData != null)
+        {
+            Setup(_towerData);
+        }
+    }
+
+    public void Setup(TowerData data)
+    {
+        if (data == null)
+        {
+            Debug.LogError("[Tower] TowerData가 지정되지 않았습니다.", this);
+            return;
+        }
+
+        if (_isInitialized)
+        {
+            _health.Died -= HandleDisabled;
+        }
+
+        _towerData = data;
+        _health.Initialize(_towerData.MaxHealth);
         _health.Died += HandleDisabled;
-
-        _attack.Initialize(data.Attack);
-
+        _attack.Initialize(_towerData.Attack);
+        _isInitialized = true;
     }
 
     public void TakeDamage(DamageInfo damage)
     {
-        throw new System.NotImplementedException();
+        if (IsDead)
+        {
+            return;
+        }
+
+        _health.TakeDamage(damage.Amount);
     }
 
     private void HandleDisabled()
     {
-        // 공격 중지
-        // 부활 대기 시작
+        _attack.SetAttackEnabled(false);
+
+        if (_reviveCoroutine != null)
+        {
+            StopCoroutine(_reviveCoroutine);
+        }
+
+        _reviveCoroutine = StartCoroutine(ReviveAfterDelay());
     }
 
     public void RestoreAtMorning()
     {
-        // 체력 완전 회복
-        // 비활성 상태라면 재활성화 정책 확인
+        if (!_isInitialized)
+        {
+            return;
+        }
+
+        if (_reviveCoroutine != null)
+        {
+            StopCoroutine(_reviveCoroutine);
+            _reviveCoroutine = null;
+        }
+
+        RestoreAndReactivate();
+    }
+
+    private IEnumerator ReviveAfterDelay()
+    {
+        yield return new WaitForSeconds(_towerData.ReviveDelay);
+        _reviveCoroutine = null;
+        RestoreAndReactivate();
+    }
+
+    private void RestoreAndReactivate()
+    {
+        _health.RestoreToFull();
+        _attack.SetAttackEnabled(_towerData.CanAttack);
+    }
+
+    private void OnDestroy()
+    {
+        if (_health != null)
+        {
+            _health.Died -= HandleDisabled;
+        }
     }
 }
