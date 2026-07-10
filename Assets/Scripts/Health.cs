@@ -40,4 +40,10 @@ public class Health : MonoBehaviour
             Died?.Invoke();
         }
     }
+
+    public void RestoreToFull()
+    {
+        _currentHealth = _maxHealth;
+        HealthChanged?.Invoke(_currentHealth, _maxHealth);
+    }
 }
