@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tower and Dragons · 타워 기획</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #080E1C;
+  color: #C8D4E0;
+  font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #080E1C; }
+::-webkit-scrollbar-thumb { background: #1E3048; border-radius: 4px; }
+
+/* ── Layout ── */
+.wrap { max-width: 1200px; margin: 0 auto; }
+
+/* ── Header ── */
+.page-header { margin-bottom: 20px; }
+.page-label { color: #D4A53A; font-size: 9px; letter-spacing: 3px; margin-bottom: 4px; }
+.page-title { font-size: 22px; font-weight: 800; color: #F0F0F0; }
+.page-sub   { color: #4A6070; font-size: 11px; margin-top: 4px; }
+
+/* ── Tier tabs ── */
+.tier-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+.tier-btn {
+  padding: 6px 14px; border-radius: 8px; border: 1.5px solid #1A2535;
+  background: #0A1020; color: #4A6070; font-size: 11px; font-weight: 700;
+  cursor: pointer; transition: all 0.18s; white-space: nowrap;
+}
+.tier-btn.active { color: #F0F0F0; }
+.tier-btn:hover { filter: brightness(1.2); }
+
+/* ── Tier sections ── */
+.tier-section { display: none; }
+.tier-section.show { display: block; }
+
+.tier-heading {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 10px; margin-bottom: 14px;
+}
+.tier-heading-icon { font-size: 18px; }
+.tier-heading-title { font-size: 15px; font-weight: 800; }
+.tier-heading-sub   { font-size: 10px; color: #7A8A9A; margin-top: 2px; }
+
+/* ── Tower grid ── */
+.tower-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+/* ── Tower card ── */
+.tower-card {
+  background: #0D1525; border-radius: 10px;
+  border: 1.5px solid #1A2535; padding: 12px;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  cursor: default;
+  position: relative; overflow: hidden;
+}
+.tower-card:hover { filter: brightness(1.05); }
+
+.tower-card-top {
+  display: flex; justify-content: space-between;
+  align-items: flex-start; margin-bottom: 8px; gap: 6px;
+}
+.tower-name { font-size: 13px; font-weight: 800; line-height: 1.3; }
+.tower-name-en { font-size: 9px; color: #4A6070; font-weight: 400; }
+
+/* badges */
+.badges { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 7px; }
+.badge {
+  font-size: 8px; padding: 1px 6px; border-radius: 3px; white-space: nowrap;
+  font-weight: 700;
+}
+
+/* stat bars */
+.stats { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.stat-row { display: flex; align-items: center; gap: 6px; }
+.stat-label { font-size: 9px; color: #4A6070; min-width: 38px; }
+.stat-bar-bg {
+  flex: 1; height: 5px; background: #1A2535; border-radius: 3px; overflow: hidden;
+}
+.stat-bar { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.stat-val { font-size: 9px; min-width: 26px; text-align: right; }
+
+/* special ability */
+.special {
+  background: #0A1830; border: 1px solid #1A2A40;
+  border-radius: 6px; padding: 5px 8px; font-size: 9px;
+  color: #7A9AAA; line-height: 1.5; margin-bottom: 7px;
+}
+.special-title { font-weight: 700; color: #A0B8C8; margin-bottom: 2px; font-size: 9px; }
+
+/* footer row */
+.card-footer {
+  display: flex; justify-content: space-between; align-items: center; gap: 6px;
+}
+.pop-badge {
+  font-size: 9px; background: #0A1535; border: 1px solid #1A2A50;
+  border-radius: 4px; padding: "1px 6px"; color: #6080AA;
+  padding: 1px 6px;
+}
+.dragon-synergy {
+  font-size: 8px; padding: 1px 6px; border-radius: 3px; font-weight: 700;
+}
+.new-tag {
+  position: absolute; top: 8px; right: -16px;
+  background: #D4A53A; color: #080800; font-size: 7px;
+  font-weight: 800; padding: 2px 22px; transform: rotate(45deg);
+  letter-spacing: 1px;
+}
+
+/* ── Synergy table ── */
+.synergy-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.synergy-table th, .synergy-table td {
+  padding: 7px 10px; border: 1px solid #1A2535; font-size: 10px; text-align: left;
+}
+.synergy-table th { background: #0D1525; color: #7A8A9A; font-weight: 700; }
+.synergy-table tr:hover td { background: #0A1020; }
+
+/* ── Legend section ── */
+.legend-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.legend-item {
+  display: flex; align-items: center; gap: 5px;
+  background: #0A1020; border: 1px solid #141E30;
+  border-radius: 6px; padding: 4px 8px;
+}
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.legend-label { font-size: 9px; color: #4A6070; }
+
+/* ── Overview banner ── */
+.overview {
+  background: #0A1020; border: 1px solid #141E30; border-radius: 10px;
+  padding: 14px; margin-bottom: 16px;
+}
+.overview-title { color: #D4A53A; font-size: 10px; font-weight: 700; letter-spacing: 2px; margin-bottom: 10px; }
+.overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px,1fr)); gap: 8px; }
+.overview-item { background: #080E1C; border-radius: 8px; padding: 8px 10px; border: 1px solid #1A2535; }
+.overview-item-label { font-size: 8px; color: #4A6070; }
+.overview-item-val   { font-size: 16px; font-weight: 800; margin-top: 2px; }
+
+/* mobile */
+@media (max-width: 520px) {
+  body { padding: 10px 8px; }
+  .tower-grid { grid-template-columns: 1fr; }
+  .page-title { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="page-label">TOWER AND DRAGONS · TOWER DESIGN DOCUMENT</div>
+    <div class="page-title">🏰 타워 기획서</div>
+    <div class="page-sub">총 22종 · 3티어 구조 · 5속성 연계 시스템</div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="overview">
+    <div class="overview-title">TOWER ROSTER OVERVIEW</div>
+    <div class="overview-grid">
+      <div class="overview-item">
+        <div class="overview-item-label">기본 타워 (무조건)</div>
+        <div class="overview-item-val" style="color:#52C97D">4종</div>
+      </div>
+      <div class="overview-item">
+        <div class="overview-item-label">연구 필요</div>
+        <div class="overview-item-val" style="color:#4A9EE8">8종</div>
+      </div>
+      <div class="overview-item">
+        <div class="overview-item-label">연구 + 점령 필요</div>
+        <div class="overview-item-val" style="color:#FF8C42">9종</div>
+      </div>
+      <div class="overview-item">
+        <div class="overview-item-label">특수 (용 연계)</div>
+        <div class="overview-item-val" style="color:#B06EF7">1종</div>
+      </div>
+      <div class="overview-item">
+        <div class="overview-item-label">인구 필요 범위</div>
+        <div class="overview-item-val" style="color:#D4A53A">0~10</div>
+      </div>
+      <div class="overview-item">
+        <div class="overview-item-label">속성 연계 타워</div>
+        <div class="overview-item-val" style="color:#FF8C42">5종</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIER TABS -->
+  <div class="tier-tabs">
+    <button class="tier-btn active" onclick="switchTier(this,'t1')" style="border-color:#52C97D;color:#52C97D">
+      🟢 Tier 1 · 기본 (4종)
+    </button>
+    <button class="tier-btn" onclick="switchTier(this,'t2')" style="">
+      🔵 Tier 2 · 연구 필요 (8종)
+    </button>
+    <button class="tier-btn" onclick="switchTier(this,'t3')" style="">
+      🟠 Tier 3 · 연구+점령 (9종)
+    </button>
+    <button class="tier-btn" onclick="switchTier(this,'t4')" style="">
+      🟣 특수 · 용 연계 (1종)
+    </button>
+    <button class="tier-btn" onclick="switchTier(this,'synergy')" style="">
+      🐉 속성 시너지 표
+    </button>
+  </div>
+
+  <!-- ═════════════ TIER 1 ═════════════ -->
+  <div id="t1" class="tier-section show">
+    <div class="tier-heading" style="background:#52C97D15;border:1px solid #52C97D33">
+      <span class="tier-heading-icon">🟢</span>
+      <div>
+        <div class="tier-heading-title" style="color:#52C97D">Tier 1 · 기본 타워</div>
+        <div class="tier-heading-sub">연구·점령 불필요 / 인구 3~5 / 누구나 즉시 건설 가능</div>
+      </div>
+    </div>
+    <div class="tower-grid" id="grid-t1"></div>
+  </div>
+
+  <!-- ═════════════ TIER 2 ═════════════ -->
+  <div id="t2" class="tier-section">
+    <div class="tier-heading" style="background:#4A9EE815;border:1px solid #4A9EE833">
+      <span class="tier-heading-icon">🔵</span>
+      <div>
+        <div class="tier-heading-title" style="color:#4A9EE8">Tier 2 · 연구 필요 타워</div>
+        <div class="tier-heading-sub">연구소에서 해금 필요 / 점령 불필요 / 전문화 역할</div>
+      </div>
+    </div>
+    <div class="tower-grid" id="grid-t2"></div>
+  </div>
+
+  <!-- ═════════════ TIER 3 ═════════════ -->
+  <div id="t3" class="tier-section">
+    <div class="tier-heading" style="background:#FF8C4215;border:1px solid #FF8C4233">
+      <span class="tier-heading-icon">🟠</span>
+      <div>
+        <div class="tier-heading-title" style="color:#FF8C42">Tier 3 · 연구+점령 필요 타워</div>
+        <div class="tier-heading-sub">외곽 지역 점령 후 해금 / 강력한 고티어 타워 / 속성 연계 포함</div>
+      </div>
+    </div>
+    <div class="tower-grid" id="grid-t3"></div>
+  </div>
+
+  <!-- ═════════════ TIER 4 special ═════════════ -->
+  <div id="t4" class="tier-section">
+    <div class="tier-heading" style="background:#B06EF715;border:1px solid #B06EF733">
+      <span class="tier-heading-icon">🟣</span>
+      <div>
+        <div class="tier-heading-title" style="color:#B06EF7">특수 · 용 연계 타워</div>
+        <div class="tier-heading-sub">어미용·새끼용과 직접 연동되는 고유 특수 타워</div>
+      </div>
+    </div>
+    <div class="tower-grid" id="grid-t4"></div>
+  </div>
+
+  <!-- ═════════════ SYNERGY ═════════════ -->
+  <div id="synergy" class="tier-section">
+    <div class="tier-heading" style="background:#FF8C4215;border:1px solid #D4A53A33">
+      <span class="tier-heading-icon">🐉</span>
+      <div>
+        <div class="tier-heading-title" style="color:#D4A53A">속성 시너지 표</div>
+        <div class="tier-heading-sub">용 속성과 타워가 같은 속성일 때 보너스 효과 발생</div>
+      </div>
+    </div>
+    <table class="synergy-table">
+      <thead>
+        <tr>
+          <th>용 속성</th>
+          <th>연계 타워</th>
+          <th>시너지 효과</th>
+          <th>비고</th>
+        </tr>
+      </thead>
+      <tbody id="synergy-body"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   DATA
+════════════════════════════════════════════ */
+
+/* stat: 0~5 숫자, 단계 = 없음(0)/하/하중/중/중상/상/최상 */
+const TOWERS = [
+  /* ── TIER 1: 기본 ── */
+  {
+    tier:"t1", id:"arrow", name:"화살탑", en:"Arrow Tower",
+    pop:5, cost:{wood:20, stone:0},
+    stats:{ atk_spd:5, damage:1, range:2, aoe:0 },
+    role:["단일","물리"], new_design: false,
+    special:"기본 단일 타겟 공격. 공속이 빨라 소규모 적 대응에 유용합니다.",
+    ability:null,
+    dragon:null, color:"#52C97D",
+    existing: true,
+  },
+  {
+    tier:"t1", id:"crossbow", name:"석궁탑", en:"Crossbow Tower",
+    pop:5, cost:{wood:30, stone:10},
+    stats:{ atk_spd:3, damage:3, range:3, aoe:0 },
+    role:["단일","물리"], new_design: false,
+    special:"균형 잡힌 기본 타워. 전반적으로 무난한 성능을 제공합니다.",
+    ability:null,
+    dragon:null, color:"#52C97D",
+    existing: true,
+  },
+  {
+    tier:"t1", id:"gun", name:"총탑", en:"Gun Tower",
+    pop:5, cost:{wood:20, stone:20},
+    stats:{ atk_spd:1, damage:5, range:5, aoe:0 },
+    role:["단일","물리","관통"], new_design: false,
+    special:"관통: 일직선 상 적 최대 2체까지 통과. 느리지만 강력합니다.",
+    ability:{ title:"관통", desc:"탄환이 적 1체를 통과, 후방 적에게 75% 피해" },
+    dragon:null, color:"#52C97D",
+    existing: true,
+  },
+  {
+    tier:"t1", id:"sling", name:"새총탑", en:"Sling Tower",
+    pop:3, cost:{wood:10, stone:0},
+    stats:{ atk_spd:5, damage:1, range:1, aoe:1 },
+    role:["범위","물리","저비용"], new_design: true,
+    special:"초저비용 타워. 좁은 사정거리 내 다수 적에게 낮은 피해를 줍니다. 경로 입구 보조용.",
+    ability:{ title:"집중 사격", desc:"반경 1칸 내 모든 적에게 동시 피해" },
+    dragon:null, color:"#52C97D",
+  },
+
+  /* ── TIER 2: 연구 필요 ── */
+  {
+    tier:"t2", id:"sniper", name:"저격탑", en:"Sniper Tower",
+    pop:7, cost:{wood:30, stone:40},
+    stats:{ atk_spd:1, damage:5, range:5, aoe:0 },
+    role:["단일","물리","대보스"], new_design: true,
+    special:"가장 긴 사거리. 체력이 높은 적을 우선 타겟팅. 보스에 특히 효과적입니다.",
+    ability:{ title:"보스 우선 조준", desc:"최고 체력 적 자동 조준 / 보스에게 +50% 피해" },
+    dragon:null, color:"#4A9EE8",
+  },
+  {
+    tier:"t2", id:"gatling", name:"기관총탑", en:"Gatling Tower",
+    pop:8, cost:{wood:40, stone:30},
+    stats:{ atk_spd:5, damage:2, range:3, aoe:0 },
+    role:["단일","물리","다수"  ], new_design: true,
+    special:"과열 메커니즘: 일정 발사 수 초과 시 과열로 잠시 공격 중단. 다수 약적 처리에 최적.",
+    ability:{ title:"과열", desc:"30발 연속 후 과열 (3초 중단). 과열 직전 공격속도 +50%" },
+    dragon:null, color:"#4A9EE8",
+  },
+  {
+    tier:"t2", id:"catapult", name:"투석기", en:"Catapult",
+    pop:7, cost:{wood:50, stone:30},
+    stats:{ atk_spd:2, damage:4, range:4, aoe:3 },
+    role:["광역","물리"], new_design: false,
+    special:"중간 광역 공격. 탄착 지점 주변 적에게 피해를 줍니다.",
+    ability:{ title:"충격파", desc:"착탄 지점 반경 2칸 적에게 피해 + 0.5초 넉백" },
+    dragon:null, color:"#4A9EE8",
+    existing: true,
+  },
+  {
+    tier:"t2", id:"poison_arrow", name:"독화살탑", en:"Poison Arrow Tower",
+    pop:5, cost:{wood:30, stone:20},
+    stats:{ atk_spd:3, damage:2, range:3, aoe:0 },
+    role:["단일","독","디버프"], new_design: true,
+    special:"피격 적에게 독 상태이상 부여. 독은 방어력도 감소시킵니다.",
+    ability:{ title:"맹독", desc:"5초간 지속 피해 + 피격 적 방어력 -15%" },
+    dragon:null, color:"#4A9EE8",
+  },
+  {
+    tier:"t2", id:"net", name:"그물탑", en:"Net Tower",
+    pop:5, cost:{wood:20, stone:20},
+    stats:{ atk_spd:2, damage:0, range:3, aoe:2 },
+    role:["CC","범위","슬로우"], new_design: true,
+    special:"그물을 투척해 반경 내 모든 적 이동을 3초간 완전 포박합니다. 피해는 없습니다.",
+    ability:{ title:"광역 포박", desc:"반경 2칸 적 3초 스턴 / 재사용 10초" },
+    dragon:null, color:"#4A9EE8",
+  },
+  {
+    tier:"t2", id:"beacon", name:"봉화탑", en:"Beacon Tower",
+    pop:3, cost:{wood:20, stone:30},
+    stats:{ atk_spd:0, damage:0, range:0, aoe:0 },
+    role:["지원","버프","인구효율"], new_design: true,
+    special:"공격 없음. 인근 타워(반경 3칸)의 공격속도와 사거리를 증폭합니다. 낮에는 시야도 확장.",
+    ability:{ title:"아군 지원 오라", desc:"반경 3칸 타워 공속 +20% · 사거리 +1 / 낮: 시야 +3" },
+    dragon:null, color:"#4A9EE8",
+  },
+  {
+    tier:"t2", id:"ballista", name:"발리스타", en:"Ballista",
+    pop:7, cost:{wood:50, stone:50},
+    stats:{ atk_spd:2, damage:4, range:5, aoe:0 },
+    role:["단일","물리","관통"], new_design: true,
+    special:"초대형 볼트로 직선 경로 상 모든 적을 관통합니다. 총탑의 강화 버전.",
+    ability:{ title:"완전 관통", desc:"직선 경로 상 모든 적 통과 피해 (거리에 따라 감쇠)" },
+    dragon:null, color:"#4A9EE8",
+  },
+  {
+    tier:"t2", id:"barricade", name:"바리케이드", en:"Barricade",
+    pop:2, cost:{wood:30, stone:40},
+    stats:{ atk_spd:0, damage:0, range:0, aoe:0 },
+    role:["특수","경로차단"], new_design: true,
+    special:"공격 없음. 적의 이동 경로를 막아 우회시킵니다. 체력 보유 · 파괴 가능.",
+    ability:{ title:"경로 차단", desc:"배치 시 적 경로 변경 / 자체 체력으로 파괴될 때까지 유지" },
+    dragon:null, color:"#4A9EE8",
+  },
+
+  /* ── TIER 3: 연구+점령 ── */
+  {
+    tier:"t3", id:"cannon", name:"대포", en:"Cannon Tower",
+    pop:8, cost:{wood:60, stone:80},
+    stats:{ atk_spd:1, damage:5, range:4, aoe:5 },
+    role:["광역","물리"], new_design: false,
+    special:"최강 물리 광역 피해. 느린 공속이지만 밀집 적에게 절대적입니다.",
+    ability:{ title:"포격", desc:"반경 3칸 광역 최고 피해 / 구조물 파괴 가능" },
+    dragon:null, color:"#FF8C42",
+    existing: true,
+  },
+  {
+    tier:"t3", id:"ice", name:"얼음 타워", en:"Ice Tower",
+    pop:6, cost:{wood:40, stone:60},
+    stats:{ atk_spd:3, damage:2, range:3, aoe:2 },
+    role:["CC","속성","슬로우"], new_design: false,
+    special:"피격 적을 빙결 상태로 만들어 이동을 완전히 정지시킵니다.",
+    ability:{ title:"빙결", desc:"직격 적 2초 빙결 / 광역 내 적 이동속도 -50%" },
+    dragon:"얼음", dragon_bonus:"같은 경로 얼음 용 존재 시: 빙결 지속 +2초 · 범위 +1칸",
+    color:"#A0D4FF",
+  },
+  {
+    tier:"t3", id:"fire", name:"화염 타워", en:"Fire Tower",
+    pop:6, cost:{wood:30, stone:60},
+    stats:{ atk_spd:4, damage:3, range:3, aoe:3 },
+    role:["범위","속성","DOT"], new_design: false,
+    special:"화염 방사로 전방 원뿔 범위 내 적에게 화상 DOT를 부여합니다.",
+    ability:{ title:"화염 방사", desc:"전방 60° 원뿔 피해 + 화상 3초 DOT" },
+    dragon:"불", dragon_bonus:"불 용 존재 시: 화상 피해 +100% · 불길 전파",
+    color:"#FF8C42",
+  },
+  {
+    tier:"t3", id:"lightning", name:"전기 타워", en:"Lightning Tower",
+    pop:7, cost:{wood:50, stone:50},
+    stats:{ atk_spd:2, damage:4, range:4, aoe:2 },
+    role:["범위","속성","연쇄"], new_design: false,
+    special:"번개가 첫 번째 적에서 인근 3체로 연쇄. 빙결된 적에게 피해 2배.",
+    ability:{ title:"연쇄 번개", desc:"최대 3회 연쇄 (피해 25% 감소) / 빙결 적에게 피해 ×2" },
+    dragon:null, dragon_bonus:"얼음+전기 타워 인접 시: 자동 콤보 시너지 활성화",
+    color:"#FFE060",
+  },
+  {
+    tier:"t3", id:"poison_cloud", name:"독안개탑", en:"Poison Cloud Tower",
+    pop:6, cost:{wood:40, stone:40},
+    stats:{ atk_spd:1, damage:2, range:3, aoe:4 },
+    role:["범위","독","디버프"], new_design: true,
+    special:"주기적으로 독안개 구름을 생성합니다. 구름 내 적은 지속 독 피해 + 방어력 대폭 감소.",
+    ability:{ title:"독안개 구역", desc:"반경 2칸 독 필드 10초 유지 / 적 방어력 -30% + 독 피해" },
+    dragon:null, color:"#A8E060",
+  },
+  {
+    tier:"t3", id:"time_tower", name:"시간의 탑", en:"Time Tower",
+    pop:8, cost:{wood:60, stone:80},
+    stats:{ atk_spd:1, damage:1, range:4, aoe:4 },
+    role:["CC","속성","광역감속"], new_design: true,
+    special:"주변 적의 시간을 늦춥니다. 직접 피해는 낮지만 광역 슬로우 효과가 강력합니다.",
+    ability:{ title:"시간 왜곡", desc:"반경 4칸 내 적 이동·공격속도 -40% / 시간 용 존재 시 -70%" },
+    dragon:"시간", dragon_bonus:"시간 용 존재 시: 슬로우 효과 -40% → -70% · 재사용 -50%",
+    color:"#A0C8FF",
+  },
+  {
+    tier:"t3", id:"boulder", name:"암석탑", en:"Boulder Tower",
+    pop:7, cost:{wood:30, stone:80},
+    stats:{ atk_spd:2, damage:5, range:4, aoe:1 },
+    role:["단일","속성","관통"], new_design: true,
+    special:"거대한 바위를 굴려 경로 위 일직선으로 적을 밀쳐냅니다. 소형 지형 장애물 무시.",
+    ability:{ title:"바위 굴리기", desc:"직선 경로 관통 + 피격 적 2칸 넉백 / 암석 용 공격력 버프" },
+    dragon:"암석", dragon_bonus:"암석 용 존재 시: 바위 크기 +1 · 넉백 거리 +2칸",
+    color:"#C8A060",
+  },
+  {
+    tier:"t3", id:"life_tower", name:"생명의 탑", en:"Life Tower",
+    pop:6, cost:{wood:40, stone:60},
+    stats:{ atk_spd:3, damage:2, range:3, aoe:2 },
+    role:["단일","속성","회복"], new_design: true,
+    special:"신성 에너지로 공격하며, 동시에 인근 아군 건물/타워를 회복시키는 유일한 지원+공격 타워.",
+    ability:{ title:"신성 광선", desc:"적에게 피해 + 반경 2칸 아군 타워·성 체력 +5 회복/공격" },
+    dragon:"생명", dragon_bonus:"생명 용 존재 시: 회복량 +300% · 언데드 계열 적에게 피해 ×2",
+    color:"#80E890",
+  },
+
+  /* ── TIER 4: 특수 ── */
+  {
+    tier:"t4", id:"dragon_altar", name:"드래곤 제단", en:"Dragon Altar",
+    pop:0, cost:{wood:80, stone:80, special:"특화 자원 20"},
+    stats:{ atk_spd:0, damage:0, range:0, aoe:0 },
+    role:["특수","용 연계","자원소모"], new_design: true,
+    special:"공격 없음. 제단 반경 내 어미용·새끼용의 모든 스탯과 스킬 효과를 증폭합니다. 슬라임 소모 필요.",
+    ability:{ title:"용의 성역", desc:"반경 5칸 내 용 공격력 +40% · 스킬 쿨다운 -30% / 슬라임 10 소모/분" },
+    dragon:"전체", dragon_bonus:"제단과 같은 속성 용이 존재할 때 추가 속성 오라 활성화",
+    color:"#D4A53A",
+  },
+];
+
+/* ── Synergy data ── */
+const SYNERGIES = [
+  {
+    dragon:"🔥 불", color:"#FF8C42",
+    towers:"화염 타워",
+    effect:"화상 DOT +100%, 화염 방사 범위 +1칸, 불길 전파 (인접 적으로 번짐)",
+    note:"화염 용 + 화염 타워는 가장 직관적인 DPS 콤보"
+  },
+  {
+    dragon:"❄ 얼음", color:"#A0D4FF",
+    towers:"얼음 타워, 전기 타워 (간접)",
+    effect:"빙결 지속 +2초, 범위 +1칸 / 얼음+전기 인접 시 콤보: 빙결 적 전기 피해 ×3",
+    note:"얼음으로 고정 후 전기 연쇄가 최강 CC+딜 콤보"
+  },
+  {
+    dragon:"⏳ 시간", color:"#A0C8FF",
+    towers:"시간의 탑, 봉화탑 (간접)",
+    effect:"시간 왜곡 슬로우 -40% → -70%, 재사용 대기 -50%",
+    note:"경로 전체를 느리게 만드는 전략적 타워"
+  },
+  {
+    dragon:"🪨 암석", color:"#C8A060",
+    towers:"암석탑, 대포 (간접)",
+    effect:"바위 크기 +1칸, 넉백 +2칸, 인근 암석 용 방어력 +30%",
+    note:"넉백+지형 활용 전략 극대화"
+  },
+  {
+    dragon:"🌿 생명", color:"#80E890",
+    towers:"생명의 탑, 봉화탑",
+    effect:"회복량 ×4, 언데드 적 대미지 ×2, 주기 시작 시 인근 타워 자동 수리",
+    note:"밤 동안 성과 타워를 유지하는 유일한 회복 경로"
+  },
+];
+
+/* ════════════════════════════════════════════
+   RENDER
+════════════════════════════════════════════ */
+
+const STAT_LABELS = {atk_spd:"공속", damage:"피해", range:"사거리", aoe:"광역"};
+const STAT_COLORS = {atk_spd:"#4A9EE8", damage:"#FF8C42", range:"#52C97D", aoe:"#B06EF7"};
+
+const ROLE_COLORS = {
+  "단일":"#3D1A1A:#FF9090", "물리":"#1A1A3D:#9090FF", "광역":"#2A1500:#FFB060",
+  "범위":"#280A18:#FF80CC", "속성":"#2A2500:#FFE066", "CC":"#2A1800:#FFA040",
+  "슬로우":"#0A3030:#80DDDD", "DOT":"#1A2A0A:#A0E060", "독":"#1A2A0A:#A0E060",
+  "지원":"#1E0A2E:#CC88FF", "버프":"#1E0A2E:#CC88FF", "디버프":"#380A0A:#FF7777",
+  "연쇄":"#2A2500:#FFE066", "관통":"#180A2A:#CC88FF", "특수":"#2A2000:#FFD700",
+  "경로차단":"#280A00:#FF9966", "회복":"#0A2515:#60CC80", "용 연계":"#2A1000:#FFAA40",
+  "대보스":"#3D0A0A:#FF6060", "저비용":"#0A3030:#80DDDD", "인구효율":"#0A1535:#6090FF",
+  "다수":"#0A2515:#60CC80", "자원소모":"#2A2000:#FFD700",
+};
+
+function renderBadge(role) {
+  const raw = ROLE_COLORS[role] || "#1A1A2A:#AAAAAA";
+  const [bg, fg] = raw.split(":");
+  return `<span class="badge" style="background:${bg};color:${fg};border:1px solid ${fg}44">${role}</span>`;
+}
+
+function renderStatBar(key, val, color) {
+  const labels = {0:"없음",1:"하",2:"하중",3:"중",4:"중상",5:"상/최상"};
+  const pct = Math.round((val/5)*100);
+  return `
+    <div class="stat-row">
+      <span class="stat-label">${STAT_LABELS[key]}</span>
+      <div class="stat-bar-bg">
+        <div class="stat-bar" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <span class="stat-val" style="color:${color};font-size:9px">${labels[val]||""}</span>
+    </div>`;
+}
+
+function renderCard(t) {
+  const isNew = t.new_design;
+  const isExist = t.existing;
+
+  let unlockText = "";
+  if      (t.tier==="t1") unlockText = "즉시 건설 가능";
+  else if (t.tier==="t2") unlockText = "연구 필요";
+  else if (t.tier==="t3") unlockText = "연구 + 점령 필요";
+  else                    unlockText = "특수 해금";
+
+  const statsBars = ["atk_spd","damage","range","aoe"].map(k =>
+    renderStatBar(k, t.stats[k], STAT_COLORS[k])
+  ).join("");
+
+  const abilityHtml = t.ability
+    ? `<div class="special">
+         <div class="special-title">⚡ ${t.ability.title}</div>
+         ${t.ability.desc}
+       </div>`
+    : "";
+
+  const dragonHtml = t.dragon_bonus
+    ? `<div class="special" style="border-color:#D4A53A44;background:#1E1200">
+         <div class="special-title" style="color:#D4A53A">🐉 속성 시너지</div>
+         ${t.dragon_bonus}
+       </div>`
+    : "";
+
+  const popColor = t.pop === 0 ? "#52C97D" : t.pop <= 5 ? "#D4A53A" : "#FF8C42";
+
+  return `
+    <div class="tower-card" style="border-color:${t.color}44">
+      ${isNew ? '<div class="new-tag">NEW</div>' : ''}
+      <div class="tower-card-top">
+        <div>
+          <div class="tower-name" style="color:${t.color}">${t.name}</div>
+          <div class="tower-name-en">${t.en}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:9px;color:#3A5060">${unlockText}</div>
+        </div>
+      </div>
+      <div class="badges">
+        ${t.role.map(renderBadge).join("")}
+      </div>
+      <div class="stats">${statsBars}</div>
+      <div class="special" style="font-size:9.5px">${t.special}</div>
+      ${abilityHtml}
+      ${dragonHtml}
+      <div class="card-footer">
+        <span class="pop-badge" style="color:${popColor}">
+          👥 인구 ${t.pop === 0 ? "불필요" : t.pop}
+        </span>
+        ${t.dragon
+          ? `<span class="dragon-synergy" style="background:#2A1000;color:#FFAA40;border:1px solid #FFAA4044">🐉 ${t.dragon} 연계</span>`
+          : ""}
+      </div>
+    </div>`;
+}
+
+/* fill grids */
+["t1","t2","t3","t4"].forEach(tier => {
+  const el = document.getElementById(`grid-${tier}`);
+  if (!el) return;
+  el.innerHTML = TOWERS.filter(t => t.tier === tier).map(renderCard).join("");
+});
+
+/* fill synergy */
+const sb = document.getElementById("synergy-body");
+if (sb) {
+  sb.innerHTML = SYNERGIES.map(s => `
+    <tr>
+      <td><span style="color:${s.color};font-weight:700">${s.dragon}</span></td>
+      <td style="color:#C8D0D8">${s.towers}</td>
+      <td style="color:#A0C8A0">${s.effect}</td>
+      <td style="color:#4A6070;font-size:9px">${s.note}</td>
+    </tr>
+  `).join("");
+}
+
+/* ── Tab switch ── */
+function switchTier(btn, id) {
+  document.querySelectorAll(".tier-section").forEach(el => el.classList.remove("show"));
+  document.querySelectorAll(".tier-btn").forEach(el => {
+    el.classList.remove("active");
+    el.style.borderColor = "#1A2535";
+    el.style.color = "#4A6070";
+  });
+  document.getElementById(id).classList.add("show");
+  btn.classList.add("active");
+
+  const colorMap = {t1:"#52C97D", t2:"#4A9EE8", t3:"#FF8C42", t4:"#B06EF7", synergy:"#D4A53A"};
+  btn.style.borderColor = colorMap[id] || "#52C97D";
+  btn.style.color       = colorMap[id] || "#52C97D";
+}
+</script>
+</body>
+</html>

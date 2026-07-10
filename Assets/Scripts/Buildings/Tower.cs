@@ -1,4 +1,6 @@
-using System.Collections;
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 [RequireComponent(typeof(Health))]
@@ -10,7 +12,7 @@ public class Tower : Building, IDamageable
 
     private Health _health;
     private TowerAttack _attack;
-    private Coroutine _reviveCoroutine;
+    private CancellationTokenSource _reviveCts;
     private bool _isInitialized;
 
     public bool IsDead => _health == null || _health.IsDead;
@@ -65,12 +67,9 @@ public class Tower : Building, IDamageable
     {
         _attack.SetAttackEnabled(false);
 
-        if (_reviveCoroutine != null)
-        {
-            StopCoroutine(_reviveCoroutine);
-        }
-
-        _reviveCoroutine = StartCoroutine(ReviveAfterDelay());
+        CancelRevive();
+        _reviveCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        ReviveAfterDelayAsync(_reviveCts.Token).Forget();
     }
 
     public void RestoreAtMorning()
@@ -80,20 +79,26 @@ public class Tower : Building, IDamageable
             return;
         }
 
-        if (_reviveCoroutine != null)
-        {
-            StopCoroutine(_reviveCoroutine);
-            _reviveCoroutine = null;
-        }
-
+        CancelRevive();
         RestoreAndReactivate();
     }
 
-    private IEnumerator ReviveAfterDelay()
+    private async UniTaskVoid ReviveAfterDelayAsync(CancellationToken token)
     {
-        yield return new WaitForSeconds(_towerData.ReviveDelay);
-        _reviveCoroutine = null;
+        await UniTask.Delay(TimeSpan.FromSeconds(_towerData.ReviveDelay), cancellationToken: token);
         RestoreAndReactivate();
+    }
+
+    private void CancelRevive()
+    {
+        if (_reviveCts == null)
+        {
+            return;
+        }
+
+        _reviveCts.Cancel();
+        _reviveCts.Dispose();
+        _reviveCts = null;
     }
 
     private void RestoreAndReactivate()
@@ -104,6 +109,8 @@ public class Tower : Building, IDamageable
 
     private void OnDestroy()
     {
+        CancelRevive();
+
         if (_health != null)
         {
             _health.Died -= HandleDisabled;
