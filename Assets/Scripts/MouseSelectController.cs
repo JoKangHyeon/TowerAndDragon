@@ -5,7 +5,6 @@ using System.Collections.Generic;
 public class MouseSelectController : MonoBehaviour
 {
     private const int FOOTPRINT_CENTER_DIVISOR = 2;
-    private const int DEFAULT_CELL_SIZE = 1;
 
     [SerializeField]
     private SpriteRenderer _spriteRenderer;
@@ -16,9 +15,19 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private float _yOffset = 0.7f;
 
+    [SerializeField]
+    private SpriteRenderer _ghostRenderer;
+
+    [SerializeField]
+    private float _ghostAlpha = 0.5f;
+
+    [SerializeField]
+    private Color _ghostBlockedTint = new Color(1f, 0.4f, 0.4f);
+
     private Camera _cam;
-    private int _cellSize = DEFAULT_CELL_SIZE;
     private readonly List<SpriteRenderer> _highlightPool = new();
+    private FootprintShape _footprintShape = new FootprintShape(new bool[1, 1] { { true } });
+    private Vector3 _ghostLocalOffset;
 
     public Vector3Int CurrentAnchor { get; private set; }
     public bool CanConstruct { get; private set; }
@@ -28,6 +37,9 @@ public class MouseSelectController : MonoBehaviour
     {
         _cam = Camera.main;
         _highlightPool.Add(_spriteRenderer);
+
+        if (_ghostRenderer != null)
+            _ghostRenderer.gameObject.SetActive(false);
     }
 
     private void Update()
@@ -37,24 +49,38 @@ public class MouseSelectController : MonoBehaviour
         worldPos.y -= _yOffset;
 
         Vector3Int hoveredCell = _gridMap.ConvertWorldToGrid(worldPos);
-        Vector3Int anchor = GetFootprintAnchor(hoveredCell, _cellSize);
-        List<Vector3Int> footprint = _gridMap.GetFootprintCoords(anchor, _cellSize);
-        bool canConstruct = _gridMap.CanConstructFootPrint(anchor, _cellSize);
+        Vector3Int anchor = GetFootprintAnchor(hoveredCell, _footprintShape);
+        List<Vector3Int> footprint = _gridMap.GetFootprintCoords(anchor, _footprintShape);
+        bool canConstruct = _gridMap.CanConstructFootPrint(anchor, _footprintShape);
 
         CurrentAnchor = anchor;
         CanConstruct = canConstruct;
 
         DrawFootprint(footprint, canConstruct);
-    }
-    public void SetCellSize(int cellSize)
-    {
-        _cellSize = Mathf.Max(DEFAULT_CELL_SIZE, cellSize);
+        DrawGhost(anchor, canConstruct);
     }
 
-    private Vector3Int GetFootprintAnchor(Vector3Int hoveredCell, int cellSize)
+    public void SetSelectedBuilding(Building prefab)
     {
-        int offset = (cellSize - 1) / FOOTPRINT_CENTER_DIVISOR;
-        return hoveredCell - new Vector3Int(offset, offset, 0);
+        _footprintShape = prefab.FootprintShape;
+        _ghostLocalOffset = prefab.transform.localPosition;
+
+        if (_ghostRenderer == null)
+            return;
+
+        SpriteRenderer prefabRenderer = prefab.GetComponent<SpriteRenderer>();
+        Sprite ghostSprite = prefabRenderer != null ? prefabRenderer.sprite : null;
+
+        _ghostRenderer.sprite = ghostSprite;
+        _ghostRenderer.transform.localScale = prefab.transform.localScale;
+        _ghostRenderer.gameObject.SetActive(ghostSprite != null);
+    }
+
+    private Vector3Int GetFootprintAnchor(Vector3Int hoveredCell, FootprintShape shape)
+    {
+        int offsetX = (shape.Width - 1) / FOOTPRINT_CENTER_DIVISOR;
+        int offsetY = (shape.Height - 1) / FOOTPRINT_CENTER_DIVISOR;
+        return hoveredCell - new Vector3Int(offsetX, offsetY, 0);
     }
 
     private void DrawFootprint(List<Vector3Int> footprint, bool canConstruct)
@@ -74,6 +100,18 @@ public class MouseSelectController : MonoBehaviour
         {
             _highlightPool[i].gameObject.SetActive(false);
         }
+    }
+
+    private void DrawGhost(Vector3Int anchor, bool canConstruct)
+    {
+        if (_ghostRenderer == null || !_ghostRenderer.gameObject.activeSelf)
+            return;
+
+        _ghostRenderer.transform.position = _gridMap.GetFootprintCenterWorld(anchor, _footprintShape) + _ghostLocalOffset;
+
+        Color color = canConstruct ? Color.white : _ghostBlockedTint;
+        color.a = _ghostAlpha;
+        _ghostRenderer.color = color;
     }
 
     private SpriteRenderer GetPooledHighlight(int index)
