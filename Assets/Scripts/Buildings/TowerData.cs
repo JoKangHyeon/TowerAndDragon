@@ -19,6 +19,6 @@ public class TowerData : ScriptableObject
     public float MaxHealth => _maxHealth;
     public float ReviveDelay => _reviveDelay;
     public AttackSO Attack => _attack;
-    public bool CanAttack => _attack != null; //타워의 활성화 상태
+    public bool CanAttack => _attack != null;
 
 }
