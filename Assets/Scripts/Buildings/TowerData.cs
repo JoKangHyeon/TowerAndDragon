@@ -15,10 +15,19 @@ public class TowerData : ScriptableObject
     [Header("Attack")]
     [SerializeField] private AttackSO _attack;
 
+    // 공격 판정과 분리된 시각적 투사체 표현 데이터
+    [Header("Projectile")]
+    [SerializeField] private GameObject _projectilePrefab;
+    [SerializeField] private float _projectileSpeed;
+
+
     public string NameLocKey => _nameLocKey;
     public float MaxHealth => _maxHealth;
     public float ReviveDelay => _reviveDelay;
     public AttackSO Attack => _attack;
     public bool CanAttack => _attack != null;
+
+    public GameObject ProjectilePrefab => _projectilePrefab;
+    public float ProjectileSpeed => _projectileSpeed;
 
 }

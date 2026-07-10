@@ -3,25 +3,29 @@ using UnityEngine;
 public class TowerAttack : MonoBehaviour
 {
     [SerializeField] private LayerMask _targetLayers;
+    [SerializeField] private Transform _firePoint;
 
-    private AttackSO _attack;
+    private TowerData _towerData;
     private BaseMonster _target;
+
     private float _nextAttackTime;
     private bool _isAttackEnabled;
 
     [SerializeField] private bool _showDebugLogs;
 
-    public void Initialize(AttackSO attack)
+    private AttackSO Attack => _towerData.Attack;
+
+    public void Initialize(TowerData towerData)
     {
-        _attack = attack;
+        _towerData = towerData;
         _target = null;
         _nextAttackTime = Time.time;
-        _isAttackEnabled = _attack != null;
+        _isAttackEnabled = _towerData != null && _towerData.CanAttack;
     }
 
     public void SetAttackEnabled(bool isEnabled)
     {
-        _isAttackEnabled = isEnabled && _attack != null;
+        _isAttackEnabled = isEnabled && _towerData != null && _towerData.CanAttack;
 
         if (!_isAttackEnabled)
         {
@@ -54,7 +58,7 @@ public class TowerAttack : MonoBehaviour
         }
 
         Fire();
-        _nextAttackTime = Time.time + _attack.Interval;
+        _nextAttackTime = Time.time + Attack.Interval;
     }
 
     private bool IsCurrentTargetValid()
@@ -64,7 +68,7 @@ public class TowerAttack : MonoBehaviour
             return false;
         }
 
-        return GetSqrDistance(_target.transform.position) <= _attack.Range * _attack.Range;
+        return GetSqrDistance(_target.transform.position) <= Attack.Range * Attack.Range;
     }
 
     // 후에 몬스터의 종류, 및 타워종류에 따라 공격 우선도 다르게
@@ -72,7 +76,7 @@ public class TowerAttack : MonoBehaviour
     {
         Collider2D[] candidates = Physics2D.OverlapCircleAll(
             transform.position,
-            _attack.Range,
+            Attack.Range,
             _targetLayers);
 
         BaseMonster closestTarget = null;
@@ -106,29 +110,45 @@ public class TowerAttack : MonoBehaviour
 
     private void Fire()
     {
-        //타워 디버깅용
-        if (_showDebugLogs)
-        {
-            Debug.Log(
-                $"[TowerAttack] {name} → {_target.name} 공격 " +
-                $"(거리: {Vector3.Distance(transform.position, _target.transform.position):F2}, " +
-                $"다음 공격 간격: {_attack.Interval:F2}초)", this);
-        }
-        //까지
         AttackContext context = new AttackContext(gameObject);
-        _attack.Execute(_target, in context);
+        Attack.Execute(_target, in context);
+
+        if (_towerData.ProjectilePrefab == null || _towerData.ProjectileSpeed <= 0)
+        {
+            Debug.LogWarning("[TowerAttack] 투사체 프리팹 또는 투사체 속도가 설정되지 않았습니다.", this);
+            return;
+        }
+
+        Vector3 spawnPosition = _firePoint != null
+            ? _firePoint.position
+            : transform.position;
+
+        GameObject projectileObject = Instantiate(
+            _towerData.ProjectilePrefab,
+            spawnPosition,
+            Quaternion.identity);
+
+        TowerProjectile projectile = projectileObject.GetComponent<TowerProjectile>();
+        if (projectile == null)
+        {
+            Debug.LogError("[TowerAttack] 투사체 프리팹에 TowerProjectile이 없습니다.", projectileObject);
+            Destroy(projectileObject);
+            return;
+        }
+
+        projectile.Launch(_target.transform, _towerData.ProjectileSpeed);
     }
 
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
-        if (_attack == null)
+        if (_towerData == null || !_towerData.CanAttack)
         {
             return;
         }
     
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, _attack.Range);
+        Gizmos.DrawWireSphere(transform.position, Attack.Range);
     }
 #endif
 }

@@ -47,7 +47,7 @@ public class Tower : Building, IDamageable
         _towerData = data;
         _health.Initialize(_towerData.MaxHealth);
         _health.Died += HandleDisabled;
-        _attack.Initialize(_towerData.Attack);
+        _attack.Initialize(_towerData);
         _isInitialized = true;
     }
 
