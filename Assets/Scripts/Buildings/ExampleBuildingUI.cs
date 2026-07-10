@@ -39,6 +39,7 @@ public class ExampleBuildingUI : MonoBehaviour
         {
             _buildModePanel.gameObject.SetActive(true);
             _selectBuildingModePanel.gameObject.SetActive(true);
+            _buildingPlacementController.ShowOccupiedTiles();
         });
 
         // 건물 먼저 선택 후 remove 버튼 클릭하면 건물 삭제되도록
@@ -68,6 +69,7 @@ public class ExampleBuildingUI : MonoBehaviour
         {
             _buildModePanel.gameObject.SetActive(false);
             _selectBuildingModePanel.gameObject.SetActive(false);
+            _buildingPlacementController.HideOccupiedTiles();
         }
     }
 }

@@ -12,8 +12,6 @@ public class GridMap : MonoBehaviour
     [SerializeField]
     private TerrainTileMap _terrainTileMap;
 
-    [SerializeField]
-    private BuildingCatalog _buildingCatalog;
     private Dictionary<Vector3Int, GridCell> _cells = new();
     private Dictionary<Building, List<GridCell>> _buildingFootprintCells = new();
 
@@ -23,7 +21,6 @@ public class GridMap : MonoBehaviour
     private void Awake()
     {
         GenerateGridFromTilemap();
-        Debug.Log($"[GridMap] 셀 개수: {_cells.Count}");
     }
 
     private void GenerateGridFromTilemap()
@@ -37,11 +34,7 @@ public class GridMap : MonoBehaviour
             TerrainType terrain = _terrainTileMap.Resolve(tile);
             bool canConstruct = _terrainTileMap.ResolveCanConstruct(tile);
 
-            Debug.Log($"[GirdMap] {pos} 타일의 터레인타입: {terrain}");
-
             _cells[pos] = new GridCell(pos, terrain, canConstruct);
-
-            Debug.Log($"[GridMap] 셀 현재 상태: {_cells[pos].CurrentState}, CanConstruct {_cells[pos].CanConstruct}");
         }
     }
 
@@ -69,6 +62,9 @@ public class GridMap : MonoBehaviour
     public Building GetBuildingAt(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.OccupantBuilding : null;
 
+    public List<Vector3Int> GetAllOccupiedCoords() =>
+        _cells.Values.Where(cell => cell.HasBuilding).Select(cell => cell.Coord).ToList();
+
     public void ConstructBuilding(Building prefab, Vector3Int anchor)
     {
         if (prefab == null || !TryGetFootprint(anchor, prefab.FootprintShape, out List<GridCell> footprint))
@@ -86,16 +82,10 @@ public class GridMap : MonoBehaviour
         foreach (GridCell cell in footprint)
         {
             cell.PlaceBuilding(building);
-            Debug.Log($"[GridMap] 셀 위치: {cell.Coord} - 셀에 건물 존재 여부: {cell.HasBuilding}");
             OnCellChanged?.Invoke(cell);
         }
 
         _buildingFootprintCells[building] = footprint;
-    }
-
-    public void ConstructBuilding<T>(Vector3Int anchor) where T : Building
-    {
-        ConstructBuilding(_buildingCatalog.GetPrefab<T>(), anchor);
     }
 
     public bool TryGetFootprint(Vector3Int anchor, FootprintShape shape, out List<GridCell> footprint) =>
@@ -187,7 +177,6 @@ public class GridMap : MonoBehaviour
         if (!_buildingFootprintCells.TryGetValue(building, out List<GridCell> oldFootprint))
             return false;
 
-        // 자기 자신이 차지한 칸은 비어있는 것처럼 취급해서 겹치는 이동도 허용
         if (!TryGetFootprint(nextCoord, building.FootprintShape, building, out List<GridCell> newFootprint))
             return false;
 
