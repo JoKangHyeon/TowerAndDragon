@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Tower and Dragons · 연구소</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #080E1C;
+    color: #C8D4E0;
+    font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif;
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: #080E1C; }
+  ::-webkit-scrollbar-thumb { background: #1E3048; border-radius: 4px; }
+
+  /* ── Layout ── */
+  .app-wrap { padding: 14px; max-width: 1100px; margin: 0 auto; }
+
+  /* header */
+  .header { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  /* legend */
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; background: #0A1020; border: 1px solid #121C2E; border-radius: 8px; padding: 6px 12px; margin-bottom: 10px; }
+
+  /* category tabs */
+  .cat-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .cat-btn {
+    flex: 1; background: #0A1020; border-radius: 10px; padding: 8px 4px;
+    cursor: pointer; font-weight: 700; font-size: 11px;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    outline: none; line-height: 1.4;
+  }
+  .cat-btn:active { transform: scale(0.96); }
+
+  /* branches */
+  .branch-wrap { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; }
+  .branch-col { flex: 1; min-width: 150px; }
+
+  /* node card */
+  .node-card { transition: filter 0.15s, box-shadow 0.15s; position: relative; border-radius: 8px; }
+  .node-card:not([data-excl="true"]):hover { filter: brightness(1.12); }
+  .node-card:not([data-excl="true"]):active { transform: scale(0.98); }
+
+  /* detail panel */
+  .detail-inner { display: flex; gap: 14px; align-items: flex-start; }
+  .detail-btn-area { min-width: 100px; text-align: center; flex-shrink: 0; }
+
+  /* learn button */
+  .learn-btn { transition: all 0.15s; outline: none; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer; }
+  .learn-btn:active { transform: scale(0.96); }
+  .learn-btn[disabled] { cursor: not-allowed; }
+
+  /* 4X guide */
+  .x4-guide { display: flex; gap: 6px; flex-wrap: wrap; }
+  .x4-item { flex: 1 1 120px; border-radius: 6px; padding: 6px 8px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 560px) {
+    .app-wrap { padding: 10px 8px; }
+    .branch-col { min-width: 130px; }
+    .header-title-label { font-size: 7px; letter-spacing: 1px; }
+    .header-title { font-size: 16px; }
+    .pts-display { font-size: 18px !important; }
+    .cat-btn { font-size: 10px; padding: 6px 2px; }
+    .cat-btn-icon { font-size: 13px !important; }
+    .detail-inner { flex-direction: column; }
+    .detail-btn-area { min-width: 0; width: 100%; display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+    .legend-item-text { font-size: 8px; }
+    .x4-item { flex: 1 1 100px; }
+  }
+
+  @media (max-width: 380px) {
+    .branch-col { min-width: 115px; }
+    .cat-btn { font-size: 9px; }
+  }
+
+  @media (min-width: 768px) {
+    .branch-col { min-width: 0; }
+  }
+
+  /* hidden node pulse */
+  @keyframes hiddenPulse {
+    0%, 100% { opacity: 0.45; }
+    50%       { opacity: 0.65; }
+  }
+  .hidden-node { animation: hiddenPulse 2.4s ease-in-out infinite; }
+
+  /* mastery glow */
+  @keyframes masteryGlow {
+    0%, 100% { box-shadow: 0 0 6px #D4A53A44; }
+    50%       { box-shadow: 0 0 14px #D4A53A88; }
+  }
+  .mastery-avail { animation: masteryGlow 2s ease-in-out infinite; }
+
+  /* synergy badge */
+  @keyframes synergyPop {
+    from { transform: scale(0.9); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+  .synergy-badge { animation: synergyPop 0.3s ease-out; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+/* ══════════════════════════════════════════════════════
+   DATA
+══════════════════════════════════════════════════════ */
+const CATEGORIES = [
+  { id:"dragon",      label:"용",   icon:"🐉", color:"#FF8C42" },
+  { id:"tower",       label:"타워", icon:"🏰", color:"#4A9EE8" },
+  { id:"production",  label:"생산", icon:"🌾", color:"#52C97D" },
+  { id:"convenience", label:"편의", icon:"⚙️", color:"#B06EF7" },
+];
+
+/* requires 규칙: "id:minLv"  |  "a|b" (OR)  |  "a+b" (AND) */
+const TREES = {
+  dragon: {
+    color: "#FF8C42",
+    branches: [
+      {
+        id:"mother", label:"어미용", icon:"🔥",
+        nodes:[
+          { id:"md1",  label:"어미용 공격력", desc:"어미용의 기본 공격력이 레벨당 +15% 증가합니다.", maxLv:3, cost:1, tags:["공격","용"], effect:"+15% 공격력 / 레벨" },
+          { id:"md2",  label:"스킬 쿨다운",   desc:"액티브 스킬 재사용 대기시간이 레벨당 -10% 감소합니다.", maxLv:3, cost:1, tags:["스킬","용"], requires:"md1:1", effect:"-10% 쿨다운 / 레벨" },
+          { id:"md3",  label:"속성 증폭",     desc:"용의 속성 피해 및 지역 효과가 레벨당 +20% 강화됩니다.", maxLv:3, cost:1, tags:["속성","용"], requires:"md2:1", effect:"+20% 속성 효과 / 레벨" },
+          { id:"md_m", label:"용의 분노",     desc:"어미용이 60초마다 전체 화면 범위에 속성 폭발을 시전합니다.\n용의 속성에 따라 효과가 달라집니다.", maxLv:1, cost:3, tags:["마스터리","용","속성"], requires:"md3:3", mastery:true, effect:"60초마다 전체 범위 속성 폭발" },
+        ],
+      },
+      {
+        id:"baby", label:"새끼용", icon:"🥚",
+        nodes:[
+          { id:"bd1",  label:"새끼용 성장",    desc:"새끼용의 모든 능력치가 레벨당 +10% 증가합니다.", maxLv:3, cost:1, tags:["성장","용"], effect:"+10% 전체 능력치 / 레벨" },
+          { id:"bd2a", label:"⚔ 전투형 특화", desc:"새끼용을 전투에 특화시킵니다. 공격력 +50% 및 독립 전투가 가능합니다.\n🚫 버프형 특화와 동시 선택 불가", maxLv:1, cost:2, tags:["공격","배타"], requires:"bd1:1", exclusiveWith:"bd2b", effect:"+50% 공격력 · 독립 전투 활성화" },
+          { id:"bd2b", label:"✨ 버프형 특화", desc:"새끼용을 지원에 특화시킵니다. 인근 타워 공격속도를 +30% 강화합니다.\n🚫 전투형 특화와 동시 선택 불가", maxLv:1, cost:2, tags:["버프","배타"], requires:"bd1:1", exclusiveWith:"bd2a", effect:"인근 타워 +30% 공격속도 버프" },
+          { id:"bd_m", label:"용의 군단",      desc:"새끼용의 최대 보유 수가 +2 증가하고 귀환 없이 지속 전투합니다.", maxLv:1, cost:3, tags:["마스터리","용"], requires:"bd2a|bd2b", mastery:true, effect:"새끼용 +2마리 추가 보유" },
+        ],
+      },
+      {
+        id:"synergy", label:"속성 시너지", icon:"💎",
+        nodes:[
+          { id:"sy1",  label:"지역 속성 효과", desc:"용의 속성과 일치하는 외곽 지역에서 자원 생산 보너스를 획득합니다.", maxLv:3, cost:1, tags:["속성","지역"], effect:"+10% 해당 속성 자원 / 레벨" },
+          { id:"sy2",  label:"속성 저항 감소", desc:"적의 속성 저항이 감소하여 모든 속성 피해가 증가합니다.", maxLv:3, cost:1, tags:["속성","디버프"], requires:"sy1:1", effect:"-8% 적 저항 / 레벨" },
+          { id:"sy_h", label:"🔮 용의 계약",   desc:"[숨김] 어미용·새끼용 마스터리를 동시에 달성해야 해금됩니다.\n두 용이 합동 스킬을 함께 시전합니다.", maxLv:1, cost:2, tags:["숨김","특별","마스터리"], requires:"md_m:1+bd_m:1", hidden:true, effect:"어미용·새끼용 합동 스킬 해금" },
+        ],
+      },
+    ],
+  },
+  tower: {
+    color: "#4A9EE8",
+    branches: [
+      {
+        id:"atk", label:"공격 타워", icon:"⚔️",
+        nodes:[
+          { id:"ta1",  label:"타워 공격력",   desc:"모든 타워의 기본 공격력이 레벨당 +15% 증가합니다.", maxLv:3, cost:1, tags:["공격","타워"], effect:"+15% 공격력 / 레벨" },
+          { id:"ta2",  label:"타워 공격속도", desc:"모든 타워의 공격 속도가 레벨당 +10% 증가합니다.", maxLv:3, cost:1, tags:["공격","속도"], requires:"ta1:1", effect:"+10% 공격속도 / 레벨" },
+          { id:"ta3",  label:"사거리 확장",   desc:"타워의 공격 사거리가 레벨당 +1 증가합니다.", maxLv:3, cost:1, tags:["범위","타워"], requires:"ta2:1", effect:"+1 사거리 / 레벨" },
+          { id:"ta_m", label:"연쇄 공격",     desc:"타워의 공격이 주 대상에서 최대 3회 추가로 튕기며 연쇄 피해를 입힙니다.", maxLv:1, cost:3, tags:["마스터리","공격"], requires:"ta3:3", mastery:true, effect:"공격 시 최대 3회 연쇄 타격" },
+        ],
+      },
+      {
+        id:"def", label:"방어 타워", icon:"🛡️",
+        nodes:[
+          { id:"td1",  label:"타워 내구도", desc:"타워의 체력 및 방어력이 레벨당 +20% 증가합니다.", maxLv:3, cost:1, tags:["방어","타워"], effect:"+20% 타워 내구도 / 레벨" },
+          { id:"td2",  label:"광역 둔화",   desc:"타워 공격에 이동속도 감소 효과가 추가됩니다. (레벨당 -10%)", maxLv:3, cost:1, tags:["CC","방어"], requires:"td1:1", effect:"-10% 적 이동속도 / 레벨" },
+          { id:"td_m", label:"철벽 방어",   desc:"타워 주변 5칸에 방어 오라가 생성되어 진입하는 적에게 지속 피해를 입힙니다.", maxLv:1, cost:3, tags:["마스터리","방어"], requires:"td2:3", mastery:true, effect:"타워 주변 5칸 오라 지속 피해" },
+        ],
+      },
+      {
+        id:"support", label:"지원 타워", icon:"🔧",
+        nodes:[
+          { id:"ts1",  label:"필요 인구 감소", desc:"타워 운영에 필요한 인구 수가 2레벨당 -1 감소합니다.", maxLv:3, cost:1, tags:["인구","유틸"], effect:"-1 필요 인구 / 2레벨" },
+          { id:"ts2",  label:"타워 이동 기능", desc:"낮 동안 배치된 타워를 다른 위치로 자유롭게 이동할 수 있습니다.", maxLv:1, cost:2, tags:["유틸","건설"], requires:"ts1:1", effect:"타워 재배치 가능 (낮 한정)" },
+          { id:"ts_m", label:"자동화 시스템",  desc:"타워가 인구 없이도 기본 공격력의 50%로 자동 운영됩니다.", maxLv:1, cost:3, tags:["마스터리","유틸"], requires:"ts2:1", mastery:true, effect:"무인 운영 가능 (효율 50%)" },
+        ],
+      },
+    ],
+  },
+  production: {
+    color: "#52C97D",
+    branches: [
+      {
+        id:"basic", label:"기초 자원", icon:"🌾",
+        nodes:[
+          { id:"pr1",  label:"식량 생산 효율", desc:"식량 생산 건물의 생산량이 레벨당 +20% 증가합니다.", maxLv:3, cost:1, tags:["자원","식량"], effect:"+20% 식량 생산 / 레벨" },
+          { id:"pr2",  label:"건재 채집 효율", desc:"목재·석재·광물 채집량이 레벨당 +15% 증가합니다.", maxLv:3, cost:1, tags:["자원","건재"], requires:"pr1:1", effect:"+15% 건재 채집 / 레벨" },
+          { id:"pr3",  label:"저장 용량 증가", desc:"모든 자원의 최대 저장량이 레벨당 +25% 증가합니다.", maxLv:3, cost:1, tags:["자원","저장"], requires:"pr2:1", effect:"+25% 최대 저장 / 레벨" },
+          { id:"pr_m", label:"풍요의 땅",      desc:"모든 자원 생산 +50%, 각 주기 시작 시 자원 보너스를 획득합니다.", maxLv:1, cost:3, tags:["마스터리","자원"], requires:"pr3:3", mastery:true, effect:"전체 자원 +50% + 주기 시작 보너스" },
+        ],
+      },
+      {
+        id:"expand", label:"확장 생산", icon:"🗺️",
+        nodes:[
+          { id:"pe1",  label:"외곽 채집",      desc:"외곽 바이옴 지역에서도 기초 자원을 채집할 수 있습니다.", maxLv:3, cost:1, tags:["자원","지역","확장"], effect:"외곽 지역 기초 자원 채집 허용" },
+          { id:"pe2",  label:"특화 자원 증폭",  desc:"바이옴별 특화 자원 생산량이 레벨당 +30% 증가합니다.", maxLv:3, cost:1, tags:["특화","자원"], requires:"pe1:1", effect:"+30% 특화 자원 / 레벨" },
+          { id:"pe_h", label:"🔮 무역 루트",   desc:"[숨김] 특화 자원 증폭 만렙 달성 시 해금됩니다.\n미점령 지역에서도 자원의 30%를 원격으로 수집합니다.", maxLv:1, cost:2, tags:["숨김","무역","자원"], requires:"pe2:3", hidden:true, effect:"미점령 지역 자원 30% 원격 수집" },
+        ],
+      },
+      {
+        id:"pop", label:"인구 관리", icon:"👥",
+        nodes:[
+          { id:"pp1",  label:"인구 성장 가속", desc:"점령 후 인구 유입 속도가 레벨당 +15% 증가합니다.", maxLv:3, cost:1, tags:["인구","성장"], effect:"+15% 인구 유입 속도 / 레벨" },
+          { id:"pp2",  label:"유지비 절감",    desc:"인구당 소모되는 식량 유지비가 레벨당 -10% 감소합니다.", maxLv:3, cost:1, tags:["인구","경제"], requires:"pp1:1", effect:"-10% 인구 유지비 / 레벨" },
+          { id:"pp_m", label:"번영하는 도시",  desc:"인구 최대치가 +20 증가하고, 웨이브 종료 시마다 인구 보너스를 획득합니다.", maxLv:1, cost:3, tags:["마스터리","인구"], requires:"pp2:3", mastery:true, effect:"최대 인구 +20 + 웨이브 인구 보너스" },
+        ],
+      },
+    ],
+  },
+  convenience: {
+    color: "#B06EF7",
+    branches: [
+      {
+        id:"vision", label:"탐색·시야", icon:"👁️",
+        nodes:[
+          { id:"cv1",  label:"가시 범위 확장", desc:"카메라 시야 및 안개 제거 범위가 레벨당 +2 증가합니다.", maxLv:3, cost:1, tags:["시야","탐색"], effect:"+2 시야 범위 / 레벨" },
+          { id:"cv2",  label:"전술 미니맵",    desc:"미니맵에 적 이동 경로와 자원 지대가 항시 표시됩니다.", maxLv:1, cost:2, tags:["정보","탐색"], requires:"cv1:1", effect:"미니맵 정보 강화 표시" },
+          { id:"cv_m", label:"전략적 정찰",    desc:"포탈 주변 시야가 항시 확보되고, 다음 웨이브 구성을 밤 시작 전 미리 확인할 수 있습니다.", maxLv:1, cost:3, tags:["마스터리","정보"], requires:"cv2:1", mastery:true, effect:"다음 웨이브 구성 사전 공개" },
+        ],
+      },
+      {
+        id:"build", label:"건설·운영", icon:"🔨",
+        nodes:[
+          { id:"cb1",  label:"건설 속도 향상", desc:"모든 건물 건설 및 업그레이드 속도가 레벨당 +20% 증가합니다.", maxLv:3, cost:1, tags:["건설","속도"], effect:"+20% 건설 속도 / 레벨" },
+          { id:"cb2",  label:"다중 건설",      desc:"동시에 건설 가능한 건물 수가 레벨당 +1 증가합니다.", maxLv:3, cost:1, tags:["건설","유틸"], requires:"cb1:1", effect:"동시 건설 +1 / 레벨" },
+          { id:"cb_m", label:"원격 운영",      desc:"낮 동안 건물 업그레이드 및 타워 배치를 인구 없이 진행할 수 있습니다.", maxLv:1, cost:3, tags:["마스터리","유틸"], requires:"cb2:3", mastery:true, effect:"인구 없이 건설·업그레이드 가능" },
+        ],
+      },
+      {
+        id:"castle", label:"성 관리", icon:"🏰",
+        nodes:[
+          { id:"cc1",  label:"성 자동 회복", desc:"낮 동안 성의 체력이 분당 +5%씩 자동으로 회복됩니다.", maxLv:3, cost:1, tags:["성","회복"], effect:"+5% 체력 회복 / 분 · 레벨" },
+          { id:"cc2",  label:"성벽 강화",    desc:"메인 성의 최대 체력 및 방어력이 레벨당 +25% 증가합니다.", maxLv:3, cost:1, tags:["성","방어"], requires:"cc1:1", effect:"+25% 최대 체력 / 레벨" },
+          { id:"cc_m", label:"난공불락",     desc:"성 주변 3칸에 방어 오라가 생성되어 진입하는 적을 즉시 둔화시킵니다.", maxLv:1, cost:3, tags:["마스터리","방어","성"], requires:"cc2:3", mastery:true, effect:"성 주변 방어 오라 + 즉시 둔화" },
+        ],
+      },
+    ],
+  },
+};
+
+const TAG_S = {
+  "공격":["#3D0A0A","#FF9090"],"방어":["#0A3030","#80DDDD"],"용":["#2A1500","#FFB060"],
+  "스킬":["#1A2A1A","#88DD88"],"속성":["#2A2500","#FFE066"],"마스터리":["#2A2000","#FFD700"],
+  "숨김":["#180A2A","#CC88FF"],"배타":["#380A0A","#FF7777"],"인구":["#0A1535","#6090FF"],
+  "자원":["#0A2515","#60CC80"],"성장":["#1A2A0A","#A0E060"],"버프":["#1E0A2E","#CC88FF"],
+  "CC":["#2A1800","#FFA040"],"유틸":["#181828","#AAAAFF"],"건설":["#281800","#FFCC44"],
+  "속도":["#0A2828","#60DDDD"],"시야":["#0A2818","#80EE80"],"탐색":["#0A2020","#60CCCC"],
+  "정보":["#0A1A28","#60AADD"],"회복":["#280A0A","#FF9090"],"성":["#1A0808","#FF7070"],
+  "지역":["#1A1A08","#CCCC44"],"특화":["#280A18","#FF80CC"],"특별":["#1A0A28","#CC88FF"],
+  "무역":["#282000","#DDDD44"],"경제":["#0A1A0A","#44DD44"],"디버프":["#280A00","#FF9966"],
+  "범위":["#0A0A28","#9090FF"],"저장":["#102010","#70BB70"],"건재":["#201808","#CCAA44"],
+  "식량":["#082010","#44DD66"],"확장":["#0A1A1A","#40CCCC"],"타워":["#0A1A35","#80BBFF"],
+};
+
+/* ══════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════ */
+function checkReqs(requires, learned) {
+  if (!requires) return true;
+  if (requires.includes("+")) return requires.split("+").every(r=>{const[id,lv]=r.split(":");return(learned[id]||0)>=parseInt(lv||"1");});
+  if (requires.includes("|")) return requires.split("|").some(r=>{const[id,lv]=r.split(":");return(learned[id]||0)>=parseInt(lv||"1");});
+  const[id,lv]=requires.split(":"); return (learned[id]||0)>=parseInt(lv||"1");
+}
+
+function getState(node, learned, pts) {
+  const lv = learned[node.id]||0;
+  if (lv >= node.maxLv)                                           return "maxed";
+  if (node.exclusiveWith && (learned[node.exclusiveWith]||0) > 0) return "excluded";
+  if (!checkReqs(node.requires, learned)) return node.hidden ? "hidden" : "locked";
+  if (pts < node.cost)                                            return "poor";
+  return "available";
+}
+
+/* ══════════════════════════════════════════════════════
+   SUB-COMPONENTS
+══════════════════════════════════════════════════════ */
+function Tag({label}) {
+  const [bg,fg] = TAG_S[label] || ["#1A1A2A","#AAAAAA"];
+  return (
+    <span style={{background:bg, color:fg, border:`1px solid ${fg}55`,
+      fontSize:8, padding:"1px 5px", borderRadius:3, whiteSpace:"nowrap"}}>
+      {label}
+    </span>
+  );
+}
+
+function NodeCard({node, learned, pts, onSelect, isSelected, color}) {
+  const state = getState(node, learned, pts);
+  const lv    = learned[node.id] || 0;
+
+  /* hidden → mystery card */
+  if (state === "hidden") return (
+    <div className="hidden-node node-card" style={{
+      background:"#080C18", border:"1px dashed #1A2535",
+      borderRadius:8, padding:"12px 10px", textAlign:"center",
+    }}>
+      <div style={{fontSize:18}}>🔮</div>
+      <div style={{color:"#2A3545", fontSize:9, marginTop:4}}>숨겨진 노드</div>
+      <div style={{color:"#1A2535", fontSize:8}}>조건 미충족</div>
+    </div>
+  );
+
+  const isMaxed = state==="maxed";
+  const isAvail = state==="available";
+  const isExcl  = state==="excluded";
+
+  let border = "1.5px solid #1A2535", bg = "#0D1525";
+  if (isMaxed)                  { border=`1.5px solid ${color}`;     bg=color+"1A"; }
+  else if (isAvail && node.mastery) { border="1.5px solid #D4A53A"; bg="#1E1800"; }
+  else if (isAvail)             { border=`1.5px solid ${color}77`; bg=color+"0D"; }
+  if (isSelected)               { border=`2px solid ${color}`; }
+
+  const selShadow = isSelected ? `0 0 14px ${color}66` : "";
+  const animClass = (node.mastery && isAvail) ? "mastery-avail" : "";
+
+  return (
+    <div
+      className={`node-card ${animClass}`}
+      data-excl={isExcl?"true":"false"}
+      onClick={() => !isExcl && onSelect(node)}
+      style={{
+        background:bg, border, borderRadius:8, padding:"10px",
+        cursor: isExcl ? "not-allowed" : "pointer",
+        opacity: isExcl ? 0.28 : state==="locked" ? 0.48 : 1,
+        boxShadow: selShadow || (node.hidden&&isAvail ? "0 0 12px #BB88FF55" : "none"),
+        position:"relative",
+      }}
+    >
+      {/* MASTERY badge */}
+      {node.mastery && (
+        <div style={{position:"absolute",top:-1,right:-1,background:"#D4A53A",
+          color:"#080800",fontSize:7,fontWeight:"bold",padding:"1px 5px",borderRadius:"0 7px 0 4px"}}>
+          MASTERY
+        </div>
+      )}
+      {/* HIDDEN revealed badge */}
+      {node.hidden && isAvail && (
+        <div style={{position:"absolute",top:-1,left:-1,background:"#BB88FF",
+          color:"#080818",fontSize:7,fontWeight:"bold",padding:"1px 5px",borderRadius:"7px 0 4px 0"}}>
+          HIDDEN ✦
+        </div>
+      )}
+
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:6}}>
+        {/* Left: name + tags */}
+        <div style={{flex:1, minWidth:0}}>
+          <div style={{fontWeight:"bold", fontSize:11, color:isMaxed?color:"#CCD5DE",
+            marginBottom:5, lineHeight:1.3}}>
+            {node.label}
+          </div>
+          <div style={{display:"flex", gap:3, flexWrap:"wrap"}}>
+            {node.tags.slice(0,3).map(t=><Tag key={t} label={t}/>)}
+          </div>
+        </div>
+        {/* Right: level dots + cost */}
+        <div style={{display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0}}>
+          <div style={{display:"flex", gap:2}}>
+            {Array.from({length:node.maxLv},(_,i)=>(
+              <div key={i} style={{
+                width:7, height:7, borderRadius:"50%",
+                background: i<lv ? color : "#1E2A3E",
+                border:`1px solid ${i<lv ? color : "#2E3E50"}`,
+              }}/>
+            ))}
+          </div>
+          {!isMaxed && (
+            <div style={{background:"#0A1020", borderRadius:3, padding:"1px 5px",
+              fontSize:9, border:`1px solid ${isAvail?"#D4A53A88":"#1E2A3E"}`,
+              color:isAvail?"#D4A53A":"#3A4A5A"}}>
+              {node.cost}P
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Exclusive warning */}
+      {node.exclusiveWith && lv===0 && (
+        <div style={{marginTop:5,fontSize:8,color:"#FF8888",
+          background:"#2A0A0A",borderRadius:3,padding:"1px 5px",display:"inline-block"}}>
+          ⚔ 배타 선택
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BranchCol({branch, learned, pts, onSelect, selected, color}) {
+  return (
+    <div className="branch-col">
+      {/* Branch header */}
+      <div style={{background:color+"15", border:`1px solid ${color}33`,
+        borderRadius:8, padding:"6px 8px", textAlign:"center", marginBottom:8}}>
+        <span style={{fontSize:14}}>{branch.icon}</span>
+        <span style={{color, fontSize:11, fontWeight:700, marginLeft:5}}>{branch.label}</span>
+      </div>
+      {/* Nodes */}
+      <div style={{display:"flex", flexDirection:"column", gap:5}}>
+        {branch.nodes.map((node,i) => {
+          const prev    = branch.nodes[i-1];
+          const showOr  = node.exclusiveWith && prev?.id === node.exclusiveWith;
+          return (
+            <div key={node.id}>
+              {showOr && (
+                <div style={{textAlign:"center", color:"#FF8888",
+                  fontSize:9, margin:"2px 0", letterSpacing:3}}>
+                  —&nbsp;&nbsp;OR&nbsp;&nbsp;—
+                </div>
+              )}
+              <NodeCard
+                node={node} learned={learned} pts={pts}
+                onSelect={onSelect}
+                isSelected={selected?.id === node.id}
+                color={color}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   MAIN APP
+══════════════════════════════════════════════════════ */
+function App() {
+  const [tab,     setTab]  = useState("dragon");
+  const [pts,     setPts]  = useState(20);
+  const [learned, setL]    = useState({});
+  const [sel,     setSel]  = useState(null);
+  const [mobile,  setMob]  = useState(window.innerWidth < 560);
+
+  useEffect(() => {
+    const h = () => setMob(window.innerWidth < 560);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+
+  const tree    = TREES[tab];
+  const catMeta = CATEGORIES.find(c => c.id === tab);
+  const allNodes= Object.values(TREES).flatMap(t => t.branches.flatMap(b => b.nodes));
+
+  /* Spent points */
+  const spent = Object.entries(learned).reduce((acc,[id,lv]) => {
+    const n = allNodes.find(n => n.id === id);
+    return acc + (n ? n.cost * lv : 0);
+  }, 0);
+
+  /* Active synergies (tag count ≥ 3) */
+  const tagCnt = {};
+  Object.entries(learned).forEach(([id,lv]) => {
+    if (!lv) return;
+    const n = allNodes.find(n => n.id === id);
+    if (!n) return;
+    n.tags.forEach(t => { tagCnt[t] = (tagCnt[t]||0) + lv; });
+  });
+  const synergies = Object.entries(tagCnt).filter(([,c]) => c >= 3);
+
+  /* Learn a node */
+  const handleLearn = useCallback(() => {
+    if (!sel) return;
+    if (getState(sel, learned, pts) !== "available") return;
+    setL(p => ({...p, [sel.id]: (p[sel.id]||0) + 1}));
+    setPts(p => p - sel.cost);
+  }, [sel, learned, pts]);
+
+  /* Reset */
+  const handleReset = () => { setL({}); setPts(20); setSel(null); };
+
+  const selState = sel ? getState(sel, learned, pts) : null;
+  const selLv    = sel ? (learned[sel.id]||0) : 0;
+
+  return (
+    <div className="app-wrap">
+
+      {/* ─────────────────── HEADER ─────────────────── */}
+      <div className="header">
+        <div>
+          <div className="header-title-label"
+            style={{color:"#D4A53A", fontSize:9, letterSpacing: mobile?1:3}}>
+            TOWER AND DRAGONS · 4X RESEARCH SYSTEM
+          </div>
+          <div className="header-title"
+            style={{fontSize: mobile?16:20, fontWeight:700, color:"#F0F0F0"}}>
+            🔬 연구소
+          </div>
+        </div>
+
+        <div className="header-right">
+          {synergies.length > 0 && (
+            <div className="synergy-badge" style={{background:"#140E00",
+              border:"1px solid #D4A53A44", borderRadius:8, padding:"4px 10px"}}>
+              <div style={{color:"#8A7030", fontSize:8, marginBottom:2}}>✦ 활성 시너지</div>
+              {synergies.map(([tag,cnt]) => (
+                <span key={tag} style={{color:"#FFD700", fontSize:mobile?9:10, marginRight:8}}>
+                  {tag} ×{cnt}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Points */}
+          <div style={{background:"#0E1828", border:"1px solid #1A2A3E",
+            borderRadius:10, padding:"5px 14px", textAlign:"center"}}>
+            <div style={{color:"#3A5A6A", fontSize:8}}>연구 포인트</div>
+            <div className="pts-display"
+              style={{color:"#D4A53A", fontSize:mobile?18:22, fontWeight:700, lineHeight:1}}>
+              {pts}
+            </div>
+            <div style={{color:"#2A3A4A", fontSize:8}}>사용됨: {spent}</div>
+          </div>
+
+          {/* Reset */}
+          <button onClick={handleReset} style={{
+            background:"#1A0A0A", border:"1px solid #3A1A1A", borderRadius:6,
+            padding:"6px 10px", cursor:"pointer", color:"#AA5555", fontSize:10,
+            outline:"none", transition:"all 0.15s",
+          }}>
+            ↺ 초기화
+          </button>
+        </div>
+      </div>
+
+      {/* ─────────────────── LEGEND ─────────────────── */}
+      <div className="legend">
+        {[
+          {color:catMeta.color, label:"해금 가능",  note:"eXpand"},
+          {color:"#D4A53A",     label:"마스터리",   note:"eXterminate"},
+          {color:"#BB88FF",     label:"숨김 노드",  note:"eXplore"},
+          {color:"#FF6666",     label:"배타 선택",  note:"eXploit"},
+        ].map(({color,label,note}) => (
+          <div key={label} style={{display:"flex", alignItems:"center", gap:4}}>
+            <div style={{width:9, height:9, borderRadius:2, flexShrink:0,
+              background:color+"33", border:`1.5px solid ${color}`}}/>
+            <span className="legend-item-text"
+              style={{color:"#4A6070", fontSize:mobile?7:9, whiteSpace:"nowrap"}}>
+              {label} <span style={{color:"#2A3A4A"}}>({note})</span>
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ─────────────────── CATEGORY TABS ─────────────────── */}
+      <div className="cat-tabs">
+        {CATEGORIES.map(c => {
+          const cnt = Object.keys(learned).filter(id =>
+            TREES[c.id].branches.some(b => b.nodes.some(n => n.id===id && (learned[id]||0)>0))
+          ).length;
+          const active = tab === c.id;
+          return (
+            <button
+              key={c.id}
+              className="cat-btn"
+              onClick={() => { setTab(c.id); setSel(null); }}
+              style={{
+                border:`1.5px solid ${active ? c.color : "#1A2535"}`,
+                background: active ? c.color+"1A" : "#0A1020",
+                color: active ? c.color : "#3A5060",
+              }}
+            >
+              <div className="cat-btn-icon" style={{fontSize: mobile?13:16, marginBottom:2}}>
+                {c.icon}
+              </div>
+              <div>{c.label}</div>
+              {cnt > 0 && (
+                <div style={{color:c.color, fontSize:7, marginTop:1}}>✦{cnt}</div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ─────────────────── BRANCH TREE ─────────────────── */}
+      <div className="branch-wrap">
+        {tree.branches.map(b => (
+          <BranchCol
+            key={b.id}
+            branch={b}
+            learned={learned}
+            pts={pts}
+            onSelect={setSel}
+            selected={sel}
+            color={tree.color}
+          />
+        ))}
+      </div>
+
+      {/* ─────────────────── DETAIL PANEL ─────────────────── */}
+      <div style={{
+        background:"#0A1020",
+        border:`1px solid ${sel ? tree.color+"44" : "#121C2E"}`,
+        borderRadius:12, padding: mobile?10:12, minHeight:74,
+        boxShadow: sel ? `0 0 24px ${tree.color}18` : "none",
+        transition:"border-color 0.2s, box-shadow 0.2s",
+      }}>
+        {sel ? (
+          <div className="detail-inner">
+            {/* ── Info ── */}
+            <div style={{flex:1, minWidth:0}}>
+              {/* Title row */}
+              <div style={{display:"flex", alignItems:"center", gap:7,
+                marginBottom:6, flexWrap:"wrap"}}>
+                <span style={{color:tree.color, fontSize:mobile?12:14, fontWeight:700}}>
+                  {sel.label}
+                </span>
+                {sel.mastery && (
+                  <span style={{background:"#2A2000", border:"1px solid #D4A53A",
+                    color:"#D4A53A", fontSize:8, padding:"1px 6px", borderRadius:4}}>
+                    MASTERY
+                  </span>
+                )}
+                {sel.hidden && (
+                  <span style={{background:"#180A2A", border:"1px solid #BB88FF",
+                    color:"#BB88FF", fontSize:8, padding:"1px 6px", borderRadius:4}}>
+                    HIDDEN
+                  </span>
+                )}
+                {sel.exclusiveWith && (
+                  <span style={{background:"#280A0A", border:"1px solid #FF6666",
+                    color:"#FF6666", fontSize:8, padding:"1px 6px", borderRadius:4}}>
+                    EXCLUSIVE
+                  </span>
+                )}
+              </div>
+
+              {/* Tags */}
+              <div style={{display:"flex", gap:3, flexWrap:"wrap", marginBottom:7}}>
+                {sel.tags.map(t => <Tag key={t} label={t}/>)}
+              </div>
+
+              {/* Description */}
+              <div style={{color:"#7A9AAA", fontSize:10, lineHeight:1.65,
+                marginBottom:7, whiteSpace:"pre-line"}}>
+                {sel.desc}
+              </div>
+
+              {/* Effect */}
+              <div style={{background:tree.color+"0D", border:`1px solid ${tree.color}33`,
+                borderRadius:6, padding:"4px 10px", display:"inline-block", marginBottom:4}}>
+                <span style={{color:"#4A6070", fontSize:9}}>효과: </span>
+                <span style={{color:tree.color, fontSize:11, fontWeight:600}}>
+                  {sel.effect}
+                </span>
+              </div>
+
+              {/* Requirement status */}
+              {sel.requires && (
+                <div style={{marginTop:5, color:"#3A5060", fontSize:9}}>
+                  선행 조건:{" "}
+                  <span style={{
+                    color: checkReqs(sel.requires,learned) ? "#52C97D" : "#AA4444",
+                    fontWeight:600,
+                  }}>
+                    {checkReqs(sel.requires,learned) ? "✓ 충족됨" : "✗ 미충족"}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* ── Learn button area ── */}
+            <div className="detail-btn-area">
+              <div style={{color:"#3A5565", fontSize:9, marginBottom:6}}>
+                레벨{" "}
+                <span style={{color:tree.color, fontWeight:700}}>{selLv}</span>
+                {" "}/{" "}{sel.maxLv}
+              </div>
+              <button
+                className="learn-btn"
+                onClick={handleLearn}
+                disabled={selState !== "available"}
+                style={{
+                  width: mobile ? "auto" : "100%",
+                  padding: mobile ? "8px 18px" : "8px 12px",
+                  background: selState==="available" ? tree.color : "#0E1828",
+                  border:`1.5px solid ${selState==="available" ? tree.color : "#1A2A35"}`,
+                  color: selState==="available" ? "#080E1C" : "#2A3A45",
+                }}
+              >
+                {selState==="maxed"    ? "✓ 완료"     :
+                 selState==="excluded" ? "✗ 배타"     :
+                 selState==="locked"   ? "🔒 조건 미달" :
+                 selState==="poor"     ? "포인트 부족" :
+                 `연구 (${sel.cost}P)`}
+              </button>
+              {selState==="available" && (
+                <div style={{color:"#D4A53A", fontSize:8, marginTop:5}}>
+                  {pts}P → {pts - sel.cost}P
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div style={{color:"#1E2E3E", fontSize:11,
+            textAlign:"center", paddingTop:22}}>
+            노드를 클릭하면 상세 정보를 확인할 수 있습니다
+          </div>
+        )}
+      </div>
+
+      {/* ─────────────────── 4X DESIGN GUIDE ─────────────────── */}
+      <div style={{marginTop:10, background:"#060A14",
+        border:"1px solid #0E1828", borderRadius:8, padding:10}}>
+        <div style={{color:"#2A3A4A", fontSize:8, letterSpacing:2, marginBottom:7}}>
+          4X 설계 원리 (DESIGN PHILOSOPHY)
+        </div>
+        <div className="x4-guide">
+          {[
+            {x:"eXplore",     ko:"탐험", color:"#BB88FF", desc:"숨김 노드 — 특정 조합 달성 시 해금"},
+            {x:"eXpand",      ko:"확장", color:"#52C97D", desc:"분기 확장 — 포인트 투자로 능력 개방"},
+            {x:"eXploit",     ko:"착취", color:"#4A9EE8", desc:"배타 선택 — 한 방향 극대화 강요"},
+            {x:"eXterminate", ko:"섬멸", color:"#D4A53A", desc:"마스터리 — 분야 완전 장악 보상"},
+          ].map(({x,ko,color,desc}) => (
+            <div key={x} className="x4-item"
+              style={{background:color+"08", border:`1px solid ${color}22`}}>
+              <div style={{color, fontSize:10, fontWeight:700}}>{x}</div>
+              <div style={{color:color+"88", fontSize:8}}>({ko})</div>
+              <div style={{color:"#2A3A4A", fontSize:8, marginTop:3, lineHeight:1.4}}>
+                {desc}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+/* mount */
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
