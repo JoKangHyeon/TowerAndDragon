@@ -19,8 +19,23 @@ public class BuildingPlacementController : MonoBehaviour
     private Building _selectedBuilding;
     private Vector3Int? _selectedExistingBuildingCoord;
     private Vector3Int? _moveSourceCoord;
+    private bool _isOccupiedOverlayVisible;
 
     public bool IsMoving => _moveSourceCoord.HasValue;
+
+    public Building SelectedBuilding
+    {
+        get
+        {
+            if (_selectedExistingBuildingCoord.HasValue)
+                return _gridMap.GetBuildingAt(_selectedExistingBuildingCoord.Value);
+
+            if (_moveSourceCoord.HasValue)
+                return _gridMap.GetBuildingAt(_moveSourceCoord.Value);
+
+            return null;
+        }
+    }
 
     private void Awake()
     {
@@ -42,7 +57,17 @@ public class BuildingPlacementController : MonoBehaviour
         {   Debug.LogWarning($"[BuildingPlacementController] CancelMoveAction 인스펙터 연결 필요");
             return;
         }
+
+        _gridMap.OnCellChanged += HandleCellChanged;
     }
+
+    private void OnDestroy()
+    {
+        if (_gridMap != null)
+            _gridMap.OnCellChanged -= HandleCellChanged;
+    }
+
+    private void HandleCellChanged(GridCell cell) => RefreshOccupiedOverlay();
 
     private void OnEnable()
     {
@@ -74,9 +99,9 @@ public class BuildingPlacementController : MonoBehaviour
             return;
 
         _selectedBuilding = prefab;
-        DeselectExistingBuilding();
+        Deselect();
         CancelMove();
-        _mouseSelectController.SetSelectedBuilding(prefab);
+        _mouseSelectController.BeginPlacementPreview(prefab);
         _mouseSelectController.SetPlacementActive(true);
         Debug.Log($"[BuildingPlacementController] 선택된 건물: {prefab.name}");
     }
@@ -106,10 +131,11 @@ public class BuildingPlacementController : MonoBehaviour
         if (building == null)
             return;
 
+        CancelBuildMode();
         _moveSourceCoord = _selectedExistingBuildingCoord;
         _selectedExistingBuildingCoord = null;
 
-        _mouseSelectController.SetSelectedBuilding(building);
+        _mouseSelectController.BeginRepositionPreview(building);
         _mouseSelectController.SetPlacementActive(true);
     }
 
@@ -127,7 +153,7 @@ public class BuildingPlacementController : MonoBehaviour
         _mouseSelectController.ClearHighlights();
     }
 
-    private void DeselectExistingBuilding()
+    public void Deselect()
     {
         if (_selectedExistingBuildingCoord.HasValue)
         {
@@ -157,55 +183,67 @@ public class BuildingPlacementController : MonoBehaviour
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             return;
 
+        ConfirmAtPointer();
+    }
+
+    public void ConfirmAtPointer()
+    {
         if (_selectedBuilding != null)
         {
-            HandleConstructionClick();
+            TryConstructAt(_mouseSelectController.CurrentAnchor);
             return;
         }
 
         if (_moveSourceCoord.HasValue)
         {
-            HandleMoveTargetClick();
+            Building building = _gridMap.GetBuildingAt(_moveSourceCoord.Value);
+            if (building != null)
+                TryMoveSelectedTo(_mouseSelectController.GetHoveredAnchor(building.FootprintShape));
+
             return;
         }
 
-        HandleExistingBuildingSelectClick();
+        SelectExistingBuildingAt(_mouseSelectController.GetHoveredCell());
     }
 
-    private void HandleConstructionClick()
+    public bool TryConstructAt(Vector3Int anchor)
     {
-        if (!_mouseSelectController.CanConstruct)
-            return;
+        if (_selectedBuilding == null || !_gridMap.CanConstructFootPrint(anchor, _selectedBuilding.FootprintShape))
+            return false;
 
-        Debug.Log($"[BuildingPlacementController] 건설 위치: {_mouseSelectController.CurrentAnchor}");
-        _gridMap.ConstructBuilding(_selectedBuilding, _mouseSelectController.CurrentAnchor);
+        Debug.Log($"[BuildingPlacementController] 건설 위치: {anchor}");
+        _gridMap.ConstructBuilding(_selectedBuilding, anchor);
         CancelBuildMode();
+        return true;
     }
 
-    private void HandleMoveTargetClick()
+    public bool TryMoveSelectedTo(Vector3Int anchor)
     {
+        if (!_moveSourceCoord.HasValue)
+            return false;
+
         Vector3Int prevCoord = _moveSourceCoord.Value;
         Building building = _gridMap.GetBuildingAt(prevCoord);
         if (building == null)
-            return;
-
-        Vector3Int anchor = _mouseSelectController.GetHoveredAnchor(building.FootprintShape);
+            return false;
 
         if (!_gridMap.MoveBuilding(prevCoord, anchor))
-            return; // 유효하지 않은 자리 - 이동 모드 유지, 다른 곳 다시 클릭 가능
+            return false;
 
         building.SetHighlighted(false, default);
         _moveSourceCoord = null;
         _mouseSelectController.SetPlacementActive(false);
         _mouseSelectController.ClearHighlights();
+        return true;
     }
 
-    private void HandleExistingBuildingSelectClick()
+    public void SelectExistingBuildingAt(Vector3Int coord)
     {
-        Vector3Int coord = _mouseSelectController.GetHoveredCell();
         Building building = _gridMap.GetBuildingAt(coord);
 
-        DeselectExistingBuilding();
+        CancelBuildMode();
+        CancelMove();
+        Deselect();
 
         if (building == null)
             return;
@@ -213,6 +251,35 @@ public class BuildingPlacementController : MonoBehaviour
         _selectedExistingBuildingCoord = coord;
         _mouseSelectController.HighlightSelection(_gridMap.GetOccupiedCoords(coord));
         building.SetHighlighted(true, _mouseSelectController.SelectionHighlightColor);
+    }
+
+    public void CancelAll()
+    {
+        CancelBuildMode();
+        CancelMove();
+        Deselect();
+    }
+
+    // 건설 모드 진입 시 이미 배치된 건물의 타일을 표시 - 어떤 땅이 비어있는지 시각적으로 확인 가능
+    public void ShowOccupiedTiles()
+    {
+        _isOccupiedOverlayVisible = true;
+        RefreshOccupiedOverlay();
+    }
+
+    public void HideOccupiedTiles()
+    {
+        _isOccupiedOverlayVisible = false;
+        _mouseSelectController.ClearOccupiedOverlay();
+    }
+
+    // 건설 모드가 열려있는 동안 건물 배치/철거/이동에 맞춰 표시된 타일을 최신 상태로 갱신
+    private void RefreshOccupiedOverlay()
+    {
+        if (!_isOccupiedOverlayVisible)
+            return;
+
+        _mouseSelectController.ShowOccupiedOverlay(_gridMap.GetAllOccupiedCoords());
     }
 
 }
