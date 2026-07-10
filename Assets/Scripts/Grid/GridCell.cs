@@ -15,8 +15,9 @@ public class GridCell
     public bool CanConstruct { get; }
     public bool CanFarmField { get; }
 
-    private Building _occupantBuilding;  
+    private Building _occupantBuilding;
     public bool HasBuilding => _occupantBuilding != null;
+    public Building OccupantBuilding => _occupantBuilding;
 
     public ExistTypeOnCell ExistTypeOnCell =>
         _occupantBuilding is Tower ? ExistTypeOnCell.Tower
@@ -44,5 +45,9 @@ public class GridCell
         return true;
     }
 
-    public void RemoveBuilding() => _occupantBuilding = null;
+    public void RemoveBuilding() 
+    {
+        Debug.Log($"[GridCell] RemoveBuilding - {Coord} 타일 삭제");
+        _occupantBuilding = null;
+    }
 }

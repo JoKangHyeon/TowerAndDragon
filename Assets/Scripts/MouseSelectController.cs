@@ -24,34 +24,56 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private Color _ghostBlockedTint = new Color(1f, 0.4f, 0.4f);
 
+    [SerializeField]
+    private Color _selectionHighlightColor = Color.yellow;
+
     private Camera _cam;
     private readonly List<SpriteRenderer> _highlightPool = new();
     private FootprintShape _footprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private Vector3 _ghostLocalOffset;
+    private bool _isPlacementActive;
+    private Building _selectedBuildingRef; // 재배치 중이면 실제 인스턴스 - 자기 자신과 겹치는 위치도 유효하게 판정하기 위함
 
     public Vector3Int CurrentAnchor { get; private set; }
     public bool CanConstruct { get; private set; }
+    public Color SelectionHighlightColor => _selectionHighlightColor;
 
 
     private void Awake()
     {
         _cam = Camera.main;
         _highlightPool.Add(_spriteRenderer);
-
-        if (_ghostRenderer != null)
-            _ghostRenderer.gameObject.SetActive(false);
+        Deactivate();
     }
 
-    private void Update()
+    public void SetPlacementActive(bool isActive)
+    {
+        _isPlacementActive = isActive;
+
+        if (!_isPlacementActive)
+            Deactivate();
+    }
+
+    public Vector3Int GetHoveredCell()
     {
         Vector3 worldPos = _cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         worldPos.z = 0f;
         worldPos.y -= _yOffset;
 
-        Vector3Int hoveredCell = _gridMap.ConvertWorldToGrid(worldPos);
+        return _gridMap.ConvertWorldToGrid(worldPos);
+    }
+
+    public Vector3Int GetHoveredAnchor(FootprintShape shape) => GetFootprintAnchor(GetHoveredCell(), shape);
+
+    private void Update()
+    {
+        if (!_isPlacementActive)
+            return;
+
+        Vector3Int hoveredCell = GetHoveredCell();
         Vector3Int anchor = GetFootprintAnchor(hoveredCell, _footprintShape);
         List<Vector3Int> footprint = _gridMap.GetFootprintCoords(anchor, _footprintShape);
-        bool canConstruct = _gridMap.CanConstructFootPrint(anchor, _footprintShape);
+        bool canConstruct = _gridMap.CanConstructFootPrint(anchor, _footprintShape, _selectedBuildingRef);
 
         CurrentAnchor = anchor;
         CanConstruct = canConstruct;
@@ -62,8 +84,9 @@ public class MouseSelectController : MonoBehaviour
 
     public void SetSelectedBuilding(Building prefab)
     {
+        _selectedBuildingRef = prefab;
         _footprintShape = prefab.FootprintShape;
-        _ghostLocalOffset = prefab.transform.localPosition;
+        _ghostLocalOffset = prefab.PlacementOffset;
 
         if (_ghostRenderer == null)
             return;
@@ -86,19 +109,33 @@ public class MouseSelectController : MonoBehaviour
     private void DrawFootprint(List<Vector3Int> footprint, bool canConstruct)
     {
         Color highlightColor = canConstruct ? Color.green : Color.red;
+        HighlightCells(footprint, highlightColor);
+    }
 
-        for (int i = 0; i < footprint.Count; i++)
+    public void HighlightCells(List<Vector3Int> coords, Color color)
+    {
+        for (int i = 0; i < coords.Count; i++)
         {
             SpriteRenderer highlight = GetPooledHighlight(i);
-            Vector3 cellPos = _gridMap.ConvertGridToWorld(footprint[i]);
+            Vector3 cellPos = _gridMap.ConvertGridToWorld(coords[i]);
             cellPos.y += _yOffset;
             highlight.transform.position = cellPos;
-            highlight.color = highlightColor;
+            highlight.color = color;
         }
 
-        for (int i = footprint.Count; i < _highlightPool.Count; i++)
+        for (int i = coords.Count; i < _highlightPool.Count; i++)
         {
             _highlightPool[i].gameObject.SetActive(false);
+        }
+    }
+
+    public void HighlightSelection(List<Vector3Int> coords) => HighlightCells(coords, _selectionHighlightColor);
+
+    public void ClearHighlights()
+    {
+        foreach (SpriteRenderer highlight in _highlightPool)
+        {
+            highlight.gameObject.SetActive(false);
         }
     }
 
@@ -112,6 +149,15 @@ public class MouseSelectController : MonoBehaviour
         Color color = canConstruct ? Color.white : _ghostBlockedTint;
         color.a = _ghostAlpha;
         _ghostRenderer.color = color;
+    }
+
+    private void Deactivate()
+    {
+        if (_ghostRenderer != null)
+            _ghostRenderer.gameObject.SetActive(false);
+
+        ClearHighlights();
+        CanConstruct = false;
     }
 
     private SpriteRenderer GetPooledHighlight(int index)
