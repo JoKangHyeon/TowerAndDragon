@@ -11,8 +11,8 @@ GameObject:
   - component: {fileID: 4987679836311095451}
   - component: {fileID: 5707680070361657057}
   - component: {fileID: 8562530296713420513}
-  - component: {fileID: 3156219505518156756}
-  - component: {fileID: 3183298237602931475}
+  - component: {fileID: -6360304390758115834}
+  - component: {fileID: -687291307508128235}
   m_Layer: 0
   m_Name: Monster_Ground_Basic
   m_TagString: Untagged
@@ -106,20 +106,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a210ca5b9b21c8245b0418473702c92c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
---- !u!114 &3156219505518156756
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8845832112575990564}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 663b977c16c7e054bbe9406e75320647, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BaseMonster
-  _data: {fileID: 0}
---- !u!114 &3183298237602931475
+--- !u!114 &-6360304390758115834
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -132,3 +119,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GroundSplineMovement
   _arrivalThreshold: 0.05
+--- !u!114 &-687291307508128235
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8845832112575990564}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 663b977c16c7e054bbe9406e75320647, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BaseMonster
+  _data: {fileID: 11400000, guid: 61968d7c469b4ef4491e30b18aa56538, type: 2}
