@@ -12,6 +12,9 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private BuildingCatalog _buildingCatalog;
 
+    [SerializeField]
+    private InputActionReference _placeAction;
+
     private Building _selectedBuilding;
 
     private void Awake()
@@ -29,8 +32,25 @@ public class BuildingPlacementController : MonoBehaviour
         {   Debug.LogWarning($"[BuildingPlacementController] BuildingCatalog 인스펙터 연결 필요");
             return;
         }
-        
+
+        if (_placeAction == null)
+        {   Debug.LogWarning($"[BuildingPlacementController] PlaceAction 인스펙터 연결 필요");
+            return;
+        }
     }
+
+    private void OnEnable()
+    {
+        if (_placeAction != null)
+            _placeAction.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        if (_placeAction != null)
+            _placeAction.action.Disable();
+    }
+
     private void Update()
     {
         HandleSelectionInput();
@@ -56,18 +76,15 @@ public class BuildingPlacementController : MonoBehaviour
             return;
         
         _selectedBuilding = prefab;
-        _mouseSelectController.SetCellSize(prefab.CellSize);
+        _mouseSelectController.SetSelectedBuilding(prefab);
         Debug.Log($"[BuildingPlacementController] 선택된 건물: {prefab.name}");
     }
 
     private void HandlePlacementInput()
     {
-        if (Mouse.current == null)
+        if (_placeAction == null || !_placeAction.action.WasPerformedThisFrame())
             return;
-            
-        if (!Mouse.current.leftButton.wasPressedThisFrame)
-            return;
-        
+
         if (_selectedBuilding == null || !_mouseSelectController.CanConstruct)
             return;
         

@@ -62,14 +62,13 @@ public class GridMap : MonoBehaviour
 
     public void ConstructBuilding(Building prefab, Vector3Int anchor)
     {
-        if (prefab == null || !TryGetFootprint(anchor, prefab.CellSize, out List<GridCell> footprint))
+        if (prefab == null || !TryGetFootprint(anchor, prefab.FootprintShape, out List<GridCell> footprint))
             return;
 
-        Vector3Int farCorner = anchor + new Vector3Int(prefab.CellSize - 1, prefab.CellSize - 1, 0);
-        Vector3 worldPos = (ConvertGridToWorld(anchor) + ConvertGridToWorld(farCorner)) / 2f;
+        Vector3 worldPos = GetFootprintCenterWorld(anchor, prefab.FootprintShape) + prefab.transform.localPosition;
         Building building = Instantiate(
             prefab,
-            worldPos + prefab.transform.localPosition,
+            worldPos,
             prefab.transform.rotation,
             transform);
 
@@ -86,33 +85,10 @@ public class GridMap : MonoBehaviour
         ConstructBuilding(_buildingCatalog.GetPrefab<T>(), anchor);
     }
 
-    // --- 키보드로 건물 생성 디버깅용 메서드 ---
-    public bool TryGetRandomValidCoord<T>(out Vector3Int coord) where T : Building
-    {
-        coord = default;
-
-        T prefab = _buildingCatalog.GetPrefab<T>();
-        if (prefab == null)
-            return false;
-
-        var validAnchors = new List<Vector3Int>();
-        foreach (Vector3Int anchor in _cells.Keys)
-        {
-            if (TryGetFootprint(anchor, prefab.CellSize, out _))
-                validAnchors.Add(anchor);
-        }
-
-        if (validAnchors.Count == 0)
-            return false;
-
-        coord = validAnchors[UnityEngine.Random.Range(0, validAnchors.Count)];
-        return true;
-    }
-
-    public bool TryGetFootprint(Vector3Int anchor, int cellSize, out List<GridCell> footprint)
+    public bool TryGetFootprint(Vector3Int anchor, FootprintShape shape, out List<GridCell> footprint)
     {
         footprint = new List<GridCell>();
-        foreach (Vector3Int coord in GetFootprintCoords(anchor, cellSize))
+        foreach (Vector3Int coord in GetFootprintCoords(anchor, shape))
         {
             if (!CanConstructBuilding(coord) || !_cells.TryGetValue(coord, out GridCell cell))
                 return false;
@@ -124,23 +100,27 @@ public class GridMap : MonoBehaviour
         return true;
     }
 
-    public List<Vector3Int> GetFootprintCoords(Vector3Int anchor, int cellSize)
+    public List<Vector3Int> GetFootprintCoords(Vector3Int anchor, FootprintShape shape)
     {
-        var coords = new List<Vector3Int>(cellSize * cellSize);
-        for (int x = 0;  x < cellSize; x++)
+        var coords = new List<Vector3Int>();
+        
+        foreach (Vector2Int offset in shape.GetOccupiedOffsets())
         {
-            for (int y = 0; y < cellSize; y++)
-            {
-                coords.Add(anchor + new Vector3Int(x, y, 0));
-            }
+            coords.Add(anchor + new Vector3Int(offset.x, offset.y, 0));
         }
 
         return coords;
     }
 
-    public bool CanConstructFootPrint(Vector3Int anchor, int cellSize)
+    public Vector3 GetFootprintCenterWorld(Vector3Int anchor, FootprintShape shape)
     {
-        foreach (Vector3Int coord in GetFootprintCoords(anchor, cellSize))
+        Vector3Int farCorner = anchor + new Vector3Int(shape.Width - 1, shape.Height - 1, 0);
+        return (ConvertGridToWorld(anchor) + ConvertGridToWorld(farCorner)) / 2f;
+    }
+
+    public bool CanConstructFootPrint(Vector3Int anchor, FootprintShape shape)
+    {
+        foreach (Vector3Int coord in GetFootprintCoords(anchor, shape))
         {
             if (!CanConstructBuilding(coord))
                 return false;

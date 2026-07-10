@@ -6,6 +6,8 @@ public class Building : MonoBehaviour
     private Sprite _sprite;
 
     [SerializeField]
-    private int _cellSize = 1;
-    public int CellSize => _cellSize;
+    private FootprintShape _footprintShape;
+
+    public Sprite Sprite => _sprite;
+    public FootprintShape FootprintShape => _footprintShape;
 }
