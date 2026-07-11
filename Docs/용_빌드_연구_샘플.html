@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tower and Dragons · 용 빌드 & 연구 종합 기획</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #080E1C; color: #C8D4E0;
+  font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif;
+  min-height: 100vh; padding: 16px; line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
+}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #080E1C; }
+::-webkit-scrollbar-thumb { background: #1E3048; border-radius: 4px; }
+
+.wrap { max-width: 1200px; margin: 0 auto; }
+
+/* header */
+.page-header { margin-bottom: 18px; }
+.page-label { color: #D4A53A; font-size: 9px; letter-spacing: 3px; margin-bottom: 4px; }
+.page-title { font-size: 24px; font-weight: 800; color: #F0F0F0; }
+.page-sub   { color: #4A6070; font-size: 12px; margin-top: 5px; }
+.tagline { color:#7A8A6A; font-size:11px; font-style:italic; margin-top:8px; }
+
+/* main tabs */
+.tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap;
+  position: sticky; top: 0; background:#080E1C; padding:6px 0; z-index:20; }
+.tab-btn {
+  padding: 8px 14px; border-radius: 9px; border: 1.5px solid #1A2535;
+  background: #0A1020; color: #4A6070; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 0.16s; white-space: nowrap;
+}
+.tab-btn:hover { filter: brightness(1.3); }
+.tab-btn.active { background:#141E30; }
+
+.section { display: none; }
+.section.show { display: block; animation: fade 0.25s ease; }
+@keyframes fade { from { opacity:0; transform:translateY(4px);} to {opacity:1;transform:none;} }
+
+/* generic blocks */
+.h-band {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px; border-radius:10px; margin: 4px 0 14px;
+}
+.h-band .ic { font-size:20px; }
+.h-band .t { font-size:16px; font-weight:800; }
+.h-band .s { font-size:10px; color:#7A8A9A; margin-top:2px; }
+
+.card {
+  background:#0D1525; border:1.5px solid #1A2535; border-radius:10px;
+  padding:14px; margin-bottom:12px;
+}
+.card h4 { font-size:13px; margin-bottom:8px; }
+.card p  { font-size:11px; color:#9AAAB8; margin-bottom:6px; }
+.lead { color:#8CA0B0; font-size:12px; line-height:1.7; margin-bottom:14px; }
+
+.grid { display:grid; gap:10px; }
+.g2 { grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); }
+.g3 { grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); }
+.g4 { grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); }
+
+/* stat pill */
+.stat { background:#080E1C; border:1px solid #1A2535; border-radius:8px; padding:9px 11px; }
+.stat .l { font-size:8px; color:#4A6070; letter-spacing:1px; }
+.stat .v { font-size:19px; font-weight:800; margin-top:3px; }
+
+/* tables */
+table { width:100%; border-collapse:collapse; margin-top:6px; font-size:11px; }
+th, td { padding:7px 9px; border:1px solid #1A2535; text-align:left; vertical-align:top; }
+th { background:#0D1525; color:#8A9AA8; font-weight:700; font-size:10px; letter-spacing:0.5px; }
+tr:hover td { background:#0A1424; }
+td .eff { color:#A0C8A0; }
+.mono { font-variant-numeric: tabular-nums; }
+
+/* badges / tags */
+.tag { font-size:8px; padding:1px 6px; border-radius:3px; white-space:nowrap; font-weight:700; display:inline-block; margin:1px 2px 1px 0; }
+.pill { font-size:9px; padding:2px 8px; border-radius:20px; font-weight:700; display:inline-block; }
+.cap { background:#2A2000; color:#FFD700; border:1px solid #D4A53A; }
+.hid { background:#180A2A; color:#CC88FF; border:1px solid #BB88FF; }
+.excl{ background:#2A0A0A; color:#FF7777; border:1px solid #FF6666; }
+.new { background:#0A2515; color:#6CE89A; border:1px solid #52C97D; }
+
+/* sub tabs (attributes) */
+.subtabs { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+.sub-btn { padding:7px 13px; border-radius:20px; border:1.5px solid #1A2535;
+  background:#0A1020; font-size:11px; font-weight:700; cursor:pointer; transition:all .15s; color:#4A6070; }
+.sub-btn:hover { filter:brightness(1.3); }
+.attr-panel { display:none; }
+.attr-panel.show { display:block; }
+
+/* skill node card */
+.node {
+  background:#0D1525; border-radius:9px; padding:11px; margin-bottom:8px;
+  border-left:3px solid #2A3A4A;
+}
+.node .nh { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.node .nn { font-size:12px; font-weight:800; }
+.node .nd { font-size:10.5px; color:#8A9AA8; margin-top:5px; line-height:1.6; }
+.node .ne { display:inline-block; margin-top:6px; font-size:10px; padding:2px 8px; border-radius:5px; }
+.node .cost { font-size:9px; color:#D4A53A; background:#140E00; border:1px solid #D4A53A55; padding:2px 7px; border-radius:5px; white-space:nowrap; }
+.tier-lbl { font-size:9px; color:#3A5060; letter-spacing:2px; margin:14px 0 8px; }
+
+/* flow / loop */
+.loop { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:10px 0; }
+.loop .step { background:#0A1020; border:1px solid #1E2A3E; border-radius:8px; padding:8px 12px; font-size:10px; }
+.loop .arr { color:#3A5060; font-size:16px; }
+
+.note { background:#060A14; border:1px solid #14202E; border-left:3px solid #D4A53A; border-radius:6px; padding:10px 12px; font-size:10.5px; color:#8A9AA8; margin:10px 0; line-height:1.7; }
+.callout { background:#0A1424; border:1px solid #1A2A3E; border-radius:8px; padding:11px 13px; margin-bottom:10px; }
+.callout .ct { font-size:11px; font-weight:800; margin-bottom:5px; }
+.callout .cd { font-size:10.5px; color:#8A9AA8; line-height:1.7; }
+
+.legend { display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 16px; }
+.legend .li { display:flex; align-items:center; gap:5px; background:#0A1020; border:1px solid #141E30; border-radius:6px; padding:4px 9px; font-size:9px; color:#6A7A8A; }
+.dot { width:10px; height:10px; border-radius:3px; }
+
+@media (max-width:520px){
+  body{ padding:10px 8px; }
+  .page-title{ font-size:19px; }
+  .g2,.g3,.g4{ grid-template-columns:1fr; }
+  table{ font-size:10px; }
+  th,td{ padding:5px 6px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="page-header">
+    <div class="page-label">TOWER AND DRAGONS · DRAGON BUILD & RESEARCH DESIGN</div>
+    <div class="page-title">🐉 용 빌드 & 연구 종합 기획</div>
+    <div class="page-sub">용 성장·진화 · 5속성 어미용 스킬트리 · 새끼용 빌드 · 연구 트리 확장 · 빌드 아키타입</div>
+    <div class="tagline">"낮의 선택이 밤의 생존을 결정한다" — 프로젝트 &lt;수성록&gt;</div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <!-- ══════════════ 1. 개요 ══════════════ -->
+  <div id="sec-overview" class="section show">
+    <div class="h-band" style="background:#D4A53A12;border:1px solid #D4A53A33">
+      <span class="ic">🧭</span>
+      <div><div class="t" style="color:#D4A53A">설계 개요</div>
+      <div class="s">용 빌드의 3층 구조와 설계 철학</div></div>
+    </div>
+
+    <div class="lead">
+      용은 이 게임의 핵심 재미요소입니다. 본 문서는 용을 <b>① 성장(재화를 소모해 강해지는 축)</b>,
+      <b>② 스킬트리(플레이어만의 빌드를 만드는 축)</b>, <b>③ 시너지(타워·지역·새끼용과 맞물리는 축)</b>의
+      3층 구조로 정의하고, 여기에 연동되는 연구 트리 확장안을 함께 제안합니다. 기존
+      <b>타워 22종 · 연구 4카테고리</b> 프로토타입과 완전히 호환되도록 설계했습니다.
+    </div>
+
+    <div class="grid g4" style="margin-bottom:16px">
+      <div class="stat"><div class="l">속성</div><div class="v" style="color:#FF8C42">5종</div></div>
+      <div class="stat"><div class="l">어미용 스킬 노드</div><div class="v" style="color:#A0D4FF">55+</div></div>
+      <div class="stat"><div class="l">새끼용 타입</div><div class="v" style="color:#80E890">10종</div></div>
+      <div class="stat"><div class="l">진화 단계</div><div class="v" style="color:#CC88FF">4단계</div></div>
+      <div class="stat"><div class="l">연구 추가 노드</div><div class="v" style="color:#52C97D">18종</div></div>
+      <div class="stat"><div class="l">추천 빌드</div><div class="v" style="color:#D4A53A">6종</div></div>
+    </div>
+
+    <h4 style="font-size:13px;color:#C8D4E0;margin:6px 0 10px">용 빌드의 3층 구조</h4>
+    <div class="grid g3" style="margin-bottom:16px">
+      <div class="card" style="border-color:#52C97D44">
+        <h4 style="color:#52C97D">① 성장 (Growth)</h4>
+        <p><b>슬라임</b>과 <b>특화자원</b>을 먹여 레벨을 올리고 진화시킵니다. 성장하면 <b>성장 포인트(SP)</b>와 스킬트리 티어가 열립니다.</p>
+        <p style="color:#5A7A6A">→ "얼마나 자원을 용에 투자할 것인가" (인구·생산과 경쟁)</p>
+      </div>
+      <div class="card" style="border-color:#A0D4FF44">
+        <h4 style="color:#A0D4FF">② 스킬트리 (Build)</h4>
+        <p>획득한 SP를 속성별 스킬트리에 투자합니다. <b>공통·특화·시너지</b> 3분기 + <b>각성 궁극기</b>로 나만의 빌드를 완성합니다.</p>
+        <p style="color:#5A7A6A">→ "이 용을 어떤 역할로 키울 것인가" (제어/폭딜/유틸/방어/유지)</p>
+      </div>
+      <div class="card" style="border-color:#FF8C4244">
+        <h4 style="color:#FF8C42">③ 시너지 (Synergy)</h4>
+        <p>용의 속성이 <b>같은 속성 타워·지역</b>과 만나면 강력한 보너스가 발동. <b>새끼용</b>과의 합동 스킬도 존재합니다.</p>
+        <p style="color:#5A7A6A">→ "용을 중심으로 방어 전체를 어떻게 엮을 것인가"</p>
+      </div>
+    </div>
+
+    <h4 style="font-size:13px;color:#C8D4E0;margin:6px 0 10px">4X 설계 원리 (기존 연구 트리와 공유)</h4>
+    <div class="grid g4">
+      <div class="callout"><div class="ct" style="color:#BB88FF">eXplore · 탐험</div><div class="cd">숨김 노드 — 특정 속성·조합을 달성해야 열리는 비밀 스킬 (예: 속성 교배, 용의 계약)</div></div>
+      <div class="callout"><div class="ct" style="color:#52C97D">eXpand · 확장</div><div class="cd">SP·연구 포인트를 투자해 단계적으로 능력을 개방하는 기본 성장 축</div></div>
+      <div class="callout"><div class="ct" style="color:#4A9EE8">eXploit · 착취</div><div class="cd">배타 선택 — 전투형/버프형, 극단 특화 등 한 방향으로 몰아주는 선택</div></div>
+      <div class="callout"><div class="ct" style="color:#D4A53A">eXterminate · 섬멸</div><div class="cd">각성(궁극기) — 한 속성을 끝까지 판 플레이어에게 주는 전맵 규모 보상</div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════ 2. 성장·진화 ══════════════ -->
+  <div id="sec-growth" class="section">
+    <div class="h-band" style="background:#52C97D12;border:1px solid #52C97D33">
+      <span class="ic">🥚</span>
+      <div><div class="t" style="color:#52C97D">용 성장 · 진화 시스템</div>
+      <div class="s">먹이 소모 → 레벨링 → 진화 → 스킬포인트 획득</div></div>
+    </div>
+
+    <div class="lead">
+      용은 <b>먹이(슬라임)</b>로 경험치를 얻어 레벨을 올리고, <b>특화자원</b>을 소모해 <b>진화</b>합니다.
+      레벨업은 <b>성장 포인트(SP)</b>를, 진화는 <b>스킬트리 티어</b>를 개방합니다. 자원을 용에 쓸지 인구·타워에
+      쓸지가 낮의 핵심 선택이 됩니다.
+    </div>
+
+    <h4 style="font-size:13px;color:#C8D4E0;margin:4px 0 8px">성장 재화 3종</h4>
+    <div class="grid g3" style="margin-bottom:16px">
+      <div class="card" style="border-color:#8AD0A044">
+        <h4 style="color:#8AD0A0">🟢 슬라임 (먹이)</h4>
+        <p>외곽·중앙에서 획득하는 용의 기본 먹이. 소모 시 <b>용 경험치</b>가 오르고 레벨이 상승합니다.</p>
+        <p style="color:#5A7A6A">→ 레벨 = SP(성장 포인트)의 원천</p>
+      </div>
+      <div class="card" style="border-color:#FF80CC44">
+        <h4 style="color:#FF80CC">🟣 특화자원 (진화 재료)</h4>
+        <p>4개 바이옴별 고유 자원. 각 속성 용의 <b>진화 조건</b> 재료이자 속성 각성의 열쇠입니다.</p>
+        <p style="color:#5A7A6A">→ 진화 = 스킬트리 상위 티어 개방</p>
+      </div>
+      <div class="card" style="border-color:#D4A53A44">
+        <h4 style="color:#D4A53A">⭐ 성장 포인트 (SP)</h4>
+        <p>레벨업·진화·보스 처치로 획득하는 스킬트리 투자 화폐. 초기화(리스펙)는 슬라임을 소량 소모해 가능합니다.</p>
+        <p style="color:#5A7A6A">→ 스킬트리 노드 연구에 사용</p>
+      </div>
+    </div>
+
+    <h4 style="font-size:13px;color:#C8D4E0;margin:4px 0 8px">진화 4단계 (어미용)</h4>
+    <table>
+      <thead><tr><th style="width:14%">단계</th><th style="width:26%">진화 조건</th><th style="width:24%">개방 내용</th><th>비고</th></tr></thead>
+      <tbody id="evo-body"></tbody>
+    </table>
+
+    <div class="note">
+      💡 <b>진화 게이트 설계 의도</b> — 각 진화는 "레벨(슬라임)" + "특화자원(원정으로 점령한 바이옴)"을 동시에
+      요구합니다. 즉 용을 키우려면 반드시 <b>확장(점령)</b>을 해야 하고, 확장하면 적 난이도가 오르므로
+      "리스크 → 리워드" 구조가 성장에도 그대로 적용됩니다.
+    </div>
+
+    <h4 style="font-size:13px;color:#C8D4E0;margin:16px 0 8px">성장 곡선 (레벨별 요구치 · 예시 밸런스)</h4>
+    <table>
+      <thead><tr><th>레벨 구간</th><th>레벨당 슬라임</th><th>누적 SP</th><th>단계</th><th>비고</th></tr></thead>
+      <tbody id="curve-body"></tbody>
+    </table>
+
+    <h4 style="font-size:13px;color:#C8D4E0;margin:16px 0 8px">새끼용 획득 · 성장</h4>
+    <div class="loop">
+      <span class="step">🥚 알 획득<br><span style="color:#5A7A6A">보스 주기 보상 / 용 둥지 점령</span></span>
+      <span class="arr">→</span>
+      <span class="step">🐣 부화<br><span style="color:#5A7A6A">둥지에서 슬라임 소모</span></span>
+      <span class="arr">→</span>
+      <span class="step">⚔✨ 타입 선택<br><span style="color:#5A7A6A">전투형 / 버프형 (배타)</span></span>
+      <span class="arr">→</span>
+      <span class="step">👑 군단 확장<br><span style="color:#5A7A6A">연구로 보유 수 증가</span></span>
+    </div>
+
+    <div class="note">
+      🔄 <b>먹이 루프</b> : (밤) 슬라임 드랍 → (낮) 용에게 급여 → 레벨업·SP 획득 → 스킬트리 투자 →
+      (밤) 방어력 상승 → 더 많은 슬라임 확보. 인구를 <b>생산/방어/원정</b> 어디에 넣느냐가 이 루프의 속도를 결정합니다.
+    </div>
+  </div>
+
+  <!-- ══════════════ 3. 어미용 스킬트리 ══════════════ -->
+  <div id="sec-mother" class="section">
+    <div class="h-band" style="background:#FF8C4212;border:1px solid #FF8C4233">
+      <span class="ic">🔥</span>
+      <div><div class="t" style="color:#FF8C42">어미용 5속성 스킬트리</div>
+      <div class="s">공통 성장 + 속성 특화 + 시너지 + 각성 궁극기</div></div>
+    </div>
+
+    <div class="lead">
+      모든 어미용은 <b>공통 성장 분기</b>(어느 속성이든 동일)와 <b>속성 특화 분기</b>,
+      <b>지역·시너지 분기</b>를 가지며, 특화 분기 끝에는 진화 4단계에서만 열리는 <b>각성(궁극기)</b>가 있습니다.
+      아래에서 속성을 선택해 상세 트리를 확인하세요.
+    </div>
+
+    <div class="legend">
+      <span class="li"><span class="dot" style="background:#52C97D"></span>공통 성장 (모든 속성 공유)</span>
+      <span class="li"><span class="dot" style="background:#FF8C42"></span>속성 특화</span>
+      <span class="li"><span class="dot" style="background:#4A9EE8"></span>지역·시너지</span>
+      <span class="li"><span class="dot" style="background:#D4A53A"></span>각성 (궁극기)</span>
+      <span class="li"><span class="dot" style="background:#BB88FF"></span>숨김 노드</span>
+    </div>
+
+    <div class="subtabs" id="attr-tabs"></div>
+    <div id="attr-panels"></div>
+
+    <div class="note" style="margin-top:16px">
+      🧩 <b>공통 성장 분기</b>는 5속성 모두 동일합니다: <b>용의 위엄</b>(공격력 +12%/Lv, 3Lv) →
+      <b>용린</b>(생명력·방어 +15%/Lv, 3Lv) → <b>비룡</b>(액티브 스킬 쿨다운 -8%/Lv, 3Lv). 위 트리에는
+      각 속성의 <b>특화·시너지·각성</b> 분기만 표시합니다.
+    </div>
+  </div>
+
+  <!-- ══════════════ 4. 새끼용 ══════════════ -->
+  <div id="sec-baby" class="section">
+    <div class="h-band" style="background:#80E89012;border:1px solid #80E89033">
+      <span class="ic">🐣</span>
+      <div><div class="t" style="color:#80E890">새끼용 빌드</div>
+      <div class="s">전투형 / 버프형 배타 선택 · 속성별 필드 효과 · 군단 시스템</div></div>
+    </div>
+
+    <div class="lead">
+      새끼용은 어미용과 같은 <b>5속성</b>으로 존재하며, 부화 시 <b>전투형(독립 전투)</b> 또는
+      <b>버프형(지원)</b> 중 하나를 <b>배타 선택</b>합니다. 어미용이 "판 전체를 지배하는 축"이라면,
+      새끼용은 "특정 경로·구역을 책임지는 유닛"입니다.
+    </div>
+
+    <div class="grid g2" style="margin-bottom:16px">
+      <div class="card" style="border-color:#FF909044">
+        <h4 style="color:#FF9090">⚔ 전투형 (Combat)</h4>
+        <p>배치한 경로를 <b>순찰하며 독립 전투</b>. 속성 공격으로 적을 직접 처치하고, 어미용 스킬의 표식/상태이상을 함께 굴립니다.</p>
+        <p style="color:#5A7A6A">🚫 버프형과 동시 선택 불가</p>
+      </div>
+      <div class="card" style="border-color:#CC88FF44">
+        <h4 style="color:#CC88FF">✨ 버프형 (Support)</h4>
+        <p>공격하지 않는 대신 <b>인근 타워·지역에 속성 필드/버프</b>를 부여. 봉화탑·생명의 탑처럼 아군을 증폭합니다.</p>
+        <p style="color:#5A7A6A">🚫 전투형과 동시 선택 불가</p>
+      </div>
+    </div>
+
+    <h4 style="font-size:13px;color:#C8D4E0;margin:4px 0 8px">속성 × 타입 효과표</h4>
+    <table>
+      <thead><tr><th style="width:12%">속성</th><th style="width:32%">⚔ 전투형</th><th style="width:32%">✨ 버프형</th><th>지역 효과</th></tr></thead>
+      <tbody id="baby-body"></tbody>
+    </table>
+
+    <h4 style="font-size:13px;color:#C8D4E0;margin:16px 0 8px">새끼용 공통 성장 노드</h4>
+    <div class="grid g4" id="baby-nodes"></div>
+
+    <div class="note">
+      👑 <b>군단(Legion) 시스템</b> — 기본 보유 1마리. 연구 <b>용의 군단</b>(마스터리)으로 +2, 새끼용 각성으로
+      귀환 없이 상시 전투. 서로 다른 속성 새끼용을 조합해 <b>경로별 속성 분업</b>이 가능합니다
+      (예: 좌측 경로=얼음 전투형, 우측=불 전투형, 중앙 성 앞=생명 버프형).
+    </div>
+  </div>
+
+  <!-- ══════════════ 5. 연구 확장 ══════════════ -->
+  <div id="sec-research" class="section">
+    <div class="h-band" style="background:#4A9EE812;border:1px solid #4A9EE833">
+      <span class="ic">🔬</span>
+      <div><div class="t" style="color:#4A9EE8">연구 트리 확장안</div>
+      <div class="s">기존 4카테고리에 추가 제안하는 18개 노드</div></div>
+    </div>
+
+    <div class="lead">
+      기존 연구 프로토타입(<b>용 · 타워 · 생산 · 편의</b> 4카테고리)에 용 성장 루프를 뒷받침할
+      <b>추가 노드</b>를 제안합니다. 특히 <b>용 카테고리</b>에 성장·먹이 효율 분기를 신설해, 연구 트리와 용
+      스킬트리가 서로를 강화하도록 연결했습니다. <span class="pill new">NEW</span> = 신규 제안.
+    </div>
+
+    <div id="research-cats"></div>
+
+    <div class="note">
+      🔮 <b>숨김 노드 연계</b> — 기존 <b>용의 계약</b>(어미·새끼 마스터리 동시 달성)에 더해,
+      신규 <b>속성 교배</b>(서로 다른 두 속성 용 각성 시 → 혼합 속성 스킬 해금)를 제안합니다.
+      이는 4X의 eXplore 축을 강화하고, 리플레이 동기를 만듭니다.
+    </div>
+  </div>
+
+  <!-- ══════════════ 6. 빌드 & 시너지 ══════════════ -->
+  <div id="sec-build" class="section">
+    <div class="h-band" style="background:#D4A53A12;border:1px solid #D4A53A33">
+      <span class="ic">🎯</span>
+      <div><div class="t" style="color:#D4A53A">빌드 아키타입 & 시너지</div>
+      <div class="s">속성별 추천 빌드 · 타워 연계 · 포인트 예산</div></div>
+    </div>
+
+    <div class="lead">
+      용 스킬트리 + 타워 + 인구 배분을 하나로 묶은 <b>6개 대표 빌드</b>를 제안합니다. 플레이어가 초반에
+      어떤 바이옴을 점령하느냐(=어떤 특화자원/속성을 확보하느냐)에 따라 자연스럽게 아키타입이 갈립니다.
+    </div>
+
+    <div id="archetypes"></div>
+
+    <h4 style="font-size:13px;color:#C8D4E0;margin:18px 0 8px">포인트 예산 (예시 밸런스)</h4>
+    <table>
+      <thead><tr><th>주기</th><th>낮/밤 수</th><th>누적 연구 포인트</th><th>누적 용 SP</th><th>권장 지출 방향</th></tr></thead>
+      <tbody id="budget-body"></tbody>
+    </table>
+
+    <div class="note">
+      ⚖ <b>밸런스 원칙</b> — 한 주기의 SP로는 <b>한 속성의 특화 분기 하나</b>를 겨우 완성할 정도로 책정.
+      각성(궁극기)은 주기 2 보스 이후에야 도달 가능하게 하여, "끝까지 판 보상"의 무게를 유지합니다.
+      리스펙 비용(슬라임)은 존재하되 저렴하게 두어 실험을 장려합니다.
+    </div>
+
+    <h4 style="font-size:13px;color:#C8D4E0;margin:18px 0 8px">구현 메모 (데이터 파이프라인)</h4>
+    <div class="grid g2">
+      <div class="callout"><div class="ct" style="color:#4A9EE8">ScriptableObject 구조</div><div class="cd">
+        <b>DragonDataSO</b>(속성·기본스탯·진화조건) · <b>SkillNodeSO</b>(cost·requires·effect·tags) ·
+        <b>GrowthCurveSO</b>(레벨별 슬라임/SP). 스킬트리는 SkillNodeSO 리스트로 데이터화 → 기존 연구 트리와 동일 파이프라인 재사용.</div></div>
+      <div class="callout"><div class="ct" style="color:#52C97D">이벤트 버스 연동</div><div class="cd">
+        <b>OnDragonLevelUp</b>, <b>OnSkillLearned</b>, <b>OnDragonEvolved</b> 이벤트 채널(SO) 발행 →
+        타워·지역·UI가 구독. 매니저 간 직접 참조 없이 시너지 갱신. (3계층: 데이터/로직/UI)</div></div>
+    </div>
+  </div>
+
+  <div style="text-align:center;color:#2A3A4A;font-size:9px;margin:24px 0 8px;letter-spacing:2px">
+    TOWER AND DRAGONS · &lt;수성록&gt; · 조강현 · 김지해 · 이하늘 · 나상욱
+  </div>
+</div>
+
+<script>
+/* ════════ MAIN TAB DATA ════════ */
+const TABS = [
+  {id:"overview", label:"🧭 개요"},
+  {id:"growth",   label:"🥚 성장·진화"},
+  {id:"mother",   label:"🔥 어미용 스킬트리"},
+  {id:"baby",     label:"🐣 새끼용"},
+  {id:"research", label:"🔬 연구 확장"},
+  {id:"build",    label:"🎯 빌드 & 시너지"},
+];
+const tabsEl = document.getElementById("tabs");
+TABS.forEach((t,i)=>{
+  const b=document.createElement("button");
+  b.className="tab-btn"+(i===0?" active":"");
+  b.textContent=t.label;
+  b.onclick=()=>{
+    document.querySelectorAll(".section").forEach(s=>s.classList.remove("show"));
+    document.querySelectorAll(".tab-btn").forEach(x=>x.classList.remove("active"));
+    document.getElementById("sec-"+t.id).classList.add("show");
+    b.classList.add("active");
+    window.scrollTo({top:0,behavior:"smooth"});
+  };
+  tabsEl.appendChild(b);
+});
+
+/* ════════ 2. EVOLUTION ════════ */
+const EVO = [
+  {stage:"1단계 · 유생(幼生)", cond:"기본 (부화 직후)", open:"스킬트리 1티어 · 액티브 스킬 1개", note:"공통 성장 분기 개방", c:"#8ADFA0"},
+  {stage:"2단계 · 성장기", cond:"Lv5 + 특화자원 ×15", open:"2티어 · 액티브 스킬 강화 · 지역효과 반경 +1", note:"속성 특화 분기 진입", c:"#7AD0FF"},
+  {stage:"3단계 · 성체(成體)", cond:"Lv10 + 특화자원 ×40 + 주둔지 2곳", open:"3티어 · 시너지 분기 · 지역효과 확장", note:"타워/새끼용 시너지 본격화", c:"#FFB060"},
+  {stage:"4단계 · 각성체(覺醒體)", cond:"Lv15 + 주기2 보스 처치 + 슬라임 ×200", open:"각성(궁극기) 노드 개방", note:"전맵 규모 스킬 · 최종 빌드 완성", c:"#FFD700"},
+];
+document.getElementById("evo-body").innerHTML = EVO.map(e=>`
+  <tr>
+    <td style="color:${e.c};font-weight:800">${e.stage}</td>
+    <td class="mono">${e.cond}</td>
+    <td class="eff">${e.open}</td>
+    <td style="color:#6A7A8A">${e.note}</td>
+  </tr>`).join("");
+
+/* ════════ growth curve ════════ */
+const CURVE = [
+  {lv:"Lv 1–5",  slime:"20 → 60",  sp:"5 SP",  st:"유생", note:"공통 성장 분기 완성 목표"},
+  {lv:"Lv 6–10", slime:"80 → 160", sp:"12 SP", st:"성장기", note:"특화 분기 1개 진행"},
+  {lv:"Lv 11–15",slime:"200 → 340",sp:"22 SP", st:"성체",  note:"시너지 분기 + 특화 완성"},
+  {lv:"Lv 16–20",slime:"400 → 600",sp:"34 SP", st:"각성체", note:"각성 후 잔여 SP는 2속성 투자"},
+];
+document.getElementById("curve-body").innerHTML = CURVE.map(c=>`
+  <tr><td style="font-weight:700">${c.lv}</td><td class="mono" style="color:#8ADFA0">${c.slime}</td>
+  <td class="mono" style="color:#D4A53A">${c.sp}</td><td>${c.st}</td><td style="color:#6A7A8A">${c.note}</td></tr>`).join("");
+
+/* ════════ 3. MOTHER DRAGON SKILL TREES ════════ */
+const ATTRS = [
+  {id:"ice",  name:"얼음", icon:"❄", color:"#A0D4FF", theme:"제어 · 빙결", role:"적을 얼려 세우고 판을 정지시키는 컨트롤 특화"},
+  {id:"fire", name:"불",   icon:"🔥", color:"#FF8C42", theme:"폭발 · 지속피해", role:"화상 전파와 광역 폭발로 밀집 적을 녹이는 딜 특화"},
+  {id:"time", name:"시간", icon:"⏳", color:"#A0C8FF", theme:"템포 · 유틸", role:"감속/가속/되감기로 전투 속도를 지배하는 유틸 특화"},
+  {id:"rock", name:"암석", icon:"🪨", color:"#C8A060", theme:"방어 · 존컨트롤", role:"넉백·방벽·지진으로 경로를 통제하는 방어 특화"},
+  {id:"life", name:"생명", icon:"🌿", color:"#80E890", theme:"회복 · 유지", role:"타워·성을 살리고 언데드를 처단하는 유지 특화"},
+];
+/* type: spec(특화) / syn(시너지) / cap(각성) / hidden(숨김) */
+const SKILLS = {
+  ice: [
+    {tier:"특화 분기 · 절대영도", nodes:[
+      {n:"서리 강화", d:"얼음 브레스의 빙결 지속시간이 +0.5초/Lv, 슬로우 강도 +8%/Lv 증가합니다.", e:"빙결 +0.5초 · 슬로우 +8% / Lv", lv:3, cost:1, type:"spec"},
+      {n:"냉기 확산", d:"빙결된 적 주변 1칸의 적에게도 슬로우가 전이됩니다.", e:"빙결 시 인접 적 슬로우 전이", lv:2, cost:1, type:"spec", req:"서리 강화"},
+      {n:"얼음 파편", d:"빙결·슬로우 상태의 적에게 가하는 모든 피해가 +25%/Lv 증가합니다. (타워 포함)", e:"빙결 적 피해 +25% / Lv", lv:3, cost:1, type:"spec", req:"냉기 확산"},
+      {n:"동결 지대", d:"어미용이 있는 경로에 상시 냉기장을 깔아 적 이동속도를 -20% 감소시킵니다.", e:"경로 상시 -20% 이동속도", lv:2, cost:2, type:"spec", req:"얼음 파편"},
+    ]},
+    {tier:"시너지 분기", nodes:[
+      {n:"빙결 공명 (얼음 타워)", d:"얼음 타워의 빙결 지속 +2초, 범위 +1칸. 같은 경로일 때 최대 효과.", e:"얼음 타워 빙결 +2초 · 범위 +1", lv:1, cost:2, type:"syn"},
+      {n:"한랭 전도 (전기 연계)", d:"빙결된 적이 전기 타워에 맞으면 피해 ×3, 연쇄 대상 +1.", e:"빙결+전기 콤보 피해 ×3", lv:1, cost:2, type:"syn", req:"빙결 공명 (얼음 타워)"},
+    ]},
+    {tier:"각성 · 궁극기", nodes:[
+      {n:"절대영도", d:"[각성] 60초마다 전 화면의 적을 3초간 완전 빙결시키고, 빙결이 풀릴 때 최대 체력 비례 피해를 입힙니다.", e:"전맵 3초 빙결 + 처형 피해", lv:1, cost:3, type:"cap", req:"동결 지대"},
+    ]},
+  ],
+  fire: [
+    {tier:"특화 분기 · 업화(業火)", nodes:[
+      {n:"화상 강화", d:"화상 DOT 피해 +20%/Lv, 지속시간 +1초/Lv.", e:"화상 +20% · +1초 / Lv", lv:3, cost:1, type:"spec"},
+      {n:"연쇄 발화", d:"화상 적이 죽거나 접촉하면 인접 적에게 화상이 전파됩니다.", e:"화상 전파 (번짐)", lv:2, cost:1, type:"spec", req:"화상 강화"},
+      {n:"작열 폭발", d:"화상 스택이 5 이상인 적이 폭발해 주변 2칸에 광역 피해를 줍니다.", e:"5스택 시 광역 폭발", lv:3, cost:1, type:"spec", req:"연쇄 발화"},
+      {n:"용암 지대", d:"어미용 경로에 용암을 깔아 지나가는 모든 적에게 지속 화상을 부여합니다.", e:"경로 지속 화상 필드", lv:2, cost:2, type:"spec", req:"작열 폭발"},
+    ]},
+    {tier:"시너지 분기", nodes:[
+      {n:"업화 공명 (화염 타워)", d:"화염 타워 화상 피해 +100%, 방사 범위 +1칸.", e:"화염 타워 화상 ×2 · 범위 +1", lv:1, cost:2, type:"syn"},
+      {n:"열폭풍 (대포 연계)", d:"대포 착탄 지점에 화염 지대를 남깁니다. 밀집 처리 극대화.", e:"대포 착탄 → 화염 지대", lv:1, cost:2, type:"syn", req:"업화 공명 (화염 타워)"},
+    ]},
+    {tier:"각성 · 궁극기", nodes:[
+      {n:"업화강림", d:"[각성] 45초마다 전 화면에 화염 폭풍을 일으켜 모든 적에게 화상 5스택을 즉시 부여하고 대폭발을 유발합니다.", e:"전맵 화상 5스택 + 대폭발", lv:1, cost:3, type:"cap", req:"용암 지대"},
+    ]},
+  ],
+  time: [
+    {tier:"특화 분기 · 시간 지배", nodes:[
+      {n:"감속장 강화", d:"어미용 주변 감속 필드의 강도 +12%/Lv, 반경 +1칸(2Lv당).", e:"감속 +12% / Lv · 반경↑", lv:3, cost:1, type:"spec"},
+      {n:"가속 오라", d:"아군 타워의 공격속도를 +10%/Lv 증가시킵니다 (감속 필드와 별개로 아군에만 적용).", e:"아군 타워 공속 +10% / Lv", lv:3, cost:1, type:"spec", req:"감속장 강화"},
+      {n:"시간 되감기", d:"60초마다 파괴된 타워 1개 또는 성 체력 일부를 직전 상태로 복원합니다.", e:"60초마다 타워/성 상태 복원", lv:2, cost:2, type:"spec", req:"가속 오라"},
+      {n:"정체 필드", d:"경로 한 지점에 시간 정체 구역을 만들어 통과하는 적을 -50% 감속시킵니다.", e:"지점 -50% 감속 구역", lv:2, cost:2, type:"spec", req:"시간 되감기"},
+    ]},
+    {tier:"시너지 분기", nodes:[
+      {n:"시간 공명 (시간의 탑)", d:"시간의 탑 슬로우 -40%→-70%, 재사용 -50%.", e:"시간의 탑 슬로우 강화", lv:1, cost:2, type:"syn"},
+      {n:"봉화 증폭 (봉화탑 연계)", d:"봉화탑 버프 오라에 가속 효과를 추가로 얹습니다.", e:"봉화탑 오라 + 가속", lv:1, cost:2, type:"syn", req:"시간 공명 (시간의 탑)"},
+    ]},
+    {tier:"각성 · 궁극기", nodes:[
+      {n:"시간 정지", d:"[각성] 50초마다 전 화면의 적을 3초간 완전 정지시킵니다. 정지 중 적은 받는 피해 +30%.", e:"전맵 3초 정지 + 피해 +30%", lv:1, cost:3, type:"cap", req:"정체 필드"},
+    ]},
+  ],
+  rock: [
+    {tier:"특화 분기 · 대지 요새", nodes:[
+      {n:"넉백 강화", d:"암석 계열 공격의 넉백 거리 +1칸/Lv, 피해 +12%/Lv.", e:"넉백 +1칸 · 피해 +12% / Lv", lv:3, cost:1, type:"spec"},
+      {n:"관통 굴림", d:"바위가 경로 상 모든 적을 관통하며 밀어냅니다.", e:"직선 관통 + 넉백", lv:2, cost:1, type:"spec", req:"넉백 강화"},
+      {n:"지진", d:"어미용 착지/스킬 시 주변 3칸 적을 1.5초 스턴시킵니다.", e:"광역 1.5초 스턴", lv:3, cost:1, type:"spec", req:"관통 굴림"},
+      {n:"방벽 소환", d:"낮 동안 임시 석벽을 세워 적 경로를 강제 우회시킵니다 (밤 시작 시 유지).", e:"임시 방벽 → 경로 차단", lv:2, cost:2, type:"spec", req:"지진"},
+    ]},
+    {tier:"시너지 분기", nodes:[
+      {n:"대지 공명 (암석탑)", d:"암석탑 바위 크기 +1, 넉백 +2칸, 인근 암석 병력 방어 +30%.", e:"암석탑 강화 + 방어 오라", lv:1, cost:2, type:"syn"},
+      {n:"협곡 활용 (지형 연계)", d:"넉백으로 밀린 적이 지형/방벽에 부딪히면 추가 피해를 받습니다.", e:"충돌 시 추가 피해", lv:1, cost:2, type:"syn", req:"대지 공명 (암석탑)"},
+    ]},
+    {tier:"각성 · 궁극기", nodes:[
+      {n:"대지분노", d:"[각성] 55초마다 전맵 지진으로 모든 적을 2초 스턴·넉백하고, 아군 성벽 내구도를 일시 +50% 강화합니다.", e:"전맵 스턴 + 성벽 +50%", lv:1, cost:3, type:"cap", req:"방벽 소환"},
+    ]},
+  ],
+  life: [
+    {tier:"특화 분기 · 생명의 축복", nodes:[
+      {n:"치유 강화", d:"어미용 회복 스킬의 회복량 +25%/Lv, 대상 수 +1(2Lv당).", e:"회복량 +25% / Lv", lv:3, cost:1, type:"spec"},
+      {n:"생명 오라", d:"어미용 주변 타워·성이 초당 체력을 지속 회복합니다.", e:"인근 아군 지속 회복 오라", lv:3, cost:1, type:"spec", req:"치유 강화"},
+      {n:"부활의 씨앗", d:"90초마다 파괴된 타워 1개를 자동 재건(체력 50%)합니다.", e:"90초마다 타워 1개 부활", lv:2, cost:2, type:"spec", req:"생명 오라"},
+      {n:"성역화", d:"경로 한 구역을 성역으로 만들어 아군 회복 +100%, 언데드 적에게 지속 피해를 줍니다.", e:"성역: 회복 ×2 · 언데드 피해", lv:2, cost:2, type:"spec", req:"부활의 씨앗"},
+    ]},
+    {tier:"시너지 분기", nodes:[
+      {n:"생명 공명 (생명의 탑)", d:"생명의 탑 회복량 +300%, 언데드 적 피해 ×2.", e:"생명의 탑 회복 ×4", lv:1, cost:2, type:"syn"},
+      {n:"불굴의 성벽 (성 연계)", d:"밤 동안 성이 파괴되어도 3초간 버티며 그 사이 회복하면 붕괴를 취소합니다.", e:"성 붕괴 유예 3초 + 회복", lv:1, cost:2, type:"syn", req:"생명 공명 (생명의 탑)"},
+    ]},
+    {tier:"각성 · 궁극기", nodes:[
+      {n:"생명의 강림", d:"[각성] 60초마다 전 아군 타워·성을 대량 회복하고, 파괴된 타워를 모두 부활시키며 언데드 적을 즉사시킵니다.", e:"전 아군 대회복 + 전체 부활", lv:1, cost:3, type:"cap", req:"성역화"},
+    ]},
+  ],
+};
+const HIDDEN_MOTHER = {
+  n:"속성 교배", d:"[숨김] 서로 다른 두 속성의 어미·새끼용을 각성시키면 해금. 두 속성이 섞인 혼합 스킬(예: 얼음+불 → 증기 폭발, 시간+생명 → 시간 역행 부활)을 사용합니다.",
+  e:"두 속성 혼합 스킬 해금", type:"hidden"
+};
+
+const TYPE_STYLE = {
+  spec:{c:"#FF8C42", lbl:"특화"},
+  syn: {c:"#4A9EE8", lbl:"시너지"},
+  cap: {c:"#D4A53A", lbl:"각성"},
+  hidden:{c:"#BB88FF", lbl:"숨김"},
+};
+function nodeHtml(nd, accent){
+  const ts = TYPE_STYLE[nd.type];
+  const pillClass = nd.type==="cap"?"cap":nd.type==="hidden"?"hid":"";
+  const pill = (nd.type==="cap")?`<span class="pill cap">각성 궁극기</span>`
+            : (nd.type==="hidden")?`<span class="pill hid">숨김</span>`:"";
+  return `<div class="node" style="border-left-color:${ts.c}">
+    <div class="nh">
+      <div style="flex:1">
+        <span class="nn" style="color:${ts.c}">${nd.n}</span> ${pill}
+        ${nd.req?`<div style="font-size:9px;color:#3A5060;margin-top:3px">선행: ${nd.req}</div>`:""}
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <span class="cost">${nd.cost} SP × ${nd.lv||1}Lv</span>
+      </div>
+    </div>
+    <div class="nd">${nd.d}</div>
+    <span class="ne" style="background:${accent}14;border:1px solid ${accent}44;color:${accent}">효과: ${nd.e}</span>
+  </div>`;
+}
+
+const atabs = document.getElementById("attr-tabs");
+const apanels = document.getElementById("attr-panels");
+ATTRS.forEach((a,i)=>{
+  const b=document.createElement("button");
+  b.className="sub-btn"+(i===0?" active":"");
+  b.style.borderColor = i===0?a.color:"#1A2535";
+  b.style.color = i===0?a.color:"#4A6070";
+  b.innerHTML = `${a.icon} ${a.name}`;
+  b.onclick=()=>{
+    document.querySelectorAll(".attr-panel").forEach(p=>p.classList.remove("show"));
+    document.querySelectorAll("#attr-tabs .sub-btn").forEach(x=>{x.classList.remove("active");x.style.borderColor="#1A2535";x.style.color="#4A6070";});
+    document.getElementById("ap-"+a.id).classList.add("show");
+    b.classList.add("active"); b.style.borderColor=a.color; b.style.color=a.color;
+  };
+  atabs.appendChild(b);
+
+  const panel=document.createElement("div");
+  panel.className="attr-panel"+(i===0?" show":"");
+  panel.id="ap-"+a.id;
+  let inner = `<div class="card" style="border-color:${a.color}44;margin-bottom:14px">
+    <h4 style="color:${a.color};font-size:14px">${a.icon} ${a.name}용 — ${a.theme}</h4>
+    <p style="font-size:11px;color:#9AAAB8">${a.role}</p>
+  </div>`;
+  SKILLS[a.id].forEach(grp=>{
+    inner += `<div class="tier-lbl">▸ ${grp.tier}</div>`;
+    inner += grp.nodes.map(nd=>nodeHtml(nd,a.color)).join("");
+  });
+  inner += `<div class="tier-lbl">▸ 숨김 · 공통</div>` + nodeHtml(HIDDEN_MOTHER, "#BB88FF");
+  panel.innerHTML = inner;
+  apanels.appendChild(panel);
+});
+
+/* ════════ 4. BABY DRAGONS ════════ */
+const BABY = [
+  {a:"❄ 얼음", c:"#A0D4FF", combat:"공격 시 30% 확률 빙결(0.5초). 순찰 경로의 적을 세워 타워 처리 시간 확보.", buff:"인근 타워에 슬로우 부여 오라. 구역 내 적 이동속도 -15%.", field:"발밑에 미끄러운 얼음길 — 적 통과 시간 증가"},
+  {a:"🔥 불", c:"#FF8C42", combat:"공격에 화상 DOT. 밀집 웨이브에 강함. 경로를 태우며 순찰.", buff:"인근 타워 공격에 화상 추가. 봉화탑처럼 화력 증폭.", field:"작은 불길 지대 — 지나는 적 지속 피해"},
+  {a:"⏳ 시간", c:"#A0C8FF", combat:"공격 적중 시 대상 공/이속 감소. 강한 단일 적 견제.", buff:"인근 타워 공속 +15%, 스킬 쿨다운 감소.", field:"감속 필드 — 구역 내 적 전체 둔화"},
+  {a:"🪨 암석", c:"#C8A060", combat:"공격에 넉백. 경로 입구에서 적을 밀어 진입 지연.", buff:"인근 타워 방어/사거리 강화, 병력 방어 오라.", field:"돌무더기 지형 — 넉백된 적 추가 피해"},
+  {a:"🌿 생명", c:"#80E890", combat:"공격 시 인근 아군 소량 회복(딜+힐 겸용). 언데드 특효.", buff:"인근 타워·성 지속 회복 오라. 밤 유지력의 핵심.", field:"치유의 풀밭 — 구역 내 아군 회복"},
+];
+document.getElementById("baby-body").innerHTML = BABY.map(b=>`
+  <tr>
+    <td style="color:${b.c};font-weight:800">${b.a}</td>
+    <td style="color:#FFB0B0">${b.combat}</td>
+    <td style="color:#CCA0FF">${b.buff}</td>
+    <td class="eff">${b.field}</td>
+  </tr>`).join("");
+
+const BABY_NODES = [
+  {n:"성장", d:"모든 능력치 +10%/Lv (3Lv)", c:"#52C97D"},
+  {n:"타입 특화", d:"전투형 +50% 공격력 / 버프형 +30% 오라 (배타)", c:"#FF7777"},
+  {n:"군단 확장", d:"보유 가능 수 +1 (연구 연계)", c:"#4A9EE8"},
+  {n:"각성", d:"귀환 없이 상시 전투 · 어미용 각성과 합동 스킬", c:"#D4A53A"},
+];
+document.getElementById("baby-nodes").innerHTML = BABY_NODES.map(b=>`
+  <div class="card" style="border-color:${b.c}44;margin:0">
+    <h4 style="color:${b.c};font-size:12px">${b.n}</h4>
+    <p style="font-size:10px;margin:0">${b.d}</p>
+  </div>`).join("");
+
+/* ════════ 5. RESEARCH EXPANSION ════════ */
+const RESEARCH = [
+  {cat:"🐉 용", color:"#FF8C42", nodes:[
+    {n:"먹이 효율", d:"슬라임 급여 시 획득 경험치 +15%/Lv. 용 성장 가속.", isnew:true, branch:"용 성장 [신설]"},
+    {n:"SP 촉진", d:"레벨업 시 획득 SP +1 (구간별). 스킬트리 투자 여유 확보.", isnew:true, branch:"용 성장 [신설]"},
+    {n:"진화 촉매", d:"진화에 필요한 특화자원 -20%. 빠른 각성 루트.", isnew:true, branch:"용 성장 [신설]"},
+    {n:"용 둥지 감응", d:"용 둥지 지역 점령 시 새끼용 알 획득 확률 +. 추가 새끼용 확보.", isnew:true, branch:"용 성장 [신설]"},
+    {n:"속성 교배 (숨김)", d:"[숨김] 두 속성 각성 달성 시 혼합 스킬 해금.", isnew:true, branch:"속성 시너지", hidden:true},
+  ]},
+  {cat:"🏰 타워", color:"#4A9EE8", nodes:[
+    {n:"속성 타워 연구 할인", d:"속성 타워(얼음/불/전기 등) 연구·건설 비용 -15%.", isnew:true, branch:"공격 타워"},
+    {n:"타워 속성 각인", d:"기본 타워 1종에 용 속성을 부여해 속성 시너지 대상으로 편입.", isnew:true, branch:"지원 타워", hidden:false},
+    {n:"제단 효율", d:"드래곤 제단의 슬라임 소모 -30%, 오라 반경 +1칸.", isnew:true, branch:"지원 타워"},
+  ]},
+  {cat:"🌾 생산", color:"#52C97D", nodes:[
+    {n:"슬라임 목장", d:"슬라임 채집량 +25%/Lv. 용 먹이 안정 공급.", isnew:true, branch:"기초 자원"},
+    {n:"특화자원 정제", d:"특화자원 채집 +30%. 진화·각성 재료 확보.", isnew:true, branch:"확장 생산"},
+    {n:"먹이 자동화 (숨김)", d:"[숨김] 슬라임 목장 만렙 시, 매 주기 시작 시 슬라임 자동 지급.", isnew:true, branch:"확장 생산", hidden:true},
+  ]},
+  {cat:"⚙️ 편의", color:"#B06EF7", nodes:[
+    {n:"용 지휘 UI", d:"어미용 스킬 예약 시전 · 새끼용 경로 지정 UI 해금.", isnew:true, branch:"건설·운영"},
+    {n:"용 시야", d:"어미용·새끼용 주변 시야 상시 확보. 정찰 대체.", isnew:true, branch:"탐색·시야"},
+    {n:"스킬 프리뷰", d:"각성 스킬 쿨다운/발동 타이밍을 UI에 표시.", isnew:true, branch:"탐색·시야"},
+    {n:"용 귀환 가속", d:"새끼용 귀환·재출격 대기시간 -40%.", isnew:true, branch:"성 관리"},
+    {n:"리스펙 할인", d:"용 스킬트리 초기화 슬라임 비용 -50%. 빌드 실험 장려.", isnew:true, branch:"성 관리"},
+    {n:"제단 원격 (숨김)", d:"[숨김] 드래곤 제단을 인구 없이 원격 운영.", isnew:true, branch:"건설·운영", hidden:true},
+  ]},
+];
+const rc = document.getElementById("research-cats");
+rc.innerHTML = RESEARCH.map(cat=>`
+  <div class="h-band" style="background:${cat.color}10;border:1px solid ${cat.color}30;margin-top:10px">
+    <span class="ic">${cat.cat.split(" ")[0]}</span>
+    <div><div class="t" style="color:${cat.color};font-size:14px">${cat.cat.split(" ")[1]} 카테고리</div>
+    <div class="s">추가 제안 노드 ${cat.nodes.length}종</div></div>
+  </div>
+  <table>
+    <thead><tr><th style="width:20%">노드</th><th style="width:16%">분기</th><th>효과</th><th style="width:8%">구분</th></tr></thead>
+    <tbody>${cat.nodes.map(n=>`
+      <tr>
+        <td style="font-weight:700;color:${n.hidden?'#CC88FF':cat.color}">${n.n}</td>
+        <td style="color:#6A7A8A;font-size:10px">${n.branch}</td>
+        <td class="eff">${n.d}</td>
+        <td>${n.hidden?'<span class="pill hid">숨김</span>':'<span class="pill new">NEW</span>'}</td>
+      </tr>`).join("")}</tbody>
+  </table>`).join("");
+
+/* ════════ 6. ARCHETYPES ════════ */
+const ARCH = [
+  {name:"🧊 빙결 감옥", color:"#A0D4FF", dragon:"얼음 어미용 (절대영도)", tower:"얼음 타워 + 전기 타워 + 그물탑", baby:"얼음 전투형",
+   pop:"방어 편중 (타워 다수)", style:"모든 적을 얼려 세우고 전기 연쇄로 처형. 웨이브를 통째로 정지시키는 하드 CC 빌드. 보스전에 특히 강력."},
+  {name:"🌋 업화 화력", color:"#FF8C42", dragon:"불 어미용 (업화강림)", tower:"화염 타워 + 대포 + 기관총탑", baby:"불 전투형",
+   pop:"생산·방어 균형", style:"화상 전파 + 광역 폭발로 밀집 웨이브를 순삭. 다수 약적 러시에 최적. 단일 보스엔 저격탑 보조 필요."},
+  {name:"⏱ 시간 지연 요새", color:"#A0C8FF", dragon:"시간 어미용 (시간 정지)", tower:"시간의 탑 + 봉화탑 + 저격탑", baby:"시간 버프형",
+   pop:"방어·편의 편중", style:"감속으로 적을 묶고 가속 버프로 타워 DPS를 극대화. 안정적이고 운영 실수를 용서하는 방어형 빌드."},
+  {name:"🏔 철벽 넉백", color:"#C8A060", dragon:"암석 어미용 (대지분노)", tower:"암석탑 + 대포 + 바리케이드", baby:"암석 전투형",
+   pop:"확장·방어 (원정 중시)", style:"넉백·방벽·지진으로 경로를 통제하고 성벽을 강화. 공격로가 늘어나는 후반 주기에 강한 지형 활용 빌드."},
+  {name:"💚 불멸 수비", color:"#80E890", dragon:"생명 어미용 (생명의 강림)", tower:"생명의 탑 + 봉화탑 + 화살탑", baby:"생명 버프형",
+   pop:"생산 편중 (장기전)", style:"타워·성을 계속 살려내며 소모전을 버티는 지구력 빌드. 언데드 웨이브·장기 방어에 최고. 4포탈 봉인 승리 루트와 궁합."},
+  {name:"🌗 이중 속성 (숨김)", color:"#CC88FF", dragon:"두 속성 각성 (속성 교배)", tower:"두 속성 타워 혼합", baby:"서로 다른 속성 2종",
+   pop:"유동적", style:"[숨김 아키타입] 얼음+불(증기 폭발), 시간+생명(시간 역행 부활) 등 혼합 스킬로 상황 대응. 리플레이·마스터리 지향 고급 빌드."},
+];
+document.getElementById("archetypes").innerHTML =
+`<div class="grid g2">` + ARCH.map(a=>`
+  <div class="card" style="border-color:${a.color}55">
+    <h4 style="color:${a.color};font-size:14px;margin-bottom:9px">${a.name}</h4>
+    <table style="margin:0">
+      <tr><td style="width:26%;color:#5A7A8A;border:none;padding:3px 4px">핵심 용</td><td style="border:none;padding:3px 4px;color:#C8D4E0">${a.dragon}</td></tr>
+      <tr><td style="color:#5A7A8A;border:none;padding:3px 4px">연계 타워</td><td style="border:none;padding:3px 4px;color:#C8D4E0">${a.tower}</td></tr>
+      <tr><td style="color:#5A7A8A;border:none;padding:3px 4px">새끼용</td><td style="border:none;padding:3px 4px;color:#C8D4E0">${a.baby}</td></tr>
+      <tr><td style="color:#5A7A8A;border:none;padding:3px 4px">인구 배분</td><td style="border:none;padding:3px 4px;color:#C8D4E0">${a.pop}</td></tr>
+    </table>
+    <div style="margin-top:9px;font-size:10.5px;color:#9AAAB8;line-height:1.7;border-top:1px solid #1A2535;padding-top:8px">${a.style}</div>
+  </div>`).join("") + `</div>`;
+
+/* budget */
+const BUDGET = [
+  {cyc:"주기 1", dn:"낮/밤 3회", rp:"12 RP", sp:"18 SP", dir:"공통 성장 완성 + 특화 분기 1개 진입 · 기초 타워 연구"},
+  {cyc:"주기 2", dn:"낮/밤 3회", rp:"28 RP", sp:"40 SP", dir:"특화 분기 완성 · 각성 도달(보스 처치 후) · 시너지 타워 해금"},
+  {cyc:"주기 3", dn:"낮/밤 4회", rp:"48 RP", sp:"66 SP", dir:"시너지 분기 + 새끼용 군단 · 2속성 투자 시작"},
+  {cyc:"주기 4", dn:"낮/밤 4회", rp:"72 RP", sp:"98 SP", dir:"이중 속성/숨김 노드 · 최종 보스 대비 풀 빌드 완성"},
+];
+document.getElementById("budget-body").innerHTML = BUDGET.map(b=>`
+  <tr><td style="font-weight:800;color:#D4A53A">${b.cyc}</td><td>${b.dn}</td>
+  <td class="mono" style="color:#4A9EE8">${b.rp}</td><td class="mono" style="color:#FF8C42">${b.sp}</td>
+  <td style="color:#9AAAB8">${b.dir}</td></tr>`).join("");
+</script>
+</body>
+</html>
