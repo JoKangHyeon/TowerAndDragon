@@ -1,51 +1,45 @@
 using UnityEngine;
+using DG.Tweening;
 
 /// <summary>
 /// 체력바에서 떨어져 나온 연출용 조각. 제자리에서 위로 조금 떠오르며(ease-out) 서서히 사라진 뒤 스스로 제거된다.
-/// DOTween 등 외부 의존성 없이 Update로 직접 움직여, 어떤 환경에서도 컴파일·동작한다.
+/// 상승·페이드는 DOTween 시퀀스로 처리한다.
 /// </summary>
 [RequireComponent(typeof(RectTransform))]
 [RequireComponent(typeof(CanvasGroup))]
 public class HealthChunkEffect : MonoBehaviour
 {
-    private RectTransform _rect;
-    private CanvasGroup _group;
-    private float _lifetime;
-    private float _riseDistance;
-    private float _startY;
-    private float _elapsed;
+    private Sequence _sequence;
 
     /// <summary>생성 직후 스포너가 호출한다. 이 시점부터 상승·페이드를 시작한다.</summary>
     public void Play(float lifetime, float riseDistance)
     {
-        _rect = GetComponent<RectTransform>();
-        _group = GetComponent<CanvasGroup>();
-        _lifetime = lifetime;
-        _riseDistance = riseDistance;
-        _startY = _rect.anchoredPosition.y;
-    }
+        RectTransform rect = GetComponent<RectTransform>();
+        CanvasGroup group = GetComponent<CanvasGroup>();
 
-    private void Update()
-    {
-        if (_group == null)
+        group.alpha = 1f;
+
+        // 수명이 없으면 연출 없이 즉시 제거.
+        if (lifetime <= 0f)
         {
+            Destroy(gameObject);
             return;
         }
 
-        _elapsed += Time.deltaTime;
-        float t = _lifetime > 0 ? Mathf.Clamp01(_elapsed / _lifetime) : 1f;
+        float targetY = rect.anchoredPosition.y + riseDistance;
 
-        // ease-out: 처음엔 빠르게 떠오르다 점점 느려진다.
-        float eased = 1 - (1 - t) * (1 - t);
-        Vector2 pos = _rect.anchoredPosition;
-        pos.y = _startY + _riseDistance * eased;
-        _rect.anchoredPosition = pos;
+        _sequence = DOTween.Sequence();
+        // 위로 상승: 처음엔 빠르게, 점점 느리게(ease-out).
+        _sequence.Join(rect.DOAnchorPosY(targetY, lifetime).SetEase(Ease.OutQuad));
+        // 페이드아웃: 처음엔 천천히, 끝으로 갈수록 빠르게 사라진다(ease-in).
+        _sequence.Join(group.DOFade(0f, lifetime).SetEase(Ease.InQuad));
+        // 오브젝트가 파괴되면 트윈도 자동 정리되도록 링크한다.
+        _sequence.SetLink(gameObject);
+        _sequence.OnComplete(() => Destroy(gameObject));
+    }
 
-        _group.alpha = 1 - t;
-
-        if (t >= 1f)
-        {
-            Destroy(gameObject);
-        }
+    private void OnDestroy()
+    {
+        _sequence?.Kill();
     }
 }
