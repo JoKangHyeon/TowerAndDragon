@@ -12,6 +12,6 @@ public class SpawnGroupData : MonoBehaviour
     public MonsterData MonsterData => _monsterData;
     public int SpawnCount => _spawnCount;
     public float SpawnInterval => _spawnInterval;
-    public float DelayAfterGroup => _delayAfterGroup;
+    public float DelayAfterGroup => _delayAfterGroup; 
 
 }
