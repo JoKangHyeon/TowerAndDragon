@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using DG.Tweening;
 
 /// <summary>
 /// 메인 성 체력바 View.
@@ -17,6 +18,9 @@ public class UI_CastleHealth : MonoBehaviour
     private const float DEFAULT_RISE_DISTANCE = 30f;
     private const float DEFAULT_TRAIL_LERP_SPEED = 6f;
     private const float TRAIL_SNAP_THRESHOLD = 0.001f;
+    private const float DEFAULT_SHAKE_DURATION = 0.2f;
+    private const float DEFAULT_SHAKE_STRENGTH = 8f;
+    private const int DEFAULT_SHAKE_VIBRATO = 10;
 
     [SerializeField] private Castle _castle;
     [Tooltip("현재 체력을 즉시 반영하는 앞쪽 바.")]
@@ -37,12 +41,34 @@ public class UI_CastleHealth : MonoBehaviour
     [Tooltip("조각이 사라질 때까지 위로 떠오르는 거리(px).")]
     [SerializeField] private float _chunkRiseDistance = DEFAULT_RISE_DISTANCE;
 
+    [Header("피격 흔들림 연출")]
+    [Tooltip("체력이 깎일 때 흔들 대상. 비워두면 이 오브젝트 자신을 흔든다. 보통 체력바 루트를 지정한다.")]
+    [SerializeField] private RectTransform _shakeTarget;
+    [Tooltip("흔들림 지속 시간(초).")]
+    [SerializeField] private float _shakeDuration = DEFAULT_SHAKE_DURATION;
+    [Tooltip("흔들림 세기(px). 클수록 크게 흔들린다.")]
+    [SerializeField] private float _shakeStrength = DEFAULT_SHAKE_STRENGTH;
+    [Tooltip("흔들림 진동 횟수. 클수록 촘촘하게 떨린다.")]
+    [SerializeField] private int _shakeVibrato = DEFAULT_SHAKE_VIBRATO;
+
     private float _lastRatio = 1f;
     private float _targetRatio = 1f;
+
+    private Vector2 _shakeRestPosition;
+    private Tween _shakeTween;
 
     private void OnEnable()
     {
         _castle.HealthChanged += Render;
+        // 흔들 대상이 지정되지 않으면 이 오브젝트 자신을 흔든다.
+        if (_shakeTarget == null)
+        {
+            _shakeTarget = transform as RectTransform;
+        }
+        if (_shakeTarget != null)
+        {
+            _shakeRestPosition = _shakeTarget.anchoredPosition;
+        }
         // 창을 다시 켰을 때는 두 바 모두 애니메이션 없이 현재값으로 즉시 맞춘다.
         _lastRatio = SafeRatio(_castle.CurrentHealth, _castle.MaxHealth);
         _targetRatio = _lastRatio;
@@ -57,6 +83,13 @@ public class UI_CastleHealth : MonoBehaviour
     private void OnDisable()
     {
         _castle.HealthChanged -= Render;
+        // 진행 중인 흔들림을 정리하고 원위치로 되돌린다.
+        _shakeTween?.Kill();
+        _shakeTween = null;
+        if (_shakeTarget != null)
+        {
+            _shakeTarget.anchoredPosition = _shakeRestPosition;
+        }
     }
 
     private void Update()
@@ -86,10 +119,17 @@ public class UI_CastleHealth : MonoBehaviour
         if (ratio < _lastRatio)
         {
             SpawnChunk(ratio, _lastRatio);
+            Shake();
+        }
+        else if (_trailFill != null)
+        {
+            // 증가·초기화(회복, 첫 Initialize 등)에는 트레일을 즉시 맞춘다.
+            // 안 그러면 트레일이 옛 값에서 위로 Lerp되며 그 사이 첫 감소를 삼켜버린다.
+            _trailFill.fillAmount = ratio;
         }
 
         _bar.value = ratio;      // 본 바: 즉시
-        _targetRatio = ratio;    // 트레일: Update에서 Lerp로 수렴
+        _targetRatio = ratio;    // 트레일: 감소 시에만 Update에서 Lerp로 수렴
         _lastRatio = ratio;
         UpdateAmountText(current, max);
     }
@@ -106,6 +146,22 @@ public class UI_CastleHealth : MonoBehaviour
     private static float SafeRatio(float current, float max)
     {
         return max > 0 ? current / max : 0;
+    }
+
+    /// <summary>피격 시 흔들 대상을 원위치 기준으로 살짝 흔든다. 연속 피격 시 위치가 밀리지 않도록 매번 원위치로 리셋 후 시작한다.</summary>
+    private void Shake()
+    {
+        if (_shakeTarget == null)
+        {
+            return;
+        }
+
+        _shakeTween?.Kill();
+        _shakeTarget.anchoredPosition = _shakeRestPosition;
+        _shakeTween = _shakeTarget
+            .DOShakeAnchorPos(_shakeDuration, _shakeStrength, _shakeVibrato)
+            .SetLink(_shakeTarget.gameObject)
+            .OnComplete(() => _shakeTarget.anchoredPosition = _shakeRestPosition);
     }
 
     /// <summary>fromRatio~toRatio 구간(=줄어든 체력)을 조각으로 복제해 떠오르게 한다. toRatio가 더 큰 값.</summary>
