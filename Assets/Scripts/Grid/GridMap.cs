@@ -68,6 +68,8 @@ public class GridMap : MonoBehaviour
 
             _cells[pos] = new GridCell(pos, terrain, canConstruct);
         }
+
+        Debug.Log($"[GridMap] 그리드맵 생성 완료 - 셀의 개수: {_cells.Count}");
     }
 
     private void GenerateChunks()
@@ -412,7 +414,7 @@ public class GridMap : MonoBehaviour
     private const int CHUNK_GIZMO_HUE_STEPS = 360;
     private const float CHUNK_GIZMO_SATURATION = 1f;
     private const float CHUNK_GIZMO_VALUE = 1f;
-    private const float CHUNK_GIZMO_ALPHA = 0.85f;
+    private const float CHUNK_GIZMO_ALPHA = 0.2f;
     private const float CHUNK_GIZMO_STATE_RADIUS = 0.15f;
 
     private static Color GetChunkGizmoColor(Vector2Int chunkCoord)
