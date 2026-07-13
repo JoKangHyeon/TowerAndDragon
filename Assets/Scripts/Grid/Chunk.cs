@@ -15,7 +15,7 @@ public class Chunk
     {
         ChunkCoord = chunkCoord;
         _cells = cells;
-        CurrentState = State.Unknown;    
+        CurrentState = State.Hidden;
     }
 
     public void SetState(State newState)
