@@ -501,6 +501,83 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4b24750c648ceb4478c00b663dfb77d1, type: 3}
+--- !u!1001 &1115116234
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 265247682064661445, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_Name
+      value: Monster_Ground_Attack
+      objectReference: {fileID: 0}
+    - target: {fileID: 4349105385719986298, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 8.76579
+      objectReference: {fileID: 0}
+    - target: {fileID: 4349105385719986298, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -4.25985
+      objectReference: {fileID: 0}
+    - target: {fileID: 4349105385719986298, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4349105385719986298, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4349105385719986298, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4349105385719986298, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4349105385719986298, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4349105385719986298, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4349105385719986298, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4349105385719986298, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 265247682064661445, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1115116236}
+  m_SourcePrefab: {fileID: 100100000, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+--- !u!1 &1115116235 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 265247682064661445, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+  m_PrefabInstance: {fileID: 1115116234}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1115116236
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1115116235}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7c35a73d362f554d94265c2ccbdcea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterAttack
 --- !u!1 &1545694922
 GameObject:
   m_ObjectHideFlags: 0
@@ -1916,3 +1993,4 @@ SceneRoots:
   - {fileID: 89758534}
   - {fileID: 921679672}
   - {fileID: 1811002934}
+  - {fileID: 1115116234}
