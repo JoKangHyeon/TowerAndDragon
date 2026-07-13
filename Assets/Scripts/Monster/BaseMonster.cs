@@ -46,7 +46,7 @@ public class BaseMonster : MonoBehaviour, IDamageable
             _shield.Initialize(_data.ShieldAmount);
         }
 
-        if (_attack != null && _data.IsAttacker)
+        if (_attack != null && _data.Attack != null)
         {
             _attack.Initialize(_data.Attack);
         }
