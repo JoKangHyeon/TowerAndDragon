@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 
-public class WaveData : MonoBehaviour 
+[CreateAssetMenu(menuName = "TowerAndDragon/Wave Data", fileName = "WaveData")]
+public class WaveData : ScriptableObject 
 {
-    [SerializeField] private SpawnGroup _spawnGroup;
+    [SerializeField] private SpawnGroup[] _spawnGroups;
 
-    public SpawnGroup SpawnGroup => _spawnGroup;
+    public IReadOnlyList<SpawnGroup> SpawnGroups => _spawnGroups;
 }
