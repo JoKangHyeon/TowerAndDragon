@@ -5,7 +5,7 @@ using UnityEngine;
 
 [RequireComponent(typeof(Health))]
 [RequireComponent(typeof(TowerAttack))]
-public class Tower : Building, IDamageable
+public class Tower : Building, IMonsterTarget
 {
 
     [SerializeField] private TowerData _towerData;
@@ -18,6 +18,9 @@ public class Tower : Building, IDamageable
     public bool IsDead => _health == null || _health.IsDead;
 
     public TowerAttack Attack => _attack;
+
+    public MonsterTargetType TargetType => MonsterTargetType.Tower;
+    public Transform TargetTransform => transform;
 
     private void Awake()
     {

@@ -1,22 +1,34 @@
 using UnityEngine;
 
 /// <summary>
-/// 선택 컴포넌트. 타워 공격형(원거리) 적에만 부착한다.
-/// 공격 정의(AttackSO)를 주입받아 실행하는 "실행자" 역할이다.
-/// 대상 선정(가장 가까운 타워 등)과 발사 루프는 팀 확정 후 구현한다. [미정]
-///
-/// 쿨다운 등 런타임 상태는 공유 애셋인 AttackSO가 아니라 이 컴포넌트가 보관한다.
+/// 몬스터의 공격 실행 컴포넌트.
+/// 이동 중 허용된 대상을 탐색해 공격하고,
+/// 메인 성 도착 후에는 성을 최종 대상으로 공격한다.
+/// 쿨다운과 현재 대상 같은 런타임 상태를 보관한다.
 /// </summary>
 public class MonsterAttack : MonoBehaviour
 {
     private AttackSO _attack;
+    private MonsterTargetType _enRouteTargetTypes;
+    private MonsterMovement _movement;
+
+    private IMonsterTarget _currentTarget;
+    private float _nextAttackTime;
 
     public float Range => _attack.Range;
     public float Interval => _attack.Interval;
 
-    public void Initialize(AttackSO attack)
+    public void Initialize(
+        AttackSO attack,
+        MonsterTargetType enRouteTargetTypes,
+        MonsterMovement movement)
     {
         _attack = attack;
+        _enRouteTargetTypes = enRouteTargetTypes;
+        _movement = movement;
+
+        _currentTarget = null;
+        _nextAttackTime = Time.time;
     }
 
     /// <summary>

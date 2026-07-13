@@ -21,7 +21,7 @@ public class MonsterData : ScriptableObject
     [SerializeField] private bool _hasShield;
     [SerializeField] private float _shieldAmount;
 
-    [Header("Attack (optional)")]
+    [Header("Attack")]
     [SerializeField] private AttackSO _attack;
     [SerializeField] private MonsterTargetType _enRouteTargetTypes;
 

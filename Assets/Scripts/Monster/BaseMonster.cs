@@ -6,7 +6,7 @@ using UnityEngine.Splines;
 /// 프리팹에 붙은 컴포넌트(Health/Shield/Movement/Attack)를 조립하고
 /// 생명주기(주입 → 이동 → 데미지 라우팅 → 사망 → 삭제)만 관리한다.
 ///
-/// 적 종류의 조합(지상/공중 × 공격/비공격 × 쉴드 유무)은 상속이 아니라
+/// 적 종류의 조합(지상/공중 × 공격 × 쉴드 유무)은 상속이 아니라
 /// 프리팹에 어떤 컴포넌트를 붙이고 어떤 MonsterData를 주입하느냐로 표현한다.
 /// </summary>
 [RequireComponent(typeof(Health))]
@@ -48,7 +48,10 @@ public class BaseMonster : MonoBehaviour, IDamageable
 
         if (_attack != null && _data.Attack != null)
         {
-            _attack.Initialize(_data.Attack);
+            _attack.Initialize(
+                _data.Attack,
+                _data.EnRouteTargetTypes,
+                _movement);
         }
 
         ConfigureMovement(path, mainCastle);
