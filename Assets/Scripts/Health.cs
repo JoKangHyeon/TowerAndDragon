@@ -32,8 +32,6 @@ public class Health : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[BaseMonster] {name}이 {amount}의 피해를 입었습니다.",this);
-
         _currentHealth = Mathf.Max(0, _currentHealth - amount);
         HealthChanged?.Invoke(_currentHealth, _maxHealth);
 

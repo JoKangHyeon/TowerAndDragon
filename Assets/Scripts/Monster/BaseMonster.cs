@@ -64,6 +64,10 @@ public class BaseMonster : MonoBehaviour, IDamageable
             return;
         }
 
+        Debug.Log(
+            $"[BaseMonster] {name}이 공격받았습니다. 피해량: {damage.Amount}. 체력 : {_health.CurrentHealth}",
+            this);
+
         float remaining = damage.Amount;
 
         if (_shield != null && !_shield.IsBroken)
