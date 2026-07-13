@@ -13,11 +13,6 @@ using DG.Tweening;
 public class UI_CastleHealth : MonoBehaviour
 {
     private const string CURRENT_AMOUNT_FORMAT = "{0}/{1}";
-    private const float DEFAULT_TRAIL_DURATION = 0.4f;
-    private const float DEFAULT_SHAKE_DURATION = 0.15f;
-    private const float DEFAULT_SHAKE_STRENGTH = 8f;
-    private const int DEFAULT_SHAKE_VIBRATO = 20;
-    private const float SHAKE_RANDOMNESS = 0f;
 
     [SerializeField] private Castle _castle;
     [Tooltip("현재 체력을 즉시 반영하는 앞쪽 바.")]
@@ -25,7 +20,7 @@ public class UI_CastleHealth : MonoBehaviour
     [Tooltip("본 Fill 뒤에서 천천히 따라 내려가는 잔상 Fill (Filled 이미지).")]
     [SerializeField] private Image _trailFill;
     [Tooltip("트레일이 새 체력까지 따라 내려가는 시간(초).")]
-    [SerializeField] private float _trailDuration = DEFAULT_TRAIL_DURATION;
+    [SerializeField] private float _trailDuration = 0.4f;
     [Tooltip("현재 체력/최대 체력을 표시하는 텍스트.")]
     [SerializeField] private TMP_Text _amountText;
 
@@ -33,11 +28,13 @@ public class UI_CastleHealth : MonoBehaviour
     [Tooltip("체력이 깎일 때 흔들 대상. 비워두면 이 오브젝트 자신을 흔든다. 보통 fill(FillArea)을 지정한다.")]
     [SerializeField] private RectTransform _shakeTarget;
     [Tooltip("흔들림 지속 시간(초).")]
-    [SerializeField] private float _shakeDuration = DEFAULT_SHAKE_DURATION;
+    [SerializeField] private float _shakeDuration = 0.15f;
     [Tooltip("위아래 흔들림 세기(px). 클수록 크게 흔들린다.")]
-    [SerializeField] private float _shakeStrength = DEFAULT_SHAKE_STRENGTH;
+    [SerializeField] private float _shakeStrength = 8f;
     [Tooltip("흔들림 진동 횟수. 클수록 촘촘하게 떨린다.")]
-    [SerializeField] private int _shakeVibrato = DEFAULT_SHAKE_VIBRATO;
+    [SerializeField] private int _shakeVibrato = 20;
+    [Tooltip("흔들림 방향 랜덤성. 0이면 순수 위아래, 클수록 좌우로도 퍼진다.")]
+    [SerializeField] private float _shakeRandomness = 0f;
 
     private float _lastRatio = 1f;
 
@@ -136,7 +133,7 @@ public class UI_CastleHealth : MonoBehaviour
         _shakeTarget.anchoredPosition = _shakeRestPosition;
         // 위아래(Y축)로만 흔든다. x 세기 0 + randomness 0 → 순수 수직 흔들림.
         _shakeTween = _shakeTarget
-            .DOShakeAnchorPos(_shakeDuration, new Vector2(0f, _shakeStrength), _shakeVibrato, SHAKE_RANDOMNESS)
+            .DOShakeAnchorPos(_shakeDuration, new Vector2(0f, _shakeStrength), _shakeVibrato, _shakeRandomness)
             .SetLink(_shakeTarget.gameObject)
             .OnComplete(() => _shakeTarget.anchoredPosition = _shakeRestPosition);
     }
