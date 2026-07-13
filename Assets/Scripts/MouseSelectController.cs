@@ -41,6 +41,7 @@ public class MouseSelectController : MonoBehaviour
     public Vector3Int CurrentAnchor { get; private set; }
     public bool CanConstruct { get; private set; }
     public Color SelectionHighlightColor => _selectionHighlightColor;
+    public float YOffset => _yOffset;
 
 
     private void Awake()

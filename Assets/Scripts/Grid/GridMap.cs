@@ -12,8 +12,17 @@ public class GridMap : MonoBehaviour
     [SerializeField]
     private TerrainTileMap _terrainTileMap;
 
+    [SerializeField]
+    private bool _showChunkGizmos = true;
+
+    // 전체 맵
     private Dictionary<Vector3Int, GridCell> _cells = new();
+
+    // 건물이 차지하는 타일 맵
     private Dictionary<Building, List<GridCell>> _buildingFootprintCells = new();
+
+    // 청크
+    private Dictionary<Vector2Int, Chunk> _chunks = new();
 
     // 그리드 셀의 상태 변경 이벤트 - 건물 배치, 건물 파괴, 적 진입
     public Action<GridCell> OnCellChanged;
@@ -21,6 +30,7 @@ public class GridMap : MonoBehaviour
     private void Awake()
     {
         GenerateGridFromTilemap();
+        GenerateChunks();
     }
 
     private void GenerateGridFromTilemap()
@@ -36,7 +46,44 @@ public class GridMap : MonoBehaviour
 
             _cells[pos] = new GridCell(pos, terrain, canConstruct);
         }
+
+        Debug.Log($"[GridMap] 그리드맵 생성 완료 - 셀의 개수: {_cells.Count}");
     }
+
+    private void GenerateChunks()
+    {
+        var grouped = new Dictionary<Vector2Int, List<GridCell>>();
+
+        foreach (GridCell cell in _cells.Values)
+        {
+            Vector2Int chunkCoord = ToChunkCoord(cell.Coord);
+
+            if (!grouped.TryGetValue(chunkCoord, out List<GridCell> cellsInChunk))
+            {
+                cellsInChunk = new List<GridCell>();
+                grouped[chunkCoord] = cellsInChunk;
+            }
+
+            cellsInChunk.Add(cell);
+        }
+
+        foreach (var pair in grouped)
+        {
+            _chunks[pair.Key] = new Chunk(pair.Key, pair.Value);
+        }
+
+        Debug.Log($"[GridMap] 청크 생성 완료 - 청크 개수: {_chunks.Count}");
+    }
+
+    private static Vector2Int ToChunkCoord(Vector3Int cellCoord) => 
+        new Vector2Int(
+            FloorDiv(cellCoord.x, Chunk.CHUNK_SIZE),
+            FloorDiv(cellCoord.y, Chunk.CHUNK_SIZE)
+        );
+
+    
+    private static int FloorDiv(int value, int divisor) => 
+        (int)Mathf.Floor((float)value / divisor);
 
     public State GetCellState(Vector3Int coord)
     {
@@ -48,7 +95,6 @@ public class GridMap : MonoBehaviour
 
     public Vector3 ConvertGridToWorld(Vector3Int cellCoord) => _tilemap.GetCellCenterWorld(cellCoord);
     public Vector3Int ConvertWorldToGrid(Vector3 worldCoord) => _tilemap.WorldToCell(worldCoord);
-
     public bool CanConstructBuilding(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) && cell.CanConstruct && cell.ExistTypeOnCell == ExistTypeOnCell.None;
 
@@ -62,8 +108,28 @@ public class GridMap : MonoBehaviour
     public Building GetBuildingAt(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.OccupantBuilding : null;
 
-    public List<Vector3Int> GetAllOccupiedCoords() =>
+     public List<Vector3Int> GetAllOccupiedCoords() =>
         _cells.Values.Where(cell => cell.HasBuilding).Select(cell => cell.Coord).ToList();
+
+    public Chunk GetChunkAt(Vector3Int cellCoord)
+    {
+        Vector2Int chunkCoord = ToChunkCoord(cellCoord);
+        return _chunks.TryGetValue(chunkCoord, out Chunk chunk) ? chunk : null;
+    }
+
+    public void SetChunkState(Vector3Int cellCoord, State newState)
+    {
+        Chunk chunk = GetChunkAt(cellCoord);
+        if (chunk == null) 
+            return;
+        
+        chunk.SetState(newState);
+
+        foreach (GridCell cell in chunk.Cells)
+        {
+            OnCellChanged?.Invoke(cell);
+        }
+    }
 
     public void ConstructBuilding(Building prefab, Vector3Int anchor)
     {
@@ -237,4 +303,5 @@ public class GridMap : MonoBehaviour
         _buildingFootprintCells[building] = newFootprint;
         return true;
     }
+
 }
