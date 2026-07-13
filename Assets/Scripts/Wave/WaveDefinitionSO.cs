@@ -3,7 +3,7 @@ using UnityEngine;
 
 
 [CreateAssetMenu(menuName = "TowerAndDragon/Wave/Wave Definition", fileName = "WaveDefinition")]
-public class WaveDefinitionSO : MonoBehaviour
+public class WaveDefinitionSO : ScriptableObject
 {
     [SerializeField] private List<PortalWaveData> _portalWaves;
 
