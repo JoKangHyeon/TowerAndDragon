@@ -11,6 +11,8 @@ GameObject:
   - component: {fileID: 8459449534628094542}
   - component: {fileID: 8288304793958955497}
   - component: {fileID: -1179263789838454351}
+  - component: {fileID: 1782250389559104409}
+  - component: {fileID: 4412623613816595417}
   m_Layer: 0
   m_Name: Tower
   m_TagString: Untagged
@@ -78,8 +80,8 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: -1328854079
+  m_SortingLayer: 1
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 14a9f66f4cc5bc2479a797d95a62af1d, type: 3}
@@ -109,3 +111,33 @@ MonoBehaviour:
     _width: 3
     _height: 3
     _cells: 000100010101000100
+  _towerData: {fileID: 0}
+--- !u!114 &1782250389559104409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4042602934233984407}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a210ca5b9b21c8245b0418473702c92c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Health
+--- !u!114 &4412623613816595417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4042602934233984407}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9216b15d14880a4ab4c04c17cda3d67, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerAttack
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  _firePoint: {fileID: 0}
+  _showDebugLogs: 0
