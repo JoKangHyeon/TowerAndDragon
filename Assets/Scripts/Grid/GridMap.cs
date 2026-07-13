@@ -12,9 +12,6 @@ public class GridMap : MonoBehaviour
     [SerializeField]
     private TerrainTileMap _terrainTileMap;
 
-    [SerializeField]
-    private bool _showChunkGizmos = true;
-
     // 전체 맵
     private Dictionary<Vector3Int, GridCell> _cells = new();
 
@@ -75,10 +72,12 @@ public class GridMap : MonoBehaviour
         Debug.Log($"[GridMap] 청크 생성 완료 - 청크 개수: {_chunks.Count}");
     }
 
+    private const int CHUNK_ORIGIN_OFFSET = ((Chunk.CHUNK_SIZE - 1) / 2);
+
     private static Vector2Int ToChunkCoord(Vector3Int cellCoord) => 
         new Vector2Int(
-            FloorDiv(cellCoord.x, Chunk.CHUNK_SIZE),
-            FloorDiv(cellCoord.y, Chunk.CHUNK_SIZE)
+            FloorDiv(cellCoord.x + CHUNK_ORIGIN_OFFSET, Chunk.CHUNK_SIZE),
+            FloorDiv(cellCoord.y + CHUNK_ORIGIN_OFFSET, Chunk.CHUNK_SIZE)
         );
 
     
@@ -117,10 +116,20 @@ public class GridMap : MonoBehaviour
         return _chunks.TryGetValue(chunkCoord, out Chunk chunk) ? chunk : null;
     }
 
-    public void SetChunkState(Vector3Int cellCoord, State newState)
+    public IEnumerable<Chunk> GetAllChunks() => _chunks.Values;
+
+    public void SetCellState(Vector3Int coord, State newState)
     {
-        Chunk chunk = GetChunkAt(cellCoord);
-        if (chunk == null) 
+        if (!_cells.TryGetValue(coord, out GridCell cell))
+            return;
+        
+        cell.SetState(newState);
+        OnCellChanged?.Invoke(cell);
+    }
+
+    public void SetChunkState(Vector2Int chunkCoord, State newState)
+    {
+        if (!_chunks.TryGetValue(chunkCoord, out Chunk chunk))
             return;
         
         chunk.SetState(newState);
@@ -129,6 +138,13 @@ public class GridMap : MonoBehaviour
         {
             OnCellChanged?.Invoke(cell);
         }
+    }
+
+    public void SetChunkState(Vector3Int cellCoord, State newState)
+    {
+        Chunk chunk = GetChunkAt(cellCoord);
+        if (chunk != null)
+            SetChunkState(chunk.ChunkCoord, newState);
     }
 
     public void ConstructBuilding(Building prefab, Vector3Int anchor)
