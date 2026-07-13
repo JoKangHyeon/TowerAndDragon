@@ -172,9 +172,9 @@ public class ChunkDebugger : MonoBehaviour
     // Active=초록, Inactive=빨강, Unknown=회색 작은 구슬로 셀 상태 표시 (청크 상태 변경 시 한번에 바뀌는지 확인용)
     private static Color GetStateGizmoColor(State state) => state switch
     {
-        State.Active => Color.green,
-        State.Inactive => Color.red,
-        State.Unknown => Color.gray,
+        State.Conquered => Color.green,
+        State.Visible => Color.red,
+        State.Hidden => Color.gray,
         _ => Color.white,
     };
 
@@ -211,10 +211,10 @@ public class ChunkDebugger : MonoBehaviour
 
     private static State GetNextDebugState(State current) => current switch
     {
-        State.Unknown => State.Inactive,
-        State.Inactive => State.Active,
-        State.Active => State.Unknown,
-        _ => State.Unknown,
+        State.Hidden => State.Visible,
+        State.Visible => State.Conquered,
+        State.Conquered => State.Hidden,
+        _ => State.Hidden,
     };
 }
 #endif

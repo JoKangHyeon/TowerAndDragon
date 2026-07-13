@@ -90,7 +90,7 @@ public class Castle : MonoBehaviour, IDamageable
             for (int dy = -_inactiveChunkRadius; dy <= _inactiveChunkRadius; dy++)
             {
                 Vector2Int neighborCoord = homeChunk.ChunkCoord + new Vector2Int(dx, dy);
-                _gridMap.SetChunkState(neighborCoord, State.Inactive);
+                _gridMap.SetChunkState(neighborCoord, State.Visible);
             }
         }
 
@@ -101,7 +101,7 @@ public class Castle : MonoBehaviour, IDamageable
         {
             for (int y = -activeHalfHeight; y <= activeHalfHeight; y++)
             {
-                _gridMap.SetCellState(castleCenter + new Vector3Int(x, y, 0), State.Active);
+                _gridMap.SetCellState(castleCenter + new Vector3Int(x, y, 0), State.Conquered);
             }
         }
     }

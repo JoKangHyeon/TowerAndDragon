@@ -89,7 +89,7 @@ public class GridMap : MonoBehaviour
         if (_cells.TryGetValue(coord, out var cell))
             return cell.CurrentState;
 
-        return State.Unknown;
+        return State.Hidden;
     }
 
     public Vector3 ConvertGridToWorld(Vector3Int cellCoord) => _tilemap.GetCellCenterWorld(cellCoord);
