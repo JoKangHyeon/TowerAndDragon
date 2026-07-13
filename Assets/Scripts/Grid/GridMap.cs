@@ -88,6 +88,45 @@ public class GridMap : MonoBehaviour
         _buildingFootprintCells[building] = footprint;
     }
 
+    // 타일맵 셀 좌표계의 정중앙 셀.
+    public Vector3Int GetCenterCell()
+    {
+        BoundsInt bounds = _tilemap.cellBounds;
+        return new Vector3Int(
+            bounds.xMin + bounds.size.x / 2,
+            bounds.yMin + bounds.size.y / 2,
+            0);
+    }
+
+    // 이미 생성된 building 인스턴스의 footprint 셀을 점유 등록한다(생성은 호출자 담당).
+    // 배치 규칙(CanConstruct)과 무관하게, 셀이 존재하고 비어 있으면 점유한다(성 같은 고정 구조물용).
+    public bool RegisterFootprint(Building building, Vector3Int anchor)
+    {
+        if (building == null)
+            return false;
+
+        var footprint = new List<GridCell>();
+        foreach (Vector3Int coord in GetFootprintCoords(anchor, building.FootprintShape))
+        {
+            if (!_cells.TryGetValue(coord, out GridCell cell) || cell.HasBuilding)
+            {
+                Debug.LogWarning($"[GridMap] RegisterFootprint 실패 - 셀 없음/이미 점유: {coord}");
+                return false;
+            }
+
+            footprint.Add(cell);
+        }
+
+        foreach (GridCell cell in footprint)
+        {
+            cell.PlaceBuilding(building);
+            OnCellChanged?.Invoke(cell);
+        }
+
+        _buildingFootprintCells[building] = footprint;
+        return true;
+    }
+
     public bool TryGetFootprint(Vector3Int anchor, FootprintShape shape, out List<GridCell> footprint) =>
         TryGetFootprint(anchor, shape, null, out footprint);
 
