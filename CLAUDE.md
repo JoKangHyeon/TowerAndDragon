@@ -50,6 +50,19 @@
   3D 모델·텍스처·이미지·음악·SFX·TTS 생성, 오토 리깅, 애니메이션 라이브러리 검색
 - 에셋이 필요하면 생성하지 말고 팀에 요청합니다.
 
+## 비동기 처리 규칙 — UniTask
+
+- 비동기 로직은 Coroutine 대신 UniTask를 사용합니다. (`com.cysharp.unitask` 설치됨)
+  - 새 코드에서 `StartCoroutine`/`IEnumerator` 기반 비동기 작성 금지
+  - 기존 Coroutine 코드는 해당 파일을 수정할 때 UniTask로 전환
+- 사용 지침:
+  - 시간 대기: `WaitForSeconds` 대신 `UniTask.WaitForSeconds(...)` / `UniTask.Delay(...)`
+  - 프레임 대기: `yield return null` 대신 `await UniTask.Yield()` / `UniTask.NextFrame()`
+  - 조건 대기: `await UniTask.WaitUntil(...)`
+  - GameObject 파괴 시 자동 취소되도록 `this.GetCancellationTokenOnDestroy()`를 전달합니다.
+  - fire-and-forget 호출은 `.Forget()`을 명시합니다.
+  - `async void` 금지 — 반환 타입은 `UniTask` / `UniTaskVoid`를 사용합니다.
+
 ## Git 커밋 규칙
 
 커밋 전 다음 사항을 확인합니다.
