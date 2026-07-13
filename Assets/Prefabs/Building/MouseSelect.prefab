@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &4042602934233984407
+--- !u!1 &2535348471473174201
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,41 +8,38 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 8459449534628094542}
-  - component: {fileID: 8288304793958955497}
-  - component: {fileID: -1179263789838454351}
-  - component: {fileID: 1782250389559104409}
-  - component: {fileID: 4412623613816595417}
+  - component: {fileID: 4503602581574242159}
+  - component: {fileID: 956263651941294742}
   m_Layer: 0
-  m_Name: Tower
+  m_Name: MouseSprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &8459449534628094542
+--- !u!4 &4503602581574242159
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4042602934233984407}
+  m_GameObject: {fileID: 2535348471473174201}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 2010907744488704879}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &8288304793958955497
+--- !u!212 &956263651941294742
 SpriteRenderer:
   serializedVersion: 2
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4042602934233984407}
+  m_GameObject: {fileID: 2535348471473174201}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -84,60 +81,66 @@ SpriteRenderer:
   m_SortingLayer: 1
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 14a9f66f4cc5bc2479a797d95a62af1d, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 2a3faa40bc8c4d52ac57ac18f93ca3a7, type: 3}
+  m_Color: {r: 0, g: 1, b: 0, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1.28, y: 3.01}
+  m_Size: {x: 1.28, y: 0.64}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!114 &-1179263789838454351
+--- !u!1 &8035174449541127747
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2010907744488704879}
+  - component: {fileID: 20335123856780131}
+  m_Layer: 0
+  m_Name: MouseSelect
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2010907744488704879
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8035174449541127747}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.7, z: 0}
+  m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 4503602581574242159}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &20335123856780131
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4042602934233984407}
+  m_GameObject: {fileID: 8035174449541127747}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e463613f21eb8b64d9b728eaec728923, type: 3}
+  m_Script: {fileID: 11500000, guid: bf01cc4e25e0b4c6cb0918c10772f56c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Tower
-  _sprite: {fileID: 21300000, guid: 14a9f66f4cc5bc2479a797d95a62af1d, type: 3}
-  _footprintShape:
-    _width: 3
-    _height: 3
-    _cells: 000100010101000100
-  _towerData: {fileID: 0}
---- !u!114 &1782250389559104409
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4042602934233984407}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a210ca5b9b21c8245b0418473702c92c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Health
---- !u!114 &4412623613816595417
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4042602934233984407}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b9216b15d14880a4ab4c04c17cda3d67, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TowerAttack
-  _targetLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  _firePoint: {fileID: 0}
-  _showDebugLogs: 0
+  m_EditorClassIdentifier: Assembly-CSharp::MouseSelectController
+  _spriteRenderer: {fileID: 956263651941294742}
+  _gridMap: {fileID: 0}
+  _yOffset: 0.75
+  _ghostRenderer: {fileID: 0}
+  _ghostAlpha: 0.5
+  _ghostBlockedTint: {r: 1, g: 0.4, b: 0.4, a: 1}
+  _selectionHighlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  _occupiedOverlayColor: {r: 1, g: 0, b: 0, a: 0.35}
