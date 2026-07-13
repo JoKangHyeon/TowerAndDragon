@@ -198,6 +198,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!224 &407691648 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 7579155938643648278, guid: f908c939041044a459d5a135e39741fa, type: 3}
+  m_PrefabInstance: {fileID: 3548494763055230080}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &577079560 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4068037261241880805, guid: f908c939041044a459d5a135e39741fa, type: 3}
@@ -624,8 +629,28 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 577079560}
     - target: {fileID: 60994123811608454, guid: f908c939041044a459d5a135e39741fa, type: 3}
+      propertyPath: _shakeTarget
+      value: 
+      objectReference: {fileID: 407691648}
+    - target: {fileID: 60994123811608454, guid: f908c939041044a459d5a135e39741fa, type: 3}
+      propertyPath: _shakeVibrato
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 60994123811608454, guid: f908c939041044a459d5a135e39741fa, type: 3}
       propertyPath: _chunkLifetime
       value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 60994123811608454, guid: f908c939041044a459d5a135e39741fa, type: 3}
+      propertyPath: _shakeDuration
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 60994123811608454, guid: f908c939041044a459d5a135e39741fa, type: 3}
+      propertyPath: _shakeStrength
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 60994123811608454, guid: f908c939041044a459d5a135e39741fa, type: 3}
+      propertyPath: _trailDuration
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 60994123811608454, guid: f908c939041044a459d5a135e39741fa, type: 3}
       propertyPath: _trailLerpSpeed
