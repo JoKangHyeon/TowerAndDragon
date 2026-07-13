@@ -120,7 +120,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1780844122913316418}
   m_HandleRect: {fileID: 7580731994498918941}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -2219,9 +2219,9 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1641235057387093762}
-  - {fileID: 999177317427904631}
   - {fileID: 1460184050736353187}
+  - {fileID: 999177317427904631}
+  - {fileID: 1641235057387093762}
   m_Father: {fileID: 969202009751102807}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
@@ -2759,7 +2759,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7329107019409463932}
-  - component: {fileID: 9104496071298723923}
   m_Layer: 5
   m_Name: Content
   m_TagString: Untagged
@@ -2783,35 +2782,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0.000068080655}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
---- !u!114 &9104496071298723923
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6988256401287056523}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 59f8146938fff824cb5fd77236b75775, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup
-  m_Padding:
-    m_Left: 5
-    m_Right: 5
-    m_Top: 10
-    m_Bottom: 10
-  m_ChildAlignment: 1
-  m_Spacing: 0
-  m_ChildForceExpandWidth: 1
-  m_ChildForceExpandHeight: 0
-  m_ChildControlWidth: 1
-  m_ChildControlHeight: 0
-  m_ChildScaleWidth: 0
-  m_ChildScaleHeight: 0
-  m_ReverseArrangement: 0
 --- !u!1 &7497598457177206838
 GameObject:
   m_ObjectHideFlags: 0
@@ -3057,34 +3030,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ExampleBuildingUI
   _buildButton: {fileID: 0}
-  _activeButtons:
-    Move: {fileID: 7297518787157514627}
-    Remove: {fileID: 8642254819847884166}
-  _filterTabs:
-  - Button: {fileID: 5582366786101997210}
-    MenuFocus: {fileID: 4643003178395011791}
-    MenuDefault: {fileID: 8106280172736505893}
-    SlotPrefab: {fileID: 3536144141363945427, guid: a6925b2d9a7c1d2478feed262ffde42b, type: 3}
-    Buildings:
-    - {fileID: -1179263789838454351, guid: 8fb2db73183f5d9449ebf41e2cfff227, type: 3}
-  - Button: {fileID: 2190599232498101948}
-    MenuFocus: {fileID: 5733603552303198301}
-    MenuDefault: {fileID: 7634933415935407928}
-    SlotPrefab: {fileID: 3536144141363945427, guid: 66234d0a6437d5c4c8ba04456bcb0c43, type: 3}
-    Buildings:
-    - {fileID: 8620626010104526027, guid: 8ba1292f00cbee448bc282b6b27bb212, type: 3}
-  - Button: {fileID: 339703008396501665}
-    MenuFocus: {fileID: 8979773612712673098}
-    MenuDefault: {fileID: 1920961609758876747}
-    SlotPrefab: {fileID: 3536144141363945427, guid: 2b89d9f32b2cd1c4287a134b4e273523, type: 3}
-    Buildings:
-    - {fileID: 4751353425643375589, guid: 21bd02fe69745774b8162ddfd36bf622, type: 3}
-  _slotContainer: {fileID: 7329107019409463932}
+  _removeButton: {fileID: 8642254819847884166}
+  _moveButton: {fileID: 7297518787157514627}
+  _buildingButtons: []
   _buildModePanel: {fileID: 7676966861720226360}
+  _selectBuildingModePanel: {fileID: 0}
   _buildingPlacementController: {fileID: 0}
-  _slideDuration: 0.4
-  _openFromOffset: {x: -100, y: 0}
-  _closeToOffset: {x: -500, y: 0}
 --- !u!1 &8031343824719650478
 GameObject:
   m_ObjectHideFlags: 0
