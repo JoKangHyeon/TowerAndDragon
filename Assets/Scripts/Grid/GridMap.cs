@@ -81,8 +81,9 @@ public class GridMap : MonoBehaviour
         );
 
     
-    private static int FloorDiv(int value, int divisor) => 
-        (int)Mathf.Floor((float)value / divisor);
+    private static int FloorDiv(int value, int divisor) =>
+       (value >= 0) ? value / divisor : (value - divisor + 1) / divisor;
+
 
     public State GetCellState(Vector3Int coord)
     {
