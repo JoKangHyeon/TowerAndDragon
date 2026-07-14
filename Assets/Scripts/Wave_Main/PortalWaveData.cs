@@ -15,7 +15,7 @@ public class PortalWaveData
     [SerializeField] private float _startDelay;
 
     [Tooltip("이 포탈에서 목록 순서대로 실행할 적 생성 그룹입니다.")]
-    [SerializeField] private List<SpawnGroupData> _spawnGroups = new();
+    [SerializeField] private List<SpawnGroupData> _spawnGroups;
 
     public PortalId PortalId => _portalId;
     public float StartDelay => _startDelay;
