@@ -21,6 +21,9 @@ public class GridMap : MonoBehaviour
     // 청크
     private Dictionary<Vector2Int, Chunk> _chunks = new();
 
+    private Vector2Int _homeChunkCoord;
+    private bool _hasHomeChunk;
+
     // 그리드 셀의 상태 변경 이벤트 - 건물 배치, 건물 파괴, 적 진입
     public Action<GridCell> OnCellChanged;
 
@@ -146,6 +149,41 @@ public class GridMap : MonoBehaviour
         Chunk chunk = GetChunkAt(cellCoord);
         if (chunk != null)
             SetChunkState(chunk.ChunkCoord, newState);
+    }
+
+    public void SetHomeChunk(Vector2Int chunkCoord)
+    {
+        _homeChunkCoord = chunkCoord;
+        _hasHomeChunk = true;
+    }
+
+    public int GetChunkDistanceFromHome(Vector2Int chunkCoord)
+    {
+        if (!_hasHomeChunk)
+            return 0;
+        
+        int dx = Mathf.Abs(chunkCoord.x - _homeChunkCoord.x);
+        int dy = Mathf.Abs(chunkCoord.y - _homeChunkCoord.y);
+        return Mathf.Max(dx, dy);
+    }
+
+    public Chunk GetChunk(Vector2Int chunkCoord) =>
+        _chunks.TryGetValue(chunkCoord, out Chunk chunk) ? chunk : null;
+    
+    public IEnumerable<Chunk> GetAdjacentChunks(Vector2Int chunkCoord)
+    {
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0)
+                    continue;
+                
+                Vector2Int neighborCoord = chunkCoord + new Vector2Int(dx, dy);
+                if (_chunks.TryGetValue(neighborCoord, out Chunk neighbor))
+                    yield return neighbor;
+            }
+        }
     }
 
     public void ConstructBuilding(Building prefab, Vector3Int anchor)

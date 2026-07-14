@@ -8,8 +8,6 @@ public class Castle : MonoBehaviour, IDamageable
     private const float DEFAULT_MAX_HEALTH = 100f;
     private const int CENTER_HALF_DIVISOR = 2;
 
-    private const int ACTIVE_AREA_EXPAND = 1;
-
     // --- TO Do: 추후 확정되면 상수로 고정하든가 함 ---
     [Tooltip("성 청크 기준 몇 칸(대각선까지 포함)까지 Inactive로 할지 -> 인스펙터에서 조정")]
     [SerializeField]
@@ -74,16 +72,18 @@ public class Castle : MonoBehaviour, IDamageable
             return;
         }
 
-        SetUpInitialTerritory(center, shape);
+        SetUpInitialTerritory(center);
     }
 
     // --- 게임 시작 시 초기 영역 세팅 ---
 
-    private void SetUpInitialTerritory(Vector3Int castleCenter, FootprintShape shape)
+    private void SetUpInitialTerritory(Vector3Int castleCenter)
     {
         Chunk homeChunk = _gridMap.GetChunkAt(castleCenter);
         if (homeChunk == null)
             return;
+        
+        _gridMap.SetHomeChunk(homeChunk.ChunkCoord);
         
         for (int dx = -_inactiveChunkRadius; dx <= _inactiveChunkRadius; dx++)
         {
@@ -93,17 +93,7 @@ public class Castle : MonoBehaviour, IDamageable
                 _gridMap.SetChunkState(neighborCoord, State.Visible);
             }
         }
-
-        int activeHalfWidth = (shape.Width - 1) / CENTER_HALF_DIVISOR + ACTIVE_AREA_EXPAND;
-        int activeHalfHeight = (shape.Height - 1) / CENTER_HALF_DIVISOR + ACTIVE_AREA_EXPAND;
-
-        for (int x = -activeHalfWidth; x <= activeHalfWidth; x++)
-        {
-            for (int y = -activeHalfHeight; y <= activeHalfHeight; y++)
-            {
-                _gridMap.SetCellState(castleCenter + new Vector3Int(x, y, 0), State.Conquered);
-            }
-        }
+        _gridMap.SetChunkState(homeChunk.ChunkCoord, State.Conquered);
     }
 
     public void TakeDamage(DamageInfo damage)
