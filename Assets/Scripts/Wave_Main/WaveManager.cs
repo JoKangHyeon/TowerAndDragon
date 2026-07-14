@@ -68,7 +68,20 @@ public class WaveManager : MonoBehaviour
         CancellationToken token
     )
     {
-    
+        if (portalWave.StartDelay > 0f)
+        {
+            await UniTask.Delay(
+                TimeSpan.FromSeconds(portalWave.StartDelay),
+                cancellationToken : token
+            );
+        }
+
+        foreach (SpawnGroupData sg in portalWave.SpawnGroups)
+        {
+            token.ThrowIfCancellationRequested();
+
+            await SpawnGroupAsync(sg, portal, token);
+        }
     }
 
     private async UniTask SpawnGroupAsync(
