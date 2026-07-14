@@ -4,7 +4,6 @@ using System.Threading;
 using UnityEngine;
 using UnityEngine.Events;
 using Cysharp.Threading.Tasks;
-using NUnit.Framework;
 
 /// <summary>
 /// 웨이브 실행을 조율한다. 실제 실행 로직은 데이터 계약 검증 후 구현한다.
@@ -12,9 +11,9 @@ using NUnit.Framework;
 public class WaveManager : MonoBehaviour
 {
     [SerializeField] private List<Portal> _portals = new();
+    [SerializeField] private UnityEvent _allSpawnCompleted = new();
     private CancellationTokenSource _waveCancellation;
     private readonly Dictionary<PortalId, Portal> _portalById = new();
-    private UnityEvent _allSpawnCompleted = new();
 
 
     public bool IsRunning {get; private set;}   
@@ -69,7 +68,39 @@ public class WaveManager : MonoBehaviour
         CancellationToken token
     )
     {
-        
+    
+    }
+
+    private async UniTask SpawnGroupAsync(
+        SpawnGroupData spawnGroup,
+        Portal portal,
+        CancellationToken token
+    )
+    {
+        if (spawnGroup.DelayBeforeGroup > 0f)
+        {
+            await UniTask.Delay(
+                TimeSpan.FromSeconds(spawnGroup.DelayBeforeGroup),
+                cancellationToken: token
+            );
+        }
+
+        for (int i = 0; i < spawnGroup.SpawnCount; i++)
+        {
+            token.ThrowIfCancellationRequested();
+
+            SpawnMonster(spawnGroup, portal);
+
+            bool hasNextMonster = i + 1 < spawnGroup.SpawnCount;
+
+            if (hasNextMonster && spawnGroup.SpawnInterval > 0f)
+            {
+                await UniTask.Delay(
+                    TimeSpan.FromSeconds(spawnGroup.SpawnInterval),
+                    cancellationToken : token
+                );
+            }
+        }
     }
 
     private BaseMonster SpawnMonster(
@@ -77,6 +108,19 @@ public class WaveManager : MonoBehaviour
         Portal portal
     )
     {
-        return null;
+        BaseMonster monster = Instantiate (
+            spawnGroup.MonsterPrefab,
+            portal.SpawnPoint.position,
+            portal.SpawnPoint.rotation,
+            transform
+        );
+
+        monster.Setup(
+            spawnGroup.MonsterData,
+            portal.GroundPath,
+            portal.MainCastle
+        );
+
+        return monster;
     }
 }
