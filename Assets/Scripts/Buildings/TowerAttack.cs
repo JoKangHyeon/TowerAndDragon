@@ -15,6 +15,8 @@ public class TowerAttack : MonoBehaviour
 
     private AttackSO Attack => _towerData.Attack;
 
+    public BaseMonster CurrentTarget => _target;
+
     public void Initialize(TowerData towerData)
     {
         _towerData = towerData;
