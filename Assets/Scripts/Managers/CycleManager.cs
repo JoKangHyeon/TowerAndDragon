@@ -27,21 +27,21 @@ public class CycleManager : MonoBehaviour
 
     public void StartDay()
     {
-        _gameManager.CurrentRun.currentCycle += 1;
-        OnDayStart?.Invoke(_gameManager.CurrentRun.currentCycle);
+        _gameManager.CurrentRun.CurrentCycle += 1;
+        OnDayStart?.Invoke(_gameManager.CurrentRun.CurrentCycle);
         CurrentCycle = CycleState.Day;
         OnCycleChanged?.Invoke(CycleState.Day);
     }
 
     public void EndDay()
     {
-        OnDayEnd?.Invoke(_gameManager.CurrentRun.currentCycle);
+        OnDayEnd?.Invoke(_gameManager.CurrentRun.CurrentCycle);
         StartNight();
     }
 
     public void StartNight()
     {
-        OnNightStart?.Invoke(_gameManager.CurrentRun.currentCycle);
+        OnNightStart?.Invoke(_gameManager.CurrentRun.CurrentCycle);
         CurrentCycle = CycleState.Night;
         OnCycleChanged?.Invoke(CycleState.Night);
     }
@@ -49,5 +49,17 @@ public class CycleManager : MonoBehaviour
     public void EndNight()
     {
         StartDay();
+    }
+
+    public void DebugCycle()
+    {
+        if(CurrentCycle == CycleState.Day)
+        {
+            EndDay();
+        }
+        else
+        {
+            EndNight();
+        }
     }
 }
