@@ -26,6 +26,7 @@ public class WaveSpawner : MonoBehaviour
         _mainCastle = mainCastle;
     }
 
+    //임시용 웨이브 시작ㅜ
     public async UniTask StartWaveAsync()
     {
         await SpawnWaveAsync();

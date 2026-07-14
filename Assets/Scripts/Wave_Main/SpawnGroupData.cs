@@ -1,6 +1,9 @@
+using System;
 using UnityEngine;
 
-public class SpawnGroupData : MonoBehaviour
+
+[Serializable]
+public class SpawnGroupData
 {
     [SerializeField] private BaseMonster _monsterPrefab;
     [SerializeField] private MonsterData _monsterData;
