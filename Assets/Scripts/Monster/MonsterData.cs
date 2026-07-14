@@ -25,7 +25,11 @@ public class MonsterData : ScriptableObject
     [SerializeField] private AttackSO _attack;
     [SerializeField] private MonsterTargetType _enRouteTargetTypes;
 
-
+    // 원거리 몬스터용 투사체. 비워두면 즉시 적용(근접) 공격으로 동작한다.
+    // 타워와 달리 피해는 투사체 명중 시점에 적용된다.
+    [Header("Projectile (optional)")]
+    [SerializeField] private GameObject _projectilePrefab;
+    [SerializeField] private float _projectileSpeed;
 
     public string NameLocKey => _nameLocKey;
     public float MaxHealth => _maxHealth;
@@ -37,4 +41,8 @@ public class MonsterData : ScriptableObject
 
     public AttackSO Attack => _attack;
     public MonsterTargetType EnRouteTargetTypes => _enRouteTargetTypes;
+
+    public GameObject ProjectilePrefab => _projectilePrefab;
+    public float ProjectileSpeed => _projectileSpeed;
+    public bool HasProjectile => _projectilePrefab != null && _projectileSpeed > 0;
 }

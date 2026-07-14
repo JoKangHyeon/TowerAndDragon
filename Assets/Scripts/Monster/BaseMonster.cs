@@ -48,10 +48,7 @@ public class BaseMonster : MonoBehaviour, IDamageable
 
         if (_attack != null && _data.Attack != null)
         {
-            _attack.Initialize(
-                _data.Attack,
-                _data.EnRouteTargetTypes,
-                _movement);
+            _attack.Initialize(_data, _movement);
         }
 
         ConfigureMovement(path, mainCastle);

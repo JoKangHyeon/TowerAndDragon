@@ -9,7 +9,9 @@ using UnityEngine;
 public class MonsterAttack : MonoBehaviour
 {
     [SerializeField] private LayerMask _targetLayers = Physics2D.DefaultRaycastLayers;
+    [SerializeField] private Transform _firePoint;
 
+    private MonsterData _data;
     private AttackSO _attack;
     private MonsterTargetType _enRouteTargetTypes;
     private MonsterMovement _movement;
@@ -21,13 +23,11 @@ public class MonsterAttack : MonoBehaviour
     public float Range => _attack.Range;
     public float Interval => _attack.Interval;
 
-    public void Initialize(
-        AttackSO attack,
-        MonsterTargetType enRouteTargetTypes,
-        MonsterMovement movement)
+    public void Initialize(MonsterData data, MonsterMovement movement)
     {
-        _attack = attack;
-        _enRouteTargetTypes = enRouteTargetTypes;
+        _data = data;
+        _attack = data.Attack;
+        _enRouteTargetTypes = data.EnRouteTargetTypes;
         _movement = movement;
 
         _currentTarget = null;
@@ -85,7 +85,7 @@ public class MonsterAttack : MonoBehaviour
     {
         Collider2D[] candidates = Physics2D.OverlapCircleAll(
             transform.position,
-            Range,
+            Range,  
             _targetLayers);
 
         IMonsterTarget closestTarget = null;
@@ -143,11 +143,43 @@ public class MonsterAttack : MonoBehaviour
     }
 
     /// <summary>
-    /// 사거리 내 대상에 공격을 적용한다. 실제 타깃팅·쿨다운 소비는 [미정] 발사 루프에서 호출한다.
+    /// 사거리 내 대상에 공격을 적용한다.
+    /// 투사체가 설정된 경우(원거리) 투사체를 발사해 명중 시 피해를 적용하고,
+    /// 없으면(근접) 즉시 피해를 적용한다.
     /// </summary>
-    private void Fire(IDamageable target)
+    private void Fire(IMonsterTarget target)
     {
         AttackContext context = new AttackContext(gameObject);
-        _attack.Execute(target, in context);
+
+        if (!_data.HasProjectile)
+        {
+            _attack.Execute(target, in context);
+            return;
+        }
+
+        LaunchProjectile(target, in context);
+    }
+
+    private void LaunchProjectile(IMonsterTarget target, in AttackContext context)
+    {
+        Vector3 spawnPosition = _firePoint != null
+            ? _firePoint.position
+            : transform.position;
+
+        GameObject projectileObject = Instantiate(
+            _data.ProjectilePrefab,
+            spawnPosition,
+            Quaternion.identity);
+
+        MonsterProjectile projectile = projectileObject.GetComponent<MonsterProjectile>();
+        if (projectile == null)
+        {
+            Debug.LogError("[MonsterAttack] 투사체 프리팹에 MonsterProjectile이 없습니다.", projectileObject);
+            Destroy(projectileObject);
+            _attack.Execute(target, in context);
+            return;
+        }
+
+        projectile.Launch(target, _attack, in context, _data.ProjectileSpeed);
     }
 }
