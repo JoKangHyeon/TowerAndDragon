@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PortalWaveData : MonoBehaviour
+
+[Serializable]  
+public class PortalWaveData 
 {
     [SerializeField] private PortalId _portalId;
     [SerializeField] private float _startDay;
