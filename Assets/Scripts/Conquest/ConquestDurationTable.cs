@@ -1,29 +1,29 @@
 using UnityEngine;
 using System;
 
-[CreateAssetMenu(fileName = "Data/ConquestDurationTable", menuName = "ConquestDurationTable")]
+[CreateAssetMenu(fileName = "Data/ConquestDurationTable", menuName = "Conquest/ConquestDurationTable")]
 public class ConquestDurationTable : ScriptableObject
 {
+    private const int DEFAULT_DAYS_REQUIRED = 1;
+
     [Serializable]
     private struct Entry
     {
-        public int MinDistance;
+        public TerrainType TerrainType;
         public int DaysRequired;
     }
 
     [SerializeField]
-    // MinDistance 오름차순 등록
     private Entry[] _entries;
 
-    public int Resolve(int distance)
+    public int ResolveDaysRequired(TerrainType terrainType)
     {
-        int result = _entries.Length > 0 ? _entries[0].DaysRequired : 1;
-        foreach (var entry in _entries)
+        foreach (Entry entry in _entries)
         {
-            if (distance >= entry.MinDistance)
-                result = entry.DaysRequired;
+            if (entry.TerrainType == terrainType)
+                return entry.DaysRequired;
         }
 
-        return result;
+        return DEFAULT_DAYS_REQUIRED;
     }
 }
