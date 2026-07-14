@@ -21,7 +21,7 @@ public class WaveDefinitionSO : ScriptableObject
             return;
         }
 
-        HashSet<PortalId> portalIds = new HashSet<PortalId>();
+        HashSet<PortalDirection> portalIds = new HashSet<PortalDirection>();
 
         foreach (PortalWaveData portalWave in _portalWaves)
         {
@@ -35,35 +35,35 @@ public class WaveDefinitionSO : ScriptableObject
         }
     }
 
-    private void ValidatePortalWave(PortalWaveData portalWave, HashSet<PortalId> portalIds)
+    private void ValidatePortalWave(PortalWaveData portalWave, HashSet<PortalDirection> portalIds)
     {
-        if (portalWave.PortalId == PortalId.None)
+        if (portalWave.PortalDirectionId == PortalDirection.None)
         {
             Debug.LogError("WaveDefinitionSO: 포탈 편성의 PortalId가 None입니다.", this);
         }
-        else if (!portalIds.Add(portalWave.PortalId))
+        else if (!portalIds.Add(portalWave.PortalDirectionId))
         {
-            Debug.LogError($"WaveDefinitionSO: {portalWave.PortalId} 포탈 편성이 중복되었습니다.", this);
+            Debug.LogError($"WaveDefinitionSO: {portalWave.PortalDirectionId} 포탈 편성이 중복되었습니다.", this);
         }
 
         if (portalWave.StartDelay < 0)
         {
-            Debug.LogError($"WaveDefinitionSO: {portalWave.PortalId} 포탈의 시작 지연은 음수일 수 없습니다.", this);
+            Debug.LogError($"WaveDefinitionSO: {portalWave.PortalDirectionId} 포탈의 시작 지연은 음수일 수 없습니다.", this);
         }
 
         if (portalWave.SpawnGroups == null)
         {
-            Debug.LogError($"WaveDefinitionSO: {portalWave.PortalId} 포탈의 생성 그룹 목록이 없습니다.", this);
+            Debug.LogError($"WaveDefinitionSO: {portalWave.PortalDirectionId} 포탈의 생성 그룹 목록이 없습니다.", this);
             return;
         }
 
         foreach (SpawnGroupData spawnGroup in portalWave.SpawnGroups)
         {
-            ValidateSpawnGroup(portalWave.PortalId, spawnGroup);
+            ValidateSpawnGroup(portalWave.PortalDirectionId, spawnGroup);
         }
     }
 
-    private void ValidateSpawnGroup(PortalId portalId, SpawnGroupData spawnGroup)
+    private void ValidateSpawnGroup(PortalDirection portalId, SpawnGroupData spawnGroup)
     {
         if (spawnGroup == null)
         {
