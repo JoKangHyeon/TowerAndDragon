@@ -14,7 +14,7 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private UnityEvent _allSpawnCompleted;
 
     private CancellationTokenSource _waveCancellation;
-    private readonly Dictionary<PortalId, Portal> _portalById = new();
+    private readonly Dictionary<PortalDirection, Portal> _portalById = new();
 
     public bool IsRunning { get; private set; }
     public UnityEvent AllSpawnsCompleted => _allSpawnCompleted;
@@ -128,9 +128,9 @@ public class WaveManager : MonoBehaviour
                 continue;
             }
 
-            if (!_portalById.TryAdd(portal.Id, portal))
+            if (!_portalById.TryAdd(portal.PortalDirectionId, portal))
             {
-                Debug.LogError($"[WaveManager] {portal.Id} 포탈 ID가 중복되었습니다.", portal);
+                Debug.LogError($"[WaveManager] {portal.PortalDirectionId} 포탈 ID가 중복되었습니다.", portal);
                 isValid = false;
             }
         }
@@ -140,13 +140,13 @@ public class WaveManager : MonoBehaviour
 
     private bool TryGetPortal(PortalWaveData portalWave, out Portal portal)
     {
-        if (_portalById.TryGetValue(portalWave.PortalId, out portal))
+        if (_portalById.TryGetValue(portalWave.PortalDirectionId, out portal))
         {
             return true;
         }
 
         Debug.LogError(
-            $"[WaveManager] {portalWave.PortalId} 포탈이 씬에 없습니다.",
+            $"[WaveManager] {portalWave.PortalDirectionId} 포탈이 씬에 없습니다.",
             this);
 
         return false;
