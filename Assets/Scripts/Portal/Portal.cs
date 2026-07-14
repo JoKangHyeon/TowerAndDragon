@@ -16,7 +16,7 @@ public class Portal : MonoBehaviour
 
     // 지상적일 경우 사용할 경로
     public SplineContainer GroundPath => _groundPath;
-    public Transform MainCastle => _mainCastle ;
+    public Transform MainCastle => _mainCastle;
     public bool IsActive => _isActive;
     public bool IsConfigured => 
         _id != PortalId.None &&
