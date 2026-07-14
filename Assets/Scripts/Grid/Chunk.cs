@@ -10,6 +10,7 @@ public class Chunk
 
     public Vector2Int ChunkCoord { get; }
     public State CurrentState { get; private set; }
+    public TerrainType DominantTerrain { get; }
 
     public Chunk(Vector2Int chunkCoord, List<GridCell> cells)
     {
