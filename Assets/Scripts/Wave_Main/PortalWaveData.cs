@@ -9,7 +9,7 @@ using UnityEngine;
 public class PortalWaveData
 {
     [Tooltip("이 편성을 실행할 포탈의 식별자입니다.")]
-    [SerializeField] private PortalId _portalId;
+    [SerializeField] private PortalDirection _portalDirectionId;
 
     [Tooltip("웨이브 시작 후 이 포탈의 편성을 시작하기까지 기다릴 시간(초)입니다.")]
     [SerializeField] private float _startDelay;
@@ -17,7 +17,7 @@ public class PortalWaveData
     [Tooltip("이 포탈에서 목록 순서대로 실행할 적 생성 그룹입니다.")]
     [SerializeField] private List<SpawnGroupData> _spawnGroups;
 
-    public PortalId PortalId => _portalId;
+    public PortalDirection PortalDirectionId => _portalDirectionId;
     public float StartDelay => _startDelay;
     public IReadOnlyList<SpawnGroupData> SpawnGroups => _spawnGroups;
 }
