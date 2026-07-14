@@ -10,8 +10,8 @@ using Cysharp.Threading.Tasks;
 /// </summary>
 public class WaveManager : MonoBehaviour
 {
-    [SerializeField] private List<Portal> _portals = new();
-    [SerializeField] private UnityEvent _allSpawnCompleted = new();
+    [SerializeField] private List<Portal> _portals;
+    [SerializeField] private UnityEvent _allSpawnCompleted;
 
     private CancellationTokenSource _waveCancellation;
     private readonly Dictionary<PortalId, Portal> _portalById = new();

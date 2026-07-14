@@ -9,7 +9,7 @@ using UnityEngine;
 public class WaveDefinitionSO : ScriptableObject
 {
     [Tooltip("이번 웨이브에서 실행할 포탈별 적 편성입니다.")]
-    [SerializeField] private List<PortalWaveData> _portalWaves = new();
+    [SerializeField] private List<PortalWaveData> _portalWaves;
 
     public IReadOnlyList<PortalWaveData> PortalWaves => _portalWaves;
 
