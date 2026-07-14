@@ -6,13 +6,16 @@ public class ConquestManager : MonoBehaviour
     [SerializeField]
     private GridMap _gridMap;
 
-    [SerializeField]
-    private CycleManager _cycleManager;
+    // To Do: 추후 연결 예정
+    // [SerializeField]
+    // private CycleManager _cycleManager;
 
     [SerializeField]
     private ConquestDurationTable _durationTable;
 
-    // 주둔지 프리팹 필요함
+    [SerializeField]
+    private ConquestChunkCostTable _chunkCostTable;
+
     [SerializeField]
     private Building _garrisonPrefab;
 
@@ -20,22 +23,26 @@ public class ConquestManager : MonoBehaviour
 
     private void Awake()
     {
+        // To Do: 추후 연결 예정
         //_cycleManager.OnNightEnd.AddListener(OnSettlement);
     }
 
     private void OnDestroy()
     {
+        // To Do: 추후 연결 예정
         //_cycleManager.OnNightEnd.RemoveListener(OnSettlement);
     }
 
-    
-    // 현재 점령지 기준 4칸만 점령을 보낼 수 있음
     public bool CanSendExpedition(Vector2Int targetChunkCoord)
     {
         Chunk chunk = _gridMap.GetChunk(targetChunkCoord);
         if (chunk == null || chunk.CurrentState != State.Visible)
             return false;
-        
+
+        // 점령 자체는 상하좌우 4방향으로만 진행 - 시야는 8방향으로 노출/ 대각선 청크는 점령 대상에서 제외
+        if (!HasConqueredOrthogonalNeighbor(targetChunkCoord))
+            return false;
+
         foreach (ConquestExpedition expedition in _activeExpeditions)
         {
             if (expedition.TargetChunkCoord == targetChunkCoord)
@@ -45,15 +52,49 @@ public class ConquestManager : MonoBehaviour
         return true;
     }
 
-    public bool SendExpedition(Vector2Int targetChunkCoord)
+    private bool HasConqueredOrthogonalNeighbor(Vector2Int chunkCoord)
+    {
+        foreach (Chunk neighbor in _gridMap.GetOrthogonalAdjacentChunks(chunkCoord))
+        {
+            if (neighbor.CurrentState == State.Conquered)
+                return true;
+        }
+
+        return false;
+    }
+
+    // available: 원정을 보낼 시점의 보유 자원/인구
+    // 실제 보유량 조회는 자원/인구 매니저가 생기면 그쪽에서 채워서 넘기고, 
+    // 지금은 호출자가 직접 준비해서 넘김
+    public bool CanAffordExpedition(Vector2Int targetChunkCoord, ResourceCost available)
+    {
+        if (!_chunkCostTable.TryResolve(targetChunkCoord, out ResourceCost cost))
+            return false;
+
+        return available.CanAfford(cost);
+    }
+
+    public bool SendExpedition(Vector2Int targetChunkCoord, ResourceCost available)
     {
         if (!CanSendExpedition(targetChunkCoord))
             return false;
-        
-        int distance = _gridMap.GetChunkDistanceFromHome(targetChunkCoord);
-        int daysRequired = _durationTable.Resolve(distance);
 
-        _activeExpeditions.Add(new ConquestExpedition(targetChunkCoord, daysRequired));
+        if (!_chunkCostTable.TryResolve(targetChunkCoord, out ResourceCost cost))
+        {
+            Debug.LogWarning($"[ConquestManager] 청크 {targetChunkCoord}의 점령 비용이 설정되지 않았습니다.");
+            return false;
+        }
+
+        if (!available.CanAfford(cost))
+        {
+            Debug.LogWarning($"[ConquestManager] 청크 {targetChunkCoord} 원정 실패 - 자원이 부족합니다.");
+            return false;
+        }
+
+        Chunk chunk = _gridMap.GetChunk(targetChunkCoord);
+        int daysRequired = _durationTable.ResolveDaysRequired(chunk.DominantTerrain);
+
+        _activeExpeditions.Add(new ConquestExpedition(targetChunkCoord, cost, daysRequired));
         return true;
     }
 

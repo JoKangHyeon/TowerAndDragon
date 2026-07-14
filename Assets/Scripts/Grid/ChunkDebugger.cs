@@ -4,6 +4,8 @@ using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine.InputSystem;
+using System.IO;
+using System.Text;
 #endif
 
 #if UNITY_EDITOR
@@ -17,6 +19,9 @@ using UnityEngine.InputSystem;
 // 3. 청크->셀 상태 전파 테스트: 위 2번으로 셀을 먼저 선택한 뒤,
 //    ChunkDebugger 컴포넌트 우클릭 > "디버그 - 선택 청크 상태 사이클 (청크 -> 셀)" 실행
 //    - 선택된 청크 상태가 Unknown -> Inactive -> Active 순으로 바뀌며 소속 셀 전체 반영 여부를 PASS/FAIL로 로그
+// 4. 청크 지형 서베이(맵 확장 등으로 ConquestChunkCostTable을 다시 채워야 할 때): Play 모드 진입 후
+//    ChunkDebugger 컴포넌트 우클릭 > "디버그 - 청크 지형 서베이 CSV 내보내기 (물 제외)" 실행
+//    - 물(Default)만 있는 청크는 제외하고, 실제 지형이 하나라도 있는 청크만 CHUNK_SURVEY_CSV_RELATIVE_PATH에 기록
 [RequireComponent(typeof(GridMap))]
 public class ChunkDebugger : MonoBehaviour
 {
@@ -37,8 +42,10 @@ public class ChunkDebugger : MonoBehaviour
     private const int CHUNK_GIZMO_HUE_STEPS = 360;
     private const float CHUNK_GIZMO_SATURATION = 1f;
     private const float CHUNK_GIZMO_VALUE = 1f;
-    private const float CHUNK_GIZMO_ALPHA = 0.75f;
+    private const float CHUNK_GIZMO_ALPHA = 0.45f;
     private const float CHUNK_GIZMO_STATE_RADIUS = 0.15f;
+
+    private const string CHUNK_SURVEY_CSV_RELATIVE_PATH = "Data/ConquestData/ChunkTerrainSurvey.csv";
 
     [Header("디버그 - 마우스로 선택한 셀/청크 정보")]
     [SerializeField]
@@ -216,5 +223,41 @@ public class ChunkDebugger : MonoBehaviour
         State.Conquered => State.Hidden,
         _ => State.Hidden,
     };
+
+    // 맵 확장 등으로 청크 데이터를 다시 조사해야 할 때 실행 - Chunk.DominantTerrain(물 제외 기준)을 그대로 사용하므로
+    // 물만 있는 청크(DominantTerrain == Default)는 자동으로 제외된다. ConquestChunkCostTable 작성 대상 목록 생성용.
+    [ContextMenu("디버그 - 청크 지형 서베이 CSV 내보내기 (물 제외)")]
+    private void ExportChunkTerrainSurvey()
+    {
+        if (!Application.isPlaying)
+        {
+            Debug.Log("[ChunkDebugger] 청크 서베이 실패 - Play 모드에서만 실행 가능 (청크는 런타임에 생성됨)");
+            return;
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("ChunkCoordX,ChunkCoordY,RealDominantTerrain,RealTerrainCellCount,WaterCellCount,TotalCellCount,CurrentState");
+
+        int exportedCount = 0;
+
+        foreach (Chunk chunk in _gridMap.GetAllChunks().OrderBy(c => c.ChunkCoord.x).ThenBy(c => c.ChunkCoord.y))
+        {
+            if (chunk.DominantTerrain == TerrainType.Default)
+                continue;
+
+            int realTerrainCellCount = chunk.Cells.Count(cell => cell.TerrainType == chunk.DominantTerrain);
+            int waterCellCount = chunk.Cells.Count(cell => cell.TerrainType == TerrainType.Default);
+
+            sb.AppendLine($"{chunk.ChunkCoord.x},{chunk.ChunkCoord.y},{chunk.DominantTerrain}," +
+                $"{realTerrainCellCount},{waterCellCount},{chunk.Cells.Count},{chunk.CurrentState}");
+            exportedCount++;
+        }
+
+        string fullPath = Path.Combine(Application.dataPath, CHUNK_SURVEY_CSV_RELATIVE_PATH);
+        File.WriteAllText(fullPath, sb.ToString());
+        AssetDatabase.Refresh();
+
+        Debug.Log($"[ChunkDebugger] 청크 지형 서베이 완료 - 물 전용 청크 제외 {exportedCount}개 -> Assets/{CHUNK_SURVEY_CSV_RELATIVE_PATH}");
+    }
 }
 #endif

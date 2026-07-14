@@ -21,9 +21,6 @@ public class GridMap : MonoBehaviour
     // 청크
     private Dictionary<Vector2Int, Chunk> _chunks = new();
 
-    private Vector2Int _homeChunkCoord;
-    private bool _hasHomeChunk;
-
     // 그리드 셀의 상태 변경 이벤트 - 건물 배치, 건물 파괴, 적 진입
     public Action<GridCell> OnCellChanged;
 
@@ -98,11 +95,20 @@ public class GridMap : MonoBehaviour
     public Vector3 ConvertGridToWorld(Vector3Int cellCoord) => _tilemap.GetCellCenterWorld(cellCoord);
     public Vector3Int ConvertWorldToGrid(Vector3 worldCoord) => _tilemap.WorldToCell(worldCoord);
     public bool CanConstructBuilding(Vector3Int coord) =>
-        _cells.TryGetValue(coord, out var cell) && cell.CanConstruct && cell.ExistTypeOnCell == ExistTypeOnCell.None;
+        _cells.TryGetValue(coord, out var cell) && cell.CanConstruct && cell.ExistTypeOnCell == ExistTypeOnCell.None &&
+        IsChunkConquered(coord);
 
     public bool CanConstructBuilding(Vector3Int coord, Building ignoreBuilding) =>
         _cells.TryGetValue(coord, out var cell) && cell.CanConstruct &&
-        (cell.ExistTypeOnCell == ExistTypeOnCell.None || cell.OccupantBuilding == ignoreBuilding);
+        (cell.ExistTypeOnCell == ExistTypeOnCell.None || cell.OccupantBuilding == ignoreBuilding) &&
+        IsChunkConquered(coord);
+
+    // 성 같은 고정 구조물은 RegisterFootprint()로 이 검사를 우회해 배치한다(점령 상태와 무관하게 등록).
+    private bool IsChunkConquered(Vector3Int coord)
+    {
+        Chunk chunk = GetChunkAt(coord);
+        return chunk != null && chunk.CurrentState == State.Conquered;
+    }
 
     public ExistTypeOnCell ExamExist(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.ExistTypeOnCell : ExistTypeOnCell.None;
@@ -150,22 +156,6 @@ public class GridMap : MonoBehaviour
             SetChunkState(chunk.ChunkCoord, newState);
     }
 
-    public void SetHomeChunk(Vector2Int chunkCoord)
-    {
-        _homeChunkCoord = chunkCoord;
-        _hasHomeChunk = true;
-    }
-
-    public int GetChunkDistanceFromHome(Vector2Int chunkCoord)
-    {
-        if (!_hasHomeChunk)
-            return 0;
-        
-        int dx = Mathf.Abs(chunkCoord.x - _homeChunkCoord.x);
-        int dy = Mathf.Abs(chunkCoord.y - _homeChunkCoord.y);
-        return Mathf.Max(dx, dy);
-    }
-
     public Chunk GetChunk(Vector2Int chunkCoord) =>
         _chunks.TryGetValue(chunkCoord, out Chunk chunk) ? chunk : null;
     
@@ -177,11 +167,30 @@ public class GridMap : MonoBehaviour
             {
                 if (dx == 0 && dy == 0)
                     continue;
-                
+
                 Vector2Int neighborCoord = chunkCoord + new Vector2Int(dx, dy);
                 if (_chunks.TryGetValue(neighborCoord, out Chunk neighbor))
                     yield return neighbor;
             }
+        }
+    }
+
+    // 점령 출격 가능 여부 판정 전용 - 상하좌우 4방향만 인접으로 취급한다 (시야 확장의 8방향 GetAdjacentChunks와는 별개).
+    private static readonly Vector2Int[] ORTHOGONAL_CHUNK_DIRECTIONS =
+    {
+        new Vector2Int(1, 0),
+        new Vector2Int(-1, 0),
+        new Vector2Int(0, 1),
+        new Vector2Int(0, -1),
+    };
+
+    public IEnumerable<Chunk> GetOrthogonalAdjacentChunks(Vector2Int chunkCoord)
+    {
+        foreach (Vector2Int direction in ORTHOGONAL_CHUNK_DIRECTIONS)
+        {
+            Vector2Int neighborCoord = chunkCoord + direction;
+            if (_chunks.TryGetValue(neighborCoord, out Chunk neighbor))
+                yield return neighbor;
         }
     }
 
