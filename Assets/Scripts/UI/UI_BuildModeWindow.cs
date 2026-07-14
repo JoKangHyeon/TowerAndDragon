@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -5,20 +6,16 @@ using DG.Tweening;
 // 건물 배치 및 철거, 재이동 디버깅용 -> 추후 수정될 수 있음
 public class UI_BuildModeWindow : MonoBehaviour
 {
-    [System.Serializable]
-    private struct BuildingButtonEntry
-    {
-        public Button Button;
-        public Building Prefab;
-    }
-
     // 필터 탭 하나. 선택되면 Menu_Focus가 활성, 아니면 Menu_Default가 활성이 된다.
+    // 이 탭(카테고리)이 가진 건물들이 선택 시 슬롯 목록으로 생성된다.
     [System.Serializable]
     private struct FilterTab
     {
         public Button Button;
         public GameObject MenuFocus;
         public GameObject MenuDefault;
+        public UI_BuildingSlot SlotPrefab;   // 이 카테고리 슬롯 프리팹 (Slot_Tower / Slot_Building / Slot_Factory)
+        public Building[] Buildings;
     }
 
     // 상단 활성 버튼 묶음 (이동 / 철거).
@@ -36,10 +33,12 @@ public class UI_BuildModeWindow : MonoBehaviour
     private ActiveButtons _activeButtons;
 
     [SerializeField]
-    private BuildingButtonEntry[] _buildingButtons;
-
-    [SerializeField]
     private FilterTab[] _filterTabs;
+
+    [Header("건물 슬롯")]
+    [Tooltip("생성된 슬롯이 들어갈 부모 (Scroll View의 Content). 슬롯 프리팹은 각 탭(FilterTab)에서 지정.")]
+    [SerializeField]
+    private Transform _slotContainer;
 
     [SerializeField]
     private GameObject _buildModePanel;
@@ -62,6 +61,8 @@ public class UI_BuildModeWindow : MonoBehaviour
     private bool _isOpen;
     private Tween _panelTween;
 
+    private readonly List<UI_BuildingSlot> _spawnedSlots = new();
+
     private void Awake()
     {
         // BuildMode 버튼: 열려 있으면 닫고, 닫혀 있으면 연다(토글).
@@ -72,12 +73,6 @@ public class UI_BuildModeWindow : MonoBehaviour
 
         // 건물 먼저 선택 후 move 버튼 클릭 -> 새 위치 클릭하면 바로 이동
         _activeButtons.Move.onClick.AddListener(() => _buildingPlacementController.EnterMoveMode());
-
-        foreach (BuildingButtonEntry entry in _buildingButtons)
-        {
-            Building prefab = entry.Prefab;
-            entry.Button.onClick.AddListener(() => _buildingPlacementController.SelectBuilding(prefab));
-        }
 
         for (int i = 0; i < _filterTabs.Length; i++)
         {
@@ -136,12 +131,12 @@ public class UI_BuildModeWindow : MonoBehaviour
         // 홈에서 왼쪽으로 슬라이드 아웃한 뒤 패널을 비활성화한다.
         _panelTween?.Kill();
         _panelTween = _panelRect.DOAnchorPos(_homePos + _closeToOffset, _slideDuration)
-            .SetEase(Ease.OutFlash)
+            .SetEase(Ease.InCubic)
             .SetLink(_buildModePanel)
             .OnComplete(() => _buildModePanel.SetActive(false));
     }
 
-    // 선택된 탭만 Focus 상태로, 나머지는 Default 상태로 만든다.
+    // 선택된 탭만 Focus 상태로, 나머지는 Default 상태로 만들고, 그 탭의 건물 슬롯 목록을 다시 생성한다.
     private void SelectFilter(int index)
     {
         for (int i = 0; i < _filterTabs.Length; i++)
@@ -150,5 +145,34 @@ public class UI_BuildModeWindow : MonoBehaviour
             _filterTabs[i].MenuFocus.SetActive(isSelected);
             _filterTabs[i].MenuDefault.SetActive(!isSelected);
         }
+
+        RebuildSlots(_filterTabs[index].SlotPrefab, _filterTabs[index].Buildings);
+    }
+
+    // 컨테이너의 기존 슬롯을 지우고, 주어진 슬롯 프리팹으로 건물 목록만큼 슬롯을 새로 생성한다.
+    private void RebuildSlots(UI_BuildingSlot slotPrefab, Building[] buildings)
+    {
+        foreach (UI_BuildingSlot slot in _spawnedSlots)
+        {
+            if (slot != null)
+                Destroy(slot.gameObject);
+        }
+        _spawnedSlots.Clear();
+
+        if (slotPrefab == null || _slotContainer == null || buildings == null)
+            return;
+
+        foreach (Building building in buildings)
+        {
+            UI_BuildingSlot slot = Instantiate(slotPrefab, _slotContainer);
+            slot.Setup(building, OnSlotSelected);
+            _spawnedSlots.Add(slot);
+        }
+    }
+
+    // 슬롯 클릭 시 해당 건물을 배치 대상으로 선택 (기존 building buttons에서 옮겨온 기능).
+    private void OnSlotSelected(Building prefab)
+    {
+        _buildingPlacementController.SelectBuilding(prefab);
     }
 }
