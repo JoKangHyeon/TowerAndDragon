@@ -20,6 +20,7 @@ public class Tower : Building, IMonsterTarget
     public bool IsDead => _health == null || _health.IsDead;
 
     public TowerAttack Attack => _attack;
+    public TowerData Data => _towerData;
 
     public MonsterTargetType TargetType => MonsterTargetType.Tower;
     public Transform TargetTransform => transform;
