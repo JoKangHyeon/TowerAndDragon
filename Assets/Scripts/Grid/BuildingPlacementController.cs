@@ -131,6 +131,9 @@ public class BuildingPlacementController : MonoBehaviour
         if (building == null)
             return;
 
+        if (!building.IsMoveable)
+            return;
+
         CancelBuildMode();
         _moveSourceCoord = _selectedExistingBuildingCoord;
         _selectedExistingBuildingCoord = null;
