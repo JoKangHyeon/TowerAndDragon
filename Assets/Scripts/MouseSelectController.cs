@@ -4,8 +4,6 @@ using System.Collections.Generic;
 
 public class MouseSelectController : MonoBehaviour
 {
-    private const int FOOTPRINT_CENTER_DIVISOR = 2;
-
     [SerializeField]
     private SpriteRenderer _spriteRenderer;
 
@@ -31,8 +29,8 @@ public class MouseSelectController : MonoBehaviour
     private Color _occupiedOverlayColor = new Color(1f, 0f, 0f, 0.35f);
 
     private Camera _cam;
-    private readonly List<SpriteRenderer> _highlightPool = new();
-    private readonly List<SpriteRenderer> _occupiedOverlayPool = new();
+    private ComponentPool<SpriteRenderer> _highlightPool;
+    private ComponentPool<SpriteRenderer> _occupiedOverlayPool;
     private FootprintShape _footprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private Vector3 _ghostLocalOffset;
     private bool _isPlacementActive;
@@ -43,11 +41,15 @@ public class MouseSelectController : MonoBehaviour
     public Color SelectionHighlightColor => _selectionHighlightColor;
     public float YOffset => _yOffset;
 
+    // 참조가 비어 있어도(=null) 안전하게 0을 반환 - Y 오프셋을 쓰는 다른 오버레이 스크립트들이 공용으로 사용.
+    public static float GetYOffsetOrZero(MouseSelectController mouseSelectController) =>
+        mouseSelectController != null ? mouseSelectController.YOffset : 0f;
 
     private void Awake()
     {
         _cam = Camera.main;
-        _highlightPool.Add(_spriteRenderer);
+        _highlightPool = new ComponentPool<SpriteRenderer>(_spriteRenderer, transform, seedInstance: _spriteRenderer);
+        _occupiedOverlayPool = new ComponentPool<SpriteRenderer>(_spriteRenderer, transform);
         Deactivate();
     }
 
@@ -107,12 +109,8 @@ public class MouseSelectController : MonoBehaviour
         _ghostRenderer.gameObject.SetActive(ghostSprite != null);
     }
 
-    private Vector3Int GetFootprintAnchor(Vector3Int hoveredCell, FootprintShape shape)
-    {
-        int offsetX = (shape.Width - 1) / FOOTPRINT_CENTER_DIVISOR;
-        int offsetY = (shape.Height - 1) / FOOTPRINT_CENTER_DIVISOR;
-        return hoveredCell - new Vector3Int(offsetX, offsetY, 0);
-    }
+    private Vector3Int GetFootprintAnchor(Vector3Int hoveredCell, FootprintShape shape) =>
+        hoveredCell - shape.CenterOffset;
 
     private void DrawFootprint(List<Vector3Int> footprint, bool canConstruct)
     {
@@ -122,21 +120,18 @@ public class MouseSelectController : MonoBehaviour
 
     public void HighlightCells(List<Vector3Int> coords, Color color) => HighlightCells(coords, color, _highlightPool);
 
-    private void HighlightCells(List<Vector3Int> coords, Color color, List<SpriteRenderer> pool)
+    private void HighlightCells(List<Vector3Int> coords, Color color, ComponentPool<SpriteRenderer> pool)
     {
         for (int i = 0; i < coords.Count; i++)
         {
-            SpriteRenderer highlight = GetPooledHighlight(i, pool);
+            SpriteRenderer highlight = pool.Get(i);
             Vector3 cellPos = _gridMap.ConvertGridToWorld(coords[i]);
             cellPos.y += _yOffset;
             highlight.transform.position = cellPos;
             highlight.color = color;
         }
 
-        for (int i = coords.Count; i < pool.Count; i++)
-        {
-            pool[i].gameObject.SetActive(false);
-        }
+        pool.DeactivateFrom(coords.Count);
     }
 
     public void HighlightSelection(List<Vector3Int> coords) => HighlightCells(coords, _selectionHighlightColor);
@@ -144,17 +139,9 @@ public class MouseSelectController : MonoBehaviour
     // 건설 모드에서 이미 건물이 배치된 타일을 표시 - 어떤 땅이 비어있는지 한눈에 파악 가능
     public void ShowOccupiedOverlay(List<Vector3Int> coords) => HighlightCells(coords, _occupiedOverlayColor, _occupiedOverlayPool);
 
-    public void ClearOccupiedOverlay() => ClearHighlights(_occupiedOverlayPool);
+    public void ClearOccupiedOverlay() => _occupiedOverlayPool.DeactivateAll();
 
-    public void ClearHighlights() => ClearHighlights(_highlightPool);
-
-    private void ClearHighlights(List<SpriteRenderer> pool)
-    {
-        foreach (SpriteRenderer highlight in pool)
-        {
-            highlight.gameObject.SetActive(false);
-        }
-    }
+    public void ClearHighlights() => _highlightPool.DeactivateAll();
 
     private void DrawGhost(Vector3Int anchor, bool canConstruct)
     {
@@ -175,17 +162,5 @@ public class MouseSelectController : MonoBehaviour
 
         ClearHighlights();
         CanConstruct = false;
-    }
-
-    private SpriteRenderer GetPooledHighlight(int index, List<SpriteRenderer> pool)
-    {
-        if (index >= pool.Count)
-        {
-            pool.Add(Instantiate(_spriteRenderer, transform));
-        }
-
-        SpriteRenderer pooled = pool[index];
-        pooled.gameObject.SetActive(true);
-        return pooled;
     }
 }

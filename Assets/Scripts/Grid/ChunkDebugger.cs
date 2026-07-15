@@ -35,7 +35,7 @@ public class ChunkDebugger : MonoBehaviour
     private SpriteRenderer _chunkOverlaySpritePrefab;
 
     private GridMap _gridMap;
-    private readonly List<SpriteRenderer> _chunkOverlayPool = new();
+    private ComponentPool<SpriteRenderer> _chunkOverlayPool;
 
     private const int CHUNK_GIZMO_HASH_PRIME_X = 92821;
     private const int CHUNK_GIZMO_HASH_PRIME_Y = 68917;
@@ -63,6 +63,7 @@ public class ChunkDebugger : MonoBehaviour
     private void Awake()
     {
         _gridMap = GetComponent<GridMap>();
+        _chunkOverlayPool = new ComponentPool<SpriteRenderer>(_chunkOverlaySpritePrefab, transform);
     }
 
     // GridMap.Awake()가 청크 생성을 끝낸 뒤(모든 Awake가 Start보다 먼저 실행됨)에 오버레이를 초기화
@@ -100,7 +101,7 @@ public class ChunkDebugger : MonoBehaviour
         if (!_showChunkGizmos || gridMap == null)
             return;
 
-        float yOffset = GetOverlayYOffset();
+        float yOffset = MouseSelectController.GetYOffsetOrZero(_mouseSelectController);
 
         foreach (Chunk chunk in gridMap.GetAllChunks())
         {
@@ -122,8 +123,6 @@ public class ChunkDebugger : MonoBehaviour
         }
     }
 
-    private float GetOverlayYOffset() => _mouseSelectController != null ? _mouseSelectController.YOffset : 0f;
-
     // 마우스 셀렉트와 동일한 스프라이트 풀링 방식으로, 실제 렌더링되는 타일 위치(Y 오프셋 반영)에 맞춰
     // 청크별로 다른 색 스프라이트를 깔아 그룹핑을 확인
     private void RefreshChunkOverlay()
@@ -131,7 +130,7 @@ public class ChunkDebugger : MonoBehaviour
         if (_chunkOverlaySpritePrefab == null || _gridMap == null)
             return;
 
-        float yOffset = GetOverlayYOffset();
+        float yOffset = MouseSelectController.GetYOffsetOrZero(_mouseSelectController);
         int index = 0;
 
         foreach (Chunk chunk in _gridMap.GetAllChunks())
@@ -140,7 +139,8 @@ public class ChunkDebugger : MonoBehaviour
 
             foreach (GridCell cell in chunk.Cells)
             {
-                SpriteRenderer overlay = GetPooledChunkOverlay(index);
+                SpriteRenderer overlay = _chunkOverlayPool.Get(index);
+                overlay.gameObject.SetActive(_showChunkGizmos);
                 Vector3 worldPos = _gridMap.ConvertGridToWorld(cell.Coord);
                 worldPos.y += yOffset;
                 overlay.transform.position = worldPos;
@@ -149,22 +149,7 @@ public class ChunkDebugger : MonoBehaviour
             }
         }
 
-        for (int i = index; i < _chunkOverlayPool.Count; i++)
-        {
-            _chunkOverlayPool[i].gameObject.SetActive(false);
-        }
-    }
-
-    private SpriteRenderer GetPooledChunkOverlay(int index)
-    {
-        if (index >= _chunkOverlayPool.Count)
-        {
-            _chunkOverlayPool.Add(Instantiate(_chunkOverlaySpritePrefab, transform));
-        }
-
-        SpriteRenderer overlay = _chunkOverlayPool[index];
-        overlay.gameObject.SetActive(_showChunkGizmos);
-        return overlay;
+        _chunkOverlayPool.DeactivateFrom(index);
     }
 
     private static Color GetChunkGizmoColor(Vector2Int chunkCoord)

@@ -22,10 +22,10 @@ public class GridMap : MonoBehaviour
     private Dictionary<Vector2Int, Chunk> _chunks = new();
 
     // 그리드 셀의 상태 변경 이벤트 - 건물 배치, 건물 파괴, 적 진입
-    public Action<GridCell> OnCellChanged;
+    public event Action<GridCell> OnCellChanged;
 
     // 청크 상태 변경 이벤트 - 점령/시야 확장 등 청크 단위 상태 전환 시에만 발생 (OnCellChanged보다 드묾)
-    public Action OnChunkStateChanged;
+    public event Action OnChunkStateChanged;
 
     private void Awake()
     {
@@ -144,7 +144,8 @@ public class GridMap : MonoBehaviour
     {
         if (!_chunks.TryGetValue(chunkCoord, out Chunk chunk))
             return;
-        
+
+        ChunkState previousState = chunk.CurrentState;
         chunk.SetState(newState);
 
         foreach (GridCell cell in chunk.Cells)
@@ -152,7 +153,11 @@ public class GridMap : MonoBehaviour
             OnCellChanged?.Invoke(cell);
         }
 
-        OnChunkStateChanged?.Invoke();
+        // 점령 여부와 무관한 상태 전환(예: Hidden -> Visible)은 점령 테두리 등
+        // Conquered 집합에 의존하는 구독자에게 무의미하므로 이벤트를 생략한다.
+        bool affectsConqueredSet = previousState == ChunkState.Conquered || newState == ChunkState.Conquered;
+        if (affectsConqueredSet)
+            OnChunkStateChanged?.Invoke();
     }
 
     public void SetChunkState(Vector3Int cellCoord, ChunkState newState)

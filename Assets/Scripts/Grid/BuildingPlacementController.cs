@@ -117,7 +117,13 @@ public class BuildingPlacementController : MonoBehaviour
         if (!_selectedExistingBuildingCoord.HasValue)
             return;
 
+        Building building = _gridMap.GetBuildingAt(_selectedExistingBuildingCoord.Value);
+
         _gridMap.RemoveBuilding(_selectedExistingBuildingCoord.Value);
+
+        if (building != null)
+            building.SetHighlighted(false, default);
+
         _selectedExistingBuildingCoord = null;
         _mouseSelectController.ClearHighlights();
     }

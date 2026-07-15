@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class Building : MonoBehaviour
 {
@@ -7,6 +8,14 @@ public class Building : MonoBehaviour
 
     [SerializeField]
     private FootprintShape _footprintShape;
+
+    [SerializeField]
+    [FormerlySerializedAs("IsMoveable")]
+    private bool _isMoveable;
+
+    [SerializeField]
+    [FormerlySerializedAs("IsRemoveable")]
+    private bool _isRemoveable;
 
     private bool _isOpen = false; // 해금 여부
     private SpriteRenderer _spriteRenderer;
@@ -17,8 +26,8 @@ public class Building : MonoBehaviour
     public Sprite Sprite => _sprite;
     public FootprintShape FootprintShape => _footprintShape;
 
-    public bool IsMoveable;
-    public bool IsRemoveable;
+    public bool IsMoveable => _isMoveable;
+    public bool IsRemoveable => _isRemoveable;
 
     // 배치/재배치 시 footprint 중심에 더할 오프셋 - 재배치시 localposition 더해줄 때 누적됨 방지
     public Vector3 PlacementOffset => _placementOffset ?? transform.localPosition;

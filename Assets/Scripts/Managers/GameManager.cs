@@ -1,25 +1,35 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviour
 {
-    public RunData CurrentRun;
+    [SerializeField]
+    [FormerlySerializedAs("CurrentRun")]
+    private RunData _currentRun;
 
-    public CycleManager CycleManager;
+    [SerializeField]
+    [FormerlySerializedAs("CycleManager")]
+    private CycleManager _cycleManager;
 
+    [SerializeField]
+    [FormerlySerializedAs("DefaultLights")]
+    private List<CycleLight> _defaultLights;
 
-    public List<CycleLight> DefaultLights;
+    public RunData CurrentRun => _currentRun;
+    public CycleManager CycleManager => _cycleManager;
+    public List<CycleLight> DefaultLights => _defaultLights;
 
     private void Awake()
     {
-        CycleManager.Construct(this);
+        _cycleManager.Construct(this);
     }
 
     private void Start()
     {
-        foreach (CycleLight light in DefaultLights)
+        foreach (CycleLight light in _defaultLights)
         {
-            light.Construct(CycleManager);
+            light.Construct(_cycleManager);
         }
     }
 }

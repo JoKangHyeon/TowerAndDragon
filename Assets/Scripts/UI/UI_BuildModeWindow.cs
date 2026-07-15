@@ -94,8 +94,14 @@ public class UI_BuildModeWindow : MonoBehaviour
 
     private void Update()
     {
+        Building selected = _buildingPlacementController.SelectedBuilding;
+
         // 이동 모드 진입/종료(클릭 이동, 취소, 우클릭 취소 등)에 맞춰 Move 버튼 표시를 매 프레임 동기화
         _activeButtons.Move.gameObject.SetActive(!_buildingPlacementController.IsMoving);
+
+        // 이동/철거 불가 건물(성, 주둔지 등) 선택 시 버튼을 비활성화해 클릭해도 아무 반응 없는 상황을 방지
+        _activeButtons.Move.interactable = selected != null && selected.IsMoveable;
+        _activeButtons.Remove.interactable = selected != null && selected.IsRemoveable;
     }
 
     // BuildMode 버튼 토글.

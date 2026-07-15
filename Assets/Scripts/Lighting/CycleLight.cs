@@ -1,13 +1,16 @@
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.Serialization;
 
 [RequireComponent(typeof(Light2D))]
 public class CycleLight : MonoBehaviour
 {
-    /// <summary>
-    /// false면 밤에 빛을 킴
-    /// </summary>
-    public bool IsOnWhileDay;
+    [SerializeField]
+    [FormerlySerializedAs("IsOnWhileDay")]
+    [Tooltip("false면 밤에 빛을 킴")]
+    private bool _isOnWhileDay;
+
+    public bool IsOnWhileDay => _isOnWhileDay;
 
     private Light2D _light2D;
     private CycleManager _cycleManager;

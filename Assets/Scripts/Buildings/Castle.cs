@@ -6,7 +6,6 @@ using UnityEngine;
 public class Castle : Building, IDamageable
 {
     private const float DEFAULT_MAX_HEALTH = 100f;
-    private const int CENTER_HALF_DIVISOR = 2;
 
     // 추후 연구 시스템에서 시야 확장을 다루게 되면 이 값을 늘려서 재사용한다 - const로 고정하지 않음.
     private int _inactiveChunkRadius = 1;
@@ -50,21 +49,10 @@ public class Castle : Building, IDamageable
             return;
         }
 
-        Building building = GetComponent<Building>();
-        if (building == null)
-        {
-            Debug.LogWarning("[Castle] Building 컴포넌트가 없어 그리드 점유를 건너뜁니다.");
-            return;
-        }
-
-        FootprintShape shape = building.FootprintShape;
         Vector3Int center = _gridMap.GetCenterCell();
-        Vector3Int anchor = center - new Vector3Int(
-            (shape.Width - 1) / CENTER_HALF_DIVISOR,
-            (shape.Height - 1) / CENTER_HALF_DIVISOR,
-            0);
+        Vector3Int anchor = center - FootprintShape.CenterOffset;
 
-        if (!_gridMap.RegisterFootprint(building, anchor))
+        if (!_gridMap.RegisterFootprint(this, anchor))
         {
             Debug.LogWarning($"[Castle] 그리드 점유 등록 실패 - center {center}, anchor {anchor}.");
             return;

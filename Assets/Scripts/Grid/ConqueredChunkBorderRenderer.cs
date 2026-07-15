@@ -25,11 +25,12 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
     private float _lineWidth = 0.05f;
 
     private GridMap _gridMap;
-    private readonly List<LineRenderer> _borderPool = new();
+    private ComponentPool<LineRenderer> _borderPool;
 
     private void Awake()
     {
         _gridMap = GetComponent<GridMap>();
+        _borderPool = new ComponentPool<LineRenderer>(_borderLineRendererPrefab, transform);
         _gridMap.OnChunkStateChanged += RefreshBorders;
     }
 
@@ -60,14 +61,11 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
 
         for (int i = 0; i < loops.Count; i++)
         {
-            LineRenderer lineRenderer = GetPooledLineRenderer(i);
+            LineRenderer lineRenderer = _borderPool.Get(i);
             SetLoopPositions(lineRenderer, loops[i]);
         }
 
-        for (int i = loops.Count; i < _borderPool.Count; i++)
-        {
-            _borderPool[i].gameObject.SetActive(false);
-        }
+        _borderPool.DeactivateFrom(loops.Count);
     }
 
     private void SetLoopPositions(LineRenderer lineRenderer, List<Vector2Int> loop)
@@ -84,18 +82,6 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
         {
             lineRenderer.SetPosition(i, GetCornerWorldPosition(loop[i]));
         }
-    }
-
-    private LineRenderer GetPooledLineRenderer(int index)
-    {
-        if (index >= _borderPool.Count)
-        {
-            _borderPool.Add(Instantiate(_borderLineRendererPrefab, transform));
-        }
-
-        LineRenderer pooled = _borderPool[index];
-        pooled.gameObject.SetActive(true);
-        return pooled;
     }
 
     // 청크 경계와 무관하게, 점령된 셀 전체를 하나의 영역으로 보고 바깥 경계 변만 수집한다.
@@ -222,9 +208,7 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
         Vector3 diagonalCellCenter = _gridMap.ConvertGridToWorld(new Vector3Int(corner.x - 1, corner.y - 1, 0));
         Vector3 cellCenter = _gridMap.ConvertGridToWorld(new Vector3Int(corner.x, corner.y, 0));
         Vector3 worldPos = (diagonalCellCenter + cellCenter) * CORNER_MIDPOINT_FACTOR;
-        worldPos.y += GetOverlayYOffset();
+        worldPos.y += MouseSelectController.GetYOffsetOrZero(_mouseSelectController);
         return worldPos;
     }
-
-    private float GetOverlayYOffset() => _mouseSelectController != null ? _mouseSelectController.YOffset : 0f;
 }
