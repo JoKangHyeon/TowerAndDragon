@@ -7,7 +7,6 @@ public class TowerAttack : MonoBehaviour
 
     private TowerData _towerData;
     private BaseMonster _target;
-
     private float _nextAttackTime;
     private bool _isAttackEnabled;
 
@@ -139,10 +138,10 @@ public class TowerAttack : MonoBehaviour
             spawnPosition,
             Quaternion.identity);
 
-        TowerProjectile projectile = projectileObject.GetComponent<TowerProjectile>();
+        Projectile projectile = projectileObject.GetComponent<Projectile>();
         if (projectile == null)
         {
-            Debug.LogError("[TowerAttack] 투사체 프리팹에 TowerProjectile이 없습니다.", projectileObject);
+            Debug.LogError("[TowerAttack] 투사체 프리팹에 Projectile이 없습니다.", projectileObject);
             Destroy(projectileObject);
             Attack.Execute(target, in context);
             return;
