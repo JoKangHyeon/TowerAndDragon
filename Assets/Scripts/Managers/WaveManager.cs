@@ -12,12 +12,16 @@ public class WaveManager : MonoBehaviour
 {
     [SerializeField] private List<Portal> _portals;
     [SerializeField] private UnityEvent _allSpawnCompleted;
+    [SerializeField] private UnityEvent _allMonstersDefeated;
+
 
     private CancellationTokenSource _waveCancellation;
     private readonly Dictionary<PortalDirection, Portal> _portalById = new();
+    private readonly List<BaseMonster> _spawnedMonsters = new();
 
     public bool IsRunning { get; private set; }
     public UnityEvent AllSpawnsCompleted => _allSpawnCompleted;
+    public UnityEvent AllMonstersDefeated => _allMonstersDefeated;
 
     public async UniTask StartWaveAsync(WaveDefinitionSO waveDefinition)
     {
@@ -63,6 +67,8 @@ public class WaveManager : MonoBehaviour
             executablePortals.Add(portal);
         }
 
+        _spawnedMonsters.Clear();
+
         _waveCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             destroyCancellationToken);
 
@@ -84,6 +90,13 @@ public class WaveManager : MonoBehaviour
 
             await UniTask.WhenAll(portalTasks);
             _allSpawnCompleted?.Invoke();
+
+            await UniTask.WaitUntil(
+                AreAllMonstersDefeated,
+                cancellationToken: currentCancellation.Token
+            );
+
+            _allMonstersDefeated?.Invoke();
         }
         catch (OperationCanceledException)
         {
@@ -216,6 +229,16 @@ public class WaveManager : MonoBehaviour
             portal.GroundPath,
             portal.MainCastle);
 
+        _spawnedMonsters.Add(monster);
+
         return monster;
+    }
+
+    private bool AreAllMonstersDefeated()
+    {
+        _spawnedMonsters.RemoveAll(
+            monster => monster == null || monster.IsDead);
+
+        return _spawnedMonsters.Count == 0;
     }
 }
