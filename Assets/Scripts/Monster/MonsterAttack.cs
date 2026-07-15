@@ -15,8 +15,9 @@ public class MonsterAttack : MonoBehaviour
     private AttackSO _attack;
     private MonsterTargetType _enRouteTargetTypes;
     private MonsterMovement _movement;
-
     private IMonsterTarget _currentTarget;
+    private Castle _finalTarget;
+
     private float _nextAttackTime;
     private bool _isInitialized;
 
@@ -37,10 +38,24 @@ public class MonsterAttack : MonoBehaviour
 
     private void Update()
     {
-        if (!_isInitialized ||
-            _enRouteTargetTypes == MonsterTargetType.None ||
-            _movement == null ||
-            _movement.HasArrived)
+        if (!_isInitialized)
+        {
+            return;
+        }
+
+        if (_movement != null && _movement.HasArrived)
+        {
+            UpdateFinalTargetAttack();
+            return;
+        }
+
+        UpdateEnRouteAttack();
+    }
+
+    private void UpdateEnRouteAttack()
+    {
+        if (_enRouteTargetTypes == MonsterTargetType.None ||
+        _movement == null)
         {
             return;
         }
@@ -147,7 +162,7 @@ public class MonsterAttack : MonoBehaviour
     /// 투사체가 설정된 경우(원거리) 투사체를 발사해 명중 시 피해를 적용하고,
     /// 없으면(근접) 즉시 피해를 적용한다.
     /// </summary>
-    private void Fire(IMonsterTarget target)
+    private void Fire(IAttackTarget target)
     {
         AttackContext context = new AttackContext(gameObject);
 
@@ -159,8 +174,7 @@ public class MonsterAttack : MonoBehaviour
 
         LaunchProjectile(target, in context);
     }
-
-    private void LaunchProjectile(IMonsterTarget target, in AttackContext context)
+    private void LaunchProjectile(IAttackTarget target, in AttackContext context)
     {
         Vector3 spawnPosition = _firePoint != null
             ? _firePoint.position
@@ -181,5 +195,28 @@ public class MonsterAttack : MonoBehaviour
         }
 
         projectile.Launch(target, _attack, in context, _data.ProjectileSpeed);
+    }
+
+    public void SetFinalTarget(Castle target)
+    {
+        _currentTarget = null;
+        _finalTarget = target;
+        _movement?.Stop();
+    }
+
+    private void UpdateFinalTargetAttack()
+    {
+        if (_finalTarget == null || _finalTarget.IsDead)
+        {
+            return;
+        }
+
+        if (Time.time < _nextAttackTime)
+        {
+            return;
+        }
+
+        Fire(_finalTarget);
+        _nextAttackTime = Time.time + Interval;
     }
 }
