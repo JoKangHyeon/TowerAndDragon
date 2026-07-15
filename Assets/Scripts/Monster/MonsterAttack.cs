@@ -171,10 +171,10 @@ public class MonsterAttack : MonoBehaviour
             spawnPosition,
             Quaternion.identity);
 
-        MonsterProjectile projectile = projectileObject.GetComponent<MonsterProjectile>();
+        Projectile projectile = projectileObject.GetComponent<Projectile>();
         if (projectile == null)
         {
-            Debug.LogError("[MonsterAttack] 투사체 프리팹에 MonsterProjectile이 없습니다.", projectileObject);
+            Debug.LogError("[MonsterAttack] 투사체 프리팹에 Projectile이 없습니다.", projectileObject);
             Destroy(projectileObject);
             _attack.Execute(target, in context);
             return;

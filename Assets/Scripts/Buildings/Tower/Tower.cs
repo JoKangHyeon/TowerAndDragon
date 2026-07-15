@@ -18,12 +18,11 @@ public class Tower : Building, IMonsterTarget
     private float _disabledAtTime;
 
     public bool IsDead => _health == null || _health.IsDead;
-
     public TowerAttack Attack => _attack;
     public TowerData Data => _towerData;
-
     public MonsterTargetType TargetType => MonsterTargetType.Tower;
     public Transform TargetTransform => transform;
+    public GameObject TargetObject => gameObject;
 
     private void Awake()
     {

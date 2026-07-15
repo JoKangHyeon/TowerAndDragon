@@ -7,7 +7,6 @@ public class TowerAttack : MonoBehaviour
 
     private TowerData _towerData;
     private BaseMonster _target;
-
     private float _nextAttackTime;
     private bool _isAttackEnabled;
 
@@ -110,17 +109,26 @@ public class TowerAttack : MonoBehaviour
         return (targetPosition - transform.position).sqrMagnitude;
     }
 
+    /// <summary>
+    /// 사거리 내 대상에 공격을 적용한다.
+    /// 투사체가 설정된 경우 투사체가 피해를 운반해 명중 시점에 적용하고,
+    /// 없으면 즉시 피해를 적용한다. (MonsterAttack과 동일한 패턴)
+    /// </summary>
     private void Fire()
     {
         AttackContext context = new AttackContext(gameObject);
-        Attack.Execute(_target, in context);
 
-        if (_towerData.ProjectilePrefab == null || _towerData.ProjectileSpeed <= 0)
+        if (!_towerData.HasProjectile)
         {
-            Debug.LogWarning("[TowerAttack] 투사체 프리팹 또는 투사체 속도가 설정되지 않았습니다.", this);
+            Attack.Execute(_target, in context);
             return;
         }
 
+        LaunchProjectile(_target, in context);
+    }
+
+    private void LaunchProjectile(BaseMonster target, in AttackContext context)
+    {
         Vector3 spawnPosition = _firePoint != null
             ? _firePoint.position
             : transform.position;
@@ -130,15 +138,16 @@ public class TowerAttack : MonoBehaviour
             spawnPosition,
             Quaternion.identity);
 
-        TowerProjectile projectile = projectileObject.GetComponent<TowerProjectile>();
+        Projectile projectile = projectileObject.GetComponent<Projectile>();
         if (projectile == null)
         {
-            Debug.LogError("[TowerAttack] 투사체 프리팹에 TowerProjectile이 없습니다.", projectileObject);
+            Debug.LogError("[TowerAttack] 투사체 프리팹에 Projectile이 없습니다.", projectileObject);
             Destroy(projectileObject);
+            Attack.Execute(target, in context);
             return;
         }
 
-        projectile.Launch(_target.transform, _towerData.ProjectileSpeed);
+        projectile.Launch(target, Attack, in context, _towerData.ProjectileSpeed);
     }
 
 #if UNITY_EDITOR
