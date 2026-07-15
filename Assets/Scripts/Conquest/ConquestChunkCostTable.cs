@@ -9,8 +9,8 @@ public class ConquestChunkCostTable : ScriptableObject
     {
         public Vector2Int ChunkCoord;
         public ResourceCost Cost;
+        public EnemyScalingModifier EnemyScaling;
     }
-
     [SerializeField] private Entry[] _entries;
 
     public bool TryResolve(Vector2Int chunkCoord, out ResourceCost cost)
@@ -26,5 +26,16 @@ public class ConquestChunkCostTable : ScriptableObject
 
         cost = default;
         return false;
+    }
+
+    public EnemyScalingModifier ResolveEnemyScaling(Vector2Int chunkCoord)
+    {
+        foreach (Entry entry in _entries)
+        {
+            if (entry.ChunkCoord == chunkCoord)
+                return entry.EnemyScaling;
+        }
+
+        return EnemyScalingModifier.Neutral;
     }
 }
