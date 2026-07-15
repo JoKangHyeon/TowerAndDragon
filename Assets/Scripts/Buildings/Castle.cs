@@ -14,6 +14,11 @@ public class Castle : MonoBehaviour, IDamageable
     [Tooltip("배치될 그리드. 지정하면 시작 시 타일맵 정중앙 기준 3x3을 점유한다(성 이미지는 이동하지 않으니 직접 맞춰 배치). 비워두면 그리드 등록을 건너뛴다.")]
     [SerializeField] private GridMap _gridMap;
 
+    [Tooltip("파괴 연출용 Animator. 평소 비활성으로 두고, 파괴 시 활성화하면 castle_broken이 1회 재생된다.")]
+    [SerializeField] private Animator _brokenAnimator;
+    [Tooltip("성 파괴 시 게임오버를 처리할 매니저.")]
+    [SerializeField] private GameManager _gameManager;
+
     private Health _health;
 
     public bool IsDead => _health == null || _health.IsDead;
@@ -31,6 +36,12 @@ public class Castle : MonoBehaviour, IDamageable
         _health = GetComponent<Health>();
         _health.HealthChanged += HandleHealthChanged;
         _health.Died += HandleDestroyed;
+
+        // 파괴 연출 Animator는 시작 시 꺼둔다 → 사망 시(HandleDestroyed)에만 켜서 1회 재생.
+        if (_brokenAnimator != null)
+        {
+            _brokenAnimator.enabled = false;
+        }
     }
 
     private void Start()
@@ -105,7 +116,18 @@ public class Castle : MonoBehaviour, IDamageable
 
     private void HandleDestroyed()
     {
-        // 게임오버 처리 연결 지점 (미구현).
+        // 파괴 연출: 비활성 Animator를 켜면 castle_broken 클립이 1회 재생된다.
+        if (_brokenAnimator != null)
+        {
+            _brokenAnimator.enabled = true;
+        }
+
+        // 게임오버는 성이 GameManager에 호출을 넘긴다.
+        if (_gameManager != null)
+        {
+            _gameManager.GameOver();
+        }
+
         Destroyed?.Invoke();
     }
 
