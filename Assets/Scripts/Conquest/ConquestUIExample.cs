@@ -157,6 +157,7 @@ public class ConquestUIExample : MonoBehaviour
     public void OnChunkSelected(Vector2Int chunkCoord)
     {
         _selectedChunkCoord = chunkCoord;
+        _conquestModeController.LockChunkSelection(chunkCoord);
         OpenPanel();
         Refresh();
     }
@@ -178,6 +179,7 @@ public class ConquestUIExample : MonoBehaviour
     public void Close()
     {
         _selectedChunkCoord = null;
+        _conquestModeController.UnlockChunkSelection();
 
         _panelTween?.Kill();
         _panelTween = _panelRect.DOAnchorPos(_homePos + _closeToOffset, _slideDuration)

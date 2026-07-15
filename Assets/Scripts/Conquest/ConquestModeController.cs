@@ -34,6 +34,7 @@ public class ConquestModeController : MonoBehaviour
     public bool IsActive { get; private set; }
 
     private Vector2Int? _selectedChunkCoord;
+    private bool _isSelectionLocked;
 
     private void OnEnable()
     {
@@ -59,6 +60,9 @@ public class ConquestModeController : MonoBehaviour
     // 매 프레임 호버된 청크를 확인해, 바뀐 경우에만 노란색 선택 표시를 다시 계산한다(클릭을 기다리지 않는다).
     private void HandleHover()
     {
+        if (_isSelectionLocked)
+            return;
+
         Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
         Chunk chunk = _gridMap.GetChunkAt(hoveredCell);
 
@@ -85,6 +89,7 @@ public class ConquestModeController : MonoBehaviour
         }
         else
         {
+            _isSelectionLocked = false;
             _mouseSelectController.ClearHighlights();
         }
     }
@@ -94,6 +99,20 @@ public class ConquestModeController : MonoBehaviour
     {
         if (IsActive)
             HighlightAllConquerableChunks();
+    }
+
+    // 패널이 열릴 때 호출 — 선택 셀을 고정하고 hover 갱신을 중단한다.
+    public void LockChunkSelection(Vector2Int chunkCoord)
+    {
+        _isSelectionLocked = true;
+        _selectedChunkCoord = chunkCoord;
+        HighlightAllConquerableChunks();
+    }
+
+    // 패널이 닫힐 때 호출 — 잠금을 해제해 hover가 다시 하이라이트를 갱신하도록 한다.
+    public void UnlockChunkSelection()
+    {
+        _isSelectionLocked = false;
     }
 
     // 보이는(Visible) 청크 전부를 점령 가능/불가능 색으로 한 번에 표시한다 - 호버해야만 알 수 있던 것을
