@@ -16,10 +16,17 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private InputActionReference _cancelMoveAction;
 
+    [Tooltip("타워를 이만큼(초) 꾹 누르고 있으면 이동 모드로 진입한다.")]
+    [SerializeField]
+    private float _moveHoldDuration = 2f;
+
     private Building _selectedBuilding;
     private Vector3Int? _selectedExistingBuildingCoord;
     private Vector3Int? _moveSourceCoord;
     private bool _isOccupiedOverlayVisible;
+
+    private float _holdTimer;
+    private Vector3Int? _holdCoord;
 
     public bool IsMoving => _moveSourceCoord.HasValue;
 
@@ -91,6 +98,7 @@ public class BuildingPlacementController : MonoBehaviour
     {
         HandlePlacementInput();
         HandleMoveCancelInput();
+        HandleLongPressMove();
     }
 
     public void SelectBuilding(Building prefab)
@@ -182,6 +190,65 @@ public class BuildingPlacementController : MonoBehaviour
 
         if (_cancelMoveAction != null && _cancelMoveAction.action.WasPerformedThisFrame())
             CancelMove();
+    }
+
+    // 타워 위에서 클릭을 일정 시간 유지하면(롱프레스) 이동 모드로 진입한다.
+    // (짧게 누르고 떼면 기존 클릭-선택 동작으로 처리되므로 서로 방해하지 않는다.)
+    private void HandleLongPressMove()
+    {
+        // 이미 배치/이동 중이면 롱프레스를 추적하지 않는다.
+        if (_selectedBuilding != null || _moveSourceCoord.HasValue || _placeAction == null)
+        {
+            _holdCoord = null;
+            return;
+        }
+
+        if (_placeAction.action.WasReleasedThisFrame())
+        {
+            _holdCoord = null;
+            return;
+        }
+
+        // 누르기 시작: 포인터 아래의 이동 가능한 건물을 홀드 대상으로 잡는다.
+        if (_placeAction.action.WasPressedThisFrame())
+        {
+            bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            Vector3Int cell = _mouseSelectController.GetHoveredCell();
+            Building building = _gridMap.GetBuildingAt(cell);
+
+            if (!overUI && building != null && building.IsMoveable)
+            {
+                _holdCoord = cell;
+                _holdTimer = 0f;
+            }
+            else
+            {
+                _holdCoord = null;
+            }
+
+            return;
+        }
+
+        if (!_placeAction.action.IsPressed() || !_holdCoord.HasValue)
+            return;
+
+        // 누르는 동안 포인터가 같은 건물 위에 있어야 홀드가 유지된다.
+        Building holdBuilding = _gridMap.GetBuildingAt(_holdCoord.Value);
+        Building currentBuilding = _gridMap.GetBuildingAt(_mouseSelectController.GetHoveredCell());
+        if (holdBuilding == null || currentBuilding != holdBuilding)
+        {
+            _holdCoord = null;
+            return;
+        }
+
+        _holdTimer += Time.deltaTime;
+        if (_holdTimer >= _moveHoldDuration)
+        {
+            // 홀드 완료 → 해당 건물을 선택하고 이동 모드로 진입한다.
+            SelectExistingBuildingAt(_holdCoord.Value);
+            EnterMoveMode();
+            _holdCoord = null;
+        }
     }
 
     private void HandlePlacementInput()

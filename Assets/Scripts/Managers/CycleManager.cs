@@ -41,13 +41,14 @@ public class CycleManager : MonoBehaviour
 
     public void StartNight()
     {
-        OnNightStart?.Invoke(_gameManager.CurrentRun.CurrentCycle);
         CurrentCycle = CycleState.Night;
+        OnNightStart?.Invoke(_gameManager.CurrentRun.CurrentCycle);
         OnCycleChanged?.Invoke(CycleState.Night);
     }
 
     public void EndNight()
     {
+        OnNightEnd?.Invoke(_gameManager.CurrentRun.CurrentCycle);
         StartDay();
     }
 
