@@ -36,7 +36,7 @@ public class ConquestManager : MonoBehaviour
     public bool CanSendExpedition(Vector2Int targetChunkCoord)
     {
         Chunk chunk = _gridMap.GetChunk(targetChunkCoord);
-        if (chunk == null || chunk.CurrentState != State.Visible)
+        if (chunk == null || chunk.CurrentState != ChunkState.Visible)
             return false;
 
         // 점령 자체는 상하좌우 4방향으로만 진행 - 시야는 8방향으로 노출/ 대각선 청크는 점령 대상에서 제외
@@ -56,7 +56,7 @@ public class ConquestManager : MonoBehaviour
     {
         foreach (Chunk neighbor in _gridMap.GetOrthogonalAdjacentChunks(chunkCoord))
         {
-            if (neighbor.CurrentState == State.Conquered)
+            if (neighbor.CurrentState == ChunkState.Conquered)
                 return true;
         }
 
@@ -115,7 +115,7 @@ public class ConquestManager : MonoBehaviour
 
     private void CompleteConquest(ConquestExpedition expedition)
     {
-        _gridMap.SetChunkState(expedition.TargetChunkCoord, State.Conquered);
+        _gridMap.SetChunkState(expedition.TargetChunkCoord, ChunkState.Conquered);
         ExpandVisibility(expedition.TargetChunkCoord);
         PlaceGarrison(expedition.TargetChunkCoord);
     }
@@ -124,8 +124,8 @@ public class ConquestManager : MonoBehaviour
     {
         foreach (Chunk neighbor in _gridMap.GetAdjacentChunks(chunkCoord))
         {
-            if (neighbor.CurrentState == State.Hidden)
-                _gridMap.SetChunkState(neighbor.ChunkCoord, State.Visible);
+            if (neighbor.CurrentState == ChunkState.Hidden)
+                _gridMap.SetChunkState(neighbor.ChunkCoord, ChunkState.Visible);
         }
     }
 

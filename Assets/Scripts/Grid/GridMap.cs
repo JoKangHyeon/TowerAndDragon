@@ -24,6 +24,9 @@ public class GridMap : MonoBehaviour
     // 그리드 셀의 상태 변경 이벤트 - 건물 배치, 건물 파괴, 적 진입
     public Action<GridCell> OnCellChanged;
 
+    // 청크 상태 변경 이벤트 - 점령/시야 확장 등 청크 단위 상태 전환 시에만 발생 (OnCellChanged보다 드묾)
+    public Action OnChunkStateChanged;
+
     private void Awake()
     {
         GenerateGridFromTilemap();
@@ -85,12 +88,12 @@ public class GridMap : MonoBehaviour
        (value >= 0) ? value / divisor : (value - divisor + 1) / divisor;
 
 
-    public State GetCellState(Vector3Int coord)
+    public ChunkState GetCellState(Vector3Int coord)
     {
         if (_cells.TryGetValue(coord, out var cell))
             return cell.CurrentState;
 
-        return State.Hidden;
+        return ChunkState.Hidden;
     }
 
     public Vector3 ConvertGridToWorld(Vector3Int cellCoord) => _tilemap.GetCellCenterWorld(cellCoord);
@@ -108,7 +111,7 @@ public class GridMap : MonoBehaviour
     private bool IsChunkConquered(Vector3Int coord)
     {
         Chunk chunk = GetChunkAt(coord);
-        return chunk != null && chunk.CurrentState == State.Conquered;
+        return chunk != null && chunk.CurrentState == ChunkState.Conquered;
     }
 
     public ExistTypeOnCell ExamExist(Vector3Int coord) =>
@@ -128,7 +131,7 @@ public class GridMap : MonoBehaviour
 
     public IEnumerable<Chunk> GetAllChunks() => _chunks.Values;
 
-    public void SetCellState(Vector3Int coord, State newState)
+    public void SetCellState(Vector3Int coord, ChunkState newState)
     {
         if (!_cells.TryGetValue(coord, out GridCell cell))
             return;
@@ -137,7 +140,7 @@ public class GridMap : MonoBehaviour
         OnCellChanged?.Invoke(cell);
     }
 
-    public void SetChunkState(Vector2Int chunkCoord, State newState)
+    public void SetChunkState(Vector2Int chunkCoord, ChunkState newState)
     {
         if (!_chunks.TryGetValue(chunkCoord, out Chunk chunk))
             return;
@@ -148,9 +151,11 @@ public class GridMap : MonoBehaviour
         {
             OnCellChanged?.Invoke(cell);
         }
+
+        OnChunkStateChanged?.Invoke();
     }
 
-    public void SetChunkState(Vector3Int cellCoord, State newState)
+    public void SetChunkState(Vector3Int cellCoord, ChunkState newState)
     {
         Chunk chunk = GetChunkAt(cellCoord);
         if (chunk != null)

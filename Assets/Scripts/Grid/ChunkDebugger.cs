@@ -52,13 +52,13 @@ public class ChunkDebugger : MonoBehaviour
     private Vector3Int _debugSelectedCellCoord;
 
     [SerializeField]
-    private State _debugSelectedCellState;
+    private ChunkState _debugSelectedCellState;
 
     [SerializeField]
     private Vector2Int _debugSelectedChunkCoord;
 
     [SerializeField]
-    private State _debugSelectedChunkState;
+    private ChunkState _debugSelectedChunkState;
 
     private void Awake()
     {
@@ -177,11 +177,11 @@ public class ChunkDebugger : MonoBehaviour
     }
 
     // Active=초록, Inactive=빨강, Unknown=회색 작은 구슬로 셀 상태 표시 (청크 상태 변경 시 한번에 바뀌는지 확인용)
-    private static Color GetStateGizmoColor(State state) => state switch
+    private static Color GetStateGizmoColor(ChunkState state) => state switch
     {
-        State.Conquered => Color.green,
-        State.Visible => Color.red,
-        State.Hidden => Color.gray,
+        ChunkState.Conquered => Color.green,
+        ChunkState.Visible => Color.red,
+        ChunkState.Hidden => Color.gray,
         _ => Color.white,
     };
 
@@ -203,8 +203,8 @@ public class ChunkDebugger : MonoBehaviour
             return;
         }
 
-        State prevState = chunk.CurrentState;
-        State nextState = GetNextDebugState(prevState);
+        ChunkState prevState = chunk.CurrentState;
+        ChunkState nextState = GetNextDebugState(prevState);
         _gridMap.SetChunkState(_debugSelectedCellCoord, nextState);
 
         bool allCellsMatch = chunk.Cells.All(cell => cell.CurrentState == nextState);
@@ -216,12 +216,12 @@ public class ChunkDebugger : MonoBehaviour
             $"소속 셀 {chunk.Cells.Count}개 전체 반영: {(allCellsMatch ? "PASS" : "FAIL")}");
     }
 
-    private static State GetNextDebugState(State current) => current switch
+    private static ChunkState GetNextDebugState(ChunkState current) => current switch
     {
-        State.Hidden => State.Visible,
-        State.Visible => State.Conquered,
-        State.Conquered => State.Hidden,
-        _ => State.Hidden,
+        ChunkState.Hidden => ChunkState.Visible,
+        ChunkState.Visible => ChunkState.Conquered,
+        ChunkState.Conquered => ChunkState.Hidden,
+        _ => ChunkState.Hidden,
     };
 
     // 맵 확장 등으로 청크 데이터를 다시 조사해야 할 때 실행 - Chunk.DominantTerrain(물 제외 기준)을 그대로 사용하므로

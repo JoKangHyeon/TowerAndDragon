@@ -9,8 +9,9 @@ public class RunData
     public Dragon CurrentDragon;
     public List<BabyDragon> BabyDragons;
 
-    public List<Region> Regions;
+    public GridMap Map;
 
+    public List<int> Resources;
 }
 
 
@@ -35,11 +36,5 @@ public class BabyDragon
     public DragonType DragonType;
 
     public bool IsInTower;
-
-}
-
-public class Region
-{
-    public State RegionState;
 
 }

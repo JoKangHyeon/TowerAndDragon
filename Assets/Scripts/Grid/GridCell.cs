@@ -4,7 +4,7 @@ public class GridCell
 {
     public Vector3Int Coord { get; }
     public TerrainType TerrainType { get; }
-    public State CurrentState { get; private set; }
+    public ChunkState CurrentState { get; private set; }
     public bool CanConstruct { get; }
     public bool CanFarmField { get; }
 
@@ -22,12 +22,12 @@ public class GridCell
     {
         Coord = coord;
         TerrainType = terrainType;
-        CurrentState = State.Hidden;
+        CurrentState = ChunkState.Hidden;
         CanConstruct = canConstruct;
         CanFarmField = terrainType == TerrainType.Grass;
     }
 
-    public void SetState(State newState) => CurrentState = newState;
+    public void SetState(ChunkState newState) => CurrentState = newState;
 
     public bool PlaceBuilding(Building building)
     {

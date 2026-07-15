@@ -86,10 +86,10 @@ public class Castle : MonoBehaviour, IDamageable
             for (int dy = -_inactiveChunkRadius; dy <= _inactiveChunkRadius; dy++)
             {
                 Vector2Int neighborCoord = homeChunk.ChunkCoord + new Vector2Int(dx, dy);
-                _gridMap.SetChunkState(neighborCoord, State.Visible);
+                _gridMap.SetChunkState(neighborCoord, ChunkState.Visible);
             }
         }
-        _gridMap.SetChunkState(homeChunk.ChunkCoord, State.Conquered);
+        _gridMap.SetChunkState(homeChunk.ChunkCoord, ChunkState.Conquered);
     }
 
     public void TakeDamage(DamageInfo damage)

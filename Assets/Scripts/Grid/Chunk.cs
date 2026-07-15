@@ -10,18 +10,18 @@ public class Chunk
     public IReadOnlyList<GridCell> Cells => _cells;
 
     public Vector2Int ChunkCoord { get; }
-    public State CurrentState { get; private set; }
+    public ChunkState CurrentState { get; private set; }
     public TerrainType DominantTerrain { get; }
 
     public Chunk(Vector2Int chunkCoord, List<GridCell> cells)
     {
         ChunkCoord = chunkCoord;
         _cells = cells;
-        CurrentState = State.Hidden;
+        CurrentState = ChunkState.Hidden;
         DominantTerrain = ResolveDominantTerrain(cells);
     }
 
-    public void SetState(State newState)
+    public void SetState(ChunkState newState)
     {
         CurrentState = newState;
 
