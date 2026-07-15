@@ -17,6 +17,9 @@ public class Building : MonoBehaviour
     public Sprite Sprite => _sprite;
     public FootprintShape FootprintShape => _footprintShape;
 
+    public bool IsMoveable;
+    public bool IsRemoveable;
+
     // 배치/재배치 시 footprint 중심에 더할 오프셋 - 재배치시 localposition 더해줄 때 누적됨 방지
     public Vector3 PlacementOffset => _placementOffset ?? transform.localPosition;
     public void SetPlacementOffset(Vector3 offset) => _placementOffset = offset;

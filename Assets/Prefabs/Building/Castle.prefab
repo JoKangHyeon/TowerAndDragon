@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 3376259054367252278}
   - component: {fileID: 1629258289565633039}
   - component: {fileID: 5455320943320786919}
-  - component: {fileID: 1151300646404329065}
   m_Layer: 0
   m_Name: Castle
   m_TagString: Untagged
@@ -118,22 +117,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bad66e0cd0a2b5d4d9c3d31964c86d86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CastleHealth
-  _maxHealth: 100
-  _gridMap: {fileID: 0}
---- !u!114 &1151300646404329065
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 807521685231827806}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fc56a296d25a8114da134b9040e2df3c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Building
   _sprite: {fileID: 21300000, guid: 10d885afd24f9b845a32dd58a8e614a4, type: 3}
   _footprintShape:
     _width: 3
     _height: 3
     _cells: 010101010101010101
+  IsMoveable: 0
+  IsRemoveable: 0
+  _maxHealth: 100
+  _gridMap: {fileID: 0}

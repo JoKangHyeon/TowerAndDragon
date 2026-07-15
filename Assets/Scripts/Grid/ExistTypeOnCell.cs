@@ -4,5 +4,6 @@ public enum ExistTypeOnCell
      Enemy,
      FarmField,
      Tower,
+     Castle,
      None
  }

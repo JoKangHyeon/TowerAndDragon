@@ -328,6 +328,10 @@ public class GridMap : MonoBehaviour
             return;
 
         Building building = cell.OccupantBuilding;
+
+        if (!building.IsRemoveable)
+            return;
+
         List<GridCell> footprint = _buildingFootprintCells[building];
 
         foreach (GridCell footprintCell in footprint)
@@ -347,6 +351,9 @@ public class GridMap : MonoBehaviour
             return false;
 
         Building building = cell.OccupantBuilding;
+
+        if (!building.IsMoveable)
+            return false;
 
         if (!_buildingFootprintCells.TryGetValue(building, out List<GridCell> oldFootprint))
             return false;

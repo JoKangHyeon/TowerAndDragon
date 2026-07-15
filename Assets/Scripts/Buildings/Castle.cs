@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>메인 성 개체. HP는 Health에 위임하고, 0이 되면 Destroyed(= 게임 패배)를 발생시킨다.</summary>
 [RequireComponent(typeof(Health))]
-public class Castle : MonoBehaviour, IDamageable
+public class Castle : Building, IDamageable
 {
     private const float DEFAULT_MAX_HEALTH = 100f;
     private const int CENTER_HALF_DIVISOR = 2;
