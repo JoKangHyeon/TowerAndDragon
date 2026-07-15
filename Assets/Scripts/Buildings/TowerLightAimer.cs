@@ -1,6 +1,9 @@
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 // Tower가 현재 타게팅 중인 대상을 향해 TowerLight(Light2D)를 회전시킨다.
+// 타게팅 중인 대상이 없으면 빛을 끈다.
+[RequireComponent(typeof(Light2D))]
 public class TowerLightAimer : MonoBehaviour
 {
     // Light2D 콘의 기본 방향이 로컬 +Y(위쪽)라 가정하고 보정하는 각도.
@@ -9,17 +12,25 @@ public class TowerLightAimer : MonoBehaviour
     [SerializeField]
     private TowerAttack _towerAttack;
 
+    private Light2D _light2D;
+
     private void Awake()
     {
         if (_towerAttack == null)
             _towerAttack = GetComponentInParent<TowerAttack>();
+
+        _light2D = GetComponent<Light2D>();
     }
 
     // TowerAttack.Update()에서 타겟이 갱신된 이후에 회전을 반영하기 위해 LateUpdate 사용.
     private void LateUpdate()
     {
         BaseMonster target = _towerAttack != null ? _towerAttack.CurrentTarget : null;
-        if (target == null || target.IsDead)
+        bool hasValidTarget = target != null && !target.IsDead;
+
+        _light2D.enabled = hasValidTarget;
+
+        if (!hasValidTarget)
             return;
 
         Vector2 direction = target.transform.position - transform.position;
