@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 3376259054367252278}
   - component: {fileID: 1629258289565633039}
   - component: {fileID: 5455320943320786919}
+  - component: {fileID: 2216371967426284231}
   m_Layer: 0
   m_Name: Castle
   m_TagString: Untagged
@@ -126,3 +127,27 @@ MonoBehaviour:
   _isRemoveable: 0
   _maxHealth: 100
   _gridMap: {fileID: 0}
+  _brokenAnimator: {fileID: 2216371967426284231}
+  _gameManager: {fileID: 0}
+--- !u!95 &2216371967426284231
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 807521685231827806}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 98d5279553c384748b439c10653f6a39, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0

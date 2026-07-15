@@ -110090,7 +110090,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4676293131000406741}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c7cb5978c4fb97e4b8856f9fd18435b2, type: 3}
   m_Name: 
@@ -115624,6 +115624,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3340928868166011064}
   - component: {fileID: 3410268750576872869}
+  - component: {fileID: 3474983666140386753}
   m_Layer: 0
   m_Name: Props
   m_TagString: Untagged
@@ -115756,6 +115757,19 @@ Transform:
   m_Father: {fileID: 8228429161871257706}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &3410268750576872869
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8656291282173394059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79620c9c4a5053b4eb08fc7cdeaf8200, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PropVisibilityController
+  _gridMap: {fileID: 7475151901225264468}
+--- !u!114 &3474983666140386753
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -116777,7 +116791,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d5ca42874ae31b44b3603acb4cc4b17, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CycleLight
-  IsOnWhileDay: 0
+  _isOnWhileDay: 0
 --- !u!4 &9171185634581401351 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6283158896326974521, guid: bbd28b3c030f0e3498b66b3fa2d9e693, type: 3}
