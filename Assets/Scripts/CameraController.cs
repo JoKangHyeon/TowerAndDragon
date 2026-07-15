@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 /// <summary>
@@ -155,8 +156,8 @@ public class CameraController : MonoBehaviour
     {
         if (Mouse.current == null) return;
 
-        // 드래그 시작
-        if (Mouse.current.leftButton.wasPressedThisFrame)
+        // 드래그 시작 - UI 위에서 시작한 드래그는 무시한다 (UI 위에서 끝나는 것은 허용)
+        if (Mouse.current.leftButton.wasPressedThisFrame && !IsPointerOverUI())
         {
             _dragWorldOrigin = ScreenToWorld(Mouse.current.position.ReadValue());
             _isDragging      = true;
@@ -277,4 +278,7 @@ public class CameraController : MonoBehaviour
         screenPos.z = 0f;
         return _cam.ScreenToWorldPoint(screenPos);
     }
+
+    private static bool IsPointerOverUI() =>
+        EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
 }
