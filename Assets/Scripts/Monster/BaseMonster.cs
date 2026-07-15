@@ -18,7 +18,6 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
     private MonsterShield _shield;
     private MonsterMovement _movement;
     private MonsterAttack _attack;
-    private IAttackTarget _mainCastleTarget;
     private Castle _mainCastle;
 
     public MonsterData Data => _data;
@@ -116,7 +115,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
             return;
         }
 
-        _attack?.SetFinalTarget(_mainCastleTarget)  ;
+        _attack.SetFinalTarget(_mainCastle);
         // 성에 도달했을 때의 처리(성 공격)를 연결하는 지점.
         // 밤 방어 로직과 함께 구현 예정 — 현재 작업 범위 밖.
     }

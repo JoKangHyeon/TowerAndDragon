@@ -197,7 +197,7 @@ public class MonsterAttack : MonoBehaviour
         projectile.Launch(target, _attack, in context, _data.ProjectileSpeed);
     }
 
-    private void SetFinalTarget(Castle target)
+    public void SetFinalTarget(Castle target)
     {
         _currentTarget = null;
         _finalTarget = target;
@@ -211,18 +211,12 @@ public class MonsterAttack : MonoBehaviour
             return;
         }
 
-        float sqrRange = Range * Range;
-        float sqrDistance = GetSqrDistance(
-                _finalTarget.TargetTransform.position
-        );
-
-        if (sqrDistance > sqrRange || Time.time < _nextAttackTime)
+        if (Time.time < _nextAttackTime)
         {
             return;
         }
 
         Fire(_finalTarget);
         _nextAttackTime = Time.time + Interval;
-
     }
 }
