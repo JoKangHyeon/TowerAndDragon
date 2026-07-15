@@ -1,8 +1,7 @@
-using System;
 using UnityEngine;
 
 public interface IAttackTarget : IDamageable
 {
-    Transform TargetTransform {get;}
-    GameObject TargetObject {get;}
+    Transform TargetTransform { get; }
+    GameObject TargetObject { get; }
 }
