@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>메인 성 개체. HP는 Health에 위임하고, 0이 되면 Destroyed(= 게임 패배)를 발생시킨다.</summary>
 [RequireComponent(typeof(Health))]
-public class Castle : Building, IDamageable
+public class Castle : Building, IAttackTarget
 {
     private const float DEFAULT_MAX_HEALTH = 100f;
 
@@ -19,10 +19,12 @@ public class Castle : Building, IDamageable
     [SerializeField] private GameManager _gameManager;
 
     private Health _health;
-
     public bool IsDead => _health == null || _health.IsDead;
     public float CurrentHealth => _health == null ? 0 : _health.CurrentHealth;
     public float MaxHealth => _health == null ? 0 : _health.MaxHealth;
+    public Transform TargetTransform => transform;
+    public GameObject TargetObject => gameObject;
+
 
     /// <summary>현재 체력, 최대 체력 순으로 전달.</summary>
     public event Action<float, float> HealthChanged;

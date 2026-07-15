@@ -18,6 +18,8 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
     private MonsterShield _shield;
     private MonsterMovement _movement;
     private MonsterAttack _attack;
+    private IAttackTarget _mainCastleTarget;
+    private Castle _mainCastle;
 
     public MonsterData Data => _data;
     public bool IsDead => _health == null || _health.IsDead;
@@ -41,6 +43,8 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
     public void Setup(MonsterData data, SplineContainer path, Transform mainCastle)
     {
         _data = data;
+
+        _mainCastle = mainCastle != null ? mainCastle.GetComponent<Castle>() : null;
 
         _health.Initialize(_data.MaxHealth);
         _health.Died += HandleDeath;
@@ -107,6 +111,12 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
 
     private void HandleArrivedAtCastle()
     {
+        if (_attack == null || _mainCastle == null)
+        {
+            return;
+        }
+
+        _attack?.SetFinalTarget(_mainCastleTarget)  ;
         // 성에 도달했을 때의 처리(성 공격)를 연결하는 지점.
         // 밤 방어 로직과 함께 구현 예정 — 현재 작업 범위 밖.
     }
