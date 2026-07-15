@@ -26,6 +26,11 @@ public class GameManager : MonoBehaviour
     /// <summary>성이 파괴되어 게임오버가 되면 발생. 게임오버 UI 등이 구독한다.</summary>
     public event Action GameOverOccurred;
 
+    private bool _isGameOver;
+
+    /// <summary>성이 파괴되어 게임오버가 되면 발생. 게임오버 UI 등이 구독한다.</summary>
+    public event Action GameOverOccurred;
+
     private void Awake()
     {
         _cycleManager.Construct(this);
