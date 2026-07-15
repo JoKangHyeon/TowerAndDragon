@@ -134,6 +134,27 @@ public class MouseSelectController : MonoBehaviour
         pool.DeactivateFrom(coords.Count);
     }
 
+    // 색상이 서로 다른 여러 좌표 묶음을 같은 하이라이트 풀(_highlightPool) 위에 한 번에 칠한다 - 예: 점령 가능/불가능 청크를 동시에 표시.
+    public void HighlightCellGroups(IReadOnlyList<(List<Vector3Int> Coords, Color Color)> groups)
+    {
+        int index = 0;
+
+        foreach (var group in groups)
+        {
+            foreach (Vector3Int coord in group.Coords)
+            {
+                SpriteRenderer highlight = _highlightPool.Get(index);
+                Vector3 cellPos = _gridMap.ConvertGridToWorld(coord);
+                cellPos.y += _yOffset;
+                highlight.transform.position = cellPos;
+                highlight.color = group.Color;
+                index++;
+            }
+        }
+
+        _highlightPool.DeactivateFrom(index);
+    }
+
     public void HighlightSelection(List<Vector3Int> coords) => HighlightCells(coords, _selectionHighlightColor);
 
     // 건설 모드에서 이미 건물이 배치된 타일을 표시 - 어떤 땅이 비어있는지 한눈에 파악 가능

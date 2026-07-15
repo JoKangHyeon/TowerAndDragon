@@ -33,6 +33,8 @@ public class ConquestModeController : MonoBehaviour
 
     public bool IsActive { get; private set; }
 
+    private Vector2Int? _selectedChunkCoord;
+
     private void OnEnable()
     {
         if (_selectAction != null)
@@ -50,46 +52,79 @@ public class ConquestModeController : MonoBehaviour
         if (!IsActive)
             return;
 
-        HighlightHoveredChunk();
+        HandleHover();
         HandleSelectInput();
+    }
+
+    // 매 프레임 호버된 청크를 확인해, 바뀐 경우에만 노란색 선택 표시를 다시 계산한다(클릭을 기다리지 않는다).
+    private void HandleHover()
+    {
+        Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
+        Chunk chunk = _gridMap.GetChunkAt(hoveredCell);
+
+        Vector2Int? hoveredChunkCoord = chunk != null && chunk.CurrentState == ChunkState.Visible
+            ? chunk.ChunkCoord
+            : (Vector2Int?)null;
+
+        if (hoveredChunkCoord == _selectedChunkCoord)
+            return;
+
+        _selectedChunkCoord = hoveredChunkCoord;
+        HighlightAllConquerableChunks();
     }
 
     public void SetConquestModeActive(bool isActive)
     {
         IsActive = isActive;
+        _selectedChunkCoord = null;
 
         if (isActive)
         {
             _buildingPlacementController.CancelAll();
+            HighlightAllConquerableChunks();
         }
         else
         {
-            ClearSelection();
-        }
-    }
-
-    // 패널이 모드는 유지한 채 닫힐 때(선택만 취소) 호출
-    public void ClearSelection()
-    {
-        _mouseSelectController.ClearHighlights();
-    }
-
-    private void HighlightHoveredChunk()
-    {
-        Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
-        Chunk chunk = _gridMap.GetChunkAt(hoveredCell);
-
-        if (chunk == null)
-        {
             _mouseSelectController.ClearHighlights();
-            return;
+        }
+    }
+
+    // 점령을 완료한 직후처럼 청크 상태가 바뀐 뒤 하이라이트를 다시 계산할 때 호출.
+    public void RefreshConquerableHighlights()
+    {
+        if (IsActive)
+            HighlightAllConquerableChunks();
+    }
+
+    // 보이는(Visible) 청크 전부를 점령 가능/불가능 색으로 한 번에 표시한다 - 호버해야만 알 수 있던 것을
+    // 점령 모드 진입 즉시 전부 보여준다. 선택된 청크는 건물 재배치 선택과 동일한 노란색으로 구분 표시한다.
+    private void HighlightAllConquerableChunks()
+    {
+        var conquerable = new List<Vector3Int>();
+        var blocked = new List<Vector3Int>();
+        var selected = new List<Vector3Int>();
+
+        foreach (Chunk chunk in _gridMap.GetAllChunks())
+        {
+            if (chunk.CurrentState != ChunkState.Visible)
+                continue;
+
+            if (_selectedChunkCoord.HasValue && chunk.ChunkCoord == _selectedChunkCoord.Value)
+            {
+                selected.AddRange(GetChunkCellCoords(chunk));
+                continue;
+            }
+
+            List<Vector3Int> target = _conquestManager.CanSendExpedition(chunk.ChunkCoord) ? conquerable : blocked;
+            target.AddRange(GetChunkCellCoords(chunk));
         }
 
-        Color color = _conquestManager.CanSendExpedition(chunk.ChunkCoord)
-            ? _conquerableHighlightColor
-            : _blockedHighlightColor;
-
-        _mouseSelectController.HighlightCells(GetChunkCellCoords(chunk), color);
+        _mouseSelectController.HighlightCellGroups(new (List<Vector3Int> Coords, Color Color)[]
+        {
+            (conquerable, _conquerableHighlightColor),
+            (blocked, _blockedHighlightColor),
+            (selected, _mouseSelectController.SelectionHighlightColor)
+        });
     }
 
     private void HandleSelectInput()
@@ -103,7 +138,7 @@ public class ConquestModeController : MonoBehaviour
         Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
         Chunk chunk = _gridMap.GetChunkAt(hoveredCell);
 
-        if (chunk == null || chunk.CurrentState != State.Visible)
+        if (chunk == null || chunk.CurrentState != ChunkState.Visible)
             return;
 
         _conquestUI.OnChunkSelected(chunk.ChunkCoord);
