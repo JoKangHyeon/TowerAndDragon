@@ -48,6 +48,7 @@ public class CycleManager : MonoBehaviour
 
     public void EndNight()
     {
+        OnNightEnd?.Invoke(_gameManager.CurrentRun.CurrentCycle);
         StartDay();
     }
 

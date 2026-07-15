@@ -12,12 +12,16 @@ public class WaveManager : MonoBehaviour
 {
     [SerializeField] private List<Portal> _portals;
     [SerializeField] private UnityEvent _allSpawnCompleted;
+    [SerializeField] private UnityEvent _allMonstersDefeated;
+
 
     private CancellationTokenSource _waveCancellation;
     private readonly Dictionary<PortalDirection, Portal> _portalById = new();
+    private readonly List<BaseMonster> _spawnedMonsters = new();
 
     public bool IsRunning { get; private set; }
     public UnityEvent AllSpawnsCompleted => _allSpawnCompleted;
+    public UnityEvent AllMonstersDefeated => _allMonstersDefeated;
 
     public async UniTask StartWaveAsync(WaveDefinitionSO waveDefinition)
     {
@@ -215,6 +219,8 @@ public class WaveManager : MonoBehaviour
             spawnGroup.MonsterData,
             portal.GroundPath,
             portal.MainCastle);
+
+        _spawnedMonsters.Add(monster);
 
         return monster;
     }
