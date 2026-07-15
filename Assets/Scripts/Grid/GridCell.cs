@@ -22,7 +22,7 @@ public class GridCell
     {
         Coord = coord;
         TerrainType = terrainType;
-        CurrentState = State.Unknown;
+        CurrentState = State.Hidden;
         CanConstruct = canConstruct;
         CanFarmField = terrainType == TerrainType.Grass;
     }
