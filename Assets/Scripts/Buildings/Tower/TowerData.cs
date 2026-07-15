@@ -15,7 +15,8 @@ public class TowerData : ScriptableObject
     [Header("Attack")]
     [SerializeField] private AttackSO _attack;
 
-    // 공격 판정과 분리된 시각적 투사체 표현 데이터
+    // 원거리 타워용 투사체. 비워두면 즉시 적용 공격으로 동작한다.
+    // 피해는 투사체 명중 시점에 적용된다. (MonsterData와 동일한 패턴)
     [Header("Projectile")]
     [SerializeField] private GameObject _projectilePrefab;
     [SerializeField] private float _projectileSpeed;
@@ -29,5 +30,5 @@ public class TowerData : ScriptableObject
 
     public GameObject ProjectilePrefab => _projectilePrefab;
     public float ProjectileSpeed => _projectileSpeed;
-
+    public bool HasProjectile => _projectilePrefab != null && _projectileSpeed > 0;
 }
