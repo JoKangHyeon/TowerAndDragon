@@ -939,16 +939,21 @@ MonoBehaviour:
   _conquestModePanel: {fileID: 1972945895}
   _resourceCostSlotPrefab: {fileID: 1995153421884799105, guid: 0c90858f1eac34148b31a22e932c13ac, type: 3}
   _resourceSlotContainer: {fileID: 485637356}
-  _resourceIcons: []
+  _resourceIcons:
+  - {fileID: 21300000, guid: 9019fd82d3d044ef68db5081e3a07439, type: 3}
+  - {fileID: 21300000, guid: 2b1199f382d2a4389a05e0b9d137178c, type: 3}
+  - {fileID: 21300000, guid: 0d1726050072345dfae4e64184c1ba4d, type: 3}
+  - {fileID: 21300000, guid: 9fcae6909f2bf40038589775507416d1, type: 3}
+  - {fileID: 21300000, guid: f202d87a8ac9c47b18e4505b18f1d0cb, type: 3}
   _durationInfoSlot: {fileID: 1913720939}
-  _durationIcon: {fileID: 0}
+  _durationIcon: {fileID: 21300000, guid: f0d51a33b34504d7ea9513d1d64e6ae1, type: 3}
   _terrainInfoSlot: {fileID: 293809611}
-  _terrainIcon: {fileID: 0}
+  _terrainIcon: {fileID: 21300000, guid: 711e54b18d920433a89247353713f9a8, type: 3}
   _enemyScalingSlotPrefab: {fileID: 1459839322949417037, guid: 607a177f89ff8cd4b9517b8fd585f8ba, type: 3}
   _enemyScalingSlotContainer: {fileID: 1962785273}
-  _spawnCountIcon: {fileID: 0}
-  _attackPowerIcon: {fileID: 0}
-  _normalColor: {r: 1, g: 1, b: 1, a: 1}
+  _spawnCountIcon: {fileID: 21300000, guid: 724fc8dcc3074473889141ba28e9c11d, type: 3}
+  _attackPowerIcon: {fileID: 21300000, guid: 9019fd82d3d044ef68db5081e3a07439, type: 3}
+  _sufficientColor: {r: 0, g: 1, b: 0, a: 1}
   _insufficientColor: {r: 1, g: 0, b: 0, a: 1}
   _conquestManager: {fileID: 1695919910}
   _tempResourcePool: {fileID: 1480776532}
@@ -1519,9 +1524,6 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2023085054}
     - targetCorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2023085057}
@@ -2279,7 +2281,7 @@ PrefabInstance:
     - target: {fileID: 5455320943320786919, guid: bbd28b3c030f0e3498b66b3fa2d9e693, type: 3}
       propertyPath: _gridMap
       value: 
-      objectReference: {fileID: 2023085054}
+      objectReference: {fileID: 2023085059}
     - target: {fileID: 6283158896326974521, guid: bbd28b3c030f0e3498b66b3fa2d9e693, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -2355,11 +2357,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TempResourcePool
   _current:
-    Population: 6
-    Food: 4
-    Wood: 4
-    Stone: 6
-    Ore: 4
+    Population: 50
+    Food: 50
+    Wood: 50
+    Stone: 50
+    Ore: 50
 --- !u!4 &1480776533
 Transform:
   m_ObjectHideFlags: 0
@@ -2995,7 +2997,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4045de5de46a3144b38fb3fd1b08f0e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ConquestManager
-  _gridMap: {fileID: 2023085054}
+  _gridMap: {fileID: 2023085059}
   _durationTable: {fileID: 11400000, guid: 0a3e3ba692b70e945a76de3fec50eb54, type: 2}
   _chunkCostTable: {fileID: 11400000, guid: 39762c6ab3a13ef40a76b4cc01fb0bcb, type: 2}
   _garrisonPrefab: {fileID: 8515554290544044849, guid: 8cbb9bc0e77b5bf4c94c30bec2854a03, type: 3}
@@ -3154,11 +3156,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1803596753}
   m_CullTransparentMesh: 1
---- !u!1839735485 &1846438851 stripped
-Tilemap:
-  m_CorrespondingSourceObject: {fileID: 4764779959467373717, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-  m_PrefabInstance: {fileID: 902783335}
-  m_PrefabAsset: {fileID: 0}
 --- !u!212 &1868884055 stripped
 SpriteRenderer:
   m_CorrespondingSourceObject: {fileID: 956263651941294742, guid: 2546a8af017106748bf88e394fe42aab, type: 3}
@@ -3924,20 +3921,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
   m_PrefabInstance: {fileID: 902783335}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &2023085054
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2023085053}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 26941716a71269f4bb95dbd977f72da9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GridMap
-  _tilemap: {fileID: 1846438851}
-  _terrainTileMap: {fileID: 11400000, guid: 1729beb906a7b0e4781552c4fee5bb66, type: 2}
 --- !u!114 &2023085057
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3945,7 +3928,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2023085053}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c7cb5978c4fb97e4b8856f9fd18435b2, type: 3}
   m_Name: 
@@ -4372,7 +4355,7 @@ PrefabInstance:
     - target: {fileID: 8838851740384459434, guid: 95cfbe46075fb0a4daa3a07a8a9c5edb, type: 3}
       propertyPath: _gridMap
       value: 
-      objectReference: {fileID: 2023085054}
+      objectReference: {fileID: 2023085059}
     - target: {fileID: 8838851740384459434, guid: 95cfbe46075fb0a4daa3a07a8a9c5edb, type: 3}
       propertyPath: _mouseSelectController
       value: 
@@ -4393,7 +4376,7 @@ PrefabInstance:
     - target: {fileID: 20335123856780131, guid: 2546a8af017106748bf88e394fe42aab, type: 3}
       propertyPath: _gridMap
       value: 
-      objectReference: {fileID: 2023085054}
+      objectReference: {fileID: 2023085059}
     - target: {fileID: 20335123856780131, guid: 2546a8af017106748bf88e394fe42aab, type: 3}
       propertyPath: _ghostRenderer
       value: 
