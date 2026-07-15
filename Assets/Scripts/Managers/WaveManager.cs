@@ -67,6 +67,8 @@ public class WaveManager : MonoBehaviour
             executablePortals.Add(portal);
         }
 
+        _spawnedMonsters.Clear();
+
         _waveCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             destroyCancellationToken);
 
@@ -88,6 +90,13 @@ public class WaveManager : MonoBehaviour
 
             await UniTask.WhenAll(portalTasks);
             _allSpawnCompleted?.Invoke();
+
+            await UniTask.WaitUntil(
+                AreAllMonstersDefeated,
+                cancellationToken: currentCancellation.Token
+            );
+
+            _allMonstersDefeated?.Invoke();
         }
         catch (OperationCanceledException)
         {
@@ -223,5 +232,13 @@ public class WaveManager : MonoBehaviour
         _spawnedMonsters.Add(monster);
 
         return monster;
+    }
+
+    private bool AreAllMonstersDefeated()
+    {
+        _spawnedMonsters.RemoveAll(
+            monster => monster == null || monster.IsDead);
+
+        return _spawnedMonsters.Count == 0;
     }
 }
