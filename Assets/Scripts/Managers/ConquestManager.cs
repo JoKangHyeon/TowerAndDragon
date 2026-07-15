@@ -1,8 +1,15 @@
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.Events;
 
 public class ConquestManager : MonoBehaviour
 {
+    // 열어둘 필요가 있는 것: 
+    // 1. 점령에 필요한 자원 - 인구, 돌, 나무, 광물
+    // 2. 점령에 소요되는 시간
+    // 3. 점령 시 적이 얼마나 강해지는지
+    // 4. 점령 보내는 기능 -> 성공 시 해당 청크는 점령 중인 상태 보이게 (여러 점령을 보낼 수 있으니까)
+    //                   -> 실패 시, 즉 자원이 부족하거나 조건이 안될 때는 부족한 자원 텍스트를 빨간색으로 하고 점령 보내기 버튼이 회색으로 보여서 안눌러지게 (비활성화된듯이)
     [SerializeField]
     private GridMap _gridMap;
 
@@ -20,6 +27,10 @@ public class ConquestManager : MonoBehaviour
     private Building _garrisonPrefab;
 
     private readonly List<ConquestExpedition> _activeExpeditions = new();
+    private EnemyScalingModifier _accumulatedEnemyScaling = EnemyScalingModifier.Neutral;
+    public EnemyScalingModifier AccumulatedEnemyScaling => _accumulatedEnemyScaling;
+
+    public UnityEvent<EnemyScalingModifier> OnEnemyScalingChanged;
 
     private void Awake()
     {
@@ -31,6 +42,36 @@ public class ConquestManager : MonoBehaviour
     {
         // To Do: 추후 연결 예정
         //_cycleManager.OnNightEnd.RemoveListener(OnSettlement);
+    }
+
+    public bool TryGetExpeditionCost(Vector2Int targetChunkCoord, out ResourceCost cost) =>
+        _chunkCostTable.TryResolve(targetChunkCoord, out cost);
+
+    public int GetDaysRequired(Vector2Int chunkCoord)
+    {
+        Chunk chunk = _gridMap.GetChunk(chunkCoord);
+        return _durationTable.ResolveDaysRequired(chunk.DominantTerrain);
+    }
+
+    public EnemyScalingModifier PreviewEnemyScaling(Vector2Int chunkCoord) =>
+        _chunkCostTable.ResolveEnemyScaling(chunkCoord);
+
+    public TerrainType GetDominantTerrain(Vector2Int chunkCoord) =>
+        _gridMap.GetChunk(chunkCoord).DominantTerrain;
+
+    public bool TryGetActiveExpedition(Vector2Int chunkCoord, out ConquestExpedition expedition)
+    {
+        foreach (ConquestExpedition candidate in _activeExpeditions)
+        {
+            if (candidate.TargetChunkCoord == chunkCoord)
+            {
+                expedition = candidate;
+                return true;
+            }
+        }
+
+        expedition = null;
+        return false;
     }
 
     public bool CanSendExpedition(Vector2Int targetChunkCoord)
@@ -98,6 +139,20 @@ public class ConquestManager : MonoBehaviour
         return true;
     }
 
+    // 추후 연결 예정: 낮/밤 주기 정산(OnSettlement)이 CycleManager와 아직 연결되지 않아,
+    // 원정 발송 성공 시 소요일수를 기다리지 않고 바로 점령을 완료 처리한다.
+    // CycleManager 연결 후에는 UI에서 이 메서드 대신 SendExpedition을 호출하도록 되돌린다.
+    public bool SendExpeditionAndComplete(Vector2Int targetChunkCoord, ResourceCost available)
+    {
+        if (!SendExpedition(targetChunkCoord, available))
+            return false;
+
+        ConquestExpedition expedition = _activeExpeditions[_activeExpeditions.Count - 1];
+        CompleteConquest(expedition);
+        _activeExpeditions.Remove(expedition);
+        return true;
+    }
+
     private void OnSettlement(int currentCycle)
     {
         for (int i = _activeExpeditions.Count - 1; i >= 0; i--)
@@ -118,6 +173,7 @@ public class ConquestManager : MonoBehaviour
         _gridMap.SetChunkState(expedition.TargetChunkCoord, State.Conquered);
         ExpandVisibility(expedition.TargetChunkCoord);
         PlaceGarrison(expedition.TargetChunkCoord);
+        ApplyEnemyScaling(expedition.TargetChunkCoord);
     }
 
     private void ExpandVisibility(Vector2Int chunkCoord)
@@ -127,6 +183,14 @@ public class ConquestManager : MonoBehaviour
             if (neighbor.CurrentState == State.Hidden)
                 _gridMap.SetChunkState(neighbor.ChunkCoord, State.Visible);
         }
+    }
+
+    private void ApplyEnemyScaling(Vector2Int chunkCoord)
+    {
+        EnemyScalingModifier modifier = _chunkCostTable.ResolveEnemyScaling(chunkCoord);
+
+        _accumulatedEnemyScaling = _accumulatedEnemyScaling.Combine(modifier);
+        OnEnemyScalingChanged?.Invoke(_accumulatedEnemyScaling);
     }
 
     private void PlaceGarrison(Vector2Int chunkCoord)

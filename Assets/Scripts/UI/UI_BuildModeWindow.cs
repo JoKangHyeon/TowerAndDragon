@@ -46,6 +46,9 @@ public class UI_BuildModeWindow : MonoBehaviour
     [SerializeField]
     private BuildingPlacementController _buildingPlacementController;
 
+    [SerializeField]
+    private ConquestModeController _conquestModeController;
+
     [Header("패널 열림/닫힘 연출")]
     [SerializeField]
     private float _slideDuration = 0.5f;
@@ -120,6 +123,9 @@ public class UI_BuildModeWindow : MonoBehaviour
             .SetLink(_buildModePanel);
 
         _buildingPlacementController.ShowOccupiedTiles();
+
+        // 건설 모드와 점령 모드는 상호 배타적이다.
+        _conquestModeController.SetConquestModeActive(false);
     }
 
     private void CloseBuildPanel()
