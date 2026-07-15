@@ -405,13 +405,14 @@ GameObject:
   m_Component:
   - component: {fileID: 9014762367300629392}
   - component: {fileID: 611303557523415254}
+  - component: {fileID: 8180943514876605216}
   m_Layer: 5
   m_Name: GameOver_window
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &9014762367300629392
 RectTransform:
   m_ObjectHideFlags: 0
@@ -435,6 +436,19 @@ RectTransform:
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &611303557523415254
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5534665424652385916}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c43892ca56989fe4286cda6c221d4a04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_GameOverWindow
+  _restartButton: {fileID: 9139543133994171177}
+--- !u!114 &8180943514876605216
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

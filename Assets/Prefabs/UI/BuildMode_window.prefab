@@ -1244,6 +1244,8 @@ GameObject:
   m_Component:
   - component: {fileID: 6840146047370804221}
   - component: {fileID: 7297518787157514627}
+  - component: {fileID: 7974198993231833199}
+  - component: {fileID: 4961536533004849137}
   m_Layer: 5
   m_Name: Button_Move
   m_TagString: Untagged
@@ -1318,6 +1320,31 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!225 &7974198993231833199
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2744047543992822277}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &4961536533004849137
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2744047543992822277}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1610a74eceae784c9ba5f90319e9146, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_ButtonInteractableFade
+  _disabledAlpha: 0.4
 --- !u!1 &2903242450849707780
 GameObject:
   m_ObjectHideFlags: 0
@@ -2116,6 +2143,8 @@ GameObject:
   m_Component:
   - component: {fileID: 8542000327897297895}
   - component: {fileID: 8642254819847884166}
+  - component: {fileID: 8806927581045970878}
+  - component: {fileID: 3615312952003864196}
   m_Layer: 5
   m_Name: Button_Remove
   m_TagString: Untagged
@@ -2190,6 +2219,31 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!225 &8806927581045970878
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4952722943917388943}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &3615312952003864196
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4952722943917388943}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1610a74eceae784c9ba5f90319e9146, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_ButtonInteractableFade
+  _disabledAlpha: 0.4
 --- !u!1 &4999447097234142149
 GameObject:
   m_ObjectHideFlags: 0
@@ -2783,7 +2837,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -0.0006898842}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &9104496071298723923
@@ -3067,6 +3121,7 @@ MonoBehaviour:
     SlotPrefab: {fileID: 3536144141363945427, guid: a6925b2d9a7c1d2478feed262ffde42b, type: 3}
     Buildings:
     - {fileID: -1179263789838454351, guid: 8fb2db73183f5d9449ebf41e2cfff227, type: 3}
+    - {fileID: -1179263789838454351, guid: 2ef2449491744a04eb4b1227b407b8c6, type: 3}
   - Button: {fileID: 2190599232498101948}
     MenuFocus: {fileID: 5733603552303198301}
     MenuDefault: {fileID: 7634933415935407928}
