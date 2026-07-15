@@ -27,6 +27,9 @@ public class ConquestUIExample : MonoBehaviour
     [SerializeField]
     private GameObject _conquestModePanel;
 
+    [SerializeField]
+    private InputActionReference _cancelAction;
+
     [Tooltip("자원 비용 슬롯 프리팹(ResourceCost).")]
     [SerializeField]
     private UI_ResourceCostSlot _resourceCostSlotPrefab;
@@ -92,12 +95,13 @@ public class ConquestUIExample : MonoBehaviour
     private float _slideDuration = 0.5f;
 
     [SerializeField]
-    private Vector2 _openFromOffset = new Vector2(-50f, 0f);
+    private Vector2 _openFromOffset = new Vector2(50f, 0f);
 
     [SerializeField]
-    private Vector2 _closeToOffset = new Vector2(-500f, 0f);
+    private Vector2 _closeToOffset = new Vector2(500f, 0f);
 
     private RectTransform _panelRect;
+    private Vector2 _homePos;
     private Tween _panelTween;
     private Vector2Int? _selectedChunkCoord;
 
@@ -107,8 +111,35 @@ public class ConquestUIExample : MonoBehaviour
         _conquerButton.onClick.AddListener(OnConquerButtonClicked);
 
         _panelRect = _conquestModePanel.GetComponent<RectTransform>();
+        _homePos = _panelRect.anchoredPosition;
 
         _conquestModePanel.SetActive(false);
+    }
+
+    private void OnEnable()
+    {
+        if (_cancelAction != null)
+            _cancelAction.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        if (_cancelAction != null)
+            _cancelAction.action.Disable();
+    }
+
+    private void Update()
+    {
+        HandleCancelInput();
+    }
+
+    private void HandleCancelInput()
+    {
+        if (!_conquestModePanel.activeSelf)
+            return;
+
+        if (_cancelAction != null && _cancelAction.action.WasPerformedThisFrame())
+            Close();
     }
 
     private void ToggleConquestMode()
@@ -122,44 +153,34 @@ public class ConquestUIExample : MonoBehaviour
         }
     }
 
-    // ConquestModeController가 점령 가능한 청크를 클릭했을 때 호출하는 진입점 - 클릭한 화면 위치에 패널을 띄운다.
+    // ConquestModeController가 점령 가능한 청크를 클릭했을 때 호출하는 진입점.
     public void OnChunkSelected(Vector2Int chunkCoord)
     {
         _selectedChunkCoord = chunkCoord;
-        OpenPanelAt(Mouse.current.position.ReadValue());
+        OpenPanel();
         Refresh();
     }
 
-    // 클릭한 화면 좌표를 패널 부모 기준 로컬 좌표로 변환해 그 위치에서 슬라이드 인 시킨다.
-    private void OpenPanelAt(Vector2 screenPosition)
+    // 씬에 미리 세팅해 둔 위치(_homePos)에서 슬라이드 인 시킨다.
+    private void OpenPanel()
     {
-        RectTransform parentRect = _panelRect.parent as RectTransform;
-        Camera uiCamera = ResolveUICamera();
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(parentRect, screenPosition, uiCamera, out Vector2 targetPos);
-
         _panelTween?.Kill();
 
         _conquestModePanel.SetActive(true);
-        _panelRect.anchoredPosition = targetPos + _openFromOffset;
-        _panelTween = _panelRect.DOAnchorPos(targetPos, _slideDuration)
+        _panelRect.anchoredPosition = _homePos + _openFromOffset;
+        _panelTween = _panelRect.DOAnchorPos(_homePos, _slideDuration)
             .SetEase(Ease.OutBack)
             .SetLink(_conquestModePanel);
     }
 
-    private Camera ResolveUICamera()
-    {
-        Canvas canvas = _conquestModePanel.GetComponentInParent<Canvas>();
-        return canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
-    }
-
     // 패널만 닫는다 - 점령 모드 자체는 유지되어 이어서 다른 청크를 선택할 수 있다.
+    // 청크 하이라이트(노란색 포함)는 지우지 않는다 - 이제 호버로 계속 갱신되고, 점령 모드가 꺼질 때까지 유지된다.
     public void Close()
     {
         _selectedChunkCoord = null;
-        _conquestModeController.ClearSelection();
 
         _panelTween?.Kill();
-        _panelTween = _panelRect.DOAnchorPos(_panelRect.anchoredPosition + _closeToOffset, _slideDuration)
+        _panelTween = _panelRect.DOAnchorPos(_homePos + _closeToOffset, _slideDuration)
             .SetEase(Ease.InCubic)
             .SetLink(_conquestModePanel)
             .OnComplete(() => _conquestModePanel.SetActive(false));
@@ -263,7 +284,12 @@ public class ConquestUIExample : MonoBehaviour
             return;
         }
 
-        _conquestManager.SendExpeditionAndComplete(_selectedChunkCoord.Value, _tempResourcePool.Current);
+        bool completed = _conquestManager.SendExpeditionAndComplete(_selectedChunkCoord.Value, _tempResourcePool.Current);
+        if (completed)
+        {
+            _conquestModeController.RefreshConquerableHighlights();
+        }
+
         Close();
     }
 }
