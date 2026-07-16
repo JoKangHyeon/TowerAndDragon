@@ -7,6 +7,7 @@ public class ConquestExpedition
     public int DaysRequired { get; }
     public int DaysProgressed { get; private set; }
     public bool IsComplete => DaysProgressed >= DaysRequired;
+    public float Progress => (float)DaysProgressed / DaysRequired;
 
     public ConquestExpedition(Vector2Int targetChunkCoord, ResourceCost cost, int daysRequired)
     {

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
 // 점령 모드 진입/청크 선택을 담당한다. 건설 모드(BuildingPlacementController)와 동일한
 // 입력 처리 패턴(InputActionReference Enable/Disable, 포인터-오버-UI 가드)을 따른다.
@@ -55,12 +56,14 @@ public class ConquestModeController : MonoBehaviour
     {
         if (_selectAction != null)
             _selectAction.action.Enable();
+        
     }
 
     private void OnDisable()
     {
         if (_selectAction != null)
             _selectAction.action.Disable();
+
     }
 
     private void Update()
