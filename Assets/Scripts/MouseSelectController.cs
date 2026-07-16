@@ -34,6 +34,7 @@ public class MouseSelectController : MonoBehaviour
     private FootprintShape _footprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private Vector3 _ghostLocalOffset;
     private bool _isPlacementActive;
+    private Vector3Int? _lastDrawnAnchor;
     private Building _selectedBuildingRef; // 재배치 중이면 실제 인스턴스 - 자기 자신과 겹치는 위치도 유효하게 판정하기 위함
 
     public Vector3Int CurrentAnchor { get; private set; }
@@ -57,7 +58,9 @@ public class MouseSelectController : MonoBehaviour
     {
         _isPlacementActive = isActive;
 
-        if (!_isPlacementActive)
+        if (_isPlacementActive)
+            _lastDrawnAnchor = null;
+        else
             Deactivate();
     }
 
@@ -79,8 +82,14 @@ public class MouseSelectController : MonoBehaviour
 
         Vector3Int hoveredCell = GetHoveredCell();
         Vector3Int anchor = GetFootprintAnchor(hoveredCell, _footprintShape);
+
+        if (_lastDrawnAnchor.HasValue && anchor == _lastDrawnAnchor.Value)
+            return;
+
+        _lastDrawnAnchor = anchor;
+
         List<Vector3Int> footprint = _gridMap.GetFootprintCoords(anchor, _footprintShape);
-        bool canConstruct = _gridMap.CanConstructFootPrint(anchor, _footprintShape, _selectedBuildingRef);
+        bool canConstruct = _gridMap.CanConstructFootPrint(footprint, _selectedBuildingRef);
 
         CurrentAnchor = anchor;
         CanConstruct = canConstruct;
@@ -97,6 +106,7 @@ public class MouseSelectController : MonoBehaviour
         _selectedBuildingRef = building;
         _footprintShape = building.FootprintShape;
         _ghostLocalOffset = building.PlacementOffset;
+        _lastDrawnAnchor = null;
 
         if (_ghostRenderer == null)
             return;
@@ -132,6 +142,27 @@ public class MouseSelectController : MonoBehaviour
         }
 
         pool.DeactivateFrom(coords.Count);
+    }
+
+    // 색상이 서로 다른 여러 좌표 묶음을 같은 하이라이트 풀(_highlightPool) 위에 한 번에 칠한다 - 예: 점령 가능/불가능 청크를 동시에 표시.
+    public void HighlightCellGroups(IReadOnlyList<(List<Vector3Int> Coords, Color Color)> groups)
+    {
+        int index = 0;
+
+        foreach (var group in groups)
+        {
+            foreach (Vector3Int coord in group.Coords)
+            {
+                SpriteRenderer highlight = _highlightPool.Get(index);
+                Vector3 cellPos = _gridMap.ConvertGridToWorld(coord);
+                cellPos.y += _yOffset;
+                highlight.transform.position = cellPos;
+                highlight.color = group.Color;
+                index++;
+            }
+        }
+
+        _highlightPool.DeactivateFrom(index);
     }
 
     public void HighlightSelection(List<Vector3Int> coords) => HighlightCells(coords, _selectionHighlightColor);

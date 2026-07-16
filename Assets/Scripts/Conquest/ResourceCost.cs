@@ -1,4 +1,5 @@
 using System;
+using Unity.VisualScripting;
 
 [Serializable]
 public struct ResourceCost
@@ -16,4 +17,14 @@ public struct ResourceCost
         Wood >= cost.Wood &&
         Stone >= cost.Stone &&
         Ore >= cost.Ore;
+
+    // this = 보유량에서 cost만큼 차감한 결과. 원정 발송 시 실제 차감에 사용.
+    public ResourceCost Subtract(ResourceCost cost) => new ResourceCost
+    {
+        Population = Population - cost.Population,
+        Food = Food - cost.Food,
+        Wood = Wood - cost.Wood,
+        Stone = Stone - cost.Stone,
+        Ore = Ore - cost.Ore,
+    };
 }

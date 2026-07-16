@@ -46,6 +46,8 @@ public class UI_BuildModeWindow : MonoBehaviour
     [SerializeField]
     private BuildingPlacementController _buildingPlacementController;
 
+    [SerializeField]
+    private ConquestModeController _conquestModeController;
     [Tooltip("밤이 시작되면 빌드모드 패널을 자동으로 닫기 위해 구독한다.")]
     [SerializeField]
     private CycleManager _cycleManager;
@@ -153,6 +155,9 @@ public class UI_BuildModeWindow : MonoBehaviour
             .SetLink(_buildModePanel);
 
         _buildingPlacementController.ShowOccupiedTiles();
+
+        // 건설 모드와 점령 모드는 상호 배타적이다.
+        _conquestModeController.SetConquestModeActive(false);
     }
 
     private void CloseBuildPanel()

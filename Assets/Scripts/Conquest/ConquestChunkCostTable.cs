@@ -9,8 +9,14 @@ public class ConquestChunkCostTable : ScriptableObject
     {
         public Vector2Int ChunkCoord;
         public ResourceCost Cost;
-    }
+        public EnemyScalingModifier EnemyScaling;
 
+        [Tooltip("점령 완료 시 실제로 지급되는 인구 보상.")]
+        public int PopulationReward;
+
+        [Tooltip("점령 시 해금되는 자원 종류(수량 아님, 인구 제외) - 보상 패널에 아이콘만 표시.")]
+        public ResourceType UnlockedResources;
+    }
     [SerializeField] private Entry[] _entries;
 
     public bool TryResolve(Vector2Int chunkCoord, out ResourceCost cost)
@@ -26,5 +32,38 @@ public class ConquestChunkCostTable : ScriptableObject
 
         cost = default;
         return false;
+    }
+
+    public EnemyScalingModifier ResolveEnemyScaling(Vector2Int chunkCoord)
+    {
+        foreach (Entry entry in _entries)
+        {
+            if (entry.ChunkCoord == chunkCoord)
+                return entry.EnemyScaling;
+        }
+
+        return EnemyScalingModifier.Neutral;
+    }
+
+    public int ResolvePopulationReward(Vector2Int chunkCoord)
+    {
+        foreach (Entry entry in _entries)
+        {
+            if (entry.ChunkCoord == chunkCoord)
+                return entry.PopulationReward;
+        }
+
+        return 0;
+    }
+
+    public ResourceType ResolveUnlockedResources(Vector2Int chunkCoord)
+    {
+        foreach (Entry entry in _entries)
+        {
+            if (entry.ChunkCoord == chunkCoord)
+                return entry.UnlockedResources;
+        }
+
+        return ResourceType.None;
     }
 }
