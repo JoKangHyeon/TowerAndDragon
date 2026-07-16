@@ -10,6 +10,7 @@ using UnityEngine.Splines;
 /// 프리팹에 어떤 컴포넌트를 붙이고 어떤 MonsterData를 주입하느냐로 표현한다.
 /// </summary>
 [RequireComponent(typeof(Health))]
+[RequireComponent(typeof(MonsterAttack))]
 public class BaseMonster : MonoBehaviour, IAttackTarget
 {
     [SerializeField] private MonsterData _data;

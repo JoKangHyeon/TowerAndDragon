@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 8562530296713420513}
   - component: {fileID: -6360304390758115834}
   - component: {fileID: -687291307508128235}
+  - component: {fileID: 6409980068893795165}
   m_Layer: 7
   m_Name: Monster_Ground_Basic
   m_TagString: Untagged
@@ -169,3 +170,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseMonster
   _data: {fileID: 11400000, guid: ba58415c8b289ba47af5fea8b826533f, type: 2}
+--- !u!114 &6409980068893795165
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8845832112575990564}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7c35a73d362f554d94265c2ccbdcea5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterAttack
+  _targetLayers:
+    serializedVersion: 2
+    m_Bits: 4294967291
+  _firePoint: {fileID: 0}
