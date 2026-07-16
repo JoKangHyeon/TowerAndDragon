@@ -1,11 +1,8 @@
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
-#if UNITY_EDITOR
 using UnityEngine.InputSystem;
-#endif
 
-#if UNITY_EDITOR
 // --- 점령 시스템 디버깅용 (에디터 전용, 빌드 미포함, 추후 삭제 예정) ---
 // UI·자원/인구 매니저 연동 전, ConquestManager의 핵심 로직(비용 검사 -> 원정 발송 -> 정산)만
 // 따로 검증하기 위한 스크립트. ConquestManager 프로덕션 코드는 건드리지 않고,
@@ -252,4 +249,3 @@ public class ConquestDebugger : MonoBehaviour
     private static string FormatResourceCost(ResourceCost cost) =>
         $"인구{cost.Population} 식량{cost.Food} 목재{cost.Wood} 석재{cost.Stone} 광물{cost.Ore}";
 }
-#endif
