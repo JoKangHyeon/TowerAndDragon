@@ -1,14 +1,10 @@
-using System;
-using CsvHelper.Configuration.Attributes;
-using UnityEngine;
-
 public sealed class PopulationAllocation
 {
     public PopulationAssignmentType AssignmentType {get;}
     public int Capacity {get;}
     public int AssignedPopulation {get; private set;}
 
-    public int AvailableCap => 
+    public int AvailableCapacity => 
         Capacity - AssignedPopulation;
     public float StaffingRatio => 
         Capacity == 0 ? 0f : (float)AssignedPopulation / Capacity; 
