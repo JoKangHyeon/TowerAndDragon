@@ -4,6 +4,7 @@ using UnityEngine.Splines;
 public class Portal : MonoBehaviour
 {
     [SerializeField] private PortalDirection _portalDirectionId;
+    [SerializeField] private TerrainType _terrainType;
     [SerializeField] private Transform _spawnPoint;
     [SerializeField] private SplineContainer _groundPath;
     [SerializeField] private Transform _mainCastle;
@@ -12,6 +13,7 @@ public class Portal : MonoBehaviour
 
 
     public PortalDirection PortalDirectionId => _portalDirectionId;
+    public TerrainType TerrrainType => _terrainType;
     public Transform SpawnPoint => _spawnPoint;
 
     // 지상적일 경우 사용할 경로
