@@ -7,33 +7,34 @@ using UnityEngine;
 [Serializable]
 public struct EnemyScalingModifier
 {
-    private const float NEUTRAL_MULTIPLIER = 1f;
+    private const int NEUTRAL_SPAWN_COUNT_BONUS = 0;
+    private const float NEUTRAL_ATTACK_POWER_BONUS = 0f;
 
     [SerializeField]
-    private float _spawnCountMultiplier;
+    private int _spawnCountBonus;
 
     [SerializeField]
-    private float _attackPowerMultiplier;
+    private float _attackPowerBonus;
 
-    public float SpawnCountMultiplier => _spawnCountMultiplier;
-    public float AttackPowermultiplier => _attackPowerMultiplier;
+    public int SpawnCountBonus => _spawnCountBonus;
+    public float AttackPowerBonus => _attackPowerBonus;
 
     // 이 청크가 스폰 수/공격력 중 실제로 강화하는 항목이 무엇인지 - UI에서 해당 항목만 표시할 때 사용
-    public bool AffectsSpawnCount => !Mathf.Approximately(_spawnCountMultiplier, NEUTRAL_MULTIPLIER);
-    public bool AffectsAttackPower => !Mathf.Approximately(_attackPowerMultiplier, NEUTRAL_MULTIPLIER);
+    public bool AffectsSpawnCount => _spawnCountBonus != NEUTRAL_SPAWN_COUNT_BONUS;
+    public bool AffectsAttackPower => !Mathf.Approximately(_attackPowerBonus, NEUTRAL_ATTACK_POWER_BONUS);
 
     public static EnemyScalingModifier Neutral =>
-        new EnemyScalingModifier(NEUTRAL_MULTIPLIER, NEUTRAL_MULTIPLIER);
+        new EnemyScalingModifier(NEUTRAL_SPAWN_COUNT_BONUS, NEUTRAL_ATTACK_POWER_BONUS);
 
-    public EnemyScalingModifier(float spawnCountMultiplier, float attackPowerMultiplier)
+    public EnemyScalingModifier(int spawnCountBonus, float attackPowerBonus)
     {
-        _spawnCountMultiplier = spawnCountMultiplier;
-        _attackPowerMultiplier = attackPowerMultiplier;
+        _spawnCountBonus = spawnCountBonus;
+        _attackPowerBonus = attackPowerBonus;
     }
 
     public EnemyScalingModifier Combine(EnemyScalingModifier other) =>
         new EnemyScalingModifier(
-            SpawnCountMultiplier * other.SpawnCountMultiplier,
-            AttackPowermultiplier * other.AttackPowermultiplier
+            SpawnCountBonus + other.SpawnCountBonus,
+            AttackPowerBonus + other.AttackPowerBonus
         );
 }

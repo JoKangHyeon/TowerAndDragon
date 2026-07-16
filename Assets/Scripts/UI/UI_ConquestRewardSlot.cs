@@ -1,0 +1,27 @@
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+// 점령 보상 패널의 슬롯 하나. 일반 자원(식량/나무/돌/광물)은 해금되는 종류(아이콘 + 이름)만 표시하고,
+// 인구는 실제로 지급되는 수량(아이콘 + 수량)을 같은 프리팹으로 표시한다.
+public class UI_ConquestRewardSlot : MonoBehaviour
+{
+    [SerializeField]
+    private Image _iconImage;
+
+    [SerializeField]
+    private TMP_Text _resourceNameText;
+
+    public void Setup(Sprite icon, string label)
+    {
+        if (_iconImage != null && icon != null)
+        {
+            _iconImage.sprite = icon;
+        }
+
+        if (_resourceNameText != null)
+        {
+            _resourceNameText.text = label;
+        }
+    }
+}

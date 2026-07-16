@@ -34,6 +34,7 @@ public class MouseSelectController : MonoBehaviour
     private FootprintShape _footprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private Vector3 _ghostLocalOffset;
     private bool _isPlacementActive;
+    private Vector3Int? _lastDrawnAnchor;
     private Building _selectedBuildingRef; // 재배치 중이면 실제 인스턴스 - 자기 자신과 겹치는 위치도 유효하게 판정하기 위함
 
     public Vector3Int CurrentAnchor { get; private set; }
@@ -57,7 +58,9 @@ public class MouseSelectController : MonoBehaviour
     {
         _isPlacementActive = isActive;
 
-        if (!_isPlacementActive)
+        if (_isPlacementActive)
+            _lastDrawnAnchor = null;
+        else
             Deactivate();
     }
 
@@ -79,8 +82,14 @@ public class MouseSelectController : MonoBehaviour
 
         Vector3Int hoveredCell = GetHoveredCell();
         Vector3Int anchor = GetFootprintAnchor(hoveredCell, _footprintShape);
+
+        if (_lastDrawnAnchor.HasValue && anchor == _lastDrawnAnchor.Value)
+            return;
+
+        _lastDrawnAnchor = anchor;
+
         List<Vector3Int> footprint = _gridMap.GetFootprintCoords(anchor, _footprintShape);
-        bool canConstruct = _gridMap.CanConstructFootPrint(anchor, _footprintShape, _selectedBuildingRef);
+        bool canConstruct = _gridMap.CanConstructFootPrint(footprint, _selectedBuildingRef);
 
         CurrentAnchor = anchor;
         CanConstruct = canConstruct;
@@ -97,6 +106,7 @@ public class MouseSelectController : MonoBehaviour
         _selectedBuildingRef = building;
         _footprintShape = building.FootprintShape;
         _ghostLocalOffset = building.PlacementOffset;
+        _lastDrawnAnchor = null;
 
         if (_ghostRenderer == null)
             return;

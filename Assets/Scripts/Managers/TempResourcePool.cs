@@ -7,4 +7,16 @@ public class TempResourcePool : MonoBehaviour
     private ResourceCost _current;
 
     public ResourceCost Current => _current;
+
+    // 원정 발송 성공 시 비용만큼 실제로 차감.
+    public void Spend(ResourceCost cost)
+    {
+        _current = _current.Subtract(cost);
+    }
+
+    // 점령 완료 시 인구 보상만큼 실제로 지급.
+    public void GrantPopulation(int amount)
+    {
+        _current.Population += amount;
+    }
 }
