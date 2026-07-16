@@ -46,6 +46,10 @@ public class UI_BuildModeWindow : MonoBehaviour
     [SerializeField]
     private BuildingPlacementController _buildingPlacementController;
 
+    [Tooltip("밤이 시작되면 빌드모드 패널을 자동으로 닫기 위해 구독한다.")]
+    [SerializeField]
+    private CycleManager _cycleManager;
+
     [Header("패널 열림/닫힘 연출")]
     [SerializeField]
     private float _slideDuration = 0.5f;
@@ -89,6 +93,29 @@ public class UI_BuildModeWindow : MonoBehaviour
         if (_filterTabs.Length > 0)
         {
             SelectFilter(0);
+        }
+
+        // 밤이 시작되면 열려 있던 빌드모드 패널을 자동으로 닫는다.
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnNightStart.AddListener(HandleNightStart);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnNightStart.RemoveListener(HandleNightStart);
+        }
+    }
+
+    // 밤 시작 시 패널이 열려 있으면 닫는다.
+    private void HandleNightStart(int cycle)
+    {
+        if (_isOpen)
+        {
+            CloseBuildPanel();
         }
     }
 
