@@ -148,12 +148,16 @@ public class ConquestUIExample : MonoBehaviour
     {
         if (_cancelAction != null)
             _cancelAction.action.Enable();
+
+        _conquestManager.OnConquestCompleted.AddListener(OnConquestCompleted);
     }
 
     private void OnDisable()
     {
         if (_cancelAction != null)
             _cancelAction.action.Disable();
+
+        _conquestManager.OnConquestCompleted.RemoveListener(OnConquestCompleted);
     }
 
     private void Update()
@@ -161,13 +165,25 @@ public class ConquestUIExample : MonoBehaviour
         HandleCancelInput();
     }
 
+    // 패널이 열려 있으면 먼저 패널만 닫고, 이미 닫힌 상태에서 한 번 더 누르면 점령 모드 자체를 끈다.
     private void HandleCancelInput()
     {
-        if (!_conquestModePanel.activeSelf)
+        if (_cancelAction == null || !_cancelAction.action.WasPerformedThisFrame())
             return;
 
-        if (_cancelAction != null && _cancelAction.action.WasPerformedThisFrame())
+        // _conquestModePanel.activeSelf는 슬라이드 아웃 애니메이션이 끝난 뒤에야 false가 되므로
+        // (Close()의 SetActive(false)가 tween의 OnComplete에서 실행됨), 대신 애니메이션과 무관하게
+        // Close() 시작 시점에 즉시 null이 되는 _selectedChunkCoord로 열림 여부를 판단한다.
+        if (_selectedChunkCoord.HasValue)
+        {
             Close();
+            return;
+        }
+
+        if (_conquestModeController.IsActive)
+        {
+            _conquestModeController.SetConquestModeActive(false);
+        }
     }
 
     private void ToggleConquestMode()
@@ -369,17 +385,19 @@ public class ConquestUIExample : MonoBehaviour
         Vector2Int coord = _selectedChunkCoord.Value;
         bool hasCost = _conquestManager.TryGetExpeditionCost(coord, out ResourceCost cost);
 
-        bool completed = _conquestManager.SendExpeditionAndComplete(coord, _tempResourcePool.Current);
-        if (completed)
+        bool sent = _conquestManager.SendExpedition(coord, _tempResourcePool.Current);
+        if (sent && hasCost)
         {
-            if (hasCost)
-                _tempResourcePool.Spend(cost);
-
-            _tempResourcePool.GrantPopulation(_conquestManager.GetPopulationReward(coord));
-
-            _conquestModeController.RefreshConquerableHighlights();
+            _tempResourcePool.Spend(cost);
         }
 
         Close();
+    }
+
+    // 원정이 실제로 완료된 시점(며칠 뒤 밤 정산)에 ConquestManager가 발행 - 보상 지급은 여기서 처리한다.
+    private void OnConquestCompleted(Vector2Int chunkCoord)
+    {
+        _tempResourcePool.GrantPopulation(_conquestManager.GetPopulationReward(chunkCoord));
+        _conquestModeController.RefreshConquerableHighlights();
     }
 }

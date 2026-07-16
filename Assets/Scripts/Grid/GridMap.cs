@@ -179,7 +179,20 @@ public class GridMap : MonoBehaviour
 
     public Chunk GetChunk(Vector2Int chunkCoord) =>
         _chunks.TryGetValue(chunkCoord, out Chunk chunk) ? chunk : null;
-    
+
+    public Vector3 GetChunkCenterWorld(Vector2Int chunkCoord)
+    {
+        Chunk chunk = GetChunk(chunkCoord);
+        if (chunk == null || chunk.Cells.Count == 0)
+            return Vector3.zero;
+
+        Vector3 sum = Vector3.zero;
+        foreach (GridCell cell in chunk.Cells)
+            sum += ConvertGridToWorld(cell.Coord);
+
+        return sum / chunk.Cells.Count;
+    }
+
     public IEnumerable<Chunk> GetAdjacentChunks(Vector2Int chunkCoord)
     {
         for (int dx = -1; dx <= 1; dx++)
