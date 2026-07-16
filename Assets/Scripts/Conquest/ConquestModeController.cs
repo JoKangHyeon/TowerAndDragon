@@ -36,6 +36,21 @@ public class ConquestModeController : MonoBehaviour
     private Vector2Int? _selectedChunkCoord;
     private bool _isSelectionLocked;
 
+    private readonly List<Vector3Int> _conquerableBuffer = new();
+    private readonly List<Vector3Int> _blockedBuffer = new();
+    private readonly List<Vector3Int> _selectedBuffer = new();
+    private (List<Vector3Int> Coords, Color Color)[] _highlightGroups;
+
+    private void Awake()
+    {
+        _highlightGroups = new (List<Vector3Int> Coords, Color Color)[]
+        {
+            (_conquerableBuffer, _conquerableHighlightColor),
+            (_blockedBuffer, _blockedHighlightColor),
+            (_selectedBuffer, _mouseSelectController.SelectionHighlightColor)
+        };
+    }
+
     private void OnEnable()
     {
         if (_selectAction != null)
@@ -119,9 +134,9 @@ public class ConquestModeController : MonoBehaviour
     // 점령 모드 진입 즉시 전부 보여준다. 선택된 청크는 건물 재배치 선택과 동일한 노란색으로 구분 표시한다.
     private void HighlightAllConquerableChunks()
     {
-        var conquerable = new List<Vector3Int>();
-        var blocked = new List<Vector3Int>();
-        var selected = new List<Vector3Int>();
+        _conquerableBuffer.Clear();
+        _blockedBuffer.Clear();
+        _selectedBuffer.Clear();
 
         foreach (Chunk chunk in _gridMap.GetAllChunks())
         {
@@ -130,20 +145,15 @@ public class ConquestModeController : MonoBehaviour
 
             if (_selectedChunkCoord.HasValue && chunk.ChunkCoord == _selectedChunkCoord.Value)
             {
-                selected.AddRange(GetChunkCellCoords(chunk));
+                AddChunkCellCoords(chunk, _selectedBuffer);
                 continue;
             }
 
-            List<Vector3Int> target = _conquestManager.CanSendExpedition(chunk.ChunkCoord) ? conquerable : blocked;
-            target.AddRange(GetChunkCellCoords(chunk));
+            List<Vector3Int> target = _conquestManager.CanSendExpedition(chunk.ChunkCoord) ? _conquerableBuffer : _blockedBuffer;
+            AddChunkCellCoords(chunk, target);
         }
 
-        _mouseSelectController.HighlightCellGroups(new (List<Vector3Int> Coords, Color Color)[]
-        {
-            (conquerable, _conquerableHighlightColor),
-            (blocked, _blockedHighlightColor),
-            (selected, _mouseSelectController.SelectionHighlightColor)
-        });
+        _mouseSelectController.HighlightCellGroups(_highlightGroups);
     }
 
     private void HandleSelectInput()
@@ -163,14 +173,11 @@ public class ConquestModeController : MonoBehaviour
         _conquestUI.OnChunkSelected(chunk.ChunkCoord);
     }
 
-    private static List<Vector3Int> GetChunkCellCoords(Chunk chunk)
+    private static void AddChunkCellCoords(Chunk chunk, List<Vector3Int> target)
     {
-        var coords = new List<Vector3Int>(chunk.Cells.Count);
         foreach (GridCell cell in chunk.Cells)
         {
-            coords.Add(cell.Coord);
+            target.Add(cell.Coord);
         }
-
-        return coords;
     }
 }

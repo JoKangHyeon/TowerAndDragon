@@ -4,12 +4,6 @@ using UnityEngine.Events;
 
 public class ConquestManager : MonoBehaviour
 {
-    // 열어둘 필요가 있는 것: 
-    // 1. 점령에 필요한 자원 - 인구, 돌, 나무, 광물
-    // 2. 점령에 소요되는 시간
-    // 3. 점령 시 적이 얼마나 강해지는지
-    // 4. 점령 보내는 기능 -> 성공 시 해당 청크는 점령 중인 상태 보이게 (여러 점령을 보낼 수 있으니까)
-    //                   -> 실패 시, 즉 자원이 부족하거나 조건이 안될 때는 부족한 자원 텍스트를 빨간색으로 하고 점령 보내기 버튼이 회색으로 보여서 안눌러지게 (비활성화된듯이)
     [SerializeField]
     private GridMap _gridMap;
 
@@ -56,6 +50,12 @@ public class ConquestManager : MonoBehaviour
     public EnemyScalingModifier PreviewEnemyScaling(Vector2Int chunkCoord) =>
         _chunkCostTable.ResolveEnemyScaling(chunkCoord);
 
+    public int GetPopulationReward(Vector2Int chunkCoord) =>
+        _chunkCostTable.ResolvePopulationReward(chunkCoord);
+
+    public ResourceType GetUnlockedResources(Vector2Int chunkCoord) =>
+        _chunkCostTable.ResolveUnlockedResources(chunkCoord);
+
     public TerrainType GetDominantTerrain(Vector2Int chunkCoord) =>
         _gridMap.GetChunk(chunkCoord).DominantTerrain;
 
@@ -80,7 +80,6 @@ public class ConquestManager : MonoBehaviour
         if (chunk == null || chunk.CurrentState != ChunkState.Visible)
             return false;
 
-        // 점령 자체는 상하좌우 4방향으로만 진행 - 시야는 8방향으로 노출/ 대각선 청크는 점령 대상에서 제외
         if (!HasConqueredOrthogonalNeighbor(targetChunkCoord))
             return false;
 

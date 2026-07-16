@@ -316,9 +316,13 @@ public class GridMap : MonoBehaviour
     public bool CanConstructFootPrint(Vector3Int anchor, FootprintShape shape) =>
         CanConstructFootPrint(anchor, shape, null);
 
-    public bool CanConstructFootPrint(Vector3Int anchor, FootprintShape shape, Building ignoreBuilding)
+    public bool CanConstructFootPrint(Vector3Int anchor, FootprintShape shape, Building ignoreBuilding) =>
+        CanConstructFootPrint(GetFootprintCoords(anchor, shape), ignoreBuilding);
+
+    // 호출자가 이미 GetFootprintCoords로 footprint를 계산해 둔 경우, 재계산 없이 그 결과를 그대로 검사한다.
+    public bool CanConstructFootPrint(List<Vector3Int> footprint, Building ignoreBuilding)
     {
-        foreach (Vector3Int coord in GetFootprintCoords(anchor, shape))
+        foreach (Vector3Int coord in footprint)
         {
             if (!CanConstructBuilding(coord, ignoreBuilding))
                 return false;
