@@ -4,6 +4,8 @@ using UnityEngine.Events;
 
 public class ConquestManager : MonoBehaviour
 {
+
+    // terrainType이 디폴토인 경우 아예 점령이 안되게 -> 호버 하이라이트도 안되게 수정 필요
     [SerializeField]
     private GridMap _gridMap;
 

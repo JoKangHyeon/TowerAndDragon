@@ -133,6 +133,7 @@ public class ConquestUIExample : MonoBehaviour
     private Tween _panelTween;
     private Vector2Int? _selectedChunkCoord;
 
+    private bool _isClosedPanel;
     private void Awake()
     {
         _conquestModeButton.onClick.AddListener(ToggleConquestMode);
@@ -150,6 +151,7 @@ public class ConquestUIExample : MonoBehaviour
             _cancelAction.action.Enable();
 
         _conquestManager.OnConquestCompleted.AddListener(OnConquestCompleted);
+        _isClosedPanel = false;
     }
 
     private void OnDisable()
@@ -179,6 +181,9 @@ public class ConquestUIExample : MonoBehaviour
             Close();
             return;
         }
+
+        if (_isClosedPanel)
+            _conquestModeController.SetConquestModeActive(false);
 
         if (_conquestModeController.IsActive)
         {
@@ -211,6 +216,7 @@ public class ConquestUIExample : MonoBehaviour
     {
         _panelTween?.Kill();
 
+        _isClosedPanel = false;
         _conquestModePanel.SetActive(true);
         _panelRect.anchoredPosition = _homePos + _openFromOffset;
         _panelTween = _panelRect.DOAnchorPos(_homePos, _slideDuration)
@@ -230,6 +236,8 @@ public class ConquestUIExample : MonoBehaviour
             .SetEase(Ease.InCubic)
             .SetLink(_conquestModePanel)
             .OnComplete(() => _conquestModePanel.SetActive(false));
+
+        _isClosedPanel = true;
     }
 
     private void Refresh()
