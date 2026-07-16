@@ -650,18 +650,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _wasdSpeed: 30
-  _edgeScrollSpeed: 12
+  _wasdSpeed: 10
+  _edgeScrollSpeed: 10
   _dragSensitivity: 1
   _edgeScrollEnabled: 1
   _edgeScrollThreshold: 20
-  _zoomSpeed: 3
-  _minZoom: 3
-  _maxZoom: 18
+  _zoomSpeed: 10
+  _minZoom: 2
+  _maxZoom: 15
   _zoomSmoothing: 8
   _moveSmoothTime: 0.08
-  _mapMin: {x: -60, y: -60}
-  _mapMax: {x: 60, y: 60}
+  _mapMin: {x: -20, y: -20}
+  _mapMax: {x: 20, y: 20}
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -12564,7 +12564,7 @@ MonoBehaviour:
   _ghostAlpha: 0.5
   _ghostBlockedTint: {r: 1, g: 0.4, b: 0.4, a: 1}
   _selectionHighlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  _occupiedOverlayColor: {r: 1, g: 0, b: 0, a: 0.35}
+  _occupiedOverlayColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!4 &1748892986
 Transform:
   m_ObjectHideFlags: 0
@@ -12600,6 +12600,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2034387597279232280, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4628926043074815615, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4628926043074815615, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4628926043074815615, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0.4
+      objectReference: {fileID: 0}
+    - target: {fileID: 4628926043074815615, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -5
+      objectReference: {fileID: 0}
     - target: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: m_Name
       value: Grid_HeightVariant
