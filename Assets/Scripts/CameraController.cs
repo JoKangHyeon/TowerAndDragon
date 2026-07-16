@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.Tilemaps;
 
 /// <summary>
 /// 2D 아이소메트릭 타워 디펜스 카메라 컨트롤러
@@ -47,6 +48,14 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float _moveSmoothTime = 0.08f;
 
     [Header("맵 경계 (World 좌표)")]
+    [Tooltip("지정 시 시작할 때 타일맵 실제 경계로 _mapMin/_mapMax를 덮어씀. 비우면 아래 수동 값 사용")]
+    [SerializeField] private Tilemap _boundsTilemap;
+    [Tooltip("경계 계산에서 제외할 타일 (예: 바다). 지정 시 나머지 타일 기준으로 경계 계산")]
+    [SerializeField] private TileBase _excludedBoundsTile;
+    [Tooltip("계산된 경계를 바깥으로 넓히는 여유 — 서쪽(x)·남쪽(y) 방향 (World 단위)")]
+    [SerializeField] private Vector2 _boundsMarginMin = Vector2.zero;
+    [Tooltip("계산된 경계를 바깥으로 넓히는 여유 — 동쪽(x)·북쪽(y) 방향 (World 단위)")]
+    [SerializeField] private Vector2 _boundsMarginMax = Vector2.zero;
     [SerializeField] private Vector2 _mapMin = new Vector2(-60f, -60f);
     [SerializeField] private Vector2 _mapMax = new Vector2( 60f,  60f);
 
@@ -77,6 +86,19 @@ public class CameraController : MonoBehaviour
         _cam        = GetComponent<Camera>();
         _targetPos  = transform.position;
         _targetZoom = _cam.orthographicSize;
+        InitMapBounds();
+    }
+
+    /// _boundsTilemap이 지정된 경우 타일맵 실제 월드 경계로 _mapMin/_mapMax를 갱신.
+    /// _excludedBoundsTile(바다 등)이 지정되면 해당 타일을 제외한 영역만 경계로 삼는다.
+    /// 계산 불가 시 인스펙터 수동 값을 그대로 사용한다.
+    private void InitMapBounds()
+    {
+        if (!TilemapBoundsCalculator.TryCalculate(_boundsTilemap, _excludedBoundsTile, out Vector2 min, out Vector2 max))
+            return;
+
+        _mapMin = min - _boundsMarginMin;
+        _mapMax = max + _boundsMarginMax;
     }
 
     private void OnEnable()
@@ -234,10 +256,28 @@ public class CameraController : MonoBehaviour
     // ─────────────────────────────────────────────
 
     /// 맵 경계 밖으로 나가지 않도록 targetPos 클램프
+    /// 뷰포트(orthographicSize 기준)가 맵 경계를 넘어서지 않도록,
+    /// 줌 상태에 따라 클램프 범위 자체를 안쪽으로 당겨준다.
     private void ClampTargetPosition()
     {
-        _targetPos.x = Mathf.Clamp(_targetPos.x, _mapMin.x, _mapMax.x);
-        _targetPos.y = Mathf.Clamp(_targetPos.y, _mapMin.y, _mapMax.y);
+        // _targetZoom이 아니라 _cam.orthographicSize를 쓰는 이유:
+        // ClampTargetPosition은 ApplyMovement의 줌 Lerp보다 먼저 호출되므로
+        // 이 시점의 orthographicSize가 "이번 프레임 실제 화면에 반영된 값"과 일치한다.
+        float halfHeight = _cam.orthographicSize;
+        float halfWidth  = halfHeight * _cam.aspect;
+
+        _targetPos.x = ClampAxis(_targetPos.x, _mapMin.x + halfWidth,  _mapMax.x - halfWidth);
+        _targetPos.y = ClampAxis(_targetPos.y, _mapMin.y + halfHeight, _mapMax.y - halfHeight);
+    }
+
+    /// 뷰포트가 맵보다 큰 축은 min > max가 되므로, 그 축은 맵 중앙으로 고정한다.
+    private static float ClampAxis(float value, float min, float max)
+    {
+        if (min > max)
+        {
+            return (min + max) * 0.5f; // = (mapMin + mapMax) / 2 (맵 중앙)
+        }
+        return Mathf.Clamp(value, min, max);
     }
 
     /// SmoothDamp으로 부드럽게 이동 + 줌 Lerp
