@@ -7,8 +7,7 @@ public readonly struct PopulationState
 
     public PopulationState(
         int maxPop,
-        int assignedPop,
-        int availablePop
+        int assignedPop
     )
     {
         MaxPopulation = maxPop;

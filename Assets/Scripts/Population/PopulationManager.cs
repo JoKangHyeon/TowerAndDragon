@@ -29,8 +29,7 @@ public class PopulationManager : MonoBehaviour
     public PopulationState CurrentState =>
         new PopulationState(
             MaxPopulation,
-            AssignedPopulation,
-            AvailablePopulation
+            AssignedPopulation
         );
 
     public event Action<PopulationState> PopulationChanged;
@@ -52,11 +51,6 @@ public class PopulationManager : MonoBehaviour
         {
             return false;
         }
-
-        allocation = new PopulationAllocation(
-            assignmentType,
-            capacity
-        );
 
         allocation = new PopulationAllocation(
             assignmentType,
@@ -97,7 +91,7 @@ public class PopulationManager : MonoBehaviour
         return true;
     }
 
-    public bool TryUnAssign(
+    public bool TryUnassign(
         PopulationAllocation allocation,
         int amount  
     )
