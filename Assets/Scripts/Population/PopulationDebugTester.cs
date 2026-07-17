@@ -1,0 +1,79 @@
+using UnityEngine;
+
+public class PopulationDebugTester : MonoBehaviour
+{
+
+    private const int TEST_TOWER_CAPACITY = 4;
+    private const int TEST_ASSIGNE_AMOUNT = 3;
+    private const int TEST_UNASSIGN_AMOUNT = 1;
+    private const int TEST_POPULATION_REWARD = 5;
+
+    [SerializeField] private PopulationManager _populationManager;
+    
+    private PopulationAllocation _towerAllocation;
+
+    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    void Start()
+    {
+        _populationManager.PopulationChanged += LogPopulationState;
+
+        bool IsCreated = _populationManager.TryCreateAllocation(
+            PopulationAssignmentType.Tower,
+            TEST_TOWER_CAPACITY,
+            out _towerAllocation
+        );
+
+        Debug.Log($"타워 할당 생성 결과 : {IsCreated}");
+        LogPopulationState(_populationManager.CurrentState);
+    }
+
+    private void OnDestory()
+    {
+        if (_populationManager != null)
+        {
+            _populationManager.PopulationChanged -= LogPopulationState;
+        }
+    }
+
+    [ContextMenu ("테스트/타워 인구 배치")]
+    private void AssignTowerPouplation()
+    {
+        bool isAssigned = _populationManager.TryAssign(
+            _towerAllocation,
+            TEST_ASSIGNE_AMOUNT
+        );
+
+        Debug.Log($"인구 배치 결과 : {isAssigned}");
+    }
+
+    [ContextMenu ("테스트/타워 인구 회수")]
+    private void UnAssignTowerPopulation()
+    {
+        bool isUnassigned = _populationManager.TryUnassign(
+            _towerAllocation,
+            TEST_UNASSIGN_AMOUNT
+        );
+
+        Debug.Log ($"인구 회수 결과 : {isUnassigned}");
+    }
+
+    [ContextMenu ("테스트/최대 인구 증가")]
+    private void IncreaseMaxPopulation()
+    {
+        bool isIncreased = 
+            _populationManager.TryIncreaseMaxPopulation(
+                TEST_POPULATION_REWARD
+            );
+
+        Debug.Log($"최대 인구 증가 결과 : {isIncreased}");
+    }
+
+    private void LogPopulationState(PopulationState state)
+    {
+        Debug.Log(
+            $"최대 : {state.MaxPopulation}," +
+            $"할당 : {state.AssignedPopulation}," +
+            $"가용 : {state.AvailablePopulation}"
+        );
+    }    
+}
