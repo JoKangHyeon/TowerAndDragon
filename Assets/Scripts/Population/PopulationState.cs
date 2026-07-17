@@ -2,7 +2,8 @@ public readonly struct PopulationState
 {
     public int MaxPopulation {get;}
     public int AssignedPopulation {get;}    
-    public int AvailablePopulation {get;}
+    public int AvailablePopulation =>
+        MaxPopulation - AssignedPopulation;
 
     public PopulationState(
         int maxPop,
@@ -11,7 +12,6 @@ public readonly struct PopulationState
     )
     {
         MaxPopulation = maxPop;
-        AssignedPopulation = assignedPop;           
-        AvailablePopulation = availablePop;
+        AssignedPopulation = assignedPop;
     }
 }
