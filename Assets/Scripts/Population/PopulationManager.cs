@@ -66,7 +66,7 @@ public class PopulationManager : MonoBehaviour
         int amount
     )
     {
-        if (allocation == null || !_allocations.Contains(allocation))
+        if (!IsRegistered(allocation))
         {
             return false;
         }
@@ -96,7 +96,7 @@ public class PopulationManager : MonoBehaviour
         int amount  
     )
     {
-        if (allocation == null || !_allocations.Contains(allocation))
+        if (!IsRegistered(allocation))
         {
             return false;
         }
@@ -126,5 +126,49 @@ public class PopulationManager : MonoBehaviour
         _maxPopulation += amount;
         NotifyPopulationChanged();
         return true;
+    }
+
+    public bool TryReleaseAll(
+        PopulationAllocation allocation
+    )
+    {
+        if (!IsRegistered(allocation))
+        {
+            return false;
+        }
+
+        if (allocation.AssignedPopulation == 0)
+        {
+            return true;
+        }
+
+        allocation.Unassign(
+            allocation.AssignedPopulation
+        );
+
+        NotifyPopulationChanged();
+        return true;
+    }
+
+    public bool TryRemoveAllocation(
+        PopulationAllocation allocation
+    )
+    {
+        if (!IsRegistered(allocation))
+        {
+            return false;
+        }
+
+        TryReleaseAll(allocation);
+        _allocations.Remove(allocation);
+        return true;
+    }
+
+    private bool IsRegistered(
+        PopulationAllocation allocation
+    )
+    {
+        return allocation != null &&
+            _allocations.Contains(allocation);
     }
 }
