@@ -4,7 +4,7 @@ public class PopulationDebugTester : MonoBehaviour
 {
 
     private const int TEST_TOWER_CAPACITY = 4;
-    private const int TEST_ASSIGNE_AMOUNT = 3;
+    private const int TEST_ASSIGN_AMOUNT = 3;
     private const int TEST_UNASSIGN_AMOUNT = 1;
     private const int TEST_POPULATION_REWARD = 5;
 
@@ -27,7 +27,7 @@ public class PopulationDebugTester : MonoBehaviour
         LogPopulationState(_populationManager.CurrentState);
     }
 
-    private void OnDestory()
+    private void OnDestroy()
     {
         if (_populationManager != null)
         {
@@ -40,7 +40,7 @@ public class PopulationDebugTester : MonoBehaviour
     {
         bool isAssigned = _populationManager.TryAssign(
             _towerAllocation,
-            TEST_ASSIGNE_AMOUNT
+            TEST_ASSIGN_AMOUNT
         );
 
         Debug.Log($"인구 배치 결과 : {isAssigned}");
