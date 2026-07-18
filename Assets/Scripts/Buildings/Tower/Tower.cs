@@ -7,9 +7,7 @@ using UnityEngine;
 [RequireComponent(typeof(TowerAttack))]
 public class Tower : Building, IMonsterTarget
 {
-
     [SerializeField] private TowerData _towerData;
-
     private Health _health;
     private TowerAttack _attack;
     private CancellationTokenSource _reviveCts;
