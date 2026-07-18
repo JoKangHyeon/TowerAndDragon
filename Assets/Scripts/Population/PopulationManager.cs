@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// 플레이어가 보유한 전체 인구와 모든 사용처의 할당 상태를 관리한다.
+/// 외부 시스템은 Try API를 통해서만 인구를 배치·회수하고 변경 결과를 이벤트로 받는다.
+/// </summary>
 public class PopulationManager : MonoBehaviour
 {
     [SerializeField] 

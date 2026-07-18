@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// PopulationManager의 생성, 배치, 회수와 최대 인구 증가를 씬에서 확인하는 테스트 컴포넌트다.
+/// 실제 게임 기능이 아니라 ContextMenu와 로그를 이용한 수동 스모크 테스트에만 사용한다.
+/// </summary>
 public class PopulationDebugTester : MonoBehaviour
 {
 
