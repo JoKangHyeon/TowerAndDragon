@@ -533,7 +533,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74aeb087e57fa490091fd1d51a19620c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PopulationManager
-  _maxPopulation: 10
+  _maxPopulation: 30
 --- !u!4 &486514842
 Transform:
   m_ObjectHideFlags: 0
@@ -696,26 +696,26 @@ MonoBehaviour:
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cc70f87391bb556438189252040bf4be, type: 3}
+  m_Script: {fileID: 11500000, guid: db3200645c162584daeae3f0b9ed9bd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _wasdSpeed: 10
-  _edgeScrollSpeed: 10
-  _dragSensitivity: 1
-  _edgeScrollEnabled: 1
+  _wasdSpeed: 40
+  _edgeScrollSpeed: 12
+  _dragSensitivity: 10
+  _edgeScrollEnabled: 0
   _edgeScrollThreshold: 20
-  _zoomSpeed: 10
-  _minZoom: 2
-  _maxZoom: 15
+  _zoomSpeed: 30
+  _minZoom: 3
+  _maxZoom: 18
   _zoomSmoothing: 8
   _moveSmoothTime: 0.08
   _boundsTilemap: {fileID: 0}
   _excludedBoundsTile: {fileID: 0}
   _boundsMarginMin: {x: 0, y: 0}
   _boundsMarginMax: {x: 0, y: 0}
-  _mapMin: {x: -20, y: -20}
-  _mapMax: {x: 20, y: 20}
+  _mapMin: {x: -60, y: -60}
+  _mapMax: {x: 60, y: 60}
 --- !u!1 &608755195
 GameObject:
   m_ObjectHideFlags: 0
@@ -743,7 +743,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 893007499777b408d98148c21346ce01, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerPopulationCoordinator
   _gridMap: {fileID: 313449541}
   _populationManager: {fileID: 486514841}
@@ -11096,7 +11096,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7fe31dabf625a4a1186dfb6f287911c6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerPopulationDebugGUI
   _buildingPlacementController: {fileID: 1692054028}
   _populationManager: {fileID: 486514841}

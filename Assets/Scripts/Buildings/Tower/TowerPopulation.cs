@@ -24,6 +24,8 @@ public class TowerPopulation : MonoBehaviour
     public float StaffingRatio =>
         _allocation?.StaffingRatio ?? 0f;
 
+    public bool HasAssignedPopulation => AssignedPopulation > 0f;
+
     public bool IsInitialized => _isInitialized;
 
     private void Awake()

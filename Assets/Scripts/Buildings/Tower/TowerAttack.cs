@@ -7,6 +7,7 @@ public class TowerAttack : MonoBehaviour
 
     private TowerData _towerData;
     private BaseMonster _target;
+    private TowerPopulation _towerPopulation;
     private float _nextAttackTime;
     private bool _isAttackEnabled;
 
@@ -15,6 +16,11 @@ public class TowerAttack : MonoBehaviour
     private AttackSO Attack => _towerData.Attack;
 
     public BaseMonster CurrentTarget => _target;
+
+    private void Awake()
+    {
+        _towerPopulation = GetComponent<TowerPopulation>();
+    }
 
     public void Initialize(TowerData towerData)
     {
@@ -36,7 +42,7 @@ public class TowerAttack : MonoBehaviour
 
     private void Update()
     {
-        if (!_isAttackEnabled)
+        if (!_isAttackEnabled || !CanAttackWithCurrentPopulation())
         {
             return;
         }
@@ -59,7 +65,19 @@ public class TowerAttack : MonoBehaviour
         }
 
         Fire();
-        _nextAttackTime = Time.time + Attack.Interval;
+        _nextAttackTime = Time.time + GetAttackInterval();
+    }
+
+    private float GetAttackInterval()
+    {
+        float staffingRatio = _towerPopulation.StaffingRatio;
+
+        if (staffingRatio <= 0f)
+        {
+            return float.PositiveInfinity;
+        }
+
+        return Attack.Interval / staffingRatio;
     }
 
     private bool IsCurrentTargetValid()
@@ -70,6 +88,13 @@ public class TowerAttack : MonoBehaviour
         }
 
         return GetSqrDistance(_target.transform.position) <= Attack.Range * Attack.Range;
+    }
+
+    private bool CanAttackWithCurrentPopulation()
+    {
+        return _towerPopulation != null &&
+            _towerPopulation.IsInitialized &&
+            _towerPopulation.HasAssignedPopulation;
     }
 
     // 후에 몬스터의 종류, 및 타워종류에 따라 공격 우선도 다르게
