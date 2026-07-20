@@ -41,7 +41,7 @@ public class ConquestUIExample : MonoBehaviour
     [SerializeField]
     private Transform _resourceSlotContainer;
 
-    [Tooltip("자원 아이콘 5개. 순서는 인구/식량/나무/돌/광물(ResourceCost 필드 순서)과 일치해야 한다.")]
+    [Tooltip("자원 아이콘. 순서는 인구/식량/통나무/돌/불꽃의 심장/눈의 결정/시간의 모래/현자의 돌 (인구 + ResourceType 선언 순서).")]
     [SerializeField]
     private Sprite[] _resourceIcons;
 
@@ -56,13 +56,16 @@ public class ConquestUIExample : MonoBehaviour
     [SerializeField]
     private Transform _rewardSlotContainer;
 
-    // _resourceIcons(인구/식량/나무/돌/광물)를 그대로 재사용 - 인덱스 1부터가 이 배열 순서와 대응.
+    // _resourceIcons를 그대로 재사용 - 인덱스 1부터가 이 배열 순서와 대응(_resourceIcons[0]은 인구).
     private static readonly ResourceType[] REWARD_RESOURCE_TYPES =
     {
         ResourceType.Food,
         ResourceType.Wood,
         ResourceType.Stone,
-        ResourceType.Ore,
+        ResourceType.FlameHeart,
+        ResourceType.SnowCrystal,
+        ResourceType.TimeSand,
+        ResourceType.PhilosopherStone,
     };
 
     private readonly List<UI_ConquestRewardSlot> _spawnedRewardSlots = new();
@@ -111,9 +114,9 @@ public class ConquestUIExample : MonoBehaviour
     [SerializeField]
     private ConquestManager _conquestManager;
 
-    [Tooltip("임시 - 자원/인구 매니저가 생기면 교체 예정.")]
+    [Tooltip("자원/인구 보유량 관리자.")]
     [SerializeField]
-    private TempResourcePool _tempResourcePool;
+    private ResourceManager _resourceManager;
 
     [SerializeField]
     private ConquestModeController _conquestModeController;
@@ -225,7 +228,11 @@ public class ConquestUIExample : MonoBehaviour
 
         Vector2Int coord = _selectedChunkCoord.Value;
         bool hasCost = _conquestManager.TryGetExpeditionCost(coord, out ResourceCost cost);
-        ResourceCost held = _tempResourcePool.Current;
+
+        // TODO: 인구 시스템 도입 전까지 인구 비용은 항상 충족으로 처리(검사 우회).
+        // 인구 시스템이 생기면 held.Population을 실제 보유 인구로 채운다.
+        ResourceCost held = _resourceManager.GetHoldingsSnapshot();
+        held.Population = cost.Population;
 
         RebuildResourceSlots(held, cost);
         RebuildRewardSlots(_conquestManager.GetPopulationReward(coord), _conquestManager.GetUnlockedResources(coord));
@@ -275,15 +282,17 @@ public class ConquestUIExample : MonoBehaviour
         if (_resourceCostSlotPrefab == null || _resourceSlotContainer == null)
             return;
 
-        int[] heldValues = { held.Population, held.Food, held.Wood, held.Stone, held.Ore };
-        int[] requiredValues = { cost.Population, cost.Food, cost.Wood, cost.Stone, cost.Ore };
+        // 인구 비용은 인구 시스템 도입 전까지 표시하지 않는다(자원 비용만 표시).
+        int[] heldValues = { held.Food, held.Wood, held.Stone };
+        int[] requiredValues = { cost.Food, cost.Wood, cost.Stone };
 
         for (int i = 0; i < requiredValues.Length; i++)
         {
             if (requiredValues[i] <= 0)
                 continue;
 
-            Sprite icon = _resourceIcons != null && i < _resourceIcons.Length ? _resourceIcons[i] : null;
+            int iconIndex = i + 1; // _resourceIcons[0]은 인구
+            Sprite icon = _resourceIcons != null && iconIndex < _resourceIcons.Length ? _resourceIcons[iconIndex] : null;
             Color textColor = heldValues[i] < requiredValues[i] ? _insufficientColor : _sufficientColor;
             string countText = string.Format(HELD_OVER_REQUIRED_FORMAT, heldValues[i], requiredValues[i]);
 
@@ -369,13 +378,17 @@ public class ConquestUIExample : MonoBehaviour
         Vector2Int coord = _selectedChunkCoord.Value;
         bool hasCost = _conquestManager.TryGetExpeditionCost(coord, out ResourceCost cost);
 
-        bool completed = _conquestManager.SendExpeditionAndComplete(coord, _tempResourcePool.Current);
+        // TODO: 인구 시스템 도입 전까지 인구 비용은 항상 충족으로 처리(검사 우회).
+        ResourceCost held = _resourceManager.GetHoldingsSnapshot();
+        held.Population = cost.Population;
+
+        bool completed = _conquestManager.SendExpeditionAndComplete(coord, held);
         if (completed)
         {
             if (hasCost)
-                _tempResourcePool.Spend(cost);
+                _resourceManager.Spend(cost); // 자원만 차감 (인구 차감/보상은 인구 시스템 담당)
 
-            _tempResourcePool.GrantPopulation(_conquestManager.GetPopulationReward(coord));
+            // TODO: 인구 보상 지급(GetPopulationReward)은 인구 시스템 도입 시 그쪽에서 처리.
 
             _conquestModeController.RefreshConquerableHighlights();
         }
