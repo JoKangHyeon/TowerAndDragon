@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.InputSystem;
 using DG.Tweening;
 
 // 점령 모드 버튼 + 점령 정보 패널. 건설 모드 창(UI_BuildModeWindow)과 동일한 토글/슬라이드 패턴을 따른다.
@@ -29,9 +28,6 @@ public class ConquestUIExample : MonoBehaviour
 
     [SerializeField]
     private GameObject _conquestModePanel;
-
-    [SerializeField]
-    private InputActionReference _cancelAction;
 
     [Tooltip("자원 비용 슬롯 프리팹(ResourceCost).")]
     [SerializeField]
@@ -133,7 +129,6 @@ public class ConquestUIExample : MonoBehaviour
     private Tween _panelTween;
     private Vector2Int? _selectedChunkCoord;
 
-    private bool _isClosedPanel;
     private void Awake()
     {
         _conquestModeButton.onClick.AddListener(ToggleConquestMode);
@@ -147,59 +142,18 @@ public class ConquestUIExample : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_cancelAction != null)
-            _cancelAction.action.Enable();
-
         _conquestManager.OnConquestCompleted.AddListener(OnConquestCompleted);
-        _isClosedPanel = false;
     }
 
     private void OnDisable()
     {
-        if (_cancelAction != null)
-            _cancelAction.action.Disable();
-
         _conquestManager.OnConquestCompleted.RemoveListener(OnConquestCompleted);
     }
 
-    private void Update()
-    {
-        HandleCancelInput();
-    }
-
-    // 패널이 열려 있으면 먼저 패널만 닫고, 이미 닫힌 상태에서 한 번 더 누르면 점령 모드 자체를 끈다.
-    private void HandleCancelInput()
-    {
-        if (_cancelAction == null || !_cancelAction.action.WasPerformedThisFrame())
-            return;
-
-        // _conquestModePanel.activeSelf는 슬라이드 아웃 애니메이션이 끝난 뒤에야 false가 되므로
-        // (Close()의 SetActive(false)가 tween의 OnComplete에서 실행됨), 대신 애니메이션과 무관하게
-        // Close() 시작 시점에 즉시 null이 되는 _selectedChunkCoord로 열림 여부를 판단한다.
-        if (_selectedChunkCoord.HasValue)
-        {
-            Close();
-            return;
-        }
-
-        if (_isClosedPanel)
-            _conquestModeController.SetConquestModeActive(false);
-
-        if (_conquestModeController.IsActive)
-        {
-            _conquestModeController.SetConquestModeActive(false);
-        }
-    }
-
+    // 패널이 열려 있는 상태에서 모드를 끄더라도, SetConquestModeActive(false)가 알아서 패널을 닫는다.
     private void ToggleConquestMode()
     {
-        bool nextActive = !_conquestModeController.IsActive;
-        _conquestModeController.SetConquestModeActive(nextActive);
-
-        if (!nextActive)
-        {
-            Close();
-        }
+        _conquestModeController.SetConquestModeActive(!_conquestModeController.IsActive);
     }
 
     // ConquestModeController가 점령 가능한 청크를 클릭했을 때 호출하는 진입점.
@@ -216,7 +170,6 @@ public class ConquestUIExample : MonoBehaviour
     {
         _panelTween?.Kill();
 
-        _isClosedPanel = false;
         _conquestModePanel.SetActive(true);
         _panelRect.anchoredPosition = _homePos + _openFromOffset;
         _panelTween = _panelRect.DOAnchorPos(_homePos, _slideDuration)
@@ -236,8 +189,6 @@ public class ConquestUIExample : MonoBehaviour
             .SetEase(Ease.InCubic)
             .SetLink(_conquestModePanel)
             .OnComplete(() => _conquestModePanel.SetActive(false));
-
-        _isClosedPanel = true;
     }
 
     private void Refresh()
