@@ -8,6 +8,11 @@ public class TowerData : ScriptableObject
     //[Tooltip("스트링테이블 key. 코드에 직접 이름 문자열을 넣지 않는다.")]
     [SerializeField] private string _nameLocKey;
 
+    [Header("Population")]
+    [SerializeField]
+    [Min(1)]
+    private int _populationCapacity = 1;
+
     [Header("Durability")]
     [SerializeField] private float _maxHealth;
     [SerializeField] private float _reviveDelay;
@@ -23,6 +28,7 @@ public class TowerData : ScriptableObject
 
 
     public string NameLocKey => _nameLocKey;
+    public int PopulationCapacity => _populationCapacity;
     public float MaxHealth => _maxHealth;
     public float ReviveDelay => _reviveDelay;
     public AttackSO Attack => _attack;
