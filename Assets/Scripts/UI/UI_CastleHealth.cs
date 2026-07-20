@@ -44,6 +44,11 @@ public class UI_CastleHealth : MonoBehaviour
 
     private void OnEnable()
     {
+        // Castle이 연결되지 않은 씬(UI 전용 씬 등)에서는 체력 연동을 건너뛴다.
+        if (_castle == null)
+        {
+            return;
+        }
         _castle.HealthChanged += Render;
         // 흔들 대상이 지정되지 않으면 이 오브젝트 자신을 흔든다.
         if (_shakeTarget == null)
@@ -67,6 +72,11 @@ public class UI_CastleHealth : MonoBehaviour
 
     private void OnDisable()
     {
+        // OnEnable에서 Castle 미연결로 조기 반환한 경우, 구독·트윈이 없으므로 정리할 것도 없다.
+        if (_castle == null)
+        {
+            return;
+        }
         _castle.HealthChanged -= Render;
         // 진행 중인 트윈을 정리하고 흔들림은 원위치로 되돌린다.
         _trailTween?.Kill();
