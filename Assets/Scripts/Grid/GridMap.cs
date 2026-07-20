@@ -12,6 +12,12 @@ public class GridMap : MonoBehaviour
     [SerializeField]
     private TerrainTileMap _terrainTileMap;
 
+    [SerializeField]
+    private ResourceNodeAreaTable _resourceNodeAreaTable;
+
+    // 청크 단위 연구 해금 조회 - 연구 시스템이 아직 없는 씬에서는 null로 두면 항상 터레인 기본값만으로 판정된다.
+    public IChunkResearchUnlockQuery ResearchUnlockQuery { get; set; }
+
     // 전체 맵
     private Dictionary<Vector3Int, GridCell> _cells = new();
 
@@ -36,6 +42,7 @@ public class GridMap : MonoBehaviour
     {
         GenerateGridFromTilemap();
         GenerateChunks();
+        ApplyResourceNodeAreas();
     }
 
     private void GenerateGridFromTilemap()
@@ -49,10 +56,19 @@ public class GridMap : MonoBehaviour
             TerrainType terrain = _terrainTileMap.Resolve(tile);
             bool canConstruct = _terrainTileMap.ResolveCanConstruct(tile);
 
-            _cells[pos] = new GridCell(pos, terrain, canConstruct);
+            GridCell cell = new GridCell(pos, terrain, canConstruct);
+            cell.AddResourceNodes(_terrainTileMap.ResolveDefaultResourceNodes(tile));
+            _cells[pos] = cell;
         }
 
         Debug.Log($"[GridMap] 그리드맵 생성 완료 - 셀의 개수: {_cells.Count}");
+    }
+
+    // 터레인 기본값(GenerateGridFromTilemap) 다음 단계 - 수기 지정 영역을 추가로 누적 적용한다.
+    private void ApplyResourceNodeAreas()
+    {
+        if (_resourceNodeAreaTable != null)
+            _resourceNodeAreaTable.ApplyToGrid(_cells);
     }
 
     private void GenerateChunks()
@@ -131,6 +147,9 @@ public class GridMap : MonoBehaviour
 
     public ExistTypeOnCell ExamExist(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.ExistTypeOnCell : ExistTypeOnCell.None;
+
+    public ResourceType GetAvailableResourceNodes(Vector3Int coord) =>
+        _cells.TryGetValue(coord, out var cell) ? cell.AvailableResourceNodes : ResourceType.None;
 
     public Building GetBuildingAt(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.OccupantBuilding : null;
@@ -345,6 +364,29 @@ public class GridMap : MonoBehaviour
         foreach (Vector3Int coord in footprint)
         {
             if (!CanConstructBuilding(coord, ignoreBuilding))
+                return false;
+        }
+
+        return true;
+    }
+
+    // 생산시설 전용 배치 판정 - 기존 CanConstructFootPrint에 더해, 풋프린트 전체 셀이 요구 자원 플래그를 가져야 한다.
+    // 자원 플래그는 (터레인 기반 정적 플래그) 또는 (청크 단위 연구 해금) 둘 중 하나만 만족해도 된다.
+    public bool CanConstructResourceFootprint(Vector3Int anchor, FootprintShape shape, ResourceType requiredResourceNode)
+    {
+        if (!CanConstructFootPrint(anchor, shape))
+            return false;
+
+        foreach (Vector3Int coord in GetFootprintCoords(anchor, shape))
+        {
+            if (!_cells.TryGetValue(coord, out GridCell cell))
+                return false;
+
+            bool hasTerrainNode = cell.HasResourceNode(requiredResourceNode);
+            bool hasChunkUnlock = ResearchUnlockQuery != null &&
+                ResearchUnlockQuery.IsUnlocked(ToChunkCoord(coord), requiredResourceNode);
+
+            if (!hasTerrainNode && !hasChunkUnlock)
                 return false;
         }
 
