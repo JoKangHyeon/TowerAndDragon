@@ -11086,6 +11086,7 @@ GameObject:
   - component: {fileID: 914589613}
   - component: {fileID: 914589616}
   - component: {fileID: 914589615}
+  - component: {fileID: 914589617}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -11213,6 +11214,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DailySettlementManager
   _cycleManager: {fileID: 914589611}
   _populationUpkeepSystem: {fileID: 914589615}
+--- !u!114 &914589617
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914589609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de911ad3c42f38b49a99b83793b4851d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConquestModeController
+  _gridMap: {fileID: 313449541}
+  _mouseSelectController: {fileID: 1748892985}
+  _conquestManager: {fileID: 1333838244}
+  _conquestUI: {fileID: 0}
+  _buildingPlacementController: {fileID: 1692054028}
+  _selectAction: {fileID: 3001919216989983466, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _cancelAction: {fileID: 0}
+  _conquerableHighlightColor: {r: 0, g: 1, b: 0, a: 1}
+  _blockedHighlightColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!1 &989594072
 GameObject:
   m_ObjectHideFlags: 0
@@ -12154,7 +12176,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5325039925880821724, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.00004427092
+      value: 0.0000042999814
       objectReference: {fileID: 0}
     - target: {fileID: 5739549653184268968, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -12553,6 +12575,17 @@ PrefabInstance:
       addedObject: {fileID: 434206450}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+--- !u!114 &1333838244 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1460990098537314003, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+  m_PrefabInstance: {fileID: 2046588818}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4045de5de46a3144b38fb3fd1b08f0e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConquestManager
 --- !u!1 &1396495001
 GameObject:
   m_ObjectHideFlags: 0
@@ -13059,6 +13092,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1460990098537314003, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: _cycleManager
+      value: 
+      objectReference: {fileID: 914589611}
     - target: {fileID: 2034387597279232280, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: m_IsActive
       value: 1
@@ -13139,6 +13176,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8324432385230451432, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: _conquestManager
+      value: 
+      objectReference: {fileID: 1333838244}
     - target: {fileID: 8324432385230451432, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: _mouseSelectController
       value: 
