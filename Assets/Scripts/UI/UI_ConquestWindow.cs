@@ -3,11 +3,13 @@ using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
 
-// 점령 모드 버튼 + 점령 정보 패널. 건설 모드 창(UI_BuildModeWindow)과 동일한 토글/슬라이드 패턴을 따른다.
-// 기간/지형 슬롯은 모든 청크에 항상 존재하므로 씬에 미리 고정 배치해 두고 값만 갱신한다(스폰/삭제 없음).
-// 반면 자원 비용과 몬스터 강화 효과(스폰배율/공격배율)는 청크마다 실제로 적용되는 항목이 달라서,
-// 해당하는 항목만 UI_ResourceCostSlot / UI_ConquestInfoSlot을 매번 새로 생성한다(건물 슬롯과 동일한 패턴).
-public class ConquestUIExample : MonoBehaviour
+// 점령 정보 패널. 점령 모드 진입/청크 클릭은 ConquestModeController가 담당하고,
+// 이 창은 선택된 청크의 정보 표시(비용/보상/기간/지형/적 강화)와 점령 실행만 맡는다.
+// 점령 모드 버튼은 UI_IngameWindow 등 외부에서 ToggleConquestMode()를 호출해 연결한다.
+// 기간/지형 슬롯은 모든 청크에 항상 존재하므로 씬에 미리 고정 배치해 두고 값만 갱신하고,
+// 자원 비용/보상/적 강화 슬롯은 청크마다 항목이 달라 매번 새로 생성한다(건물 슬롯과 동일 패턴).
+// 자원 아이콘은 수동 배열 대신 ResourceCatalog(ResourceData.Icon)에서 조회한다.
+public class UI_ConquestWindow : MonoBehaviour
 {
     private const string HELD_OVER_REQUIRED_FORMAT = "{0}/{1}";
     private const string PLUS_VALUE_FORMAT = "+{0}";
@@ -15,14 +17,10 @@ public class ConquestUIExample : MonoBehaviour
     // TODO: 스트링테이블 도입 시 아래 5개를 _LOC_KEY로 교체. DAY_SINGULAR/PLURAL_FORMAT의
     // 단/복수 분기(FormatDuration)도 언어별 규칙이 다를 수 있어 그때 같이 재검토 필요.
     private const string DURATION_LABEL = "Duration";
-    private const string YIELD_LABEL = "Yield";
     private const string SPAWN_LABEL = "Spawn";
     private const string ATTACK_LABEL = "Attack";
     private const string DURATION_DAY_SINGULAR_FORMAT = "{0} Day";
     private const string DURATION_DAY_PLURAL_FORMAT = "{0} Days";
-
-    [SerializeField]
-    private Button _conquestModeButton;
 
     [SerializeField]
     private Button _conquerButton;
@@ -30,7 +28,7 @@ public class ConquestUIExample : MonoBehaviour
     [SerializeField]
     private GameObject _conquestModePanel;
 
-    [Tooltip("자원 비용 슬롯 프리팹(ResourceCost).")]
+    [Tooltip("자원 비용 슬롯 프리팹(Slot_CostToConquer).")]
     [SerializeField]
     private UI_ResourceCostSlot _resourceCostSlotPrefab;
 
@@ -38,13 +36,9 @@ public class ConquestUIExample : MonoBehaviour
     [SerializeField]
     private Transform _resourceSlotContainer;
 
-    [Tooltip("자원 아이콘. 순서는 인구/식량/통나무/돌/불꽃의 심장/눈의 결정/시간의 모래/현자의 돌 (인구 + ResourceType 선언 순서).")]
-    [SerializeField]
-    private Sprite[] _resourceIcons;
-
     private readonly List<UI_ResourceCostSlot> _spawnedResourceSlots = new();
 
-    [Header("보상(해금 자원 종류) 슬롯 - 실제 지급 수량이 아닌 해금 표시용. 인구 보상은 별도로 즉시 지급된다.")]
+    [Header("보상(해금 자원 종류) 슬롯 - 실제 지급 수량이 아닌 해금 표시용.")]
     [Tooltip("보상 슬롯 프리팹(Slot_ConquestReward).")]
     [SerializeField]
     private UI_ConquestRewardSlot _rewardSlotPrefab;
@@ -53,11 +47,11 @@ public class ConquestUIExample : MonoBehaviour
     [SerializeField]
     private Transform _rewardSlotContainer;
 
-    [Tooltip("생산량 보상 슬롯 아이콘 - 특정 자원이 아니라 청크의 기본 생산량(Chunk.BaseYield)을 가리키므로 별도 아이콘을 쓴다.")]
+    [Tooltip("인구 보상 슬롯 아이콘. 인구는 자원이 아니라 ResourceData가 없어 별도 지정한다.")]
     [SerializeField]
-    private Sprite _yieldIcon;
+    private Sprite _populationIcon;
 
-    // _resourceIcons를 그대로 재사용 - 인덱스 1부터가 이 배열 순서와 대응(_resourceIcons[0]은 인구).
+    // 해금 표시 순서. 아이콘은 ResourceCatalog에서 종류로 조회한다.
     private static readonly ResourceType[] REWARD_RESOURCE_TYPES =
     {
         ResourceType.Food,
@@ -72,14 +66,14 @@ public class ConquestUIExample : MonoBehaviour
     private readonly List<UI_ConquestRewardSlot> _spawnedRewardSlots = new();
 
     [Header("고정 정보 슬롯 (기간/지형) - 씬에 미리 배치된 인스턴스")]
-    [Tooltip("소요 기간 슬롯(ConquestInfoImage) - 아이콘 + \"N Day(s)\" 텍스트.")]
+    [Tooltip("소요 기간 슬롯 - 아이콘 + \"N Day(s)\" 텍스트.")]
     [SerializeField]
     private UI_ConquestInfoSlot _durationInfoSlot;
 
     [SerializeField]
     private Sprite _durationIcon;
 
-    [Tooltip("지형 아이콘 이미지(TerrainImage) - 텍스트 없이 지형에 맞는 스프라이트만 교체한다.")]
+    [Tooltip("지형 아이콘 이미지 - 텍스트 없이 지형에 맞는 스프라이트만 교체한다.")]
     [SerializeField]
     private Image _terrainImage;
 
@@ -88,7 +82,7 @@ public class ConquestUIExample : MonoBehaviour
     private Sprite[] _terrainSprites;
 
     [Header("몬스터 강화 효과 슬롯 - 적용되는 항목만 생성")]
-    [Tooltip("몬스터 강화 효과 슬롯 프리팹(ConquestInfoImage).")]
+    [Tooltip("몬스터 강화 효과 슬롯 프리팹(Slot__EnemyConquest).")]
     [SerializeField]
     private UI_ConquestInfoSlot _enemyScalingSlotPrefab;
 
@@ -115,7 +109,7 @@ public class ConquestUIExample : MonoBehaviour
     [SerializeField]
     private ConquestManager _conquestManager;
 
-    [Tooltip("자원 보유량 관리자.")]
+    [Tooltip("자원 보유량 관리자. 보유량 조회/차감과 아이콘 카탈로그 조회에 사용한다.")]
     [SerializeField]
     private ResourceManager _resourceManager;
 
@@ -143,8 +137,10 @@ public class ConquestUIExample : MonoBehaviour
 
     private void Awake()
     {
-        _conquestModeButton.onClick.AddListener(ToggleConquestMode);
-        _conquerButton.onClick.AddListener(OnConquerButtonClicked);
+        if (_conquerButton != null)
+        {
+            _conquerButton.onClick.AddListener(OnConquerButtonClicked);
+        }
 
         _panelRect = _conquestModePanel.GetComponent<RectTransform>();
         _homePos = _panelRect.anchoredPosition;
@@ -154,14 +150,20 @@ public class ConquestUIExample : MonoBehaviour
 
     private void OnEnable()
     {
-        _conquestManager.OnConquestCompleted.AddListener(OnConquestCompleted);
+        if (_conquestManager != null)
+        {
+            _conquestManager.OnConquestCompleted.AddListener(OnConquestCompleted);
+        }
     }
 
     // 패널이 열려 있는 상태에서 점령 모드가 꺼지면 ConquestModeController.SetConquestModeActive(false)가
-    // 알아서 패널을 닫는다(ESC 처리도 그쪽 HandleCancelInput이 담당) - 여기서 중복 구현하지 않는다.
+    // 알아서 패널을 닫는다 - 여기서 중복 구현하지 않는다.
     private void OnDisable()
     {
-        _conquestManager.OnConquestCompleted.RemoveListener(OnConquestCompleted);
+        if (_conquestManager != null)
+        {
+            _conquestManager.OnConquestCompleted.RemoveListener(OnConquestCompleted);
+        }
     }
 
     // 원정이 실제로 완료된 시점(며칠 뒤 밤 정산)에 ConquestManager가 발행한다.
@@ -171,7 +173,9 @@ public class ConquestUIExample : MonoBehaviour
         _conquestModeController.RefreshConquerableHighlights();
     }
 
-    private void ToggleConquestMode()
+    // 점령 모드 on/off 토글. 외부 버튼(UI_IngameWindow의 Button_Conquest 등)이 호출한다.
+    // 모드를 끄면 컨트롤러가 열려 있던 패널도 함께 닫는다.
+    public void ToggleConquestMode()
     {
         _conquestModeController.SetConquestModeActive(!_conquestModeController.IsActive);
     }
@@ -198,7 +202,7 @@ public class ConquestUIExample : MonoBehaviour
     }
 
     // 패널만 닫는다 - 점령 모드 자체는 유지되어 이어서 다른 청크를 선택할 수 있다.
-    // 청크 하이라이트(노란색 포함)는 지우지 않는다 - 이제 호버로 계속 갱신되고, 점령 모드가 꺼질 때까지 유지된다.
+    // 청크 하이라이트는 지우지 않는다 - 호버로 계속 갱신되고, 점령 모드가 꺼질 때까지 유지된다.
     public void Close()
     {
         _selectedChunkCoord = null;
@@ -225,10 +229,7 @@ public class ConquestUIExample : MonoBehaviour
         held.Population = _populationManager != null ? _populationManager.AvailablePopulation : cost.Population;
 
         RebuildResourceSlots(held, cost);
-        RebuildRewardSlots(
-            _conquestManager.GetPopulationReward(coord),
-            _conquestManager.GetUnlockedResources(coord),
-            _conquestManager.GetChunkYield(coord));
+        RebuildRewardSlots(_conquestManager.GetPopulationReward(coord), _conquestManager.GetUnlockedResources(coord));
 
         if (_durationInfoSlot != null)
         {
@@ -262,6 +263,18 @@ public class ConquestUIExample : MonoBehaviour
         return _terrainSprites != null && index < _terrainSprites.Length ? _terrainSprites[index] : null;
     }
 
+    // 자원 아이콘은 데이터 에셋(ResourceData)이 단일 출처 - 카탈로그에서 종류로 조회한다.
+    private Sprite ResolveResourceIcon(ResourceType type)
+    {
+        if (_resourceManager != null && _resourceManager.Catalog != null &&
+            _resourceManager.Catalog.TryGet(type, out ResourceData data))
+        {
+            return data.Icon;
+        }
+
+        return null;
+    }
+
     // 이전에 생성된 자원 슬롯을 지우고, 이번 청크가 실제로 요구하는 자원(요구량 > 0)만큼만 새로 생성한다.
     private void RebuildResourceSlots(ResourceCost held, ResourceCost cost)
     {
@@ -275,28 +288,31 @@ public class ConquestUIExample : MonoBehaviour
         if (_resourceCostSlotPrefab == null || _resourceSlotContainer == null)
             return;
 
-        // _resourceIcons[0]은 인구 - held/cost 배열도 같은 순서로 맞춰 인덱스를 그대로 아이콘 인덱스로 쓴다.
-        int[] heldValues = { held.Population, held.Food, held.Wood, held.Stone };
-        int[] requiredValues = { cost.Population, cost.Food, cost.Wood, cost.Stone };
-
-        for (int i = 0; i < requiredValues.Length; i++)
+        // 인구 비용은 인구 시스템 도입 전까지 표시하지 않는다(자원 비용만 표시).
+        (ResourceType Type, int Held, int Required)[] entries =
         {
-            if (requiredValues[i] <= 0)
+            (ResourceType.Food, held.Food, cost.Food),
+            (ResourceType.Wood, held.Wood, cost.Wood),
+            (ResourceType.Stone, held.Stone, cost.Stone),
+        };
+
+        foreach ((ResourceType type, int heldAmount, int requiredAmount) in entries)
+        {
+            if (requiredAmount <= 0)
                 continue;
 
-            Sprite icon = _resourceIcons != null && i < _resourceIcons.Length ? _resourceIcons[i] : null;
-            Color textColor = heldValues[i] < requiredValues[i] ? _insufficientColor : _sufficientColor;
-            string countText = string.Format(HELD_OVER_REQUIRED_FORMAT, heldValues[i], requiredValues[i]);
+            Color textColor = heldAmount < requiredAmount ? _insufficientColor : _sufficientColor;
+            string countText = string.Format(HELD_OVER_REQUIRED_FORMAT, heldAmount, requiredAmount);
 
             UI_ResourceCostSlot slot = Instantiate(_resourceCostSlotPrefab, _resourceSlotContainer);
-            slot.Setup(icon, countText, textColor);
+            slot.Setup(ResolveResourceIcon(type), countText, textColor);
             _spawnedResourceSlots.Add(slot);
         }
     }
 
     // 이전에 생성된 보상 슬롯을 지우고 다시 생성한다.
-    // 인구/생산량은 실제 수치(populationReward, yield > 0)를, 나머지 자원은 해금된 종류(unlockedResources)만 표시한다.
-    private void RebuildRewardSlots(int populationReward, ResourceType unlockedResources, int yield)
+    // 인구는 실제 지급 수량(populationReward > 0)을, 나머지 자원은 해금된 종류(unlockedResources)만 표시한다.
+    private void RebuildRewardSlots(int populationReward, ResourceType unlockedResources)
     {
         foreach (UI_ConquestRewardSlot slot in _spawnedRewardSlots)
         {
@@ -310,24 +326,15 @@ public class ConquestUIExample : MonoBehaviour
 
         if (populationReward > 0)
         {
-            Sprite populationIcon = _resourceIcons != null && _resourceIcons.Length > 0 ? _resourceIcons[0] : null;
-            SpawnRewardSlot(populationIcon, string.Format(PLUS_VALUE_FORMAT, populationReward));
+            SpawnRewardSlot(_populationIcon, string.Format(PLUS_VALUE_FORMAT, populationReward));
         }
 
-        if (yield > 0)
+        foreach (ResourceType type in REWARD_RESOURCE_TYPES)
         {
-            SpawnRewardSlot(_yieldIcon, string.Format(PLUS_VALUE_FORMAT, yield));
-        }
-
-        for (int i = 0; i < REWARD_RESOURCE_TYPES.Length; i++)
-        {
-            ResourceType type = REWARD_RESOURCE_TYPES[i];
             if ((unlockedResources & type) == 0)
                 continue;
 
-            int iconIndex = i + 1; // _resourceIcons[0]은 인구
-            Sprite icon = _resourceIcons != null && iconIndex < _resourceIcons.Length ? _resourceIcons[iconIndex] : null;
-            SpawnRewardSlot(icon, type.ToString());
+            SpawnRewardSlot(ResolveResourceIcon(type), type.ToString());
         }
     }
 

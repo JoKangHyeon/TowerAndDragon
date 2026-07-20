@@ -18,16 +18,13 @@ public class ConquestModeController : MonoBehaviour
     private ConquestManager _conquestManager;
 
     [SerializeField]
-    private ConquestUIExample _conquestUI;
+    private UI_ConquestWindow _conquestUI;
 
     [SerializeField]
     private BuildingPlacementController _buildingPlacementController;
 
     [SerializeField]
     private InputActionReference _selectAction;
-
-    [SerializeField]
-    private InputActionReference _cancelAction;
 
     [SerializeField]
     private Color _conquerableHighlightColor = Color.green;
@@ -62,23 +59,6 @@ public class ConquestModeController : MonoBehaviour
 
         HandleHover();
         HandleSelectInput();
-        HandleCancelInput();
-    }
-
-    // 패널(청크 선택)이 열려 있으면 먼저 패널만 닫고, 이미 닫힌 상태에서 한 번 더 누르면 점령 모드 자체를 끈다.
-    // 이 컨트롤러는 점령 패널과 달리 항상 활성 상태로 유지되는 오브젝트이므로, 패널이 닫혀도 입력 처리가 끊기지 않는다.
-    private void HandleCancelInput()
-    {
-        if (_cancelAction == null || !_cancelAction.action.WasPerformedThisFrame())
-            return;
-
-        if (_isSelectionLocked)
-        {
-            _conquestUI.Close();
-            return;
-        }
-
-        SetConquestModeActive(false);
     }
 
     // 매 프레임 호버된 청크를 확인해, 바뀐 경우에만 노란색 선택 표시를 다시 계산한다(클릭을 기다리지 않는다).

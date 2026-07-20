@@ -37,6 +37,12 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("자원 종류별 수량 텍스트. 기본 3종 + 특화 4종.")]
     [SerializeField] private ResourceSlot[] _resourceSlots;
 
+    [Header("점령 (Panel_BottomRight)")]
+    [Tooltip("점령 모드 토글 버튼.")]
+    [SerializeField] private Button _buttonConquest;
+    [Tooltip("점령 정보 창. 버튼 클릭 시 점령 모드를 토글한다.")]
+    [SerializeField] private UI_ConquestWindow _conquestWindow;
+
     private void Awake()
     {
         // '다음 밤으로' 버튼: 누르면 낮을 종료하고 밤을 시작한다.
@@ -47,6 +53,12 @@ public class UI_IngameWindow : MonoBehaviour
             {
                 button.onClick.AddListener(GoToNight);
             }
+        }
+
+        // 점령 버튼: 누를 때마다 점령 모드를 켜고 끈다(토글). 실제 모드 처리는 점령 창이 담당.
+        if (_buttonConquest != null && _conquestWindow != null)
+        {
+            _buttonConquest.onClick.AddListener(_conquestWindow.ToggleConquestMode);
         }
     }
 
