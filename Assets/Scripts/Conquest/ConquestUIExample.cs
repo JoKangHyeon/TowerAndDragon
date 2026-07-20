@@ -146,32 +146,20 @@ public class ConquestUIExample : MonoBehaviour
     private void OnEnable()
     {
         _conquestManager.OnConquestCompleted.AddListener(OnConquestCompleted);
-        if (_cancelAction != null)
-            _cancelAction.action.Enable();
     }
 
+    // 패널이 열려 있는 상태에서 점령 모드가 꺼지면 ConquestModeController.SetConquestModeActive(false)가
+    // 알아서 패널을 닫는다(ESC 처리도 그쪽 HandleCancelInput이 담당) - 여기서 중복 구현하지 않는다.
     private void OnDisable()
     {
         _conquestManager.OnConquestCompleted.RemoveListener(OnConquestCompleted);
     }
 
-    // 패널이 열려 있는 상태에서 모드를 끄더라도, SetConquestModeActive(false)가 알아서 패널을 닫는다.
-        if (_cancelAction != null)
-            _cancelAction.action.Disable();
-    }
-
-    private void Update()
+    // 원정이 실제로 완료된 시점(며칠 뒤 밤 정산)에 ConquestManager가 발행한다.
+    // TODO: 인구 보상(GetPopulationReward) 지급은 인구 시스템 도입 시 그쪽에서 처리.
+    private void OnConquestCompleted(Vector2Int chunkCoord)
     {
-        HandleCancelInput();
-    }
-
-    private void HandleCancelInput()
-    {
-        if (!_conquestModePanel.activeSelf)
-            return;
-
-        if (_cancelAction != null && _cancelAction.action.WasPerformedThisFrame())
-            Close();
+        _conquestModeController.RefreshConquerableHighlights();
     }
 
     private void ToggleConquestMode()
@@ -377,15 +365,13 @@ public class ConquestUIExample : MonoBehaviour
         ResourceCost held = _resourceManager.GetHoldingsSnapshot();
         held.Population = cost.Population;
 
-        bool completed = _conquestManager.SendExpeditionAndComplete(coord, held);
-        if (completed)
+        bool sent = _conquestManager.SendExpedition(coord, held);
+        if (sent)
         {
             if (hasCost)
-                _resourceManager.Spend(cost); // 자원만 차감 (인구 차감/보상은 인구 시스템 담당)
+                _resourceManager.Spend(cost); // 자원만 차감(원정 발송 시점) - 인구 차감/보상은 인구 시스템 담당
 
-            // TODO: 인구 보상 지급(GetPopulationReward)은 인구 시스템 도입 시 그쪽에서 처리.
-
-            _conquestModeController.RefreshConquerableHighlights();
+            _conquestModeController.RefreshConquerableHighlights(); // 원정 중인 청크는 CanSendExpedition이 false가 되므로 즉시 갱신
         }
 
         Close();

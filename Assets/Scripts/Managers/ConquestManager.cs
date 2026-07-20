@@ -193,6 +193,18 @@ public class ConquestManager : MonoBehaviour
         OnConquestCompleted?.Invoke(expedition.TargetChunkCoord);
     }
 
+    // [테스트 전용] 며칠 대기 없이 진행 중인 모든 원정을 즉시 완료 처리한다.
+    public void DebugForceCompleteAllExpeditions()
+    {
+        for (int i = _activeExpeditions.Count - 1; i >= 0; i--)
+        {
+            CompleteConquest(_activeExpeditions[i]);
+            _activeExpeditions.RemoveAt(i);
+        }
+
+        OnExpeditionsChanged?.Invoke();
+    }
+
     private void ExpandVisibility(Vector2Int chunkCoord)
     {
         foreach (Chunk neighbor in _gridMap.GetAdjacentChunks(chunkCoord))
