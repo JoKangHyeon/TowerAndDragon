@@ -36,18 +36,22 @@ public static class StringTable
         }
     }
 
-    public const string tableLocation = "";
-    public const string defaultLanguage = "ko_kr";
+    public const string c_TableLocation = "";
+    public const string c_DefaultLanguage = "ko_kr";
+    public const string c_LanguageFolder = "Localization";
+    public const string c_CsvExtension = ".csv";
+    public const string c_CsvFilenameFormat = "{0}" + c_CsvExtension;
+    public const string c_CsvFileFindQuery = "*" + c_CsvExtension;
 
     public static void LoadLocalizationLoaction()
     {
-        _localizationTextLocation = Application.streamingAssetsPath + "/Localization/{0}.csv";
+        _localizationTextLocation = Path.Combine(Application.streamingAssetsPath, c_LanguageFolder, c_CsvFilenameFormat);
         _localizationList = new List<string>();
 
-        var directoryInfo = new DirectoryInfo(Application.streamingAssetsPath + "/Localization");
-        foreach (var file in directoryInfo.GetFiles("*.csv"))
+        var directoryInfo = new DirectoryInfo( Path.Combine(Application.streamingAssetsPath,c_LanguageFolder));
+        foreach (var file in directoryInfo.GetFiles(c_CsvFileFindQuery))
         {
-            _localizationList.Add(file.Name.Replace(".csv", ""));
+            _localizationList.Add(file.Name.Replace(c_CsvExtension, string.Empty));
         }
     }
 
@@ -55,7 +59,7 @@ public static class StringTable
     {
         if (table == null)
         {
-            LoadLanguage(defaultLanguage);
+            LoadLanguage(c_DefaultLanguage);
         }
 
         if (string.IsNullOrEmpty(key))
