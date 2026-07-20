@@ -1,5 +1,4 @@
 using System;
-<<<<<<< HEAD
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -52,6 +51,28 @@ public class ResourceManager : MonoBehaviour
         return _amounts.TryGetValue(type, out int amount) ? amount : 0;
     }
 
+    public int ConsumeUpTo(
+        ResourceType type, int requestedAmount
+    )
+    {
+        Debug.Assert(IsSingleType(type),$"[ResourceManager] 단일 자원 종류만 소비 가능: {type}");
+
+        if (requestedAmount <= 0)
+        {
+            return 0;
+        }
+
+        int currentAmount = GetAmount(type);
+        int consumedAmount = Math.Min(currentAmount, requestedAmount);
+
+        if (consumedAmount > 0)
+        {
+            TrySpend(type, consumedAmount);
+        }
+
+        return consumedAmount;
+    }
+
     public void Add(ResourceType type, int amount)
     {
         Debug.Assert(IsSingleType(type), $"[ResourceManager] 단일 자원 종류만 추가 가능: {type}");
@@ -99,123 +120,4 @@ public class ResourceManager : MonoBehaviour
     // 단일 비트(자원 1종)인지 판정. None/복합 플래그 방어용.
     private static bool IsSingleType(ResourceType type) =>
         type != ResourceType.None && (type & (type - 1)) == ResourceType.None;
-=======
-using UnityEngine;
-
-public class ResourceManager : MonoBehaviour
-{
-    [SerializeField, Min(0)] private int _food;
-    [SerializeField, Min(0)] private int _wood;
-    [SerializeField, Min(0)] private int _stone;
-    [SerializeField, Min(0)] private int _ore;
-
-    public int Food => _food;
-
-    public bool TryGetAmount (ResourceType resourceType, out int amount)
-    {
-        switch (resourceType)
-        {
-            case ResourceType.Food:
-                amount = _food;
-                return true;
-
-            case ResourceType.Wood:
-                amount = _wood;
-                return true;
-              
-            case ResourceType.Stone:
-                amount = _stone;
-                return true;
-            
-            case ResourceType.Ore:
-                amount = _ore;
-                return true;
-
-            default:
-                amount = 0;
-                return false;
-        }
-    }
-
-    public bool TryAdd(
-        ResourceType resourceType,
-        int amount
-    )
-    {
-        if (amount <= 0)
-        {
-            return false;
-        }
-
-        if (!TryGetAmount(resourceType, out int currentAmount))
-        {
-            return false;
-        }
-
-        if (currentAmount > int.MaxValue - amount)
-        {
-            return false;
-        }
-
-        return TrySetAmount(resourceType, currentAmount + amount);
-    }
-
-    public int ConsumeUpTo(
-        ResourceType resourceType,
-        int requestedAmount
-    )
-    {
-        if (requestedAmount <= 0)
-        {
-            return 0;
-        }
-
-        if (!TryGetAmount(resourceType, out int currentAmount))
-        {
-            return 0;
-        }
-
-        int consumedAmount = Math.Min(
-                currentAmount,
-                requestedAmount
-        );
-
-        TrySetAmount(resourceType, currentAmount - consumedAmount);
-
-        return consumedAmount;
-
-        
-    }
-
-    private bool TrySetAmount(ResourceType resourceType, int amount)
-    {
-        if (amount < 0)
-        {
-            return false;
-        }   
-
-        switch (resourceType)
-        {
-            case ResourceType.Food:
-                _food = amount;
-                return true;
-
-            case ResourceType.Wood:
-                _wood = amount;
-                return true;
-              
-            case ResourceType.Stone:
-                _stone = amount;
-                return true;
-            
-            case ResourceType.Ore:
-                _ore = amount;
-                return true;
-
-            default:
-                amount = 0;
-                return false;
-        }
-    }
->>>>>>> origin/feature/64-population-maintenance
 }
