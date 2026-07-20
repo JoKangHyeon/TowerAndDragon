@@ -3,14 +3,19 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
-// 인접한 Conquered 청크들을 하나의 영역으로 보고 바깥 경계에만 녹색 테두리를 그린다
-// (청크끼리 맞닿은 내부 경계선은 그리지 않음).
-// 셀 단위로 이웃 셀의 점령 여부를 검사해 바깥 경계 변(edge)을 모으고, 변끼리 공유하는
+// 인접한 Conquered 청크들을 하나의 영역으로 보고 바깥 경계에만 녹색 테두리를, 원정 중인(점령
+// 진행 중) 청크들에는 같은 방식으로 회색 테두리를 그린다 (청크끼리 맞닿은 내부 경계선은 그리지 않음).
+// 셀 단위로 이웃 셀의 소속 여부를 검사해 바깥 경계 변(edge)을 모으고, 변끼리 공유하는
 // 꼭짓점을 이어붙여 폐곡선(loop)을 구성한 뒤 LineRenderer로 그린다.
 [RequireComponent(typeof(GridMap))]
 public class ConqueredChunkBorderRenderer : MonoBehaviour
 {
     private const float CORNER_MIDPOINT_FACTOR = 0.5f;
+
+    // 점령지 경계가 항상 원정 중 경계보다 위에 그려지도록 고정 - 두 선이 맞닿는 경계에서
+    // 어느 쪽이 위로 오는지가 렌더러 순서에 따라 불안정하게 결정되는 것을 방지한다.
+    private const int CONQUERED_BORDER_SORTING_ORDER = 1;
+    private const int IN_PROGRESS_BORDER_SORTING_ORDER = 0;
 
     [SerializeField]
     private LineRenderer _borderLineRendererPrefab;
@@ -19,19 +24,35 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
     private MouseSelectController _mouseSelectController;
 
     [SerializeField]
+    private ConquestManager _conquestManager;
+
+    [SerializeField]
     private Color _borderColor = Color.green;
+
+    [SerializeField]
+    private Color _inProgressBorderColor = Color.gray;
 
     [SerializeField]
     private float _lineWidth = 0.05f;
 
     private GridMap _gridMap;
     private ComponentPool<LineRenderer> _borderPool;
+    private ComponentPool<LineRenderer> _inProgressBorderPool;
+    private HashSet<Vector2Int> _lastInProgressChunkCoords = new();
 
     private void Awake()
     {
         _gridMap = GetComponent<GridMap>();
         _borderPool = new ComponentPool<LineRenderer>(_borderLineRendererPrefab, transform);
+        _inProgressBorderPool = new ComponentPool<LineRenderer>(_borderLineRendererPrefab, transform);
         _gridMap.OnChunkStateChanged += RefreshBorders;
+
+        // ConquestManager는 Grid.prefab을 쓰는 씬(다른 팀원 테스트 씬 등)에 항상 있는 게 아니므로,
+        // 없는 씬에서는 회색(원정 중) 테두리 기능만 조용히 비활성화한다.
+        
+        _conquestManager.OnExpeditionsChanged.AddListener(RefreshInProgressBorders);
+        RefreshInProgressBorders();
+        
     }
 
     // Castle.SetUpInitialTerritory()도 Start()에서 성 주변 청크를 Conquered로 세팅하는데,
@@ -53,29 +74,53 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
     {
         if (_gridMap != null)
             _gridMap.OnChunkStateChanged -= RefreshBorders;
+
+        if (_conquestManager != null)
+            _conquestManager.OnExpeditionsChanged.RemoveListener(RefreshInProgressBorders);
     }
 
     private void RefreshBorders()
     {
-        List<List<Vector2Int>> loops = BuildConqueredBorderLoops();
+        List<List<Vector2Int>> loops = BuildBorderLoops(CollectConqueredCells());
 
         for (int i = 0; i < loops.Count; i++)
         {
             LineRenderer lineRenderer = _borderPool.Get(i);
-            SetLoopPositions(lineRenderer, loops[i]);
+            SetLoopPositions(lineRenderer, loops[i], _borderColor, CONQUERED_BORDER_SORTING_ORDER);
         }
 
         _borderPool.DeactivateFrom(loops.Count);
     }
 
-    private void SetLoopPositions(LineRenderer lineRenderer, List<Vector2Int> loop)
+    // 원정 세트가 실제로 바뀌지 않은 날(날짜만 하루 늘어난 경우)에는 경계 재계산을 건너뛴다.
+    private void RefreshInProgressBorders()
+    {
+        HashSet<Vector2Int> chunkCoords = CollectInProgressChunkCoords();
+        if (chunkCoords.SetEquals(_lastInProgressChunkCoords))
+            return;
+
+        _lastInProgressChunkCoords = chunkCoords;
+
+        List<List<Vector2Int>> loops = BuildBorderLoops(CollectCellsForChunks(chunkCoords));
+
+        for (int i = 0; i < loops.Count; i++)
+        {
+            LineRenderer lineRenderer = _inProgressBorderPool.Get(i);
+            SetLoopPositions(lineRenderer, loops[i], _inProgressBorderColor, IN_PROGRESS_BORDER_SORTING_ORDER);
+        }
+
+        _inProgressBorderPool.DeactivateFrom(loops.Count);
+    }
+
+    private void SetLoopPositions(LineRenderer lineRenderer, List<Vector2Int> loop, Color color, int sortingOrder)
     {
         lineRenderer.gameObject.SetActive(true);
         lineRenderer.loop = true;
-        lineRenderer.startColor = _borderColor;
-        lineRenderer.endColor = _borderColor;
+        lineRenderer.startColor = color;
+        lineRenderer.endColor = color;
         lineRenderer.startWidth = _lineWidth;
         lineRenderer.endWidth = _lineWidth;
+        lineRenderer.sortingOrder = sortingOrder;
         lineRenderer.positionCount = loop.Count;
 
         for (int i = 0; i < loop.Count; i++)
@@ -84,8 +129,14 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
         }
     }
 
+    private List<List<Vector2Int>> BuildBorderLoops(HashSet<Vector3Int> cells)
+    {
+        List<(Vector2Int A, Vector2Int B)> borderEdges = CollectBorderEdges(cells);
+        return TraceLoops(borderEdges);
+    }
+
     // 청크 경계와 무관하게, 점령된 셀 전체를 하나의 영역으로 보고 바깥 경계 변만 수집한다.
-    private List<List<Vector2Int>> BuildConqueredBorderLoops()
+    private HashSet<Vector3Int> CollectConqueredCells()
     {
         var conqueredCells = new HashSet<Vector3Int>();
 
@@ -100,34 +151,66 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
             }
         }
 
-        List<(Vector2Int A, Vector2Int B)> borderEdges = CollectBorderEdges(conqueredCells);
-        return TraceLoops(borderEdges);
+        return conqueredCells;
+    }
+
+    // 원정을 보낸(아직 완료되지 않은) 청크 좌표만 모은다 - 캐시와 비교해 재계산 여부를 판단하는 용도.
+    private HashSet<Vector2Int> CollectInProgressChunkCoords()
+    {
+        var chunkCoords = new HashSet<Vector2Int>();
+
+        foreach (ConquestExpedition expedition in _conquestManager.ActiveExpeditions)
+        {
+            chunkCoords.Add(expedition.TargetChunkCoord);
+        }
+
+        return chunkCoords;
+    }
+
+    // 주어진 청크들에 속한 셀 전체를 수집한다.
+    private HashSet<Vector3Int> CollectCellsForChunks(HashSet<Vector2Int> chunkCoords)
+    {
+        var cells = new HashSet<Vector3Int>();
+
+        foreach (Vector2Int chunkCoord in chunkCoords)
+        {
+            Chunk chunk = _gridMap.GetChunk(chunkCoord);
+            if (chunk == null)
+                continue;
+
+            foreach (GridCell cell in chunk.Cells)
+            {
+                cells.Add(cell.Coord);
+            }
+        }
+
+        return cells;
     }
 
     // 셀 하나의 네 변(동서남북) 중 이웃 셀이 점령 상태가 아닌 변만 바깥 경계 변으로 수집한다.
     // 꼭짓점은 셀 좌표계의 정수 격자 인덱스로 표현한다 - 셀 (x,y)의 네 꼭짓점은
     // (x,y) / (x+1,y) / (x,y+1) / (x+1,y+1).
-    private static List<(Vector2Int A, Vector2Int B)> CollectBorderEdges(HashSet<Vector3Int> conqueredCells)
+    private static List<(Vector2Int A, Vector2Int B)> CollectBorderEdges(HashSet<Vector3Int> cells)
     {
         var edges = new List<(Vector2Int A, Vector2Int B)>();
 
-        foreach (Vector3Int coord in conqueredCells)
+        foreach (Vector3Int coord in cells)
         {
             var bottomLeft = new Vector2Int(coord.x, coord.y);
             var bottomRight = new Vector2Int(coord.x + 1, coord.y);
             var topLeft = new Vector2Int(coord.x, coord.y + 1);
             var topRight = new Vector2Int(coord.x + 1, coord.y + 1);
 
-            if (!conqueredCells.Contains(coord + Vector3Int.down))
+            if (!cells.Contains(coord + Vector3Int.down))
                 edges.Add((bottomLeft, bottomRight));
 
-            if (!conqueredCells.Contains(coord + Vector3Int.up))
+            if (!cells.Contains(coord + Vector3Int.up))
                 edges.Add((topLeft, topRight));
 
-            if (!conqueredCells.Contains(coord + Vector3Int.left))
+            if (!cells.Contains(coord + Vector3Int.left))
                 edges.Add((bottomLeft, topLeft));
 
-            if (!conqueredCells.Contains(coord + Vector3Int.right))
+            if (!cells.Contains(coord + Vector3Int.right))
                 edges.Add((bottomRight, topRight));
         }
 

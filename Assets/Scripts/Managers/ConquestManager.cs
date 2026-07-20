@@ -4,12 +4,13 @@ using UnityEngine.Events;
 
 public class ConquestManager : MonoBehaviour
 {
+
+    // terrainType이 디폴토인 경우 아예 점령이 안되게 -> 호버 하이라이트도 안되게 수정 필요
     [SerializeField]
     private GridMap _gridMap;
 
-    // To Do: 추후 연결 예정
-    // [SerializeField]
-    // private CycleManager _cycleManager;
+    [SerializeField]
+    private CycleManager _cycleManager;
 
     [SerializeField]
     private ConquestDurationTable _durationTable;
@@ -19,23 +20,34 @@ public class ConquestManager : MonoBehaviour
 
     [SerializeField]
     private Building _garrisonPrefab;
+    public Building GarrisonPrefab => _garrisonPrefab;
 
     private readonly List<ConquestExpedition> _activeExpeditions = new();
+    public IReadOnlyList<ConquestExpedition> ActiveExpeditions => _activeExpeditions;
+
     private EnemyScalingModifier _accumulatedEnemyScaling = EnemyScalingModifier.Neutral;
     public EnemyScalingModifier AccumulatedEnemyScaling => _accumulatedEnemyScaling;
 
     public UnityEvent<EnemyScalingModifier> OnEnemyScalingChanged;
 
-    private void Awake()
+    // 점령이 실제로 완료된 시점(며칠 뒤 밤 정산)에 발생 - 보상 지급 등은 이 이벤트를 구독해 처리한다.
+    public UnityEvent<Vector2Int> OnConquestCompleted;
+
+    // 원정이 추가되거나(SendExpedition) 진행/완료되었을 때(OnSettlement) 발생 - 진행률 표시 UI가 구독한다.
+    public UnityEvent OnExpeditionsChanged;
+
+    private void OnEnable()
     {
-        // To Do: 추후 연결 예정
-        //_cycleManager.OnNightEnd.AddListener(OnSettlement);
+        // CycleManager는 Grid.prefab을 쓰는 씬(다른 팀원 테스트 씬 등)에 항상 있는 게 아니므로,
+        // 없는 씬에서는 밤 정산 구독만 조용히 건너뛴다.
+        if (_cycleManager != null)
+            _cycleManager.OnNightEnd.AddListener(OnSettlement);
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
-        // To Do: 추후 연결 예정
-        //_cycleManager.OnNightEnd.RemoveListener(OnSettlement);
+        if (_cycleManager != null)
+            _cycleManager.OnNightEnd.RemoveListener(OnSettlement);
     }
 
     public bool TryGetExpeditionCost(Vector2Int targetChunkCoord, out ResourceCost cost) =>
@@ -55,6 +67,22 @@ public class ConquestManager : MonoBehaviour
 
     public ResourceType GetUnlockedResources(Vector2Int chunkCoord) =>
         _chunkCostTable.ResolveUnlockedResources(chunkCoord);
+
+    // 아직 점령 전이라 다른 건물이 들어올 수 없는 청크이므로, 완료 전에도 안정적으로 미리 계산 가능하다.
+    public bool TryGetGarrisonPreviewCell(Vector2Int chunkCoord, out Vector3Int cellCoord)
+    {
+        Chunk chunk = _gridMap.GetChunk(chunkCoord);
+        GridCell cell = chunk != null ? FindConstructableCellNearestCenter(chunk) : null;
+
+        if (cell == null)
+        {
+            cellCoord = default;
+            return false;
+        }
+
+        cellCoord = cell.Coord;
+        return true;
+    }
 
     public TerrainType GetDominantTerrain(Vector2Int chunkCoord) =>
         _gridMap.GetChunk(chunkCoord).DominantTerrain;
@@ -135,20 +163,7 @@ public class ConquestManager : MonoBehaviour
         int daysRequired = _durationTable.ResolveDaysRequired(chunk.DominantTerrain);
 
         _activeExpeditions.Add(new ConquestExpedition(targetChunkCoord, cost, daysRequired));
-        return true;
-    }
-
-    // 추후 연결 예정: 낮/밤 주기 정산(OnSettlement)이 CycleManager와 아직 연결되지 않아,
-    // 원정 발송 성공 시 소요일수를 기다리지 않고 바로 점령을 완료 처리한다.
-    // CycleManager 연결 후에는 UI에서 이 메서드 대신 SendExpedition을 호출하도록 되돌린다.
-    public bool SendExpeditionAndComplete(Vector2Int targetChunkCoord, ResourceCost available)
-    {
-        if (!SendExpedition(targetChunkCoord, available))
-            return false;
-
-        ConquestExpedition expedition = _activeExpeditions[_activeExpeditions.Count - 1];
-        CompleteConquest(expedition);
-        _activeExpeditions.Remove(expedition);
+        OnExpeditionsChanged?.Invoke();
         return true;
     }
 
@@ -161,10 +176,12 @@ public class ConquestManager : MonoBehaviour
 
             if (!expedition.IsComplete)
                 continue;
-            
+
             CompleteConquest(expedition);
             _activeExpeditions.RemoveAt(i);
         }
+
+        OnExpeditionsChanged?.Invoke();
     }
 
     private void CompleteConquest(ConquestExpedition expedition)
@@ -173,6 +190,19 @@ public class ConquestManager : MonoBehaviour
         ExpandVisibility(expedition.TargetChunkCoord);
         PlaceGarrison(expedition.TargetChunkCoord);
         ApplyEnemyScaling(expedition.TargetChunkCoord);
+        OnConquestCompleted?.Invoke(expedition.TargetChunkCoord);
+    }
+
+    // [테스트 전용] 며칠 대기 없이 진행 중인 모든 원정을 즉시 완료 처리한다.
+    public void DebugForceCompleteAllExpeditions()
+    {
+        for (int i = _activeExpeditions.Count - 1; i >= 0; i--)
+        {
+            CompleteConquest(_activeExpeditions[i]);
+            _activeExpeditions.RemoveAt(i);
+        }
+
+        OnExpeditionsChanged?.Invoke();
     }
 
     private void ExpandVisibility(Vector2Int chunkCoord)

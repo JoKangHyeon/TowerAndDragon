@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.InputSystem;
 using DG.Tweening;
 
 // 점령 모드 버튼 + 점령 정보 패널. 건설 모드 창(UI_BuildModeWindow)과 동일한 토글/슬라이드 패턴을 따른다.
@@ -29,9 +28,6 @@ public class ConquestUIExample : MonoBehaviour
 
     [SerializeField]
     private GameObject _conquestModePanel;
-
-    [SerializeField]
-    private InputActionReference _cancelAction;
 
     [Tooltip("자원 비용 슬롯 프리팹(ResourceCost).")]
     [SerializeField]
@@ -149,39 +145,26 @@ public class ConquestUIExample : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_cancelAction != null)
-            _cancelAction.action.Enable();
+        _conquestManager.OnConquestCompleted.AddListener(OnConquestCompleted);
     }
 
+    // 패널이 열려 있는 상태에서 점령 모드가 꺼지면 ConquestModeController.SetConquestModeActive(false)가
+    // 알아서 패널을 닫는다(ESC 처리도 그쪽 HandleCancelInput이 담당) - 여기서 중복 구현하지 않는다.
     private void OnDisable()
     {
-        if (_cancelAction != null)
-            _cancelAction.action.Disable();
+        _conquestManager.OnConquestCompleted.RemoveListener(OnConquestCompleted);
     }
 
-    private void Update()
+    // 원정이 실제로 완료된 시점(며칠 뒤 밤 정산)에 ConquestManager가 발행한다.
+    // TODO: 인구 보상(GetPopulationReward) 지급은 인구 시스템 도입 시 그쪽에서 처리.
+    private void OnConquestCompleted(Vector2Int chunkCoord)
     {
-        HandleCancelInput();
-    }
-
-    private void HandleCancelInput()
-    {
-        if (!_conquestModePanel.activeSelf)
-            return;
-
-        if (_cancelAction != null && _cancelAction.action.WasPerformedThisFrame())
-            Close();
+        _conquestModeController.RefreshConquerableHighlights();
     }
 
     private void ToggleConquestMode()
     {
-        bool nextActive = !_conquestModeController.IsActive;
-        _conquestModeController.SetConquestModeActive(nextActive);
-
-        if (!nextActive)
-        {
-            Close();
-        }
+        _conquestModeController.SetConquestModeActive(!_conquestModeController.IsActive);
     }
 
     // ConquestModeController가 점령 가능한 청크를 클릭했을 때 호출하는 진입점.
@@ -382,15 +365,13 @@ public class ConquestUIExample : MonoBehaviour
         ResourceCost held = _resourceManager.GetHoldingsSnapshot();
         held.Population = cost.Population;
 
-        bool completed = _conquestManager.SendExpeditionAndComplete(coord, held);
-        if (completed)
+        bool sent = _conquestManager.SendExpedition(coord, held);
+        if (sent)
         {
             if (hasCost)
-                _resourceManager.Spend(cost); // 자원만 차감 (인구 차감/보상은 인구 시스템 담당)
+                _resourceManager.Spend(cost); // 자원만 차감(원정 발송 시점) - 인구 차감/보상은 인구 시스템 담당
 
-            // TODO: 인구 보상 지급(GetPopulationReward)은 인구 시스템 도입 시 그쪽에서 처리.
-
-            _conquestModeController.RefreshConquerableHighlights();
+            _conquestModeController.RefreshConquerableHighlights(); // 원정 중인 청크는 CanSendExpedition이 false가 되므로 즉시 갱신
         }
 
         Close();

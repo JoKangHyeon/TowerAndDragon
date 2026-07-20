@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
 // 점령 모드 진입/청크 선택을 담당한다. 건설 모드(BuildingPlacementController)와 동일한
 // 입력 처리 패턴(InputActionReference Enable/Disable, 포인터-오버-UI 가드)을 따른다.
@@ -24,6 +25,9 @@ public class ConquestModeController : MonoBehaviour
 
     [SerializeField]
     private InputActionReference _selectAction;
+
+    [SerializeField]
+    private InputActionReference _cancelAction;
 
     [SerializeField]
     private Color _conquerableHighlightColor = Color.green;
@@ -51,18 +55,6 @@ public class ConquestModeController : MonoBehaviour
         };
     }
 
-    private void OnEnable()
-    {
-        if (_selectAction != null)
-            _selectAction.action.Enable();
-    }
-
-    private void OnDisable()
-    {
-        if (_selectAction != null)
-            _selectAction.action.Disable();
-    }
-
     private void Update()
     {
         if (!IsActive)
@@ -70,6 +62,23 @@ public class ConquestModeController : MonoBehaviour
 
         HandleHover();
         HandleSelectInput();
+        HandleCancelInput();
+    }
+
+    // 패널(청크 선택)이 열려 있으면 먼저 패널만 닫고, 이미 닫힌 상태에서 한 번 더 누르면 점령 모드 자체를 끈다.
+    // 이 컨트롤러는 점령 패널과 달리 항상 활성 상태로 유지되는 오브젝트이므로, 패널이 닫혀도 입력 처리가 끊기지 않는다.
+    private void HandleCancelInput()
+    {
+        if (_cancelAction == null || !_cancelAction.action.WasPerformedThisFrame())
+            return;
+
+        if (_isSelectionLocked)
+        {
+            _conquestUI.Close();
+            return;
+        }
+
+        SetConquestModeActive(false);
     }
 
     // 매 프레임 호버된 청크를 확인해, 바뀐 경우에만 노란색 선택 표시를 다시 계산한다(클릭을 기다리지 않는다).
@@ -81,7 +90,7 @@ public class ConquestModeController : MonoBehaviour
         Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
         Chunk chunk = _gridMap.GetChunkAt(hoveredCell);
 
-        Vector2Int? hoveredChunkCoord = chunk != null && chunk.CurrentState == ChunkState.Visible
+        Vector2Int? hoveredChunkCoord = chunk != null && chunk.CurrentState == ChunkState.Visible && chunk.DominantTerrain != TerrainType.Default
             ? chunk.ChunkCoord
             : (Vector2Int?)null;
 
@@ -104,6 +113,9 @@ public class ConquestModeController : MonoBehaviour
         }
         else
         {
+            if (_isSelectionLocked)
+                _conquestUI.Close();
+
             _isSelectionLocked = false;
             _mouseSelectController.ClearHighlights();
         }
@@ -143,6 +155,9 @@ public class ConquestModeController : MonoBehaviour
             if (chunk.CurrentState != ChunkState.Visible)
                 continue;
 
+            if (chunk.DominantTerrain == TerrainType.Default)
+                continue;
+
             if (_selectedChunkCoord.HasValue && chunk.ChunkCoord == _selectedChunkCoord.Value)
             {
                 AddChunkCellCoords(chunk, _selectedBuffer);
@@ -167,7 +182,7 @@ public class ConquestModeController : MonoBehaviour
         Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
         Chunk chunk = _gridMap.GetChunkAt(hoveredCell);
 
-        if (chunk == null || chunk.CurrentState != ChunkState.Visible)
+        if (chunk == null || chunk.CurrentState != ChunkState.Visible || chunk.DominantTerrain == TerrainType.Default)
             return;
 
         _conquestUI.OnChunkSelected(chunk.ChunkCoord);
@@ -177,7 +192,8 @@ public class ConquestModeController : MonoBehaviour
     {
         foreach (GridCell cell in chunk.Cells)
         {
-            target.Add(cell.Coord);
+            if (cell.TerrainType != TerrainType.Default)
+                target.Add(cell.Coord);
         }
     }
 }
