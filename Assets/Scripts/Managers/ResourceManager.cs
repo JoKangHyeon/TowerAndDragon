@@ -51,6 +51,28 @@ public class ResourceManager : MonoBehaviour
         return _amounts.TryGetValue(type, out int amount) ? amount : 0;
     }
 
+    public int ConsumeUpTo(
+        ResourceType type, int requestedAmount
+    )
+    {
+        Debug.Assert(IsSingleType(type),$"[ResourceManager] 단일 자원 종류만 소비 가능: {type}");
+
+        if (requestedAmount <= 0)
+        {
+            return 0;
+        }
+
+        int currentAmount = GetAmount(type);
+        int consumedAmount = Math.Min(currentAmount, requestedAmount);
+
+        if (consumedAmount > 0)
+        {
+            TrySpend(type, consumedAmount);
+        }
+
+        return consumedAmount;
+    }
+
     public void Add(ResourceType type, int amount)
     {
         Debug.Assert(IsSingleType(type), $"[ResourceManager] 단일 자원 종류만 추가 가능: {type}");

@@ -2,6 +2,7 @@ using System;
 
 // 자원 종류. 점령 해금 표시(다중 플래그)와 보유량 관리(단일 비트)에 공용으로 쓴다.
 // 인구는 실수량 보상(ResourceManager.AddPopulation)으로 별도 처리하므로 제외한다.
+
 [Flags]
 public enum ResourceType
 {
