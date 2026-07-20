@@ -55,24 +55,6 @@ public class ConquestModeController : MonoBehaviour
         };
     }
 
-    private void OnEnable()
-    {
-        if (_selectAction != null)
-            _selectAction.action.Enable();
-
-        if (_cancelAction != null)
-            _cancelAction.action.Enable();
-    }
-
-    private void OnDisable()
-    {
-        if (_selectAction != null)
-            _selectAction.action.Disable();
-
-        if (_cancelAction != null)
-            _cancelAction.action.Disable();
-    }
-
     private void Update()
     {
         if (!IsActive)

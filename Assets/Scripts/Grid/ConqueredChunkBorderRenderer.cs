@@ -49,11 +49,10 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
 
         // ConquestManager는 Grid.prefab을 쓰는 씬(다른 팀원 테스트 씬 등)에 항상 있는 게 아니므로,
         // 없는 씬에서는 회색(원정 중) 테두리 기능만 조용히 비활성화한다.
-        if (_conquestManager != null)
-        {
-            _conquestManager.OnExpeditionsChanged.AddListener(RefreshInProgressBorders);
-            RefreshInProgressBorders();
-        }
+        
+        _conquestManager.OnExpeditionsChanged.AddListener(RefreshInProgressBorders);
+        RefreshInProgressBorders();
+        
     }
 
     // Castle.SetUpInitialTerritory()도 Start()에서 성 주변 청크를 Conquered로 세팅하는데,
