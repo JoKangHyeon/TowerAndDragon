@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.InputSystem;
 using DG.Tweening;
 
 // 점령 모드 버튼 + 점령 정보 패널. 건설 모드 창(UI_BuildModeWindow)과 동일한 토글/슬라이드 패턴을 따른다.
@@ -29,9 +28,6 @@ public class ConquestUIExample : MonoBehaviour
 
     [SerializeField]
     private GameObject _conquestModePanel;
-
-    [SerializeField]
-    private InputActionReference _cancelAction;
 
     [Tooltip("자원 비용 슬롯 프리팹(ResourceCost).")]
     [SerializeField]
@@ -149,12 +145,17 @@ public class ConquestUIExample : MonoBehaviour
 
     private void OnEnable()
     {
+        _conquestManager.OnConquestCompleted.AddListener(OnConquestCompleted);
         if (_cancelAction != null)
             _cancelAction.action.Enable();
     }
 
     private void OnDisable()
     {
+        _conquestManager.OnConquestCompleted.RemoveListener(OnConquestCompleted);
+    }
+
+    // 패널이 열려 있는 상태에서 모드를 끄더라도, SetConquestModeActive(false)가 알아서 패널을 닫는다.
         if (_cancelAction != null)
             _cancelAction.action.Disable();
     }
@@ -175,13 +176,7 @@ public class ConquestUIExample : MonoBehaviour
 
     private void ToggleConquestMode()
     {
-        bool nextActive = !_conquestModeController.IsActive;
-        _conquestModeController.SetConquestModeActive(nextActive);
-
-        if (!nextActive)
-        {
-            Close();
-        }
+        _conquestModeController.SetConquestModeActive(!_conquestModeController.IsActive);
     }
 
     // ConquestModeController가 점령 가능한 청크를 클릭했을 때 호출하는 진입점.
