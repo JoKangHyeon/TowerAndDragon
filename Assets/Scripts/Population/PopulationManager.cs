@@ -132,6 +132,99 @@ public class PopulationManager : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// 기아 사망을 가용, 타워, 생산, 점령 인구 순서로 적용한다.
+    /// 각 분류 안에서는 등록된 할당 순서대로 한 명씩 순환하여 감소시킨다.
+    /// </summary>
+    public bool TryApplyStarvation(
+        int requestedDeaths,
+        out StarvationResult result
+    )
+    {
+        result = default;
+
+        if (requestedDeaths <= 0 || MaxPopulation == 0)
+        {
+            return false;
+        }
+
+        int remainingDeaths = Math.Min(requestedDeaths, MaxPopulation);
+        int availablePopulationLost = Math.Min(
+            remainingDeaths,
+            AvailablePopulation
+        );
+        remainingDeaths -= availablePopulationLost;
+
+        int towerPopulationLost = ReduceAssignedPopulation(
+            PopulationAssignmentType.Tower,
+            remainingDeaths
+        );
+        remainingDeaths -= towerPopulationLost;
+
+        int productionPopulationLost = ReduceAssignedPopulation(
+            PopulationAssignmentType.Production,
+            remainingDeaths
+        );
+        remainingDeaths -= productionPopulationLost;
+
+        int conquestPopulationLost = ReduceAssignedPopulation(
+            PopulationAssignmentType.Conquest,
+            remainingDeaths
+        );
+
+        result = new StarvationResult(
+            requestedDeaths,
+            availablePopulationLost,
+            towerPopulationLost,
+            productionPopulationLost,
+            conquestPopulationLost
+        );
+
+        _maxPopulation -= result.PopulationLost;
+        NotifyPopulationChanged();
+        return true;
+    }
+
+    private int ReduceAssignedPopulation(
+        PopulationAssignmentType assignmentType,
+        int requestedDeaths
+    )
+    {
+        int remainingDeaths = requestedDeaths;
+        int populationLost = 0;
+
+        while (remainingDeaths > 0)
+        {
+            bool reducedInCurrentRound = false;
+
+            foreach (PopulationAllocation allocation in _allocations)
+            {
+                if (remainingDeaths == 0)
+                {
+                    break;
+                }
+
+                if (allocation.AssignmentType != assignmentType ||
+                    allocation.AssignedPopulation == 0)
+                {
+                    continue;
+                }
+
+                allocation.Unassign(1);
+                remainingDeaths -= 1;
+                populationLost += 1;
+                reducedInCurrentRound = true;
+            }
+
+            if (!reducedInCurrentRound)
+            {
+                break;
+            }
+        }
+
+        return populationLost;
+    }
+
     public bool TryReleaseAll(
         PopulationAllocation allocation
     )
