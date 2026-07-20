@@ -10,8 +10,6 @@ public class RunData
     public List<BabyDragon> BabyDragons;
 
     public GridMap Map;
-
-    public List<int> Resources;
 }
 
 

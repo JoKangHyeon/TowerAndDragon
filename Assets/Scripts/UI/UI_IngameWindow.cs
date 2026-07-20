@@ -1,13 +1,23 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
 /// 인게임 창 컨트롤러. 이 창에 부착해, 창 안의 UI 요소를 한곳에서 관리한다.
-/// 현재는 낮/밤 심볼(Symbol_Day) 전환을 담당 — 낮이면 Image_Day, 밤이면 Image_Light를 켠다.
-/// CycleManager.OnCycleChanged를 구독해 상태 변화에 반응하고, 활성화 시점의 현재 상태도 즉시 반영한다.
+/// - 낮/밤 심볼(Symbol_Day) 전환과 하단 컨트롤 표시 (CycleManager.OnCycleChanged 구독)
+/// - Panel_TopLeft 자원 보유량 표시 (ResourceManager 이벤트 구독)
+/// 활성화 시점의 현재 상태도 즉시 반영한다. (인구 표시는 별도 인구 시스템에서 연결 예정)
 /// </summary>
 public class UI_IngameWindow : MonoBehaviour
 {
+    // 자원 표시 1칸: 자원 종류 ↔ 수량 텍스트.
+    [System.Serializable]
+    private struct ResourceSlot
+    {
+        public ResourceType Type;
+        public TMP_Text AmountText;
+    }
+
     [SerializeField] private CycleManager _cycleManager;
 
     [Header("낮/밤 심볼")]
@@ -21,6 +31,11 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private GameObject _buttonNextNight;
     [Tooltip("밤에 켜질 속도 조절 UI.")]
     [SerializeField] private GameObject _speedSetting;
+
+    [Header("자원 표시 (Panel_TopLeft)")]
+    [SerializeField] private ResourceManager _resourceManager;
+    [Tooltip("자원 종류별 수량 텍스트. 기본 3종 + 특화 4종.")]
+    [SerializeField] private ResourceSlot[] _resourceSlots;
 
     private void Awake()
     {
@@ -42,6 +57,12 @@ public class UI_IngameWindow : MonoBehaviour
             _cycleManager.OnCycleChanged.AddListener(ApplyCycle);
             ApplyCycle(_cycleManager.CurrentCycle);
         }
+
+        if (_resourceManager != null)
+        {
+            _resourceManager.ResourceChanged += RenderResource;
+            RenderAllResources();
+        }
     }
 
     private void GoToNight()
@@ -57,6 +78,31 @@ public class UI_IngameWindow : MonoBehaviour
         if (_cycleManager != null)
         {
             _cycleManager.OnCycleChanged.RemoveListener(ApplyCycle);
+        }
+
+        if (_resourceManager != null)
+        {
+            _resourceManager.ResourceChanged -= RenderResource;
+        }
+    }
+
+    // 활성화 시점의 보유량을 전 슬롯에 즉시 반영한다(이벤트를 놓친 초기 지급분 포함).
+    private void RenderAllResources()
+    {
+        foreach (ResourceSlot slot in _resourceSlots)
+        {
+            RenderResource(slot.Type, _resourceManager.GetAmount(slot.Type));
+        }
+    }
+
+    private void RenderResource(ResourceType type, int amount)
+    {
+        foreach (ResourceSlot slot in _resourceSlots)
+        {
+            if (slot.Type == type && slot.AmountText != null)
+            {
+                slot.AmountText.text = amount.ToString();
+            }
         }
     }
 

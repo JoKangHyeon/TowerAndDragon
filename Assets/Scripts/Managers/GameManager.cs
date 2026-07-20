@@ -17,9 +17,13 @@ public class GameManager : MonoBehaviour
     [FormerlySerializedAs("DefaultLights")]
     private List<CycleLight> _defaultLights;
 
+    [SerializeField]
+    private ResourceManager _resourceManager;
+
     public RunData CurrentRun => _currentRun;
     public CycleManager CycleManager => _cycleManager;
     public List<CycleLight> DefaultLights => _defaultLights;
+    public ResourceManager ResourceManager => _resourceManager;
 
     /// <summary>성이 파괴되어 게임오버가 되면 발생. 게임오버 UI 등이 구독한다.</summary>
     public event Action GameOverOccurred;
@@ -30,6 +34,11 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         _cycleManager.Construct(this);
+
+        if (_resourceManager != null)
+        {
+            _resourceManager.Construct(this);
+        }
     }
 
     private void Start()
