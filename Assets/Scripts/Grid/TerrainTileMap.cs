@@ -11,6 +11,9 @@ public class TerrainTileMap : ScriptableObject
         public TileBase Tile;
         public TerrainType TerrainType;
         public bool CanConstruct;
+
+        [Tooltip("이 타일의 셀이 기본으로 갖는 자원 생산 플래그(복수 선택 가능). 예: Grass = Food | Wood")]
+        public ResourceType DefaultResourceNodes;
     }
 
     [SerializeField] private Entry[] _entries;
@@ -37,5 +40,15 @@ public class TerrainTileMap : ScriptableObject
             }
         }
         return false;
+    }
+
+    public ResourceType ResolveDefaultResourceNodes(TileBase tile)
+    {
+        foreach (var entry in _entries)
+        {
+            if (entry.Tile == tile)
+                return entry.DefaultResourceNodes;
+        }
+        return ResourceType.None;
     }
 }
