@@ -10988,7 +10988,6 @@ MonoBehaviour:
     Amount: 50
   - Type: 4
     Amount: 50
-  _initialPopulation: 0
 --- !u!1 &989594072
 GameObject:
   m_ObjectHideFlags: 0
@@ -11856,6 +11855,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+--- !u!114 &2092050644 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6681738151754636705, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+  m_PrefabInstance: {fileID: 2046588818}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bad66e0cd0a2b5d4d9c3d31964c86d86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CastleHealth
 --- !u!1001 &8943220367200622736
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11928,6 +11938,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _gameManager
+      value: 
+      objectReference: {fileID: 914589612}
     - target: {fileID: 867692531234121185, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 0
@@ -12133,6 +12147,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2426799609749584309, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _cycleManager
+      value: 
+      objectReference: {fileID: 914589611}
+    - target: {fileID: 2426799609749584309, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _resourceManager
       value: 
       objectReference: {fileID: 914589613}
@@ -12216,6 +12234,14 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3992104638749372965, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _cycleManager
+      value: 
+      objectReference: {fileID: 914589611}
+    - target: {fileID: 3992104638749372965, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _buildingPlacementController
+      value: 
+      objectReference: {fileID: 1692054028}
     - target: {fileID: 4040839585944289795, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -12508,6 +12534,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7878675804963011371, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _castle
+      value: 
+      objectReference: {fileID: 2092050644}
     - target: {fileID: 7911680963847714813, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
