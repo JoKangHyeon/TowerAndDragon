@@ -27,6 +27,11 @@ public class GridMap : MonoBehaviour
     // 청크 상태 변경 이벤트 - 점령/시야 확장 등 청크 단위 상태 전환 시에만 발생 (OnCellChanged보다 드묾)
     public event Action OnChunkStateChanged;
 
+    // 그리드에 건물이 등록되거나 제거되기 직전임을 외부 시스템에 알린다.
+    // GridMap은 건물별 후속 처리 내용을 알지 않고 생명주기 시점만 전달한다.
+    public event Action<Building> OnBuildingAdded;
+    public event Action<Building> OnBuildingRemoving;
+
     private void Awake()
     {
         GenerateGridFromTilemap();
@@ -236,6 +241,7 @@ public class GridMap : MonoBehaviour
         }
 
         _buildingFootprintCells[building] = footprint;
+        OnBuildingAdded?.Invoke(building);
     }
 
     // 타일맵 셀 좌표계의 정중앙 셀.
@@ -274,6 +280,7 @@ public class GridMap : MonoBehaviour
         }
 
         _buildingFootprintCells[building] = footprint;
+        OnBuildingAdded?.Invoke(building);
         return true;
     }
 
@@ -350,6 +357,8 @@ public class GridMap : MonoBehaviour
 
         if (!building.IsRemoveable)
             return;
+
+        OnBuildingRemoving?.Invoke(building);
 
         List<GridCell> footprint = _buildingFootprintCells[building];
 
