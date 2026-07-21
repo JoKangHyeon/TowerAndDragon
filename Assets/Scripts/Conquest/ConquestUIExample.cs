@@ -110,9 +110,13 @@ public class ConquestUIExample : MonoBehaviour
     [SerializeField]
     private ConquestManager _conquestManager;
 
-    [Tooltip("자원/인구 보유량 관리자.")]
+    [Tooltip("자원 보유량 관리자.")]
     [SerializeField]
     private ResourceManager _resourceManager;
+
+    [Tooltip("인구 보유량 관리자 - 원정 인구 비용 충족 여부 확인용.")]
+    [SerializeField]
+    private PopulationManager _populationManager;
 
     [SerializeField]
     private ConquestModeController _conquestModeController;
@@ -156,7 +160,7 @@ public class ConquestUIExample : MonoBehaviour
     }
 
     // 원정이 실제로 완료된 시점(며칠 뒤 밤 정산)에 ConquestManager가 발행한다.
-    // TODO: 인구 보상(GetPopulationReward) 지급은 인구 시스템 도입 시 그쪽에서 처리.
+    // 인구 보상 지급과 원정 인구 반환은 ConquestPopulationCoordinator가 같은 이벤트를 구독해 처리한다.
     private void OnConquestCompleted(Vector2Int chunkCoord)
     {
         _conquestModeController.RefreshConquerableHighlights();
@@ -212,10 +216,8 @@ public class ConquestUIExample : MonoBehaviour
         Vector2Int coord = _selectedChunkCoord.Value;
         bool hasCost = _conquestManager.TryGetExpeditionCost(coord, out ResourceCost cost);
 
-        // TODO: 인구 시스템 도입 전까지 인구 비용은 항상 충족으로 처리(검사 우회).
-        // 인구 시스템이 생기면 held.Population을 실제 보유 인구로 채운다.
         ResourceCost held = _resourceManager.GetHoldingsSnapshot();
-        held.Population = cost.Population;
+        held.Population = _populationManager != null ? _populationManager.AvailablePopulation : cost.Population;
 
         RebuildResourceSlots(held, cost);
         RebuildRewardSlots(_conquestManager.GetPopulationReward(coord), _conquestManager.GetUnlockedResources(coord));
@@ -361,15 +363,14 @@ public class ConquestUIExample : MonoBehaviour
         Vector2Int coord = _selectedChunkCoord.Value;
         bool hasCost = _conquestManager.TryGetExpeditionCost(coord, out ResourceCost cost);
 
-        // TODO: 인구 시스템 도입 전까지 인구 비용은 항상 충족으로 처리(검사 우회).
         ResourceCost held = _resourceManager.GetHoldingsSnapshot();
-        held.Population = cost.Population;
+        held.Population = _populationManager != null ? _populationManager.AvailablePopulation : cost.Population;
 
         bool sent = _conquestManager.SendExpedition(coord, held);
         if (sent)
         {
             if (hasCost)
-                _resourceManager.Spend(cost); // 자원만 차감(원정 발송 시점) - 인구 차감/보상은 인구 시스템 담당
+                _resourceManager.Spend(cost); // 자원 차감(원정 발송 시점) - 인구 배치/반환/보상은 ConquestPopulationCoordinator가 처리
 
             _conquestModeController.RefreshConquerableHighlights(); // 원정 중인 청크는 CanSendExpedition이 false가 되므로 즉시 갱신
         }
