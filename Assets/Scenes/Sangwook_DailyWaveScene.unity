@@ -11170,7 +11170,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74aeb087e57fa490091fd1d51a19620c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PopulationManager
-  _maxPopulation: 30
+  _maxPopulation: 50
 --- !u!114 &914589614
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12177,7 +12177,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5325039925880821724, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.0008995038
+      value: 0.00027296672
       objectReference: {fileID: 0}
     - target: {fileID: 5739549653184268968, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -12427,6 +12427,10 @@ PrefabInstance:
       propertyPath: _buildingPlacementController
       value: 
       objectReference: {fileID: 1692054028}
+    - target: {fileID: 7659724445254312462, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7659724445254312462, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
@@ -12840,7 +12844,7 @@ GameObject:
   - component: {fileID: 1568004906}
   - component: {fileID: 1568004907}
   m_Layer: 0
-  m_Name: WaveTestStarter
+  m_Name: WaveController
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -12870,12 +12874,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1568004905}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 218a471bdf0411d47b3f8f8700d9222f, type: 3}
+  m_Script: {fileID: 11500000, guid: ab48dd5f733d2d04b97416bdafd9e035, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WaveTestStarter
+  m_EditorClassIdentifier: Assembly-CSharp::DailyWaveController
   _cycleManager: {fileID: 914589611}
   _waveManager: {fileID: 1122431369}
-  _waveDefinition: {fileID: 11400000, guid: becff1c2f91aff441af235cd26d25fb7, type: 2}
+  _waveSchedule: {fileID: 11400000, guid: 9915222126a9c294aa70ceb24b242bdd, type: 2}
 --- !u!1 &1600766032
 GameObject:
   m_ObjectHideFlags: 0

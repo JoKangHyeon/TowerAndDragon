@@ -56,6 +56,9 @@ public class GameManager : MonoBehaviour
         {
             light.Construct(_cycleManager);
         }
+
+        // 실행 시 Day 1 시작
+        _cycleManager.StartDay();
     }
 
     // 성이 파괴되면 성이 호출한다(중복 호출 무시). 실제 창 표시는 이벤트 구독자가 담당.
