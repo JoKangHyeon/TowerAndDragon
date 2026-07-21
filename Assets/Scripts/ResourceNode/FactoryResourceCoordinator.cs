@@ -42,7 +42,7 @@ public class FactoryResourceCoordinator : MonoBehaviour
             return;
         }
 
-        if (_resourceManager == null || _cycleManager == null || !factory.Initialize(_resourceManager, _cycleManager))
+        if (_resourceManager == null || _cycleManager == null || !factory.Initialize(_resourceManager, _cycleManager, _gridMap))
         {
             Debug.LogWarning(
                 "[FactoryResourceCoordinator] 생산시설 자원 연결에 실패했습니다.",

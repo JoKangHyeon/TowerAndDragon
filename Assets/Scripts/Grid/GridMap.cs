@@ -15,8 +15,19 @@ public class GridMap : MonoBehaviour
     [SerializeField]
     private ResourceNodeAreaTable _resourceNodeAreaTable;
 
+    // 청크 단위 기본 생산량 테이블 - 점령/생산시설 판정과 동일한 granularity(청크)로 생산량을 정의한다.
+    [SerializeField]
+    private ChunkYieldTable _chunkYieldTable;
+
+    // 청크 기본값을 셀에 구운 다음, 특정 셀만 자원별 생산량을 따로 지정하고 싶을 때 쓰는 오버라이드 테이블(선택 사항).
+    [SerializeField]
+    private CellYieldOverrideTable _cellYieldOverrideTable;
+
     // 청크 단위 연구 해금 조회 - 연구 시스템이 아직 없는 씬에서는 null로 두면 항상 터레인 기본값만으로 판정된다.
     public IChunkResearchUnlockQuery ResearchUnlockQuery { get; set; }
+
+    // 청크 단위 생산량 강화 조회 - 연구 시스템이 아직 없는 씬에서는 null로 두면 땅의 기본 생산량만 적용된다.
+    public IChunkYieldBonusQuery YieldBonusQuery { get; set; }
 
     // 전체 맵
     private Dictionary<Vector3Int, GridCell> _cells = new();
@@ -43,6 +54,8 @@ public class GridMap : MonoBehaviour
         GenerateGridFromTilemap();
         GenerateChunks();
         ApplyResourceNodeAreas();
+        ApplyCellYields();
+        ApplyCellYieldOverrides();
     }
 
     private void GenerateGridFromTilemap()
@@ -69,6 +82,72 @@ public class GridMap : MonoBehaviour
     {
         if (_resourceNodeAreaTable != null)
             _resourceNodeAreaTable.ApplyToGrid(_cells);
+    }
+
+    // 성 좌표 기준 대각선·거리 공식 상수 - "대각선 지역은 경로에서 멀어 진격·방어 이점이 없는 대신
+    // 자원이 풍부하다(리스크→리워드)"는 기획(Docs/기획종합_v2.md 8장)을 셀 좌표 단위로 직접 계산한다.
+    private static readonly Vector2 CASTLE_POSITION = new Vector2(3f, 3f);
+    private const int BASELINE_YIELD = 5;
+    private const float DIAGONAL_BONUS_FACTOR = 0.4f;
+    private const float DEGREES_PER_QUADRANT = 90f;
+    private const float DEGREES_PER_DIAGONAL_STEP = 45f;
+
+    // 청크 생성 다음 단계 - 셀마다 성으로부터의 거리·대각선 정도로 원시 생산량을 계산하고,
+    // 그 셀이 보유한 자원노드에 한해 청크(바이옴) 단위 자원별 배율을 곱한다.
+    // 거리는 셀의 정확한 좌표로 연속적으로 계산되므로 같은 청크 안에서도 셀마다 값이 자연히 달라진다.
+    private void ApplyCellYields()
+    {
+        foreach (Chunk chunk in _chunks.Values)
+        {
+            foreach (GridCell cell in chunk.Cells)
+            {
+                int baseYield = CalculateDistanceYield(cell.Coord);
+                cell.SetBaseYield(baseYield);
+
+                foreach (ResourceType resourceType in EnumerateResourceFlags(cell.AvailableResourceNodes))
+                {
+                    float multiplier = _chunkYieldTable != null
+                        ? _chunkYieldTable.ResolveResourceMultiplier(chunk.ChunkCoord, resourceType)
+                        : 1f;
+
+                    cell.SetYield(resourceType, Mathf.RoundToInt(baseYield * multiplier));
+                }
+            }
+        }
+    }
+
+    private static int CalculateDistanceYield(Vector3Int cellCoord)
+    {
+        Vector2 offset = new Vector2(cellCoord.x, cellCoord.y) - CASTLE_POSITION;
+        float distance = offset.magnitude;
+        if (distance < Mathf.Epsilon)
+            return BASELINE_YIELD;
+
+        float angleFromCardinal = Mathf.Abs(Mathf.Repeat(Mathf.Atan2(offset.y, offset.x) * Mathf.Rad2Deg, DEGREES_PER_QUADRANT));
+        if (angleFromCardinal > DEGREES_PER_DIAGONAL_STEP)
+            angleFromCardinal = DEGREES_PER_QUADRANT - angleFromCardinal;
+
+        float diagonalFactor = angleFromCardinal / DEGREES_PER_DIAGONAL_STEP;
+        int bonus = Mathf.RoundToInt(diagonalFactor * distance * DIAGONAL_BONUS_FACTOR);
+
+        return BASELINE_YIELD + bonus;
+    }
+
+    // AvailableResourceNodes([Flags])에 실제로 켜진 개별 자원 비트만 순회한다.
+    private static IEnumerable<ResourceType> EnumerateResourceFlags(ResourceType flags)
+    {
+        foreach (ResourceType value in (ResourceType[])Enum.GetValues(typeof(ResourceType)))
+        {
+            if (value != ResourceType.None && (flags & value) == value)
+                yield return value;
+        }
+    }
+
+    // 청크 기본값 적용 다음 단계 - 지정된 영역의 셀만 자원별 생산량을 덮어쓴다(선택 사항).
+    private void ApplyCellYieldOverrides()
+    {
+        if (_cellYieldOverrideTable != null)
+            _cellYieldOverrideTable.ApplyToGrid(_cells);
     }
 
     private void GenerateChunks()
@@ -153,6 +232,10 @@ public class GridMap : MonoBehaviour
 
     public ResourceType GetAvailableResourceNodes(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.AvailableResourceNodes : ResourceType.None;
+
+    // 디버그 오버레이/로그 전용 원시 지형 생산력 - 자원 종류·연구 강화와 무관한 순수 값이다.
+    public int GetBaseYield(Vector3Int coord) =>
+        _cells.TryGetValue(coord, out GridCell cell) ? cell.BaseYield : 0;
 
     public Building GetBuildingAt(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.OccupantBuilding : null;
@@ -431,6 +514,45 @@ public class GridMap : MonoBehaviour
         return _buildingFootprintCells[cell.OccupantBuilding]
             .Select(footprintCell => footprintCell.Coord)
             .ToList();
+    }
+
+    // 생산시설의 실제 생산량 - footprint에 속한 각 셀이 보유한 자원별 생산량(GridCell._yields)을 합산하고,
+    // footprint가 걸친 청크마다(중복 없이) 연구로 해금된 생산량 강화(YieldBonusQuery)를 더한다.
+    public int GetFootprintYield(Building building, ResourceType resourceType)
+    {
+        if (!_buildingFootprintCells.TryGetValue(building, out List<GridCell> footprint) || footprint.Count == 0)
+            return 0;
+
+        int total = 0;
+        var touchedChunks = new HashSet<Vector2Int>();
+
+        foreach (GridCell cell in footprint)
+        {
+            total += cell.GetYield(resourceType);
+            touchedChunks.Add(ToChunkCoord(cell.Coord));
+        }
+
+        if (YieldBonusQuery != null)
+        {
+            foreach (Vector2Int chunkCoord in touchedChunks)
+                total += YieldBonusQuery.GetYieldBonus(chunkCoord, resourceType);
+        }
+
+        return total;
+    }
+
+    // 점령 UI 리워드 패널 등 표시 전용 - 자원별 배율을 적용하지 않은 청크 전체의 원시 생산력 합계다.
+    public int GetChunkBaseYield(Vector2Int chunkCoord)
+    {
+        Chunk chunk = GetChunk(chunkCoord);
+        if (chunk == null)
+            return 0;
+
+        int total = 0;
+        foreach (GridCell cell in chunk.Cells)
+            total += cell.BaseYield;
+
+        return total;
     }
 
     public void RemoveBuilding(Vector3Int coord)

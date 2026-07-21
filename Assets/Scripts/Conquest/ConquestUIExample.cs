@@ -15,6 +15,7 @@ public class ConquestUIExample : MonoBehaviour
     // TODO: 스트링테이블 도입 시 아래 5개를 _LOC_KEY로 교체. DAY_SINGULAR/PLURAL_FORMAT의
     // 단/복수 분기(FormatDuration)도 언어별 규칙이 다를 수 있어 그때 같이 재검토 필요.
     private const string DURATION_LABEL = "Duration";
+    private const string YIELD_LABEL = "Yield";
     private const string SPAWN_LABEL = "Spawn";
     private const string ATTACK_LABEL = "Attack";
     private const string DURATION_DAY_SINGULAR_FORMAT = "{0} Day";
@@ -51,6 +52,10 @@ public class ConquestUIExample : MonoBehaviour
     [Tooltip("생성된 보상 슬롯이 들어갈 부모.")]
     [SerializeField]
     private Transform _rewardSlotContainer;
+
+    [Tooltip("생산량 보상 슬롯 아이콘 - 특정 자원이 아니라 청크의 기본 생산량(Chunk.BaseYield)을 가리키므로 별도 아이콘을 쓴다.")]
+    [SerializeField]
+    private Sprite _yieldIcon;
 
     // _resourceIcons를 그대로 재사용 - 인덱스 1부터가 이 배열 순서와 대응(_resourceIcons[0]은 인구).
     private static readonly ResourceType[] REWARD_RESOURCE_TYPES =
@@ -220,7 +225,10 @@ public class ConquestUIExample : MonoBehaviour
         held.Population = _populationManager != null ? _populationManager.AvailablePopulation : cost.Population;
 
         RebuildResourceSlots(held, cost);
-        RebuildRewardSlots(_conquestManager.GetPopulationReward(coord), _conquestManager.GetUnlockedResources(coord));
+        RebuildRewardSlots(
+            _conquestManager.GetPopulationReward(coord),
+            _conquestManager.GetUnlockedResources(coord),
+            _conquestManager.GetChunkYield(coord));
 
         if (_durationInfoSlot != null)
         {
@@ -288,8 +296,8 @@ public class ConquestUIExample : MonoBehaviour
     }
 
     // 이전에 생성된 보상 슬롯을 지우고 다시 생성한다.
-    // 인구는 실제 지급 수량(populationReward > 0)을, 나머지 자원은 해금된 종류(unlockedResources)만 표시한다.
-    private void RebuildRewardSlots(int populationReward, ResourceType unlockedResources)
+    // 인구/생산량은 실제 수치(populationReward, yield > 0)를, 나머지 자원은 해금된 종류(unlockedResources)만 표시한다.
+    private void RebuildRewardSlots(int populationReward, ResourceType unlockedResources, int yield)
     {
         foreach (UI_ConquestRewardSlot slot in _spawnedRewardSlots)
         {
@@ -305,6 +313,11 @@ public class ConquestUIExample : MonoBehaviour
         {
             Sprite populationIcon = _resourceIcons != null && _resourceIcons.Length > 0 ? _resourceIcons[0] : null;
             SpawnRewardSlot(populationIcon, string.Format(PLUS_VALUE_FORMAT, populationReward));
+        }
+
+        if (yield > 0)
+        {
+            SpawnRewardSlot(_yieldIcon, string.Format(PLUS_VALUE_FORMAT, yield));
         }
 
         for (int i = 0; i < REWARD_RESOURCE_TYPES.Length; i++)

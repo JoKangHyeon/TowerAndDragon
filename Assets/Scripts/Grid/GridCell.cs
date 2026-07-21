@@ -1,6 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-public class GridCell 
+public class GridCell
 {
     public Vector3Int Coord { get; }
     public TerrainType TerrainType { get; }
@@ -9,6 +10,12 @@ public class GridCell
 
     // 이 셀에서 지을 수 있는 자원 생산시설의 종류(복수 플래그) - 터레인 기본값 + 수기 지정 영역이 누적된다.
     public ResourceType AvailableResourceNodes { get; private set; }
+
+    // 디버그 오버레이/로그 전용 원시 지형 생산력 - 자원 종류와 무관하며 실제 정산에는 쓰이지 않는다.
+    public int BaseYield { get; private set; }
+
+    // 실제 정산에 쓰이는 값 - 이 셀이 보유한 자원노드(AvailableResourceNodes)에 해당하는 자원만 등록된다.
+    private readonly Dictionary<ResourceType, int> _yields = new();
 
     private Building _occupantBuilding;
     public bool HasBuilding => _occupantBuilding != null;
@@ -37,6 +44,13 @@ public class GridCell
     public void SetResourceNodes(ResourceType flags) => AvailableResourceNodes = flags;
 
     public bool HasResourceNode(ResourceType flag) => (AvailableResourceNodes & flag) != 0;
+
+    public void SetBaseYield(int amount) => BaseYield = amount;
+
+    public void SetYield(ResourceType resourceType, int yield) => _yields[resourceType] = yield;
+
+    // 등록되지 않은 자원(= 이 셀에 없는 자원노드)은 0을 반환한다.
+    public int GetYield(ResourceType resourceType) => _yields.TryGetValue(resourceType, out int yield) ? yield : 0;
 
     public bool PlaceBuilding(Building building)
     {

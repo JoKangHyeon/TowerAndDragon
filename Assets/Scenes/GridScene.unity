@@ -1681,6 +1681,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1868884055}
     - target: {fileID: 7475151901225264468, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: _chunkYieldTable
+      value: 
+      objectReference: {fileID: 11400000, guid: c57c431f70103ba428e42a6fa14f5ab3, type: 2}
+    - target: {fileID: 7475151901225264468, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: _resourceNodeAreaTable
       value: 
       objectReference: {fileID: 11400000, guid: 1397a635f4f256f4b85b62a5384ef4a2, type: 2}
@@ -4709,6 +4713,7 @@ MonoBehaviour:
   _resourceNodeOverlaySpritePrefab: {fileID: 1868884055}
   _debugSelectedCellCoord: {x: 0, y: 0, z: 0}
   _debugSelectedResourceNodes: 0
+  _debugSelectedBaseYield: 0
 --- !u!1 &2071210179
 GameObject:
   m_ObjectHideFlags: 0
@@ -5047,6 +5052,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4328129044346772939, guid: ddfbff33c3909e9429a5afe51e8092cb, type: 3}
+      propertyPath: _yieldIcon
+      value: 
+      objectReference: {fileID: 21300000, guid: d28898bb1face48c99250d6b3952bc8b, type: 3}
+    - target: {fileID: 4328129044346772939, guid: ddfbff33c3909e9429a5afe51e8092cb, type: 3}
       propertyPath: _conquestManager
       value: 
       objectReference: {fileID: 171714923}
@@ -5054,6 +5063,10 @@ PrefabInstance:
       propertyPath: _resourceManager
       value: 
       objectReference: {fileID: 94149422}
+    - target: {fileID: 4328129044346772939, guid: ddfbff33c3909e9429a5afe51e8092cb, type: 3}
+      propertyPath: _populationManager
+      value: 
+      objectReference: {fileID: 1236792263}
     - target: {fileID: 4328129044346772939, guid: ddfbff33c3909e9429a5afe51e8092cb, type: 3}
       propertyPath: _conquestModeButton
       value: 
