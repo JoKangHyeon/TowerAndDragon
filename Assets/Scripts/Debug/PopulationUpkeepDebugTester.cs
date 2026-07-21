@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class PopulationUpkeepDebugTester : MonoBehaviour
 {
-    private const int TEST_FOOD_AMOUNT = 20;
+    private const int TEST_FOOD_AMOUNT = 50;
 
     [SerializeField]
     private PopulationUpkeepSystem _populationUpkeepSystem;
