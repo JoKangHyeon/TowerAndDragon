@@ -165664,6 +165664,133 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 1
+--- !u!1 &1505416198918788610
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8959473834318071973}
+  - component: {fileID: 1350473054417620997}
+  - component: {fileID: 3520389661969671072}
+  m_Layer: 0
+  m_Name: FogTilemap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8959473834318071973
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1505416198918788610}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8228429161871257706}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1839735485 &1350473054417620997
+Tilemap:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1505416198918788610}
+  m_Enabled: 1
+  m_Tiles: {}
+  m_AnimatedTiles: {}
+  m_TileAssetArray: []
+  m_TileSpriteArray: []
+  m_TileMatrixArray: []
+  m_TileColorArray: []
+  m_TileObjectToInstantiateArray: []
+  m_AnimationFrameRate: 1
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Origin: {x: 0, y: 0, z: 0}
+  m_Size: {x: 0, y: 0, z: 1}
+  m_TileAnchor: {x: 0.5, y: 0.5, z: 0}
+  m_TileOrientation: 0
+  m_TileOrientationMatrix:
+    e00: 1
+    e01: 0
+    e02: 0
+    e03: 0
+    e10: 0
+    e11: 1
+    e12: 0
+    e13: 0
+    e20: 0
+    e21: 0
+    e22: 1
+    e23: 0
+    e30: 0
+    e31: 0
+    e32: 0
+    e33: 1
+--- !u!483693784 &3520389661969671072
+TilemapRenderer:
+  serializedVersion: 2
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1505416198918788610}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 0
+  m_ReflectionProbeUsage: 0
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 2083595492
+  m_SortingLayer: 4
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_ChunkSize: {x: 32, y: 32, z: 32}
+  m_ChunkCullingBounds: {x: 0, y: 0, z: 0}
+  m_MaxChunkCount: 16
+  m_MaxFrameAge: 16
+  m_SortOrder: 3
+  m_Mode: 1
+  m_DetectChunkCullingBounds: 0
 --- !u!1 &1561899837718300043
 GameObject:
   m_ObjectHideFlags: 0
@@ -168771,8 +168898,8 @@ GameObject:
   - component: {fileID: 7475151901225264468}
   - component: {fileID: 5230962588699654996}
   - component: {fileID: 8324432385230451432}
-  - component: {fileID: 5052275632073346087}
   - component: {fileID: 1460990098537314003}
+  - component: {fileID: 5959431859424174035}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -168797,6 +168924,7 @@ Transform:
   - {fileID: 4694899102034139759}
   - {fileID: 3340928868166011064}
   - {fileID: 1697738111587802271}
+  - {fileID: 8959473834318071973}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!156049354 &7528598282634872239
@@ -168858,32 +168986,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ConqueredChunkBorderRenderer
   _borderLineRendererPrefab: {fileID: 0}
   _mouseSelectController: {fileID: 0}
+  _conquestManager: {fileID: 0}
   _borderColor: {r: 0, g: 1, b: 0, a: 1}
+  _inProgressBorderColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   _lineWidth: 0.05
---- !u!114 &5052275632073346087
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4676293131000406741}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a098c96ed44ad4daeb0c8d7297c2e5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ConquestDebugger
-  _conquestManager: {fileID: 1460990098537314003}
-  _mouseSelectController: {fileID: 0}
-  _focusedChunkCoord: {x: 0, y: 0}
-  _hasFocusedChunk: 0
-  _selectedTargetChunkCoord: {x: 0, y: 0}
-  _hasSelectedTarget: 0
-  _debugAvailableResources:
-    Population: 0
-    Food: 0
-    Wood: 0
-    Stone: 0
-    Ore: 0
 --- !u!114 &1460990098537314003
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -168897,9 +169003,36 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ConquestManager
   _gridMap: {fileID: 7475151901225264468}
+  _cycleManager: {fileID: 0}
   _durationTable: {fileID: 11400000, guid: 0a3e3ba692b70e945a76de3fec50eb54, type: 2}
   _chunkCostTable: {fileID: 11400000, guid: 39762c6ab3a13ef40a76b4cc01fb0bcb, type: 2}
   _garrisonPrefab: {fileID: 8515554290544044849, guid: 8cbb9bc0e77b5bf4c94c30bec2854a03, type: 3}
+  OnEnemyScalingChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  OnConquestCompleted:
+    m_PersistentCalls:
+      m_Calls: []
+  OnExpeditionsChanged:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &5959431859424174035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4676293131000406741}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd28d963bd980384eb4d90b507c17235, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FogOfWarRenderer
+  _fogTilemap: {fileID: 1350473054417620997}
+  _fogTile: {fileID: 11400000, guid: 58b4dcd602ee8ff4789051df7641604e, type: 2}
+  _fogColor: {r: 0, g: 0, b: 0, a: 1}
+  _hiddenFogAlpha: 0.5
+  _visibleFogAlpha: 0.15
 --- !u!1 &4997526250000123913
 GameObject:
   m_ObjectHideFlags: 0
