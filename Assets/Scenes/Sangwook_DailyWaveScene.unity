@@ -12177,7 +12177,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5325039925880821724, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.00027296672
+      value: 0.0006249966
       objectReference: {fileID: 0}
     - target: {fileID: 5739549653184268968, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -12843,6 +12843,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1568004906}
   - component: {fileID: 1568004907}
+  - component: {fileID: 1568004908}
   m_Layer: 0
   m_Name: WaveController
   m_TagString: Untagged
@@ -12872,7 +12873,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1568004905}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ab48dd5f733d2d04b97416bdafd9e035, type: 3}
   m_Name: 
@@ -12880,6 +12881,21 @@ MonoBehaviour:
   _cycleManager: {fileID: 914589611}
   _waveManager: {fileID: 1122431369}
   _waveSchedule: {fileID: 11400000, guid: 9915222126a9c294aa70ceb24b242bdd, type: 2}
+--- !u!114 &1568004908
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1568004905}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 218a471bdf0411d47b3f8f8700d9222f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WaveTestStarter
+  _cycleManager: {fileID: 914589611}
+  _waveManager: {fileID: 1122431369}
+  _waveDefinition: {fileID: 11400000, guid: af17264d9a589cd498af71c79987173a, type: 2}
 --- !u!1 &1600766032
 GameObject:
   m_ObjectHideFlags: 0

@@ -96,7 +96,16 @@ public sealed class HealAuraBehaviorSO : SpecialBehaviorSO
                     continue;
                 }
 
+                float previousHealth = target.CurrentHealth;
                 target.Heal(_healAmount);
+                float healedAmount = target.CurrentHealth - previousHealth;
+
+                if (healedAmount > 0)
+                {
+                    Debug.Log(
+                        $"[HealAuraBehavior] {_owner.name}이(가) {target.name}을(를) {healedAmount}만큼 치유했습니다.",
+                        _owner);
+                }
             }
         }
     }
