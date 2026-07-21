@@ -3,41 +3,34 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-// 전장의 안개 렌더러 - GridCell.CurrentState(ChunkState)를 그대로 시각화한다.
-// Hidden = 짙은 반투명(지형 형태만 어렴풋이 비침), Visible = 옅은 반투명(부분 노출·미점령), Conquered = 타일 제거(안개 없음).
-// 지형 타일맵과 같은 Grid 아래 자식 타일맵에 그려 셀 좌표계를 그대로 공유하고,
-// 최상위 정렬 레이어("Fog")에 배치해 아이소메트릭 특성상 안개 뒤로 물러나는 오브젝트까지 함께 가린다.
-// 안개 타일은 지형의 고저차(SetTransformMatrix 높이 오프셋)를 따라가지 않는다 - 정렬 레이어가
-// 이미 Z 위치와 무관하게 항상 위에 그려지므로 굳이 띄울 필요가 없고, 오히려 인접 셀끼리 다른
-// 높이로 띄우면 그 사이에 빈틈/겹침이 생긴다. 대신 Conquered와 맞닿은 아주 높은 지형(화산 등)의
-// 꼭대기가 안개선 위로 살짝 비칠 수 있음 - 눈에 띄면 몬스터 poke-through와 함께 후속으로 재검토.
+// 전장의 안개 렌더러 - GridCell.CurrentState(ChunkState)에 따라 지형 타일 자체를 어둡게 틴트한다.
+// Hidden = 짙게 어둡게(지형 형태만 어렴풋이 비침), Visible = 옅게 어둡게(부분 노출·미점령), Conquered = 원래 색(안개 없음).
+//
+// 별도 오버레이 타일맵 + 스커트로 구현했던 이전 버전은 절벽 등 고저차 경계에서 반투명 조각끼리
+// 화면상 겹치거나(과하게 어두워짐) 어긋나서(밝은 틈) 계속 실패했다 - 지형은 이미 셀마다 정확한
+// 높이·절벽면이 그려진 스프라이트라, 그 색상 자체를 바꾸면 별도 지오메트리가 없으니 이 문제가
+// 구조적으로 존재하지 않는다.
+//
+// 건물·자원노드·몬스터 등 지형 위 오브젝트는 이 렌더러가 가리지 않는다 - 각 오브젝트가 자기가 선
+// 셀의 ChunkState에 맞춰 스스로 같은 방식으로 틴트하는 별도 컴포넌트가 필요하다(PropVisibilityController류).
 [RequireComponent(typeof(GridMap))]
 public class FogOfWarRenderer : MonoBehaviour
 {
-    [Tooltip("안개를 그릴 타일맵. 지형 타일맵과 같은 Grid 아래, 셀 좌표계가 동일해야 한다.")]
-    [SerializeField]
-    private Tilemap _fogTilemap;
-
-    [Tooltip("안개 셀에 채울 불투명 타일(솔리드 아이소메트릭 다이아몬드).")]
-    [SerializeField]
-    private TileBase _fogTile;
-
-    [SerializeField]
-    private Color _fogColor = Color.black;
-
-    [Tooltip("Hidden(시야 밖) 상태일 때 안개의 불투명도 - 낮을수록 지형 형태가 더 비쳐 보인다.")]
+    [Tooltip("Hidden(시야 밖) 상태일 때 지형 어둡기 - 높을수록 더 어둡게(형태만 어렴풋이) 보인다.")]
     [SerializeField, Range(0f, 1f)]
-    private float _hiddenFogAlpha = 0.5f;
+    private float _hiddenFogAlpha = 0.85f;
 
-    [Tooltip("Visible(시야 안·미점령) 상태일 때 안개의 불투명도 - 낮을수록 더 흐릿하게 비쳐 보인다.")]
+    [Tooltip("Visible(시야 안·미점령) 상태일 때 지형 어둡기 - 높을수록 더 어둡게 보인다.")]
     [SerializeField, Range(0f, 1f)]
-    private float _visibleFogAlpha = 0.15f;
+    private float _visibleFogAlpha = 0.45f;
 
     private GridMap _gridMap;
+    private Tilemap _terrainTilemap;
 
     private void Awake()
     {
         _gridMap = GetComponent<GridMap>();
+        _terrainTilemap = _gridMap.TerrainTilemap;
     }
 
     // GridMap.Awake()가 셀/청크 생성을 끝내고, Castle.SetUpInitialTerritory() 등 다른 스크립트의
@@ -78,22 +71,21 @@ public class FogOfWarRenderer : MonoBehaviour
 
     private void PaintCell(GridCell cell)
     {
-        if (cell.CurrentState == ChunkState.Conquered)
-        {
-            _fogTilemap.SetTile(cell.Coord, null);
-            return;
-        }
-
-        float alpha = cell.CurrentState == ChunkState.Visible ? _visibleFogAlpha : _hiddenFogAlpha;
-
-        _fogTilemap.SetTile(cell.Coord, _fogTile);
-        _fogTilemap.SetTileFlags(cell.Coord, TileFlags.None);
-        _fogTilemap.SetColor(cell.Coord, WithAlpha(_fogColor, alpha));
+        _terrainTilemap.SetTileFlags(cell.Coord, TileFlags.None);
+        _terrainTilemap.SetColor(cell.Coord, GetTintColor(cell.CurrentState));
     }
 
-    private static Color WithAlpha(Color color, float alpha)
+    // 몬스터 등 지형 위 오브젝트를 같은 방식·같은 밝기로 틴트하는 FogTintReceiver가 재사용한다.
+    public Color GetTintColor(ChunkState state)
     {
-        color.a = alpha;
-        return color;
+        float alpha = state switch
+        {
+            ChunkState.Conquered => 0f,
+            ChunkState.Visible => _visibleFogAlpha,
+            _ => _hiddenFogAlpha,
+        };
+
+        float brightness = 1f - alpha;
+        return new Color(brightness, brightness, brightness, 1f);
     }
 }
