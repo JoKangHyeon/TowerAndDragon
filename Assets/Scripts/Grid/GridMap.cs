@@ -129,6 +129,9 @@ public class GridMap : MonoBehaviour
     // 지형 타일에 심어둔 고저차(Y 오프셋)를 읽어온다 - Isometric Z As Y 레이아웃에서 셀의 Z좌표는
     // 정렬용으로만 쓰이고 높이는 SetTransformMatrix로 부여한 타일별 렌더 오프셋으로 표현된다.
     public float GetHeightOffset(Vector3Int cellCoord) => _tilemap.GetTransformMatrix(cellCoord).GetColumn(3).y;
+
+    // 전장의 안개(FogOfWarRenderer)가 지형 타일 자체를 SetColor로 어둡게 틴트하기 위해 참조한다.
+    public Tilemap TerrainTilemap => _tilemap;
     public bool CanConstructBuilding(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) && cell.CanConstruct && cell.ExistTypeOnCell == ExistTypeOnCell.None &&
         IsChunkConquered(coord);
