@@ -46,4 +46,15 @@ public class Health : MonoBehaviour
         _currentHealth = _maxHealth;
         HealthChanged?.Invoke(_currentHealth, _maxHealth);
     }
+
+    public void Heal(float amount)
+    {
+        if (IsDead || amount <= 0 || _currentHealth >= _maxHealth)
+        {
+            return;
+        }
+
+        _currentHealth = Mathf.Min(_maxHealth, _currentHealth + amount);
+        HealthChanged?.Invoke(_currentHealth, _maxHealth);
+    }
 }
