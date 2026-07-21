@@ -275,17 +275,16 @@ public class ConquestUIExample : MonoBehaviour
         if (_resourceCostSlotPrefab == null || _resourceSlotContainer == null)
             return;
 
-        // 인구 비용은 인구 시스템 도입 전까지 표시하지 않는다(자원 비용만 표시).
-        int[] heldValues = { held.Food, held.Wood, held.Stone };
-        int[] requiredValues = { cost.Food, cost.Wood, cost.Stone };
+        // _resourceIcons[0]은 인구 - held/cost 배열도 같은 순서로 맞춰 인덱스를 그대로 아이콘 인덱스로 쓴다.
+        int[] heldValues = { held.Population, held.Food, held.Wood, held.Stone };
+        int[] requiredValues = { cost.Population, cost.Food, cost.Wood, cost.Stone };
 
         for (int i = 0; i < requiredValues.Length; i++)
         {
             if (requiredValues[i] <= 0)
                 continue;
 
-            int iconIndex = i + 1; // _resourceIcons[0]은 인구
-            Sprite icon = _resourceIcons != null && iconIndex < _resourceIcons.Length ? _resourceIcons[iconIndex] : null;
+            Sprite icon = _resourceIcons != null && i < _resourceIcons.Length ? _resourceIcons[i] : null;
             Color textColor = heldValues[i] < requiredValues[i] ? _insufficientColor : _sufficientColor;
             string countText = string.Format(HELD_OVER_REQUIRED_FORMAT, heldValues[i], requiredValues[i]);
 
