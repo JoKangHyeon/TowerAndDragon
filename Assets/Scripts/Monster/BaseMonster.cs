@@ -20,6 +20,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
     private MonsterMovement _movement;
     private MonsterAttack _attack;
     private Castle _mainCastle;
+    private readonly SpecialBehaviorRunner _specialBehaviorRunner = new();
 
     public MonsterData Data => _data;
     public bool IsDead => _health == null || _health.IsDead;
@@ -62,7 +63,14 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
             _attack.Initialize(_data, _movement);
         }
 
+        _specialBehaviorRunner.Initialize(this, _data.SpecialBehaviors);
+
         ConfigureMovement(path, mainCastle);
+    }
+
+    private void Update()
+    {
+        _specialBehaviorRunner.Tick(Time.deltaTime);
     }
 
     public void TakeDamage(DamageInfo damage)
@@ -87,6 +95,16 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
         {
             _health.TakeDamage(remaining);
         }
+    }
+
+    public void Heal(float amount)
+    {
+        if (IsDead)
+        {
+            return;
+        }
+
+        _health.Heal(amount);
     }
 
     private void ConfigureMovement(SplineContainer path, Transform mainCastle)
@@ -133,6 +151,8 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
 
     private void OnDestroy()
     {
+        _specialBehaviorRunner.Dispose();
+
         if (_health != null)
         {
             _health.Died -= HandleDeath;

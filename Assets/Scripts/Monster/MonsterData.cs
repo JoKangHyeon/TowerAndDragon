@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -25,6 +26,9 @@ public class MonsterData : ScriptableObject
     [SerializeField] private AttackSO _attack;
     [SerializeField] private MonsterTargetType _enRouteTargetTypes;
 
+    [Header("Special Behaviours")]
+    [SerializeField] private SpecialBehaviorSO[] _specialBehaviors;
+
     // 원거리 몬스터용 투사체. 비워두면 즉시 적용(근접) 공격으로 동작한다.
     // 타워와 달리 피해는 투사체 명중 시점에 적용된다.
     [Header("Projectile (optional)")]
@@ -41,6 +45,8 @@ public class MonsterData : ScriptableObject
 
     public AttackSO Attack => _attack;
     public MonsterTargetType EnRouteTargetTypes => _enRouteTargetTypes;
+
+    public IReadOnlyList<SpecialBehaviorSO> SpecialBehaviors => _specialBehaviors;
 
     public GameObject ProjectilePrefab => _projectilePrefab;
     public float ProjectileSpeed => _projectileSpeed;

@@ -10,15 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 809865e60fe22fd489822f264ce13c71, type: 3}
-  m_Name: MD_Ground_Basic
+  m_Name: MD_Ground_Healer
   m_EditorClassIdentifier: Assembly-CSharp::MonsterData
-  _nameLocKey: monster_ground_basic
-  _maxHealth: 60
+  _nameLocKey: monster_ground_healer
+  _maxHealth: 100
   _moveSpeed: 2
   _movementType: 0
   _hasShield: 0
   _shieldAmount: 0
   _attack: {fileID: 0}
-  _enRouteTargetTypes: -1
+  _enRouteTargetTypes: 0
+  _specialBehaviors:
+  - {fileID: 11400000, guid: 158483db67dbcf4428b8b82ed17b3e49, type: 2}
   _projectilePrefab: {fileID: 0}
   _projectileSpeed: 0
