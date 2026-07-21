@@ -13,6 +13,8 @@ public class UI_ConquestWindow : MonoBehaviour
 {
     private const string HELD_OVER_REQUIRED_FORMAT = "{0}/{1}";
     private const string PLUS_VALUE_FORMAT = "+{0}";
+    private const string MULTIPLIER_VALUE_FORMAT = "×{0}";
+    private const string ENEMY_ENHANCEMENT_LABEL_FORMAT = "{0} {1}";
 
     // TODO: 스트링테이블 도입 시 아래 5개를 _LOC_KEY로 교체. DAY_SINGULAR/PLURAL_FORMAT의
     // 단/복수 분기(FormatDuration)도 언어별 규칙이 다를 수 있어 그때 같이 재검토 필요.
@@ -293,8 +295,9 @@ public class UI_ConquestWindow : MonoBehaviour
                 _terrainImage.sprite = terrainSprite;
         }
 
-        EnemyScalingModifier scaling = _conquestManager.PreviewEnemyScaling(coord);
-        RebuildEnemyScalingSlots(scaling);
+        EnemyEnhancementProfileSO profile =
+            _conquestManager.PreviewEnemyEnhancementProfile(coord);
+        RebuildEnemyEnhancementSlots(profile);
 
         bool canSend = _conquestManager.CanSendExpedition(coord);
         bool canAfford = _conquestManager.CanAffordExpedition(coord, held);
@@ -393,24 +396,81 @@ public class UI_ConquestWindow : MonoBehaviour
         _spawnedRewardSlots.Add(slot);
     }
 
-    // 이전에 생성된 몬스터 강화 효과 슬롯을 지우고, 이번 청크가 실제로 강화하는 항목(스폰 수/공격력)만 새로 생성한다.
-    private void RebuildEnemyScalingSlots(EnemyScalingModifier scaling)
+    private void RebuildEnemyEnhancementSlots(
+        EnemyEnhancementProfileSO profile)
+    {
+        ClearEnemyEnhancementSlots();
+
+        if (profile == null ||
+            _enemyScalingSlotPrefab == null ||
+            _enemyScalingSlotContainer == null)
+        {
+            return;
+        }
+
+        foreach (EnemyEnhancementRule rule in profile.Rules)
+        {
+            if (rule == null || rule.TargetMonster == null)
+            {
+                continue;
+            }
+
+            string monsterName = StringTable.GetString(rule.TargetMonster.NameLocKey);
+
+            if (rule.SpawnCountBonus != 0)
+            {
+                string spawnLabel = string.Format(
+                    ENEMY_ENHANCEMENT_LABEL_FORMAT,
+                    monsterName,
+                    SPAWN_LABEL);
+
+                SpawnEnemyScalingSlot(
+                    _spawnCountIcon,
+                    spawnLabel,
+                    string.Format(PLUS_VALUE_FORMAT, rule.SpawnCountBonus));
+            }
+
+            SpawnAttackEnhancementSlots(monsterName, rule.AttackPower);
+        }
+    }
+
+    private void ClearEnemyEnhancementSlots()
     {
         foreach (UI_ConquestInfoSlot slot in _spawnedEnemyScalingSlots)
         {
             if (slot != null)
+            {
                 Destroy(slot.gameObject);
+            }
         }
+
         _spawnedEnemyScalingSlots.Clear();
+    }
 
-        if (_enemyScalingSlotPrefab == null || _enemyScalingSlotContainer == null)
-            return;
+    private void SpawnAttackEnhancementSlots(
+        string monsterName,
+        EnemyStatModifier attackPower)
+    {
+        string attackLabel = string.Format(
+            ENEMY_ENHANCEMENT_LABEL_FORMAT,
+            monsterName,
+            ATTACK_LABEL);
 
-        if (scaling.AffectsSpawnCount)
-            SpawnEnemyScalingSlot(_spawnCountIcon, SPAWN_LABEL, string.Format(PLUS_VALUE_FORMAT, scaling.SpawnCountBonus));
+        if (attackPower.HasAdditiveBonus)
+        {
+            SpawnEnemyScalingSlot(
+                _attackPowerIcon,
+                attackLabel,
+                string.Format(PLUS_VALUE_FORMAT, attackPower.AdditiveBonus));
+        }
 
-        if (scaling.AffectsAttackPower)
-            SpawnEnemyScalingSlot(_attackPowerIcon, ATTACK_LABEL, string.Format(PLUS_VALUE_FORMAT, scaling.AttackPowerBonus));
+        if (attackPower.HasMultiplierBonus)
+        {
+            SpawnEnemyScalingSlot(
+                _attackPowerIcon,
+                attackLabel,
+                string.Format(MULTIPLIER_VALUE_FORMAT, attackPower.Multiplier));
+        }
     }
 
     private void SpawnEnemyScalingSlot(Sprite icon, string label, string valueText)
