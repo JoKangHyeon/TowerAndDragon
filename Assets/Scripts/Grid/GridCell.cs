@@ -16,7 +16,6 @@ public class GridCell
 
     public ExistTypeOnCell ExistTypeOnCell =>
         _occupantBuilding is Tower ? ExistTypeOnCell.Tower
-        : _occupantBuilding is FarmField ? ExistTypeOnCell.FarmField
         : _occupantBuilding is Castle ? ExistTypeOnCell.Castle
         : HasBuilding ? ExistTypeOnCell.Building
         : ExistTypeOnCell.None;

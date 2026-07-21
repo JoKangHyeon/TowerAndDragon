@@ -376,21 +376,33 @@ public class GridMap : MonoBehaviour
         CanConstructResourceFootprint(anchor, shape, requiredResourceNode, null);
 
     // ignoreBuilding - 재배치 시 자기 자신이 점유한 칸도 유효하게 판정하기 위함(CanConstructFootPrint와 동일한 용도).
-    public bool CanConstructResourceFootprint(Vector3Int anchor, FootprintShape shape, ResourceType requiredResourceNode, Building ignoreBuilding)
+    public bool CanConstructResourceFootprint(Vector3Int anchor, FootprintShape shape, ResourceType requiredResourceNode, Building ignoreBuilding) =>
+        CanConstructResourceFootprint(GetFootprintCoords(anchor, shape), requiredResourceNode, ignoreBuilding);
+
+    // 호출자가 이미 GetFootprintCoords로 footprint를 계산해 둔 경우, 재계산 없이 그 결과를 그대로 검사한다(CanConstructFootPrint의 List 오버로드와 동일한 목적).
+    public bool CanConstructResourceFootprint(List<Vector3Int> footprint, ResourceType requiredResourceNode, Building ignoreBuilding)
     {
-        if (!CanConstructFootPrint(anchor, shape, ignoreBuilding))
+        if (!CanConstructFootPrint(footprint, ignoreBuilding))
             return false;
 
-        foreach (Vector3Int coord in GetFootprintCoords(anchor, shape))
+        foreach (Vector3Int coord in footprint)
         {
-            if (!_cells.TryGetValue(coord, out GridCell cell))
+            if (!_cells.TryGetValue(coord, out GridCell cell) || !SatisfiesResourceRequirement(cell, requiredResourceNode))
                 return false;
+        }
 
-            bool hasTerrainNode = cell.HasResourceNode(requiredResourceNode);
-            bool hasChunkUnlock = ResearchUnlockQuery != null &&
-                ResearchUnlockQuery.IsUnlocked(ToChunkCoord(coord), requiredResourceNode);
+        return true;
+    }
 
-            if (!hasTerrainNode && !hasChunkUnlock)
+    private bool SatisfiesResourceRequirement(GridCell cell, ResourceType requiredResourceNode) =>
+        cell.HasResourceNode(requiredResourceNode) ||
+        (ResearchUnlockQuery != null && ResearchUnlockQuery.IsUnlocked(ToChunkCoord(cell.Coord), requiredResourceNode));
+
+    private bool AllCellsSatisfyResourceRequirement(List<GridCell> cells, ResourceType requiredResourceNode)
+    {
+        foreach (GridCell cell in cells)
+        {
+            if (!SatisfiesResourceRequirement(cell, requiredResourceNode))
                 return false;
         }
 
@@ -400,9 +412,13 @@ public class GridMap : MonoBehaviour
     // 건물 타입에 따라 판정을 분기 - Factory(생산시설)는 자원 플래그 판정, 그 외는 기존 풋프린트 판정.
     // 신규 배치, 미리보기, 재배치가 항상 같은 기준을 쓰도록 통합한 진입점.
     public bool CanConstructBuildingFootprint(Vector3Int anchor, FootprintShape shape, Building building, Building ignoreBuilding) =>
+        CanConstructBuildingFootprint(GetFootprintCoords(anchor, shape), building, ignoreBuilding);
+
+    // 호출자가 이미 footprint 좌표를 계산해 둔 경우, 재계산 없이 그 결과를 그대로 검사한다.
+    public bool CanConstructBuildingFootprint(List<Vector3Int> footprint, Building building, Building ignoreBuilding) =>
         building is Factory factory
-            ? CanConstructResourceFootprint(anchor, shape, factory.RequiredResourceNode, ignoreBuilding)
-            : CanConstructFootPrint(anchor, shape, ignoreBuilding);
+            ? CanConstructResourceFootprint(footprint, factory.RequiredResourceNode, ignoreBuilding)
+            : CanConstructFootPrint(footprint, ignoreBuilding);
 
     public List<Vector3Int> GetOccupiedCoords(Vector3Int coord)
     {
@@ -452,10 +468,12 @@ public class GridMap : MonoBehaviour
         if (!_buildingFootprintCells.TryGetValue(building, out List<GridCell> oldFootprint))
             return false;
 
-        if (!CanConstructBuildingFootprint(nextCoord, building.FootprintShape, building, building))
+        // TryGetFootprint가 기본 배치 가능 여부(CanConstruct·점유·점령)를 이미 전부 검사하므로 별도로 재검사하지 않는다.
+        // Factory는 이미 확보한 셀 목록에 대해 자원 플래그 요구사항만 추가로 검사한다(좌표 재계산 없음).
+        if (!TryGetFootprint(nextCoord, building.FootprintShape, building, out List<GridCell> newFootprint))
             return false;
 
-        if (!TryGetFootprint(nextCoord, building.FootprintShape, building, out List<GridCell> newFootprint))
+        if (building is Factory factory && !AllCellsSatisfyResourceRequirement(newFootprint, factory.RequiredResourceNode))
             return false;
 
         foreach (GridCell footprintCell in oldFootprint)

@@ -8,9 +8,13 @@ public class Factory : Building
     [SerializeField] private CycleManager _cycleManager;
 
     private bool _isInitialized;
+    private FactoryPopulation _population;
 
     // 건설 가능 여부 판정에 필요 - GridMap.CanConstructResourceFootprint 호출 시 전달한다.
     public ResourceType RequiredResourceNode => _data != null ? _data.RequiredResourceNode : ResourceType.None;
+
+    // FactoryPopulation.Initialize에서 배치 가능 인구를 읽어가기 위해 필요(TowerPopulation과 동일한 용도).
+    public ResourceProductionData Data => _data;
 
     public bool IsInitialized => _isInitialized;
 
@@ -23,6 +27,7 @@ public class Factory : Building
 
         _resourceManager = resourceManager;
         _cycleManager = cycleManager;
+        _population = GetComponent<FactoryPopulation>();
         _cycleManager.OnDayStart.AddListener(OnSettlement);
         _isInitialized = true;
         return true;
@@ -39,6 +44,7 @@ public class Factory : Building
         if (_data == null || _resourceManager == null)
             return;
 
-        _resourceManager.Add(_data.ProducedResourceType, _data.YieldPerCycle);
+        int assignedPopulation = _population != null ? _population.AssignedPopulation : 0;
+        _resourceManager.Add(_data.ProducedResourceType, _data.CalculateYield(assignedPopulation));
     }
 }
