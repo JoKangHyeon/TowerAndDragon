@@ -287,12 +287,7 @@ public class BuildingPlacementController : MonoBehaviour
         if (_selectedBuilding == null)
             return false;
 
-        // 생산시설은 풋프린트 전체가 요구 자원 플래그를 가져야 하는 별도 판정을 탄다.
-        bool canConstruct = _selectedBuilding is Factory factory
-            ? _gridMap.CanConstructResourceFootprint(anchor, _selectedBuilding.FootprintShape, factory.RequiredResourceNode)
-            : _gridMap.CanConstructFootPrint(anchor, _selectedBuilding.FootprintShape);
-
-        if (!canConstruct)
+        if (!_gridMap.CanConstructBuildingFootprint(anchor, _selectedBuilding.FootprintShape, _selectedBuilding, null))
             return false;
 
         Debug.Log($"[BuildingPlacementController] 건설 위치: {anchor}");
