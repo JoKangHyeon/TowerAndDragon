@@ -372,9 +372,13 @@ public class GridMap : MonoBehaviour
 
     // 생산시설 전용 배치 판정 - 기존 CanConstructFootPrint에 더해, 풋프린트 전체 셀이 요구 자원 플래그를 가져야 한다.
     // 자원 플래그는 (터레인 기반 정적 플래그) 또는 (청크 단위 연구 해금) 둘 중 하나만 만족해도 된다.
-    public bool CanConstructResourceFootprint(Vector3Int anchor, FootprintShape shape, ResourceType requiredResourceNode)
+    public bool CanConstructResourceFootprint(Vector3Int anchor, FootprintShape shape, ResourceType requiredResourceNode) =>
+        CanConstructResourceFootprint(anchor, shape, requiredResourceNode, null);
+
+    // ignoreBuilding - 재배치 시 자기 자신이 점유한 칸도 유효하게 판정하기 위함(CanConstructFootPrint와 동일한 용도).
+    public bool CanConstructResourceFootprint(Vector3Int anchor, FootprintShape shape, ResourceType requiredResourceNode, Building ignoreBuilding)
     {
-        if (!CanConstructFootPrint(anchor, shape))
+        if (!CanConstructFootPrint(anchor, shape, ignoreBuilding))
             return false;
 
         foreach (Vector3Int coord in GetFootprintCoords(anchor, shape))
@@ -392,6 +396,13 @@ public class GridMap : MonoBehaviour
 
         return true;
     }
+
+    // 건물 타입에 따라 판정을 분기 - Factory(생산시설)는 자원 플래그 판정, 그 외는 기존 풋프린트 판정.
+    // 신규 배치, 미리보기, 재배치가 항상 같은 기준을 쓰도록 통합한 진입점.
+    public bool CanConstructBuildingFootprint(Vector3Int anchor, FootprintShape shape, Building building, Building ignoreBuilding) =>
+        building is Factory factory
+            ? CanConstructResourceFootprint(anchor, shape, factory.RequiredResourceNode, ignoreBuilding)
+            : CanConstructFootPrint(anchor, shape, ignoreBuilding);
 
     public List<Vector3Int> GetOccupiedCoords(Vector3Int coord)
     {
@@ -439,6 +450,9 @@ public class GridMap : MonoBehaviour
             return false;
 
         if (!_buildingFootprintCells.TryGetValue(building, out List<GridCell> oldFootprint))
+            return false;
+
+        if (!CanConstructBuildingFootprint(nextCoord, building.FootprintShape, building, building))
             return false;
 
         if (!TryGetFootprint(nextCoord, building.FootprintShape, building, out List<GridCell> newFootprint))
