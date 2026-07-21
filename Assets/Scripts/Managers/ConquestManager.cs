@@ -33,6 +33,10 @@ public class ConquestManager : MonoBehaviour
     // 점령이 실제로 완료된 시점(며칠 뒤 밤 정산)에 발생 - 보상 지급 등은 이 이벤트를 구독해 처리한다.
     public UnityEvent<Vector2Int> OnConquestCompleted;
 
+    // 원정이 발송된 시점(SendExpedition 성공 직후)에 발생 - 원정 인구 비용 배치 등은 이 이벤트를 구독해 처리한다.
+    // cost는 SendExpedition이 이미 조회해 둔 값을 그대로 실어보낸다 - 구독자가 ConquestChunkCostTable을 다시 조회할 필요가 없다.
+    public UnityEvent<Vector2Int, ResourceCost> OnExpeditionSent;
+
     // 원정이 추가되거나(SendExpedition) 진행/완료되었을 때(OnSettlement) 발생 - 진행률 표시 UI가 구독한다.
     public UnityEvent OnExpeditionsChanged;
 
@@ -163,6 +167,7 @@ public class ConquestManager : MonoBehaviour
         int daysRequired = _durationTable.ResolveDaysRequired(chunk.DominantTerrain);
 
         _activeExpeditions.Add(new ConquestExpedition(targetChunkCoord, cost, daysRequired));
+        OnExpeditionSent?.Invoke(targetChunkCoord, cost);
         OnExpeditionsChanged?.Invoke();
         return true;
     }

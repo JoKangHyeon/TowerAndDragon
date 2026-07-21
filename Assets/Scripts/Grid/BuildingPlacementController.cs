@@ -284,7 +284,10 @@ public class BuildingPlacementController : MonoBehaviour
 
     public bool TryConstructAt(Vector3Int anchor)
     {
-        if (_selectedBuilding == null || !_gridMap.CanConstructFootPrint(anchor, _selectedBuilding.FootprintShape))
+        if (_selectedBuilding == null)
+            return false;
+
+        if (!_gridMap.CanConstructBuildingFootprint(anchor, _selectedBuilding.FootprintShape, _selectedBuilding, null))
             return false;
 
         Debug.Log($"[BuildingPlacementController] 건설 위치: {anchor}");

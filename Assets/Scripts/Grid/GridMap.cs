@@ -12,6 +12,12 @@ public class GridMap : MonoBehaviour
     [SerializeField]
     private TerrainTileMap _terrainTileMap;
 
+    [SerializeField]
+    private ResourceNodeAreaTable _resourceNodeAreaTable;
+
+    // 청크 단위 연구 해금 조회 - 연구 시스템이 아직 없는 씬에서는 null로 두면 항상 터레인 기본값만으로 판정된다.
+    public IChunkResearchUnlockQuery ResearchUnlockQuery { get; set; }
+
     // 전체 맵
     private Dictionary<Vector3Int, GridCell> _cells = new();
 
@@ -36,6 +42,7 @@ public class GridMap : MonoBehaviour
     {
         GenerateGridFromTilemap();
         GenerateChunks();
+        ApplyResourceNodeAreas();
     }
 
     private void GenerateGridFromTilemap()
@@ -49,10 +56,19 @@ public class GridMap : MonoBehaviour
             TerrainType terrain = _terrainTileMap.Resolve(tile);
             bool canConstruct = _terrainTileMap.ResolveCanConstruct(tile);
 
-            _cells[pos] = new GridCell(pos, terrain, canConstruct);
+            GridCell cell = new GridCell(pos, terrain, canConstruct);
+            cell.AddResourceNodes(_terrainTileMap.ResolveDefaultResourceNodes(tile));
+            _cells[pos] = cell;
         }
 
         Debug.Log($"[GridMap] 그리드맵 생성 완료 - 셀의 개수: {_cells.Count}");
+    }
+
+    // 터레인 기본값(GenerateGridFromTilemap) 다음 단계 - 수기 지정 영역을 추가로 누적 적용한다.
+    private void ApplyResourceNodeAreas()
+    {
+        if (_resourceNodeAreaTable != null)
+            _resourceNodeAreaTable.ApplyToGrid(_cells);
     }
 
     private void GenerateChunks()
@@ -131,6 +147,9 @@ public class GridMap : MonoBehaviour
 
     public ExistTypeOnCell ExamExist(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.ExistTypeOnCell : ExistTypeOnCell.None;
+
+    public ResourceType GetAvailableResourceNodes(Vector3Int coord) =>
+        _cells.TryGetValue(coord, out var cell) ? cell.AvailableResourceNodes : ResourceType.None;
 
     public Building GetBuildingAt(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.OccupantBuilding : null;
@@ -351,6 +370,56 @@ public class GridMap : MonoBehaviour
         return true;
     }
 
+    // 생산시설 전용 배치 판정 - 기존 CanConstructFootPrint에 더해, 풋프린트 전체 셀이 요구 자원 플래그를 가져야 한다.
+    // 자원 플래그는 (터레인 기반 정적 플래그) 또는 (청크 단위 연구 해금) 둘 중 하나만 만족해도 된다.
+    public bool CanConstructResourceFootprint(Vector3Int anchor, FootprintShape shape, ResourceType requiredResourceNode) =>
+        CanConstructResourceFootprint(anchor, shape, requiredResourceNode, null);
+
+    // ignoreBuilding - 재배치 시 자기 자신이 점유한 칸도 유효하게 판정하기 위함(CanConstructFootPrint와 동일한 용도).
+    public bool CanConstructResourceFootprint(Vector3Int anchor, FootprintShape shape, ResourceType requiredResourceNode, Building ignoreBuilding) =>
+        CanConstructResourceFootprint(GetFootprintCoords(anchor, shape), requiredResourceNode, ignoreBuilding);
+
+    // 호출자가 이미 GetFootprintCoords로 footprint를 계산해 둔 경우, 재계산 없이 그 결과를 그대로 검사한다(CanConstructFootPrint의 List 오버로드와 동일한 목적).
+    public bool CanConstructResourceFootprint(List<Vector3Int> footprint, ResourceType requiredResourceNode, Building ignoreBuilding)
+    {
+        if (!CanConstructFootPrint(footprint, ignoreBuilding))
+            return false;
+
+        foreach (Vector3Int coord in footprint)
+        {
+            if (!_cells.TryGetValue(coord, out GridCell cell) || !SatisfiesResourceRequirement(cell, requiredResourceNode))
+                return false;
+        }
+
+        return true;
+    }
+
+    private bool SatisfiesResourceRequirement(GridCell cell, ResourceType requiredResourceNode) =>
+        cell.HasResourceNode(requiredResourceNode) ||
+        (ResearchUnlockQuery != null && ResearchUnlockQuery.IsUnlocked(ToChunkCoord(cell.Coord), requiredResourceNode));
+
+    private bool AllCellsSatisfyResourceRequirement(List<GridCell> cells, ResourceType requiredResourceNode)
+    {
+        foreach (GridCell cell in cells)
+        {
+            if (!SatisfiesResourceRequirement(cell, requiredResourceNode))
+                return false;
+        }
+
+        return true;
+    }
+
+    // 건물 타입에 따라 판정을 분기 - Factory(생산시설)는 자원 플래그 판정, 그 외는 기존 풋프린트 판정.
+    // 신규 배치, 미리보기, 재배치가 항상 같은 기준을 쓰도록 통합한 진입점.
+    public bool CanConstructBuildingFootprint(Vector3Int anchor, FootprintShape shape, Building building, Building ignoreBuilding) =>
+        CanConstructBuildingFootprint(GetFootprintCoords(anchor, shape), building, ignoreBuilding);
+
+    // 호출자가 이미 footprint 좌표를 계산해 둔 경우, 재계산 없이 그 결과를 그대로 검사한다.
+    public bool CanConstructBuildingFootprint(List<Vector3Int> footprint, Building building, Building ignoreBuilding) =>
+        building is Factory factory
+            ? CanConstructResourceFootprint(footprint, factory.RequiredResourceNode, ignoreBuilding)
+            : CanConstructFootPrint(footprint, ignoreBuilding);
+
     public List<Vector3Int> GetOccupiedCoords(Vector3Int coord)
     {
         if (!_cells.TryGetValue(coord, out GridCell cell) || !cell.HasBuilding)
@@ -399,7 +468,12 @@ public class GridMap : MonoBehaviour
         if (!_buildingFootprintCells.TryGetValue(building, out List<GridCell> oldFootprint))
             return false;
 
+        // TryGetFootprint가 기본 배치 가능 여부(CanConstruct·점유·점령)를 이미 전부 검사하므로 별도로 재검사하지 않는다.
+        // Factory는 이미 확보한 셀 목록에 대해 자원 플래그 요구사항만 추가로 검사한다(좌표 재계산 없음).
         if (!TryGetFootprint(nextCoord, building.FootprintShape, building, out List<GridCell> newFootprint))
+            return false;
+
+        if (building is Factory factory && !AllCellsSatisfyResourceRequirement(newFootprint, factory.RequiredResourceNode))
             return false;
 
         foreach (GridCell footprintCell in oldFootprint)

@@ -18,6 +18,17 @@ public class TerrainTileMapEditor : Editor
         { "Snow", TerrainType.Snow },
     };
 
+    // 지형별 기본(정적) 자원 매핑 확정본 - 초원은 기본 자원 3종 전체, 외곽 4바이옴은 각자 특화 자원 1종만 정적 해금.
+    private static readonly Dictionary<TerrainType, ResourceType> TERRAIN_RESOURCE_MAP = new()
+    {
+        { TerrainType.Grass, ResourceType.Food | ResourceType.Wood | ResourceType.Stone },
+        { TerrainType.Rock, ResourceType.PhilosopherStone },
+        { TerrainType.Volcano, ResourceType.FlameHeart },
+        { TerrainType.Desert, ResourceType.TimeSand },
+        { TerrainType.Snow, ResourceType.SnowCrystal },
+        { TerrainType.Default, ResourceType.None },
+    };
+
     public override void OnInspectorGUI()
     {
         DrawDefaultInspector();
@@ -25,6 +36,27 @@ public class TerrainTileMapEditor : Editor
         EditorGUILayout.Space();
         if (GUILayout.Button("Imported 폴더에서 자동 채우기"))
             AutoFillFromImportedFolder();
+
+        if (GUILayout.Button("Terrain Type 기준으로 Default Resource Nodes 일괄 적용"))
+            ApplyDefaultResourceNodesByTerrainType();
+    }
+
+    // 각 엔트리의 기존 TerrainType 값을 읽어, 확정된 지형-자원 매핑대로 DefaultResourceNodes를 일괄 채운다.
+    private void ApplyDefaultResourceNodesByTerrainType()
+    {
+        serializedObject.Update();
+
+        SerializedProperty entriesProperty = serializedObject.FindProperty("_entries");
+        for (int i = 0; i < entriesProperty.arraySize; i++)
+        {
+            SerializedProperty element = entriesProperty.GetArrayElementAtIndex(i);
+            var terrainType = (TerrainType)element.FindPropertyRelative("TerrainType").intValue;
+
+            if (TERRAIN_RESOURCE_MAP.TryGetValue(terrainType, out ResourceType resourceType))
+                element.FindPropertyRelative("DefaultResourceNodes").intValue = (int)resourceType;
+        }
+
+        serializedObject.ApplyModifiedProperties();
     }
 
     private void AutoFillFromImportedFolder()

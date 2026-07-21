@@ -89,7 +89,7 @@ public class MouseSelectController : MonoBehaviour
         _lastDrawnAnchor = anchor;
 
         List<Vector3Int> footprint = _gridMap.GetFootprintCoords(anchor, _footprintShape);
-        bool canConstruct = _gridMap.CanConstructFootPrint(footprint, _selectedBuildingRef);
+        bool canConstruct = _gridMap.CanConstructBuildingFootprint(footprint, _selectedBuildingRef, _selectedBuildingRef);
 
         CurrentAnchor = anchor;
         CanConstruct = canConstruct;
