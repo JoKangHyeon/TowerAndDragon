@@ -24,6 +24,9 @@ public class ConquestModeController : MonoBehaviour
     private BuildingPlacementController _buildingPlacementController;
 
     [SerializeField]
+    private ChunkInfoOverlayRenderer _chunkInfoRenderer;
+
+    [SerializeField]
     private InputActionReference _selectAction;
 
     [SerializeField]
@@ -40,6 +43,7 @@ public class ConquestModeController : MonoBehaviour
     private readonly List<Vector3Int> _conquerableBuffer = new();
     private readonly List<Vector3Int> _blockedBuffer = new();
     private readonly List<Vector3Int> _selectedBuffer = new();
+    private readonly List<Vector2Int> _conquerableChunkBuffer = new();
     private (List<Vector3Int> Coords, Color Color)[] _highlightGroups;
 
     private void Awake()
@@ -98,6 +102,9 @@ public class ConquestModeController : MonoBehaviour
 
             _isSelectionLocked = false;
             _mouseSelectController.ClearHighlights();
+
+            if (_chunkInfoRenderer != null)
+                _chunkInfoRenderer.Clear();
         }
     }
 
@@ -129,6 +136,7 @@ public class ConquestModeController : MonoBehaviour
         _conquerableBuffer.Clear();
         _blockedBuffer.Clear();
         _selectedBuffer.Clear();
+        _conquerableChunkBuffer.Clear();
 
         foreach (Chunk chunk in _gridMap.GetAllChunks())
         {
@@ -138,17 +146,24 @@ public class ConquestModeController : MonoBehaviour
             if (chunk.DominantTerrain == TerrainType.Default)
                 continue;
 
+            bool canConquer = _conquestManager.CanSendExpedition(chunk.ChunkCoord);
+            if (canConquer)
+                _conquerableChunkBuffer.Add(chunk.ChunkCoord);
+
             if (_selectedChunkCoord.HasValue && chunk.ChunkCoord == _selectedChunkCoord.Value)
             {
                 AddChunkCellCoords(chunk, _selectedBuffer);
                 continue;
             }
 
-            List<Vector3Int> target = _conquestManager.CanSendExpedition(chunk.ChunkCoord) ? _conquerableBuffer : _blockedBuffer;
+            List<Vector3Int> target = canConquer ? _conquerableBuffer : _blockedBuffer;
             AddChunkCellCoords(chunk, target);
         }
 
         _mouseSelectController.HighlightCellGroups(_highlightGroups);
+
+        if (_chunkInfoRenderer != null)
+            _chunkInfoRenderer.Refresh(_conquerableChunkBuffer);
     }
 
     private void HandleSelectInput()

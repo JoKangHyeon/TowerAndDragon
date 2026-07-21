@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4683444545429641296}
   - component: {fileID: 5952906172798228213}
+  - component: {fileID: 2176355967231933069}
   m_Layer: 0
   m_Name: ConquestController
   m_TagString: Untagged
@@ -49,7 +50,31 @@ MonoBehaviour:
   _conquestManager: {fileID: 0}
   _conquestUI: {fileID: 0}
   _buildingPlacementController: {fileID: 0}
+  _chunkInfoRenderer: {fileID: 0}
   _selectAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _cancelAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _conquerableHighlightColor: {r: 0, g: 1, b: 0, a: 1}
   _blockedHighlightColor: {r: 1, g: 0, b: 0, a: 1}
+--- !u!114 &2176355967231933069
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2399999167837544031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e1fbb6272886a64a9164e756b7bc76a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChunkInfoOverlayRenderer
+  _gridMap: {fileID: 0}
+  _conquestManager: {fileID: 0}
+  _resourceManager: {fileID: 0}
+  _mouseSelectController: {fileID: 0}
+  _cardPrefab: {fileID: 6732635606826657151, guid: 0274672a83493954aabb56aa03416174, type: 3}
+  _terrainSprites:
+  - {fileID: 21300000, guid: 5730cda6685e57845ae807d3a19f8386, type: 3}
+  - {fileID: 21300000, guid: 7b90af6ca594e3244b9ef0bd0f20603a, type: 3}
+  - {fileID: 21300000, guid: 485bab44178e01949bee7c4ebe48bacb, type: 3}
+  - {fileID: 21300000, guid: d6ee73221ba9a1348b48655847c28b3e, type: 3}
+  - {fileID: 21300000, guid: 6d13c1851753c73468aa1d04fe4620c2, type: 3}
+  _populationIcon: {fileID: 21300000, guid: bd0a3f8b6f28f406dad6db82e03648ef, type: 3}
