@@ -37,6 +37,11 @@ public abstract class Skill
 {
     private const int UNLIMITED_USE_PER_DAY = -1;
 
+    // 아이소메트릭 타일 종횡비(Grid_HeightVariant의 Grid.cellSize = 1.0 x, 0.5 y)에 맞춰
+    // 원형 판정/미리보기를 타원으로 납작하게 만드는 비율 - 판정(AreaCurrentHealthDamageSkill)과
+    // 미리보기(SkillRangeIndicator)가 항상 같은 값을 쓰도록 여기 한 곳에만 둔다.
+    public const float ISOMETRIC_RADIUS_Y_RATIO = 0.5f;
+
     private readonly SkillSO _skillData;
 
     private float _cooltimeLeft;
@@ -72,7 +77,8 @@ public abstract class Skill
     public int UsePerDayLeft => _usePerDayLeft;
     public int UsePerDay => _skillData.DefaultUsePerDay;
     public bool IsUnlimitedUse => UsePerDay == UNLIMITED_USE_PER_DAY;
-    public bool CanUse => (_usePerDayLeft > 0 || IsUnlimitedUse) && _cooltimeLeft <= 0;
+    public bool CanUse => IsUsePerDayLeft && _cooltimeLeft <= 0;
+    public bool IsUsePerDayLeft => IsUnlimitedUse || UsePerDayLeft > 0;
 
     /// <summary>이 스킬이 발동 시 무엇을 지정해야 하는지 - 타겟팅 컨트롤러가 이 값으로 분기한다.</summary>
     public abstract SkillTargeting Targeting { get; }
@@ -81,7 +87,9 @@ public abstract class Skill
     public LayerMask TargetLayers => _skillData.TargetLayers;
 
     protected float DamagePercent => _skillData.DamagePercentOfCurrentHealth;
-    protected float AreaRadius => _skillData.AreaRadius;
+
+    // 타겟팅 컨트롤러가 시전 범위 미리보기(원형 인디케이터) 크기를 결정하는 데도 필요하므로 public으로 노출한다.
+    public float AreaRadius => _skillData.AreaRadius;
 
     public void Tick(float deltaTime)
     {
@@ -153,7 +161,8 @@ public class SingleCurrentHealthDamageSkill : Skill
     }
 }
 
-/// <summary>지정한 지점 반경 안의 모든 적에게 각자 현재 체력 비례 데미지를 준다.</summary>
+/// <summary>지정한 지점을 중심으로, 아이소메트릭 타일 비율에 맞춰 납작해진 타원 범위 안의
+/// 모든 적에게 각자 현재 체력 비례 데미지를 준다.</summary>
 public class AreaCurrentHealthDamageSkill : Skill
 {
     public AreaCurrentHealthDamageSkill(SkillSO skillData) : base(skillData) { }
@@ -162,17 +171,24 @@ public class AreaCurrentHealthDamageSkill : Skill
 
     protected override void ApplyEffect(in SkillCastContext context)
     {
-        Collider2D[] hits = Physics2D.OverlapCircleAll(context.TargetPoint, AreaRadius, TargetLayers);
+        float radiusX = AreaRadius;
+        float radiusY = AreaRadius * ISOMETRIC_RADIUS_Y_RATIO;
+
+        // 브로드페이즈: 더 큰 쪽인 X 반지름의 원으로 넉넉히 후보를 모은 뒤 타원 방정식으로 정확히 걸러낸다.
+        Collider2D[] hits = Physics2D.OverlapCircleAll(context.TargetPoint, radiusX, TargetLayers);
         HashSet<BaseMonster> targets = new HashSet<BaseMonster>();
 
         foreach (Collider2D hit in hits)
         {
             BaseMonster monster = hit.GetComponentInParent<BaseMonster>();
 
-            if (monster != null)
-            {
-                targets.Add(monster);
-            }
+            if (monster == null)
+                continue;
+
+            if (!IsWithinEllipse(monster.transform.position, context.TargetPoint, radiusX, radiusY))
+                continue;
+
+            targets.Add(monster);
         }
 
         foreach (BaseMonster monster in targets)
@@ -182,5 +198,14 @@ public class AreaCurrentHealthDamageSkill : Skill
 
             monster.TakeDamage(new DamageInfo(monster.CurrentHealth * DamagePercent));
         }
+    }
+
+    private static bool IsWithinEllipse(Vector3 point, Vector3 center, float radiusX, float radiusY)
+    {
+        float dx = point.x - center.x;
+        float dy = point.y - center.y;
+        float normalizedDistanceSqr = (dx * dx) / (radiusX * radiusX) + (dy * dy) / (radiusY * radiusY);
+
+        return normalizedDistanceSqr <= 1f;
     }
 }

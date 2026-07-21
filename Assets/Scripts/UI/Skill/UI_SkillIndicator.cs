@@ -10,7 +10,7 @@ public class UI_SkillIndicator : MonoBehaviour
     [SerializeField] private Image _skillCooltimeFillImage;
     [SerializeField] private TMP_Text _skillRemainText;
     [Tooltip("클릭 입력을 받을 버튼 - SkillIcon 프리팹은 MultiImageButton을 사용한다.")]
-    [SerializeField] private MultiImageButton _button;
+    [SerializeField] private Button _button;
 
     private Skill _skill;
     private Action<Skill> _onClicked;
@@ -44,6 +44,16 @@ public class UI_SkillIndicator : MonoBehaviour
     {
         if (_skill == null)
             return;
+
+        if (!_skill.IsUsePerDayLeft)
+        {
+            _skillCooltimeFillImage.fillAmount = 1f;
+            _button.interactable = false;
+            _skillRemainText.text = _skill.IsUnlimitedUse ? string.Empty : _skill.UsePerDayLeft.ToString();
+            return;
+        }
+
+        _button.interactable = _skill.CanUse;
 
         if (_skillCooltimeFillImage != null)
         {
