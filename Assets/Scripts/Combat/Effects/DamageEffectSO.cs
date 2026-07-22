@@ -13,6 +13,9 @@ public class DamageEffectSO : AttackEffectSO
 
     public override void Apply(IDamageable target, in AttackContext context)
     {
-        target.TakeDamage(new DamageInfo(_amount));
+        float amount = Mathf.Max(
+            0f,
+            context.AttackPowerModifier.Apply(_amount));
+        target.TakeDamage(new DamageInfo(amount));
     }
 }

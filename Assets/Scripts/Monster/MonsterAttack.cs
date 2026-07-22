@@ -17,6 +17,7 @@ public class MonsterAttack : MonoBehaviour
     private MonsterMovement _movement;
     private IMonsterTarget _currentTarget;
     private Castle _finalTarget;
+    private ResolvedEnemyStatModifier _attackPowerModifier;
 
     private float _nextAttackTime;
     private bool _isInitialized;
@@ -26,10 +27,19 @@ public class MonsterAttack : MonoBehaviour
 
     public void Initialize(MonsterData data, MonsterMovement movement)
     {
+        Initialize(data, movement, ResolvedEnemyStatModifier.Neutral);
+    }
+
+    public void Initialize(
+        MonsterData data,
+        MonsterMovement movement,
+        ResolvedEnemyStatModifier attackPowerModifier)
+    {
         _data = data;
         _attack = data.Attack;
         _enRouteTargetTypes = data.EnRouteTargetTypes;
         _movement = movement;
+        _attackPowerModifier = attackPowerModifier;
 
         _currentTarget = null;
         _nextAttackTime = Time.time;
@@ -164,7 +174,9 @@ public class MonsterAttack : MonoBehaviour
     /// </summary>
     private void Fire(IAttackTarget target)
     {
-        AttackContext context = new AttackContext(gameObject);
+        AttackContext context = new AttackContext(
+            gameObject,
+            _attackPowerModifier);
 
         if (!_data.HasProjectile)
         {

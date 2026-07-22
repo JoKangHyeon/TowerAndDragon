@@ -20,6 +20,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
     private MonsterMovement _movement;
     private MonsterAttack _attack;
     private Castle _mainCastle;
+    private EnemyEnhancementSnapshot _enhancement;
     private readonly SpecialBehaviorRunner _specialBehaviorRunner = new();
 
     public MonsterData Data => _data;
@@ -46,21 +47,37 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
     /// </summary>
     public void Setup(MonsterData data, SplineContainer path, Transform mainCastle)
     {
+        Setup(data, path, mainCastle, EnemyEnhancementSnapshot.Neutral);
+    }
+
+    public void Setup(
+        MonsterData data,
+        SplineContainer path,
+        Transform mainCastle,
+        EnemyEnhancementSnapshot enhancement)
+    {
         _data = data;
+        _enhancement = enhancement;
 
         _mainCastle = mainCastle != null ? mainCastle.GetComponent<Castle>() : null;
 
-        _health.Initialize(_data.MaxHealth);
+        float maxHealth = Mathf.Max(
+            0f,
+            _enhancement.MaxHealth.Apply(_data.MaxHealth));
+        _health.Initialize(maxHealth);
         _health.Died.AddListener(HandleDeath);
 
         if (_shield != null && _data.HasShield)
         {
-            _shield.Initialize(_data.ShieldAmount);
+            float shieldAmount = Mathf.Max(
+                0f,
+                _enhancement.ShieldAmount.Apply(_data.ShieldAmount));
+            _shield.Initialize(shieldAmount);
         }
 
         if (_attack != null && _data.Attack != null)
         {
-            _attack.Initialize(_data, _movement);
+            _attack.Initialize(_data, _movement, _enhancement.AttackPower);
         }
 
         _specialBehaviorRunner.Initialize(this, _data.SpecialBehaviors);
@@ -114,7 +131,10 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
             return;
         }
 
-        _movement.SetSpeed(_data.MoveSpeed);
+        float moveSpeed = Mathf.Max(
+            0f,
+            _enhancement.MoveSpeed.Apply(_data.MoveSpeed));
+        _movement.SetSpeed(moveSpeed);
 
         switch (_movement)
         {
