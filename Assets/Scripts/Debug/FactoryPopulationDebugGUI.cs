@@ -75,17 +75,17 @@ public class FactoryPopulationDebugGUI : MonoBehaviour
         GUILayout.EndArea();
     }
 
+    private const float PERCENT_MULTIPLIER = 100f;
+
     private void DrawInfo()
     {
         PopulationState state = _populationManager != null ? _populationManager.CurrentState : default;
-        int minimumRequired = _selectedFactory.Data != null ? _selectedFactory.Data.MinimumRequiredPopulation : 0;
-        bool canProduce = _selectedFactoryPopulation.AssignedPopulation >= minimumRequired;
+        int staffingPercent = Mathf.RoundToInt(_selectedFactoryPopulation.StaffingRatio * PERCENT_MULTIPLIER);
 
         GUILayout.Label("Factory Population Test (1: Assign, 2: Unassign)");
         GUILayout.Label($"Target: {_selectedFactory.name}");
         GUILayout.Label($"Total {state.MaxPopulation} / Assigned {state.AssignedPopulation} / Available {state.AvailablePopulation}");
-        GUILayout.Label($"Factory {_selectedFactoryPopulation.AssignedPopulation} / {_selectedFactoryPopulation.Capacity} (Min {minimumRequired})");
-        GUILayout.Label(canProduce ? "Production Ready" : "Not enough population");
+        GUILayout.Label($"Factory {_selectedFactoryPopulation.AssignedPopulation} / {_selectedFactoryPopulation.Capacity} (Staffing {staffingPercent}%)");
         GUILayout.Label(IsDay ? "Day: Editable" : "Night: Locked");
     }
 }

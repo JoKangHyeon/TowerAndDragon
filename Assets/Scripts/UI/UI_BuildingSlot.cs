@@ -50,14 +50,15 @@ public class UI_BuildingSlot : MonoBehaviour
         return renderer != null ? renderer.sprite : null;
     }
 
-    // 건물에서 표시할 이름을 얻는다. 지금은 타워의 TowerData.NameLocKey.
+    // 건물에서 표시할 이름을 얻는다.
     // (추후 스트링테이블이 생기면 StringTable.GetString(key)로 감싸 지역화하면 된다.)
     private static string ResolveName(Building prefab)
     {
         if (prefab is Tower tower && tower.Data != null)
-        {
             return tower.Data.NameLocKey;
-        }
+
+        if (prefab is Factory factory && factory.Data != null)
+            return factory.Data.NameLocKey;
 
         return string.Empty;
     }

@@ -4,6 +4,9 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "TowerAndDragon/Resource Production Data")]
 public class ResourceProductionData : ScriptableObject
 {
+    [Tooltip("빌드모드 슬롯에 표시할 이름 로컬라이제이션 키.")]
+    [SerializeField] private string _nameLocKey;
+
     [Tooltip("이 생산시설을 지으려면 풋프린트 전체 셀이 가져야 하는 자원 플래그.")]
     [SerializeField] private ResourceType _requiredResourceNode;
 
@@ -13,29 +16,17 @@ public class ResourceProductionData : ScriptableObject
     [Tooltip("배치 가능한 최대 인구.")]
     [SerializeField] private int _populationCapacity;
 
-    [Tooltip("기본 생산량을 내기 위해 필요한 최소 인구. 배치 인원이 이보다 적으면 생산량 0.")]
-    [SerializeField] private int _minimumRequiredPopulation;
-
-    [Tooltip("최소 인구를 충족했을 때의 기본 생산량.")]
-    [SerializeField] private int _yieldPerCycle;
-
-    [Tooltip("최소 인구를 초과해 배치한 인원 1명당 추가되는 생산량.")]
-    [SerializeField] private int _yieldPerExtraPopulation;
-
+    public string NameLocKey => _nameLocKey;
     public ResourceType RequiredResourceNode => _requiredResourceNode;
     public ResourceType ProducedResourceType => _producedResourceType;
     public int PopulationCapacity => _populationCapacity;
-    public int MinimumRequiredPopulation => _minimumRequiredPopulation;
-    public int YieldPerCycle => _yieldPerCycle;
-    public int YieldPerExtraPopulation => _yieldPerExtraPopulation;
 
-    // 최소 인구 미달 시 0, 충족 시 기본 생산량 + (최소 초과 인원 수 * 초과 인원당 생산량).
-    public int CalculateYield(int assignedPopulation)
+    // 충원율(배치 인구 / 정원)에 비례해 생산량이 오른다 - 최소 인구 문턱 없음(1명만 있어도 그만큼 생산),
+    // 상한은 충원율 자체가 1(정원 100%)을 못 넘는 것으로 자연스럽게 걸린다.
+    // footprintYield에는 이미 셀별 자원 배율과 연구 강화가 반영되어 있다 - GridMap.GetFootprintYield 참고.
+    public int CalculateYield(int footprintYield, float staffingRatio)
     {
-        if (assignedPopulation < _minimumRequiredPopulation)
-            return 0;
-
-        int extraPopulation = assignedPopulation - _minimumRequiredPopulation;
-        return _yieldPerCycle + extraPopulation * _yieldPerExtraPopulation;
+        float ratio = Mathf.Clamp01(staffingRatio);
+        return Mathf.RoundToInt(footprintYield * ratio);
     }
 }

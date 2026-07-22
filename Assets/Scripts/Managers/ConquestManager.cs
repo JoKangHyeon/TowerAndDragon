@@ -91,6 +91,10 @@ public class ConquestManager : MonoBehaviour
     public TerrainType GetDominantTerrain(Vector2Int chunkCoord) =>
         _gridMap.GetChunk(chunkCoord).DominantTerrain;
 
+    // 이 청크를 점령하면 나오는 원시 생산력 합계(자원별 배율·연구 강화 미포함) - 점령 UI 미리보기 표시 전용.
+    public int GetChunkYield(Vector2Int chunkCoord) =>
+        _gridMap.GetChunkBaseYield(chunkCoord);
+
     public bool TryGetActiveExpedition(Vector2Int chunkCoord, out ConquestExpedition expedition)
     {
         foreach (ConquestExpedition candidate in _activeExpeditions)

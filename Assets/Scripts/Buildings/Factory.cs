@@ -6,6 +6,7 @@ public class Factory : Building
     [SerializeField] private ResourceProductionData _data;
     [SerializeField] private ResourceManager _resourceManager;
     [SerializeField] private CycleManager _cycleManager;
+    [SerializeField] private GridMap _gridMap;
 
     private bool _isInitialized;
     private FactoryPopulation _population;
@@ -18,15 +19,16 @@ public class Factory : Building
 
     public bool IsInitialized => _isInitialized;
 
-    // 프리팹은 씬 오브젝트(ResourceManager/CycleManager)를 들고 있을 수 없으므로,
+    // 프리팹은 씬 오브젝트(ResourceManager/CycleManager/GridMap)를 들고 있을 수 없으므로,
     // 건설 직후 FactoryResourceCoordinator가 주입한다(TowerPopulation.Initialize와 동일한 패턴).
-    public bool Initialize(ResourceManager resourceManager, CycleManager cycleManager)
+    public bool Initialize(ResourceManager resourceManager, CycleManager cycleManager, GridMap gridMap)
     {
-        if (_isInitialized || resourceManager == null || cycleManager == null)
+        if (_isInitialized || resourceManager == null || cycleManager == null || gridMap == null)
             return false;
 
         _resourceManager = resourceManager;
         _cycleManager = cycleManager;
+        _gridMap = gridMap;
         _population = GetComponent<FactoryPopulation>();
         _cycleManager.OnDayStart.AddListener(OnSettlement);
         _isInitialized = true;
@@ -41,10 +43,14 @@ public class Factory : Building
 
     private void OnSettlement(int currentCycle)
     {
-        if (_data == null || _resourceManager == null)
+        if (_data == null || _resourceManager == null || _gridMap == null)
             return;
 
-        int assignedPopulation = _population != null ? _population.AssignedPopulation : 0;
-        _resourceManager.Add(_data.ProducedResourceType, _data.CalculateYield(assignedPopulation));
+        // 생산량은 이 생산시설의 footprint에 속한 셀들이 보유한 자원별 생산량의 합이다(GridMap.GetFootprintYield 참고).
+        int footprintYield = _gridMap.GetFootprintYield(this, _data.ProducedResourceType);
+        float staffingRatio = _population != null ? _population.StaffingRatio : 0f;
+        int produced = _data.CalculateYield(footprintYield, staffingRatio);
+        Debug.Log($"[Factory] {name} 정산 - footprintYield: {footprintYield}, staffingRatio: {staffingRatio:F2}, produced: {produced} ({_data.ProducedResourceType})");
+        _resourceManager.Add(_data.ProducedResourceType, produced);
     }
 }
