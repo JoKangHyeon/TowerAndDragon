@@ -24,6 +24,15 @@ public class FogOfWarRenderer : MonoBehaviour
     [SerializeField, Range(0f, 1f)]
     private float _visibleFogAlpha = 0.45f;
 
+    [Tooltip("Hidden/Visible/Conquered 경계에서 안개가 부드럽게 옅어지는 폭(셀 단위) - 0이면 경계가 한 번에 바뀐다.")]
+    [SerializeField, Range(0, 4)]
+    private int _gradientBandWidth = 2;
+
+    // Conquered < Visible < Hidden 순으로 안개가 짙어지는 순서값 - 그라데이션 시 "더 옅은 이웃"을 찾는 기준.
+    private const int CONQUERED_FOG_ORDER = 0;
+    private const int VISIBLE_FOG_ORDER = 1;
+    private const int HIDDEN_FOG_ORDER = 2;
+
     private GridMap _gridMap;
     private Tilemap _terrainTilemap;
 
@@ -66,25 +75,95 @@ public class FogOfWarRenderer : MonoBehaviour
         }
     }
 
-    // 점령 등으로 셀 상태가 바뀔 때마다 GridMap이 즉시 호출 - 해당 셀 하나만 다시 칠한다.
-    private void HandleCellChanged(GridCell cell) => PaintCell(cell);
+    // 점령 등으로 셀 상태가 바뀔 때마다 GridMap이 즉시 호출 - 바뀐 셀 주변 그라데이션 폭만큼도
+    // 다시 칠한다(이웃 셀의 그라데이션이 바뀐 셀의 상태를 참조하므로 함께 갱신해야 함).
+    private void HandleCellChanged(GridCell cell) => RepaintAround(cell.Coord);
 
-    private void PaintCell(GridCell cell)
+    private void RepaintAround(Vector3Int center)
     {
-        _terrainTilemap.SetTileFlags(cell.Coord, TileFlags.None);
-        _terrainTilemap.SetColor(cell.Coord, GetTintColor(cell.CurrentState));
+        for (int dx = -_gradientBandWidth; dx <= _gradientBandWidth; dx++)
+        {
+            for (int dy = -_gradientBandWidth; dy <= _gradientBandWidth; dy++)
+            {
+                Vector3Int coord = center + new Vector3Int(dx, dy, 0);
+                if (_terrainTilemap.HasTile(coord))
+                    PaintCellAt(coord);
+            }
+        }
     }
 
+    private void PaintCell(GridCell cell) => PaintCellAt(cell.Coord);
+
+    private void PaintCellAt(Vector3Int coord)
+    {
+        _terrainTilemap.SetTileFlags(coord, TileFlags.None);
+        _terrainTilemap.SetColor(coord, GetGradientTintColor(coord));
+    }
+
+    // 지형 타일 전용 - 경계 근처 셀은 가장 가까운 "더 옅은" 이웃 셀의 색으로 부드럽게 섞는다.
+    private Color GetGradientTintColor(Vector3Int coord)
+    {
+        ChunkState state = _gridMap.GetCellState(coord);
+        int order = GetFogOrder(state);
+        float alpha = GetOrderAlpha(order);
+
+        if (_gradientBandWidth > 0 && order > CONQUERED_FOG_ORDER)
+        {
+            int bestDistance = int.MaxValue;
+            int bestOrder = order;
+
+            for (int dx = -_gradientBandWidth; dx <= _gradientBandWidth; dx++)
+            {
+                for (int dy = -_gradientBandWidth; dy <= _gradientBandWidth; dy++)
+                {
+                    if (dx == 0 && dy == 0)
+                        continue;
+
+                    int distance = Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy));
+                    if (distance >= bestDistance)
+                        continue;
+
+                    Vector3Int neighborCoord = coord + new Vector3Int(dx, dy, 0);
+                    int neighborOrder = GetFogOrder(_gridMap.GetCellState(neighborCoord));
+
+                    if (neighborOrder < order)
+                    {
+                        bestDistance = distance;
+                        bestOrder = neighborOrder;
+                    }
+                }
+            }
+
+            if (bestDistance <= _gradientBandWidth)
+            {
+                float blendFactor = 1f - (float)(bestDistance - 1) / _gradientBandWidth;
+                alpha = Mathf.Lerp(alpha, GetOrderAlpha(bestOrder), blendFactor);
+            }
+        }
+
+        float brightness = 1f - alpha;
+        return new Color(brightness, brightness, brightness, 1f);
+    }
+
+    private int GetFogOrder(ChunkState state) => state switch
+    {
+        ChunkState.Conquered => CONQUERED_FOG_ORDER,
+        ChunkState.Visible => VISIBLE_FOG_ORDER,
+        _ => HIDDEN_FOG_ORDER,
+    };
+
+    private float GetOrderAlpha(int order) => order switch
+    {
+        CONQUERED_FOG_ORDER => 0f,
+        VISIBLE_FOG_ORDER => _visibleFogAlpha,
+        _ => _hiddenFogAlpha,
+    };
+
     // 몬스터 등 지형 위 오브젝트를 같은 방식·같은 밝기로 틴트하는 FogTintReceiver가 재사용한다.
+    // (오브젝트는 그라데이션 없이 자기 셀의 상태값 그대로 적용)
     public Color GetTintColor(ChunkState state)
     {
-        float alpha = state switch
-        {
-            ChunkState.Conquered => 0f,
-            ChunkState.Visible => _visibleFogAlpha,
-            _ => _hiddenFogAlpha,
-        };
-
+        float alpha = GetOrderAlpha(GetFogOrder(state));
         float brightness = 1f - alpha;
         return new Color(brightness, brightness, brightness, 1f);
     }

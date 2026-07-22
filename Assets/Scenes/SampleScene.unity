@@ -440,25 +440,6 @@ Transform:
   - {fileID: 426573738}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &263852761 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 897356944515122841, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-  m_PrefabInstance: {fileID: 944163938}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &263852764
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 263852761}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 31383991777d4ed4b867ff34decba1a9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MinimapNavigator
-  _minimapCamera: {fileID: 61071323}
-  _cameraController: {fileID: 519420033}
 --- !u!1 &265556685
 GameObject:
   m_ObjectHideFlags: 0
@@ -12177,6 +12158,10 @@ PrefabInstance:
       propertyPath: m_SizeDelta.x
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -0.00037323052
+      objectReference: {fileID: 0}
     - target: {fileID: 3543463496763922537, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -12225,6 +12210,14 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4036528889491582579, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _minimapCamera
+      value: 
+      objectReference: {fileID: 61071323}
+    - target: {fileID: 4036528889491582579, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _cameraController
+      value: 
+      objectReference: {fileID: 519420033}
     - target: {fileID: 4051158298719874637, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -12247,6 +12240,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4358032571276575663, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4358032571276575663, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMin.y
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4411999803580549854, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -12804,10 +12801,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 897356944515122841, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 263852764}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
 --- !u!1 &989594072
 GameObject:
@@ -13631,7 +13625,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84bea500230f4d6409653ed54a659c9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResourceNodeDebugger
-  _showResourceNodeGizmos: 1
+  _showResourceNodeGizmos: 0
   _mouseSelectController: {fileID: 1748892985}
   _resourceNodeOverlaySpritePrefab: {fileID: 1044757331}
   _debugSelectedCellCoord: {x: 0, y: 0, z: 0}
@@ -13787,6 +13781,10 @@ PrefabInstance:
       propertyPath: _chunkOverlaySpritePrefab
       value: 
       objectReference: {fileID: 1044757331}
+    - target: {fileID: 5959431859424174035, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: _gradientBandWidth
+      value: 4
+      objectReference: {fileID: 0}
     - target: {fileID: 6681738151754636705, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: _gameManager
       value: 
