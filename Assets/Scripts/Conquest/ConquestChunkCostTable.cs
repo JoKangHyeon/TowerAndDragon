@@ -9,7 +9,7 @@ public class ConquestChunkCostTable : ScriptableObject
     {
         public Vector2Int ChunkCoord;
         public ResourceCost Cost;
-        public EnemyScalingModifier EnemyScaling;
+        public EnemyEnhancementProfileSO EnemyEnhancementProfile;
 
         [Tooltip("점령 완료 시 실제로 지급되는 인구 보상.")]
         public int PopulationReward;
@@ -34,15 +34,15 @@ public class ConquestChunkCostTable : ScriptableObject
         return false;
     }
 
-    public EnemyScalingModifier ResolveEnemyScaling(Vector2Int chunkCoord)
+    public EnemyEnhancementProfileSO ResolveEnemyEnhancementProfile(Vector2Int chunkCoord)
     {
         foreach (Entry entry in _entries)
         {
             if (entry.ChunkCoord == chunkCoord)
-                return entry.EnemyScaling;
+                return entry.EnemyEnhancementProfile;
         }
 
-        return EnemyScalingModifier.Neutral;
+        return null;
     }
 
     public int ResolvePopulationReward(Vector2Int chunkCoord)

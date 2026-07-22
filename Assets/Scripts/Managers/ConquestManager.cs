@@ -13,6 +13,9 @@ public class ConquestManager : MonoBehaviour
     private CycleManager _cycleManager;
 
     [SerializeField]
+    private EnemyEnhancementManager _enemyEnhancementManager;
+
+    [SerializeField]
     private ConquestDurationTable _durationTable;
 
     [SerializeField]
@@ -25,10 +28,6 @@ public class ConquestManager : MonoBehaviour
     private readonly List<ConquestExpedition> _activeExpeditions = new();
     public IReadOnlyList<ConquestExpedition> ActiveExpeditions => _activeExpeditions;
 
-    private EnemyScalingModifier _accumulatedEnemyScaling = EnemyScalingModifier.Neutral;
-    public EnemyScalingModifier AccumulatedEnemyScaling => _accumulatedEnemyScaling;
-
-    public UnityEvent<EnemyScalingModifier> OnEnemyScalingChanged;
 
     // 점령이 실제로 완료된 시점(며칠 뒤 밤 정산)에 발생 - 보상 지급 등은 이 이벤트를 구독해 처리한다.
     public UnityEvent<Vector2Int> OnConquestCompleted;
@@ -37,13 +36,13 @@ public class ConquestManager : MonoBehaviour
     // cost는 SendExpedition이 이미 조회해 둔 값을 그대로 실어보낸다 - 구독자가 ConquestChunkCostTable을 다시 조회할 필요가 없다.
     public UnityEvent<Vector2Int, ResourceCost> OnExpeditionSent;
 
-    // 원정이 추가되거나(SendExpedition) 진행/완료되었을 때(OnSettlement) 발생 - 진행률 표시 UI가 구독한다.
+    // 원정이 추가되거나 진행되고, 밤 종료 후 점령이 확정될 때 발생 - 진행률 표시 UI가 구독한다.
     public UnityEvent OnExpeditionsChanged;
 
     private void OnEnable()
     {
         // CycleManager는 Grid.prefab을 쓰는 씬(다른 팀원 테스트 씬 등)에 항상 있는 게 아니므로,
-        // 없는 씬에서는 밤 정산 구독만 조용히 건너뛴다.
+        // 없는 씬에서는 밤 종료 정산 구독을 조용히 건너뛴다.
         if (_cycleManager != null)
             _cycleManager.OnNightEnd.AddListener(OnSettlement);
     }
@@ -63,8 +62,8 @@ public class ConquestManager : MonoBehaviour
         return _durationTable.ResolveDaysRequired(chunk.DominantTerrain);
     }
 
-    public EnemyScalingModifier PreviewEnemyScaling(Vector2Int chunkCoord) =>
-        _chunkCostTable.ResolveEnemyScaling(chunkCoord);
+    public EnemyEnhancementProfileSO PreviewEnemyEnhancementProfile(Vector2Int chunkCoord) =>
+        _chunkCostTable.ResolveEnemyEnhancementProfile(chunkCoord);
 
     public int GetPopulationReward(Vector2Int chunkCoord) =>
         _chunkCostTable.ResolvePopulationReward(chunkCoord);
@@ -198,7 +197,7 @@ public class ConquestManager : MonoBehaviour
         _gridMap.SetChunkState(expedition.TargetChunkCoord, ChunkState.Conquered);
         ExpandVisibility(expedition.TargetChunkCoord);
         PlaceGarrison(expedition.TargetChunkCoord);
-        ApplyEnemyScaling(expedition.TargetChunkCoord);
+        ApplyEnemyEnhancement(expedition.TargetChunkCoord);
         OnConquestCompleted?.Invoke(expedition.TargetChunkCoord);
     }
 
@@ -223,12 +222,31 @@ public class ConquestManager : MonoBehaviour
         }
     }
 
-    private void ApplyEnemyScaling(Vector2Int chunkCoord)
+    private void ApplyEnemyEnhancement(Vector2Int chunkCoord)
     {
-        EnemyScalingModifier modifier = _chunkCostTable.ResolveEnemyScaling(chunkCoord);
+        EnemyEnhancementProfileSO profile =
+            _chunkCostTable.ResolveEnemyEnhancementProfile(chunkCoord);
 
-        _accumulatedEnemyScaling = _accumulatedEnemyScaling.Combine(modifier);
-        OnEnemyScalingChanged?.Invoke(_accumulatedEnemyScaling);
+        if (profile == null)
+        {
+            return;
+        }
+
+        Chunk chunk = _gridMap.GetChunk(chunkCoord);
+        if (chunk == null)
+        {
+            return;
+        }
+
+        if (_enemyEnhancementManager == null)
+        {
+            Debug.LogError("[ConquestManager] EnemyEnhancementManager 참조가 없습니다.", this);
+            return;
+        }
+
+        _enemyEnhancementManager.ApplyProfile(
+            chunk.DominantTerrain,
+            profile);
     }
 
     private void PlaceGarrison(Vector2Int chunkCoord)

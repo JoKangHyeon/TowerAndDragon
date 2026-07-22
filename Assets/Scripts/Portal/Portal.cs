@@ -13,7 +13,7 @@ public class Portal : MonoBehaviour
 
 
     public PortalDirection PortalDirectionId => _portalDirectionId;
-    public TerrainType TerrrainType => _terrainType;
+    public TerrainType TerrainType => _terrainType;
     public Transform SpawnPoint => _spawnPoint;
 
     // 지상적일 경우 사용할 경로

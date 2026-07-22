@@ -8,9 +8,18 @@ using UnityEngine;
 public readonly struct AttackContext
 {
     public GameObject Source { get; }
+    public ResolvedEnemyStatModifier AttackPowerModifier { get; }
 
     public AttackContext(GameObject source)
+        : this(source, ResolvedEnemyStatModifier.Neutral)
+    {
+    }
+
+    public AttackContext(
+        GameObject source,
+        ResolvedEnemyStatModifier attackPowerModifier)
     {
         Source = source;
+        AttackPowerModifier = attackPowerModifier;
     }
 }
