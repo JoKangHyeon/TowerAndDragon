@@ -2197,6 +2197,8 @@ GameObject:
   m_Component:
   - component: {fileID: 9043313789338073764}
   - component: {fileID: 6324340021273386837}
+  - component: {fileID: 273903290729460619}
+  - component: {fileID: 4552897936115243674}
   m_Layer: 5
   m_Name: Button_01
   m_TagString: Untagged
@@ -2271,6 +2273,31 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!225 &273903290729460619
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8266691234962523830}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &4552897936115243674
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8266691234962523830}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1610a74eceae784c9ba5f90319e9146, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_ButtonInteractableFade
+  _disabledAlpha: 0.4
 --- !u!1 &8796544548870983569
 GameObject:
   m_ObjectHideFlags: 0
@@ -2421,7 +2448,10 @@ MonoBehaviour:
   _insufficientColor: {r: 1, g: 0, b: 0, a: 1}
   _conquestManager: {fileID: 0}
   _resourceManager: {fileID: 0}
+  _populationManager: {fileID: 0}
   _conquestModeController: {fileID: 0}
+  _cycleManager: {fileID: 0}
+  _warningWindow: {fileID: 0}
   _slideDuration: 0.5
   _openFromOffset: {x: 100, y: 0}
   _closeToOffset: {x: 500, y: 0}

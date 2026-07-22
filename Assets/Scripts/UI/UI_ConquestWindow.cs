@@ -120,6 +120,14 @@ public class UI_ConquestWindow : MonoBehaviour
     [SerializeField]
     private ConquestModeController _conquestModeController;
 
+    [Tooltip("밤이 시작되면 점령 모드를 자동으로 끈다.")]
+    [SerializeField]
+    private CycleManager _cycleManager;
+
+    [Tooltip("밤에 점령을 시도했을 때 경고 메시지를 띄울 창.")]
+    [SerializeField]
+    private UI_WarningWindow _warningWindow;
+
     [Header("패널 열림/닫힘 연출")]
     [SerializeField]
     private float _slideDuration = 0.5f;
@@ -145,7 +153,22 @@ public class UI_ConquestWindow : MonoBehaviour
         _panelRect = _conquestModePanel.GetComponent<RectTransform>();
         _homePos = _panelRect.anchoredPosition;
 
+        // OnEnable이 아닌 Awake에서 구독한다 → 패널(이 오브젝트)이 닫혀(SetActive false) 있어도,
+        // 즉 점령 모드는 켜졌지만 패널은 안 열린 상태에서도 밤 이벤트를 받아 모드를 끌 수 있다.
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnNightStart.AddListener(HandleNightStart);
+        }
+
         _conquestModePanel.SetActive(false);
+    }
+
+    private void OnDestroy()
+    {
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnNightStart.RemoveListener(HandleNightStart);
+        }
     }
 
     private void OnEnable()
@@ -166,6 +189,15 @@ public class UI_ConquestWindow : MonoBehaviour
         }
     }
 
+    // 밤이 시작되면 점령 모드를 끈다(Claim 버튼을 토글해 끈 것과 동일 - 패널 닫힘 + 하이라이트 제거).
+    private void HandleNightStart(int cycle)
+    {
+        if (_conquestModeController != null && _conquestModeController.IsActive)
+        {
+            _conquestModeController.SetConquestModeActive(false);
+        }
+    }
+
     // 원정이 실제로 완료된 시점(며칠 뒤 밤 정산)에 ConquestManager가 발행한다.
     // 인구 보상 지급과 원정 인구 반환은 ConquestPopulationCoordinator가 같은 이벤트를 구독해 처리한다.
     private void OnConquestCompleted(Vector2Int chunkCoord)
@@ -177,7 +209,20 @@ public class UI_ConquestWindow : MonoBehaviour
     // 모드를 끄면 컨트롤러가 열려 있던 패널도 함께 닫는다.
     public void ToggleConquestMode()
     {
-        _conquestModeController.SetConquestModeActive(!_conquestModeController.IsActive);
+        bool nextActive = !_conquestModeController.IsActive;
+
+        // 밤에는 점령 모드를 켤 수 없다(창이 아예 열리지 않는다). 끄는 것은 항상 허용.
+        if (nextActive && _cycleManager != null && _cycleManager.CurrentCycle == CycleManager.CycleState.Night)
+        {
+            if (_warningWindow != null)
+            {
+                _warningWindow.ShowClaimWarning();
+            }
+
+            return;
+        }
+
+        _conquestModeController.SetConquestModeActive(nextActive);
     }
 
     // ConquestModeController가 점령 가능한 청크를 클릭했을 때 호출하는 진입점.
