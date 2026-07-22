@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c2fb7e8e217e26540a2ac4c9cb17e354, type: 3}
-  m_Name: wave_5
+  m_Name: wave_10
   m_EditorClassIdentifier: Assembly-CSharp::WaveDefinitionSO
   _portalWaves:
   - _portalDirectionId: 1
@@ -23,11 +23,19 @@ MonoBehaviour:
       _delayBeforeGroup: 1
     - _monsterPrefab: {fileID: 1088371507377460980, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
       _monsterData: {fileID: 11400000, guid: b7a4b9933e469c743adba29a2aed478e, type: 2}
+      _spawnCount: 5
+      _spawnInterval: 1
+      _delayBeforeGroup: 1
+  - _portalDirectionId: 3
+    _startDelay: 5
+    _spawnGroups:
+    - _monsterPrefab: {fileID: -687291307508128235, guid: 605f8a4e1301da546840d9d7b05316c7, type: 3}
+      _monsterData: {fileID: 11400000, guid: ba58415c8b289ba47af5fea8b826533f, type: 2}
       _spawnCount: 10
       _spawnInterval: 1
       _delayBeforeGroup: 1
-    - _monsterPrefab: {fileID: 6715424663893680715, guid: 372069aa32aafbd48b8f5fc26e1ef061, type: 3}
-      _monsterData: {fileID: 11400000, guid: 7712ae1de6f70d84dbba1417b436c8a2, type: 2}
+    - _monsterPrefab: {fileID: 1088371507377460980, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      _monsterData: {fileID: 11400000, guid: b7a4b9933e469c743adba29a2aed478e, type: 2}
       _spawnCount: 5
       _spawnInterval: 1
       _delayBeforeGroup: 1
