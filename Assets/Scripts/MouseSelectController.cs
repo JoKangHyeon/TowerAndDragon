@@ -34,7 +34,9 @@ public class MouseSelectController : MonoBehaviour
     private Camera _cam;
     private ComponentPool<SpriteRenderer> _highlightPool;
     private ComponentPool<SpriteRenderer> _occupiedOverlayPool;
+    private FootprintShape _baseFootprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private FootprintShape _footprintShape = new FootprintShape(new bool[1, 1] { { true } });
+    private int _previewRotationSteps;
     private Vector3 _ghostLocalOffset;
     private bool _isPlacementActive;
     private Vector3Int? _lastDrawnAnchor;
@@ -44,6 +46,12 @@ public class MouseSelectController : MonoBehaviour
     public bool CanConstruct { get; private set; }
     public Color SelectionHighlightColor => _selectionHighlightColor;
     public float YOffset => _yOffset;
+
+    // 미리보기 중인(아직 확정 안 된) 회전 스텝 - 배치/이동 확정 시 BuildingPlacementController가 그대로 GridMap에 넘긴다.
+    public int PreviewRotationSteps => _previewRotationSteps;
+
+    // 현재 회전이 반영된 풋프린트 모양 - 확정 시에도 미리보기와 동일한 모양을 쓰기 위해 공개.
+    public FootprintShape CurrentFootprintShape => _footprintShape;
 
     // 참조가 비어 있어도(=null) 안전하게 0을 반환 - Y 오프셋을 쓰는 다른 오버레이 스크립트들이 공용으로 사용.
     public static float GetYOffsetOrZero(MouseSelectController mouseSelectController) =>
@@ -101,24 +109,52 @@ public class MouseSelectController : MonoBehaviour
         DrawGhost(anchor, canConstruct);
     }
 
-    public void BeginPlacementPreview(Building prefab) => SetPreviewTarget(prefab);
-    public void BeginRepositionPreview(Building building) => SetPreviewTarget(building);
+    public void BeginPlacementPreview(Building prefab) => SetPreviewTarget(prefab, 0);
+    public void BeginRepositionPreview(Building building) => SetPreviewTarget(building, building.RotationSteps);
 
-    private void SetPreviewTarget(Building building)
+    private void SetPreviewTarget(Building building, int initialRotationSteps)
     {
         _selectedBuildingRef = building;
-        _footprintShape = building.FootprintShape;
-        _ghostLocalOffset = building.PlacementOffset;
+        _baseFootprintShape = building.BaseFootprintShape;
+        _previewRotationSteps = initialRotationSteps;
+        _footprintShape = _baseFootprintShape.Rotated(_previewRotationSteps);
         _lastDrawnAnchor = null;
+
+        RefreshGhostVisual();
+    }
+
+    // 배치/이동 미리보기 중 "R" 입력 시 호출 - 다음 회전 스텝으로 넘기고 footprint/고스트를 다시 계산한다.
+    public void RotatePreview()
+    {
+        if (_selectedBuildingRef == null)
+            return;
+
+        _previewRotationSteps = (_previewRotationSteps + 1) % FootprintShape.ROTATION_STEP_COUNT;
+        _footprintShape = _baseFootprintShape.Rotated(_previewRotationSteps);
+        _lastDrawnAnchor = null;
+
+        RefreshGhostVisual();
+    }
+
+    private void RefreshGhostVisual()
+    {
+        Vector3 compensation = _gridMap != null
+            ? _gridMap.ComputeRotationCompensation(_baseFootprintShape, _previewRotationSteps)
+            : Vector3.zero;
+        _ghostLocalOffset = _selectedBuildingRef.ComputePlacementOffset(_previewRotationSteps) + compensation;
 
         if (_ghostRenderer == null)
             return;
 
-        SpriteRenderer prefabRenderer = building.GetComponent<SpriteRenderer>();
-        Sprite ghostSprite = prefabRenderer != null ? prefabRenderer.sprite : null;
+        Sprite ghostSprite = _selectedBuildingRef.ResolveRotationSprite(_previewRotationSteps);
+        if (ghostSprite == null)
+        {
+            SpriteRenderer prefabRenderer = _selectedBuildingRef.GetComponent<SpriteRenderer>();
+            ghostSprite = prefabRenderer != null ? prefabRenderer.sprite : null;
+        }
 
         _ghostRenderer.sprite = ghostSprite;
-        _ghostRenderer.transform.localScale = building.transform.localScale;
+        _ghostRenderer.transform.localScale = _selectedBuildingRef.transform.localScale;
         _ghostRenderer.gameObject.SetActive(ghostSprite != null);
     }
 

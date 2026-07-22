@@ -18,4 +18,11 @@ public enum ResourceType
     SnowCrystal = 1 << 4,      // 눈의 결정 (설원)
     TimeSand = 1 << 5,         // 시간의 모래 (사막)
     PhilosopherStone = 1 << 6, // 현자의 돌 (암석)
+
+    // 슬라임 (지형별 하위 타입 - 용의 먹이, 생산시설 풋프린트에 걸친 종류별로 각각 합산되어 나온다)
+    GrassSlime = 1 << 7,       // 초원 슬라임
+    RockSlime = 1 << 8,        // 암석 슬라임
+    VolcanoSlime = 1 << 9,     // 용암 슬라임
+    DesertSlime = 1 << 10,     // 사막 슬라임
+    SnowSlime = 1 << 11,       // 설원 슬라임
 }

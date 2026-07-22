@@ -19,13 +19,14 @@ public class TerrainTileMapEditor : Editor
     };
 
     // 지형별 기본(정적) 자원 매핑 확정본 - 초원은 기본 자원 3종 전체, 외곽 4바이옴은 각자 특화 자원 1종만 정적 해금.
+    // 슬라임은 지형마다 고유 하위 타입이 있어 전부 추가로 해금된다(초원 포함).
     private static readonly Dictionary<TerrainType, ResourceType> TERRAIN_RESOURCE_MAP = new()
     {
-        { TerrainType.Grass, ResourceType.Food | ResourceType.Wood | ResourceType.Stone },
-        { TerrainType.Rock, ResourceType.PhilosopherStone },
-        { TerrainType.Volcano, ResourceType.FlameHeart },
-        { TerrainType.Desert, ResourceType.TimeSand },
-        { TerrainType.Snow, ResourceType.SnowCrystal },
+        { TerrainType.Grass, ResourceType.Food | ResourceType.Wood | ResourceType.Stone | ResourceType.GrassSlime },
+        { TerrainType.Rock, ResourceType.PhilosopherStone | ResourceType.RockSlime },
+        { TerrainType.Volcano, ResourceType.FlameHeart | ResourceType.VolcanoSlime },
+        { TerrainType.Desert, ResourceType.TimeSand | ResourceType.DesertSlime },
+        { TerrainType.Snow, ResourceType.SnowCrystal | ResourceType.SnowSlime },
         { TerrainType.Default, ResourceType.None },
     };
 

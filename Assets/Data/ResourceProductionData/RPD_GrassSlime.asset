@@ -10,12 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 00717fc5bb6674c478f5f330f40d69a5, type: 3}
-  m_Name: RPD_FarmField
+  m_Name: RPD_GrassSlime
   m_EditorClassIdentifier: Assembly-CSharp::ResourceProductionData
-  _nameLocKey: FarmField
-  _requiredResourceNode: 1
-  _producedResourceType: 1
-  _populationCapacity: 10
+  _nameLocKey: SlimeFarm
+  _requiredResourceNode: 3968
+  _producedResourceType: 3968
+  _populationCapacity: 5
   _buildCost:
+  - Type: 1
+    Amount: 5
   - Type: 2
-    Amount: 8
+    Amount: 5
+  - Type: 4
+    Amount: 5

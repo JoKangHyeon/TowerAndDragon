@@ -99,6 +99,32 @@ public class ResourceManager : MonoBehaviour
         return true;
     }
 
+    // --- 자원 종류 무관 비용 묶음 API (건물 건설 비용 등, 특화 자원 포함 임의 조합) ---
+
+    // cost의 모든 항목을 보유량이 충족하는지 확인 - Spend/Add 호출 전에 반드시 이걸로 먼저 확인할 것
+    // (Spend는 부족한 항목을 만나도 나머지를 계속 진행하므로, 부분 차감을 막으려면 호출자가 미리 걸러야 한다).
+    public bool CanAfford(IReadOnlyList<ResourceAmount> cost)
+    {
+        foreach (ResourceAmount entry in cost)
+        {
+            if (GetAmount(entry.Type) < entry.Amount)
+                return false;
+        }
+        return true;
+    }
+
+    public void Spend(IReadOnlyList<ResourceAmount> cost)
+    {
+        foreach (ResourceAmount entry in cost)
+            TrySpend(entry.Type, entry.Amount);
+    }
+
+    public void Add(IReadOnlyList<ResourceAmount> amounts)
+    {
+        foreach (ResourceAmount entry in amounts)
+            Add(entry.Type, entry.Amount);
+    }
+
     // --- ResourceCost 브리지 (점령 시스템 호환) ---
 
     // 점령 시스템이 요구하는 보유량 스냅샷(기본 자원만).
