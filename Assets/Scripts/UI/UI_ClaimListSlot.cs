@@ -1,3 +1,4 @@
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,6 +13,32 @@ public class UI_ClaimListSlot : MonoBehaviour
 
     [Tooltip("남은 일수 텍스트.")]
     [SerializeField] private TMP_Text _daysText;
+
+    [Tooltip("Slot appear animation component.")]
+    [SerializeField] private DOTweenAnimation _appearAnimation;
+
+    private void Awake()
+    {
+        if (_appearAnimation == null)
+        {
+            _appearAnimation = GetComponent<DOTweenAnimation>();
+        }
+
+        if (_appearAnimation == null)
+        {
+            _appearAnimation = GetComponentInChildren<DOTweenAnimation>(true);
+        }
+    }
+
+    public void PlayAppearAnimation()
+    {
+        if (_appearAnimation == null)
+        {
+            return;
+        }
+
+        _appearAnimation.RecreateTweenAndPlay();
+    }
 
     public void Setup(Sprite terrainIcon, int remainingDays)
     {
