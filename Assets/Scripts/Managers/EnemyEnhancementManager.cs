@@ -28,6 +28,10 @@ public class EnemyEnhancementManager : MonoBehaviour
         }
 
         profiles.Add(profile);
+        Debug.Log(
+            $"[EnemyEnhancementManager] Terrain={terrainType}, Profile={profile.name}, " +
+            $"AppliedProfileCount={profiles.Count}",
+            this);
         ProfilesChanged?.Invoke(terrainType);
     }
 

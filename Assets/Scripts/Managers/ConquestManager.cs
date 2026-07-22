@@ -36,13 +36,13 @@ public class ConquestManager : MonoBehaviour
     // cost는 SendExpedition이 이미 조회해 둔 값을 그대로 실어보낸다 - 구독자가 ConquestChunkCostTable을 다시 조회할 필요가 없다.
     public UnityEvent<Vector2Int, ResourceCost> OnExpeditionSent;
 
-    // 원정이 추가되거나(SendExpedition) 진행/완료되었을 때(OnSettlement) 발생 - 진행률 표시 UI가 구독한다.
+    // 원정이 추가되거나 진행되고, 밤 종료 후 점령이 확정될 때 발생 - 진행률 표시 UI가 구독한다.
     public UnityEvent OnExpeditionsChanged;
 
     private void OnEnable()
     {
         // CycleManager는 Grid.prefab을 쓰는 씬(다른 팀원 테스트 씬 등)에 항상 있는 게 아니므로,
-        // 없는 씬에서는 밤 정산 구독만 조용히 건너뛴다.
+        // 없는 씬에서는 밤 종료 정산 구독을 조용히 건너뛴다.
         if (_cycleManager != null)
             _cycleManager.OnNightEnd.AddListener(OnSettlement);
     }
