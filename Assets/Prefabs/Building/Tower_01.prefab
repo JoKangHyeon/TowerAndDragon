@@ -125,6 +125,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8459449534628094542}
   - component: {fileID: 5725432846739276301}
+  - component: {fileID: 5125866802389972981}
   - component: {fileID: -1179263789838454351}
   - component: {fileID: 1782250389559104409}
   - component: {fileID: 4412623613816595417}
@@ -214,6 +215,42 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!58 &5125866802389972981
+CircleCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4042602934233984407}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0}
+  m_Radius: 4
 --- !u!114 &-1179263789838454351
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -246,6 +283,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a210ca5b9b21c8245b0418473702c92c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
+  HealthChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  Died:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &4412623613816595417
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -281,7 +324,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 32ee83eb1fb4f41d1a2806fda23647c9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerPopulation
 --- !u!1 &7426831478243966631
 GameObject:

@@ -144,6 +144,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a210ca5b9b21c8245b0418473702c92c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Health
+  HealthChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  Died:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &4333060282557959303
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -157,6 +163,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GroundSplineMovement
   _arrivalThreshold: 0.05
+  Arrived:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &7228251216951454133
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -184,5 +193,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MonsterAttack
   _targetLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 4294967295
   _firePoint: {fileID: 0}
