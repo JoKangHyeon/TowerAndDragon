@@ -25,7 +25,7 @@ public class UIManager : MonoBehaviour
     {
         if (_gameManager != null)
         {
-            _gameManager.GameOverOccurred += HandleGameOver;
+            _gameManager.GameOverOccurred.AddListener(HandleGameOver);
         }
     }
 
@@ -33,7 +33,7 @@ public class UIManager : MonoBehaviour
     {
         if (_gameManager != null)
         {
-            _gameManager.GameOverOccurred -= HandleGameOver;
+            _gameManager.GameOverOccurred.RemoveListener(HandleGameOver);
         }
     }
 

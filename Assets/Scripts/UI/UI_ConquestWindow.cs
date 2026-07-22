@@ -173,8 +173,6 @@ public class UI_ConquestWindow : MonoBehaviour
         _conquestModeController.RefreshConquerableHighlights();
     }
 
-    // 점령 모드 on/off 토글. 외부 버튼(UI_IngameWindow의 Button_Conquest 등)이 호출한다.
-    // 모드를 끄면 컨트롤러가 열려 있던 패널도 함께 닫는다.
     public void ToggleConquestMode()
     {
         _conquestModeController.SetConquestModeActive(!_conquestModeController.IsActive);

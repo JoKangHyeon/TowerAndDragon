@@ -1,6 +1,6 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviour
@@ -30,7 +30,7 @@ public class GameManager : MonoBehaviour
     public SkillManager SkillManager => _skillManager;
 
     /// <summary>성이 파괴되어 게임오버가 되면 발생. 게임오버 UI 등이 구독한다.</summary>
-    public event Action GameOverOccurred;
+    public UnityEvent GameOverOccurred;
 
     private bool _isGameOver;
 

@@ -49,7 +49,7 @@ public class UI_CastleHealth : MonoBehaviour
         {
             return;
         }
-        _castle.HealthChanged += Render;
+        _castle.HealthChanged.AddListener(Render);
         // 흔들 대상이 지정되지 않으면 이 오브젝트 자신을 흔든다.
         if (_shakeTarget == null)
         {
@@ -77,7 +77,7 @@ public class UI_CastleHealth : MonoBehaviour
         {
             return;
         }
-        _castle.HealthChanged -= Render;
+        _castle.HealthChanged.RemoveListener(Render);
         // 진행 중인 트윈을 정리하고 흔들림은 원위치로 되돌린다.
         _trailTween?.Kill();
         _trailTween = null;

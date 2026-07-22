@@ -1,5 +1,5 @@
-using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>메인 성 개체. HP는 Health에 위임하고, 0이 되면 Destroyed(= 게임 패배)를 발생시킨다.</summary>
 [RequireComponent(typeof(Health))]
@@ -27,16 +27,16 @@ public class Castle : Building, IAttackTarget
 
 
     /// <summary>현재 체력, 최대 체력 순으로 전달.</summary>
-    public event Action<float, float> HealthChanged;
+    public UnityEvent<float, float> HealthChanged;
 
     /// <summary>성 파괴 = 게임 패배.</summary>
-    public event Action Destroyed;
+    public UnityEvent Destroyed;
 
     private void Awake()
     {
         _health = GetComponent<Health>();
-        _health.HealthChanged += HandleHealthChanged;
-        _health.Died += HandleDestroyed;
+        _health.HealthChanged.AddListener(HandleHealthChanged);
+        _health.Died.AddListener(HandleDestroyed);
 
         // 파괴 연출 Animator는 시작 시 꺼둔다 → 사망 시(HandleDestroyed)에만 켜서 1회 재생.
         if (_brokenAnimator != null)
@@ -125,8 +125,8 @@ public class Castle : Building, IAttackTarget
     {
         if (_health != null)
         {
-            _health.HealthChanged -= HandleHealthChanged;
-            _health.Died -= HandleDestroyed;
+            _health.HealthChanged.RemoveListener(HandleHealthChanged);
+            _health.Died.RemoveListener(HandleDestroyed);
         }
     }
 }

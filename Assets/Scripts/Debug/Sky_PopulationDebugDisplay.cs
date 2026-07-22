@@ -16,10 +16,10 @@ public class PopulationDebugDisplay : MonoBehaviour
     private void OnEnable()
     {
         if (_populationManager != null)
-            _populationManager.PopulationChanged += HandlePopulationChanged;
+            _populationManager.PopulationChanged.AddListener(HandlePopulationChanged);
 
         if (_resourceManager != null)
-            _resourceManager.ResourceChanged += HandleResourceChanged;
+            _resourceManager.ResourceChanged.AddListener(HandleResourceChanged);
 
         RefreshAll();
     }
@@ -27,10 +27,10 @@ public class PopulationDebugDisplay : MonoBehaviour
     private void OnDisable()
     {
         if (_populationManager != null)
-            _populationManager.PopulationChanged -= HandlePopulationChanged;
+            _populationManager.PopulationChanged.RemoveListener(HandlePopulationChanged);
 
         if (_resourceManager != null)
-            _resourceManager.ResourceChanged -= HandleResourceChanged;
+            _resourceManager.ResourceChanged.RemoveListener(HandleResourceChanged);
     }
 
     // 이벤트는 변경 시에만 발생하므로, 패널이 켜진 시점의 현재값을 한 번 직접 채워준다.

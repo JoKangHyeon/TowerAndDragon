@@ -1,5 +1,5 @@
-using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// 적 이동의 공통 기반(전략 패턴의 추상 클래스).
@@ -16,7 +16,7 @@ public abstract class MonsterMovement : MonoBehaviour
     protected bool _isMoving;
 
     public bool HasArrived { get; protected set; }
-    public event Action Arrived;
+    public UnityEvent Arrived;
 
     public virtual void SetSpeed(float speed)
     {

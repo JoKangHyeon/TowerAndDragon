@@ -45,7 +45,7 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
         _gridMap = GetComponent<GridMap>();
         _borderPool = new ComponentPool<LineRenderer>(_borderLineRendererPrefab, transform);
         _inProgressBorderPool = new ComponentPool<LineRenderer>(_borderLineRendererPrefab, transform);
-        _gridMap.OnChunkStateChanged += RefreshBorders;
+        _gridMap.OnChunkStateChanged.AddListener(RefreshBorders);
 
         // ConquestManager는 Grid.prefab을 쓰는 씬(다른 팀원 테스트 씬 등)에 항상 있는 게 아니므로,
         // 없는 씬에서는 회색(원정 중) 테두리 기능만 조용히 비활성화한다.
@@ -73,7 +73,7 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
     private void OnDestroy()
     {
         if (_gridMap != null)
-            _gridMap.OnChunkStateChanged -= RefreshBorders;
+            _gridMap.OnChunkStateChanged.RemoveListener(RefreshBorders);
 
         if (_conquestManager != null)
             _conquestManager.OnExpeditionsChanged.RemoveListener(RefreshInProgressBorders);

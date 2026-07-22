@@ -19,7 +19,7 @@ public class PopulationDebugTester : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        _populationManager.PopulationChanged += LogPopulationState;
+        _populationManager.PopulationChanged.AddListener(LogPopulationState);
 
         bool IsCreated = _populationManager.TryCreateAllocation(
             PopulationAssignmentType.Tower,
@@ -35,7 +35,7 @@ public class PopulationDebugTester : MonoBehaviour
     {
         if (_populationManager != null)
         {
-            _populationManager.PopulationChanged -= LogPopulationState;
+            _populationManager.PopulationChanged.RemoveListener(LogPopulationState);
         }
     }
 

@@ -1,5 +1,5 @@
-using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// 체력 컴포넌트. HP를 관리하고, HP가 0이 되면 Died 이벤트를 발생시킨다.
@@ -15,8 +15,8 @@ public class Health : MonoBehaviour
     public bool IsDead => _currentHealth <= 0;
 
     /// <summary>현재 체력, 최대 체력 순으로 전달.</summary>
-    public event Action<float, float> HealthChanged;
-    public event Action Died;
+    public UnityEvent<float, float> HealthChanged;
+    public UnityEvent Died;
 
     public void Initialize(float maxHealth)
     {

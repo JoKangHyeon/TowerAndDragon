@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using UnityEngine.Events;
 using UnityEngine.Tilemaps;
 
 public class GridMap : MonoBehaviour
@@ -43,15 +44,15 @@ public class GridMap : MonoBehaviour
     private readonly HashSet<Vector2Int> _touchedChunksBuffer = new();
 
     // 그리드 셀의 상태 변경 이벤트 - 건물 배치, 건물 파괴, 적 진입
-    public event Action<GridCell> OnCellChanged;
+    public UnityEvent<GridCell> OnCellChanged;
 
     // 청크 상태 변경 이벤트 - 점령/시야 확장 등 청크 단위 상태 전환 시에만 발생 (OnCellChanged보다 드묾)
-    public event Action OnChunkStateChanged;
+    public UnityEvent OnChunkStateChanged;
 
     // 그리드에 건물이 등록되거나 제거되기 직전임을 외부 시스템에 알린다.
     // GridMap은 건물별 후속 처리 내용을 알지 않고 생명주기 시점만 전달한다.
-    public event Action<Building> OnBuildingAdded;
-    public event Action<Building> OnBuildingRemoving;
+    public UnityEvent<Building> OnBuildingAdded;
+    public UnityEvent<Building> OnBuildingRemoving;
 
     private void Awake()
     {
@@ -227,7 +228,16 @@ public class GridMap : MonoBehaviour
         return worldPos;
     }
 
-    public Vector3Int ConvertWorldToGrid(Vector3 worldCoord) => _tilemap.WorldToCell(worldCoord);
+    // Isometric Z As Y 레이아웃에서는 셀 중심 평면보다 살짝 뜬 위치(오브젝트 피벗 등)를 넣으면
+    // WorldToCell이 z를 0이 아닌 값으로 돌려줄 때가 있다 - 이 프로젝트의 실제 셀 좌표는 항상 z=0이므로
+    // (셀 딕셔너리도 그렇게 키가 잡혀 있다) 여기서 강제로 맞춰, Props 등이 엉뚱한 z 탓에 셀 조회에
+    // 실패해 항상 Hidden으로 취급되는 문제를 막는다.
+    public Vector3Int ConvertWorldToGrid(Vector3 worldCoord)
+    {
+        Vector3Int coord = _tilemap.WorldToCell(worldCoord);
+        coord.z = 0;
+        return coord;
+    }
 
     // 지형 타일에 심어둔 고저차(Y 오프셋)를 읽어온다 - Isometric Z As Y 레이아웃에서 셀의 Z좌표는
     // 정렬용으로만 쓰이고 높이는 SetTransformMatrix로 부여한 타일별 렌더 오프셋으로 표현된다.
