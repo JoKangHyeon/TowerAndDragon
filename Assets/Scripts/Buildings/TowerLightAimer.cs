@@ -12,7 +12,12 @@ public class TowerLightAimer : MonoBehaviour
     [SerializeField]
     private TowerAttack _towerAttack;
 
+    // 타겟을 잃어도 이 시간 동안은 불을 유지해 재타게팅 시 깜빡임을 막는다.
+    [SerializeField]
+    private float _lightHoldSeconds = 0.25f;
+
     private Light2D _light2D;
+    private float _lastValidTargetTime;
 
     private void Awake()
     {
@@ -20,6 +25,7 @@ public class TowerLightAimer : MonoBehaviour
             _towerAttack = GetComponentInParent<TowerAttack>();
 
         _light2D = GetComponent<Light2D>();
+        _lastValidTargetTime = float.NegativeInfinity;
     }
 
     // TowerAttack.Update()에서 타겟이 갱신된 이후에 회전을 반영하기 위해 LateUpdate 사용.
@@ -28,13 +34,19 @@ public class TowerLightAimer : MonoBehaviour
         BaseMonster target = _towerAttack != null ? _towerAttack.CurrentTarget : null;
         bool hasValidTarget = target != null && !target.IsDead;
 
-        _light2D.enabled = hasValidTarget;
+        if (hasValidTarget)
+        {
+            _lastValidTargetTime = Time.time;
+            _light2D.enabled = true;
 
-        if (!hasValidTarget)
+            Vector2 direction = target.transform.position - transform.position;
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - FORWARD_ANGLE_OFFSET_DEG;
+            transform.rotation = Quaternion.Euler(0f, 0f, angle);
             return;
+        }
 
-        Vector2 direction = target.transform.position - transform.position;
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - FORWARD_ANGLE_OFFSET_DEG;
-        transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        // 유효 타겟이 없어도 그레이스 기간 동안은 불을 유지(짧은 재타게팅 공백에 깜빡이지 않도록).
+        bool withinHoldGracePeriod = Time.time - _lastValidTargetTime <= _lightHoldSeconds;
+        _light2D.enabled = withinHoldGracePeriod;
     }
 }
