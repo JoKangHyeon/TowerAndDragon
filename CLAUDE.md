@@ -63,6 +63,22 @@
   - fire-and-forget 호출은 `.Forget()`을 명시합니다.
   - `async void` 금지 — 반환 타입은 `UniTask` / `UniTaskVoid`를 사용합니다.
 
+## 이벤트 초기화 규칙 — UnityEvent 구독/발화 순서
+
+Unity는 씬 로드 시 "모든 오브젝트의 Awake → 모든 오브젝트의 OnEnable → 모든 오브젝트의 Start" 순서만
+보장하고, 같은 단계 안에서 오브젝트 간 순서(Awake끼리, Start끼리)는 보장하지 않습니다.
+Script Execution Order를 별도로 설정하지 않으므로, 아래 규칙으로 순서 문제를 피합니다.
+
+- 이벤트의 **첫 발화는 Awake가 아니라 Start 이후**로 미룹니다.
+  (예: `Health.Initialize()`, `ResourceManager.Construct()`를 Start에서 호출)
+- **구독은 Awake 또는 OnEnable에서** 합니다. Start에서 구독하지 않습니다.
+  (Start끼리는 순서가 안 보장되므로, "구독 Start vs 발화 Start" 조합은 순서가 뒤집힐 수 있음)
+- 다른 오브젝트의 **Start끼리 순서에 의존하는 초기 상태**(예: 성 주변 청크의 초기 점령 상태를 다른 렌더러가
+  반영해야 하는 경우)가 있다면, 그 시점에 한해 `UniTask.Yield()`로 한 프레임 지연시켜 모든 Start가
+  끝난 뒤 처리되도록 명시적으로 강제합니다.
+- 이벤트 구독자(주로 UI)는 구독 직후 **현재 값을 한 번 수동으로 반영**해 초기 발화를 놓쳐도 안전하게
+  만드는 것을 권장합니다. (예: `UI_IngameWindow.RenderAllResources()`, `PopulationDebugDisplay.RefreshAll()`)
+
 ## Git 커밋 규칙
 
 커밋 전 다음 사항을 확인합니다.

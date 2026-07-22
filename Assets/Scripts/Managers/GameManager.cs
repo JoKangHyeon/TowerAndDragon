@@ -39,11 +39,6 @@ public class GameManager : MonoBehaviour
     {
         _cycleManager.Construct(this);
 
-        if (_resourceManager != null)
-        {
-            _resourceManager.Construct(this);
-        }
-
         if (_skillManager != null)
         {
             _skillManager.Construct(_cycleManager);
@@ -55,6 +50,13 @@ public class GameManager : MonoBehaviour
         foreach (CycleLight light in _defaultLights)
         {
             light.Construct(_cycleManager);
+        }
+
+        // OnEnable 단계에서 이미 구독을 마친 ResourceChanged 리스너(UI 등)가 최초 자원 지급까지
+        // 받을 수 있도록, Awake가 아닌 Start에서 Construct한다.
+        if (_resourceManager != null)
+        {
+            _resourceManager.Construct(this);
         }
 
         // 실행 시 Day 1 시작
