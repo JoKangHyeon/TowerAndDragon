@@ -121,6 +121,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
   _gameManager: {fileID: 0}
   _gameOverWindow: {fileID: 2066712693303546972}
+  _exclusiveModeBehaviours: []
 --- !u!1001 &3621003404249684503
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1735,8 +1736,30 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7059974406233680436, guid: f908c939041044a459d5a135e39741fa, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4036528889491582579}
   m_SourcePrefab: {fileID: 100100000, guid: f908c939041044a459d5a135e39741fa, type: 3}
+--- !u!1 &897356944515122841 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7059974406233680436, guid: f908c939041044a459d5a135e39741fa, type: 3}
+  m_PrefabInstance: {fileID: 7894278205759401133}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4036528889491582579
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 897356944515122841}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31383991777d4ed4b867ff34decba1a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MinimapNavigator
+  _minimapCamera: {fileID: 0}
+  _cameraController: {fileID: 0}
 --- !u!224 &2719005956146697526 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5203282308667160987, guid: f908c939041044a459d5a135e39741fa, type: 3}

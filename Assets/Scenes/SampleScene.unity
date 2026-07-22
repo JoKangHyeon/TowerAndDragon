@@ -233,21 +233,25 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &61071324
-Transform:
+--- !u!224 &61071324
+RectTransform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 61071321}
-  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.25, z: -10}
+  m_LocalPosition: {x: 0, y: 0, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0.25}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &61071325
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -436,6 +440,25 @@ Transform:
   - {fileID: 426573738}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &263852761 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 897356944515122841, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 944163938}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &263852764
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 263852761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31383991777d4ed4b867ff34decba1a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MinimapNavigator
+  _minimapCamera: {fileID: 61071323}
+  _cameraController: {fileID: 519420033}
 --- !u!1 &265556685
 GameObject:
   m_ObjectHideFlags: 0
@@ -1021,22 +1044,22 @@ MonoBehaviour:
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db3200645c162584daeae3f0b9ed9bd1, type: 3}
+  m_Script: {fileID: 11500000, guid: cc70f87391bb556438189252040bf4be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _wasdSpeed: 40
+  _wasdSpeed: 12
   _edgeScrollSpeed: 12
   _dragSensitivity: 1
-  _edgeScrollEnabled: 0
+  _edgeScrollEnabled: 1
   _edgeScrollThreshold: 20
-  _zoomSpeed: 30
+  _zoomSpeed: 3
   _minZoom: 3
   _maxZoom: 18
   _zoomSmoothing: 8
   _moveSmoothTime: 0.08
-  _boundsTilemap: {fileID: 0}
-  _excludedBoundsTile: {fileID: 0}
+  _boundsTilemap: {fileID: 362517319}
+  _excludedBoundsTile: {fileID: 11400000, guid: 753c40826fadd234691818342dce9c63, type: 2}
   _boundsMarginMin: {x: 0, y: 0}
   _boundsMarginMax: {x: 0, y: 0}
   _mapMin: {x: -60, y: -60}
@@ -12781,7 +12804,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 897356944515122841, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 263852764}
   m_SourcePrefab: {fileID: 100100000, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
 --- !u!1 &989594072
 GameObject:
@@ -13013,6 +13039,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1122431368}
   - component: {fileID: 1122431369}
+  - component: {fileID: 1122431370}
   m_Layer: 0
   m_Name: WaveManager
   m_TagString: Untagged
@@ -13052,6 +13079,7 @@ MonoBehaviour:
   - {fileID: 1396495002}
   - {fileID: 477999547}
   - {fileID: 989594073}
+  _enemyEnhancementManager: {fileID: 1122431370}
   _allSpawnCompleted:
     m_PersistentCalls:
       m_Calls: []
@@ -13070,6 +13098,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+--- !u!114 &1122431370
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1122431367}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac9add762445ff643b9ee93be055861b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyEnhancementManager
 --- !u!114 &1159675642 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1777162882844599745, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -13707,6 +13747,10 @@ PrefabInstance:
       propertyPath: _cycleManager
       value: 
       objectReference: {fileID: 914589611}
+    - target: {fileID: 1460990098537314003, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: _enemyEnhancementManager
+      value: 
+      objectReference: {fileID: 1122431370}
     - target: {fileID: 2034387597279232280, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: m_IsActive
       value: 1
