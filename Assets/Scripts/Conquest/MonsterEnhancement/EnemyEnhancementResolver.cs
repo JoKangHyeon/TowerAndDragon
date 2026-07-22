@@ -2,24 +2,22 @@ using System.Collections.Generic;
 
 public static class EnemyEnhancementResolver
 {
-    private const float NEUTRAL_MULTIPLIER = 1f;
-
     public static EnemyEnhancementSnapshot Resolve(
         IReadOnlyList<EnemyEnhancementProfileSO> profiles,
         MonsterData targetMonster)
     {
         int spawnCountBonus = 0;
 
-        float maxHealthAdditive = 0f;
-        float maxHealthMultiplier = NEUTRAL_MULTIPLIER;
-        float shieldAdditive = 0f;
-        float shieldMultiplier = NEUTRAL_MULTIPLIER;
-        float attackAdditive = 0f;
-        float attackMultiplier = NEUTRAL_MULTIPLIER;
-        float moveSpeedAdditive = 0f;
-        float moveSpeedMultiplier = NEUTRAL_MULTIPLIER;
-        float spawnIntervalAdditive = 0f;
-        float spawnIntervalMultiplier = NEUTRAL_MULTIPLIER;
+        ResolvedEnemyStatModifier maxHealth =
+            ResolvedEnemyStatModifier.Neutral;
+        ResolvedEnemyStatModifier shieldAmount =
+            ResolvedEnemyStatModifier.Neutral;
+        ResolvedEnemyStatModifier attackPower =
+            ResolvedEnemyStatModifier.Neutral;
+        ResolvedEnemyStatModifier moveSpeed =
+            ResolvedEnemyStatModifier.Neutral;
+        ResolvedEnemyStatModifier spawnInterval =
+            ResolvedEnemyStatModifier.Neutral;
 
         if (profiles != null && targetMonster != null)
         {
@@ -38,45 +36,21 @@ public static class EnemyEnhancementResolver
                     }
 
                     spawnCountBonus += rule.SpawnCountBonus;
-                    Accumulate(
-                        ref maxHealthAdditive,
-                        ref maxHealthMultiplier,
-                        rule.MaxHealth);
-                    Accumulate(
-                        ref shieldAdditive,
-                        ref shieldMultiplier,
-                        rule.ShieldAmount);
-                    Accumulate(
-                        ref attackAdditive,
-                        ref attackMultiplier,
-                        rule.AttackPower);
-                    Accumulate(
-                        ref moveSpeedAdditive,
-                        ref moveSpeedMultiplier,
-                        rule.MoveSpeed);
-                    Accumulate(
-                        ref spawnIntervalAdditive,
-                        ref spawnIntervalMultiplier,
-                        rule.SpawnInterval);
+                    maxHealth = maxHealth.Accumulate(rule.MaxHealth);
+                    shieldAmount = shieldAmount.Accumulate(rule.ShieldAmount);
+                    attackPower = attackPower.Accumulate(rule.AttackPower);
+                    moveSpeed = moveSpeed.Accumulate(rule.MoveSpeed);
+                    spawnInterval = spawnInterval.Accumulate(rule.SpawnInterval);
                 }
             }
         }
 
         return new EnemyEnhancementSnapshot(
             spawnCountBonus,
-            new ResolvedEnemyStatModifier(maxHealthAdditive, maxHealthMultiplier),
-            new ResolvedEnemyStatModifier(shieldAdditive, shieldMultiplier),
-            new ResolvedEnemyStatModifier(attackAdditive, attackMultiplier),
-            new ResolvedEnemyStatModifier(moveSpeedAdditive, moveSpeedMultiplier),
-            new ResolvedEnemyStatModifier(spawnIntervalAdditive, spawnIntervalMultiplier));
-    }
-
-    private static void Accumulate(
-        ref float additive,
-        ref float multiplier,
-        EnemyStatModifier modifier)
-    {
-        additive += modifier.AdditiveBonus;
-        multiplier *= modifier.Multiplier;
+            maxHealth,
+            shieldAmount,
+            attackPower,
+            moveSpeed,
+            spawnInterval);
     }
 }

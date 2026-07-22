@@ -16,4 +16,9 @@ public readonly struct ResolvedEnemyStatModifier
 
     public float Apply(float baseValue) =>
         (baseValue + AdditiveBonus) * Multiplier;
+
+    public ResolvedEnemyStatModifier Accumulate(EnemyStatModifier modifier) =>
+        new ResolvedEnemyStatModifier(
+            AdditiveBonus + modifier.AdditiveBonus,
+            Multiplier * modifier.Multiplier);
 }
