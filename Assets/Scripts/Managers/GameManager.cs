@@ -1,6 +1,6 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviour
@@ -30,7 +30,7 @@ public class GameManager : MonoBehaviour
     public SkillManager SkillManager => _skillManager;
 
     /// <summary>성이 파괴되어 게임오버가 되면 발생. 게임오버 UI 등이 구독한다.</summary>
-    public event Action GameOverOccurred;
+    public UnityEvent GameOverOccurred;
 
     private bool _isGameOver;
 
@@ -38,11 +38,6 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         _cycleManager.Construct(this);
-
-        if (_resourceManager != null)
-        {
-            _resourceManager.Construct(this);
-        }
 
         if (_skillManager != null)
         {
@@ -55,6 +50,13 @@ public class GameManager : MonoBehaviour
         foreach (CycleLight light in _defaultLights)
         {
             light.Construct(_cycleManager);
+        }
+
+        // OnEnable 단계에서 이미 구독을 마친 ResourceChanged 리스너(UI 등)가 최초 자원 지급까지
+        // 받을 수 있도록, Awake가 아닌 Start에서 Construct한다.
+        if (_resourceManager != null)
+        {
+            _resourceManager.Construct(this);
         }
 
         // 실행 시 Day 1 시작

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// 자원 보유량 관리자. 보유량의 단일 출처이며, 증감은 반드시 이 클래스의 API를 거친다.
@@ -19,7 +20,7 @@ public class ResourceManager : MonoBehaviour
     private readonly Dictionary<ResourceType, int> _amounts = new();
 
     /// <summary>자원 보유량 변경 시 (종류, 변경 후 보유량). UI가 구독한다.</summary>
-    public event Action<ResourceType, int> ResourceChanged;
+    public UnityEvent<ResourceType, int> ResourceChanged;
 
     public ResourceCatalog Catalog => _catalog;
 

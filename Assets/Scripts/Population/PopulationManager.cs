@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// 플레이어가 보유한 전체 인구와 모든 사용처의 할당 상태를 관리한다.
@@ -36,7 +37,7 @@ public class PopulationManager : MonoBehaviour
             AssignedPopulation
         );
 
-    public event Action<PopulationState> PopulationChanged;
+    public UnityEvent<PopulationState> PopulationChanged;
 
     public bool TryCreateAllocation(
         PopulationAssignmentType assignmentType,

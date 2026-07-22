@@ -17,7 +17,7 @@ public class FactoryResourceCoordinator : MonoBehaviour
             return;
         }
 
-        _gridMap.OnBuildingAdded += HandleBuildingAdded;
+        _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
     }
 
     private void OnDisable()
@@ -27,7 +27,7 @@ public class FactoryResourceCoordinator : MonoBehaviour
             return;
         }
 
-        _gridMap.OnBuildingAdded -= HandleBuildingAdded;
+        _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingAdded);
     }
 
     private void HandleBuildingAdded(Building building)

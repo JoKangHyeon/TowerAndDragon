@@ -1,5 +1,5 @@
-using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// 선택 컴포넌트. 방어막을 두른 적에만 부착한다.
@@ -17,8 +17,8 @@ public class MonsterShield : MonoBehaviour
     public bool IsBroken => _currentShield <= 0;
 
     /// <summary>현재 방어막, 최대 방어막 순으로 전달.</summary>
-    public event Action<float, float> ShieldChanged;
-    public event Action ShieldBroken;
+    public UnityEvent<float, float> ShieldChanged;
+    public UnityEvent ShieldBroken;
 
     public void Initialize(float amount)
     {

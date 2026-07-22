@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using DG.Tweening;
 
 // 건물 배치 및 철거, 재이동 디버깅용 -> 추후 수정될 수 있음
-public class UI_BuildModeWindow : MonoBehaviour
+public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
 {
     // 필터 탭 하나. 선택되면 Menu_Focus가 활성, 아니면 Menu_Default가 활성이 된다.
     // 이 탭(카테고리)이 가진 건물들이 선택 시 슬롯 목록으로 생성된다.
@@ -47,7 +47,8 @@ public class UI_BuildModeWindow : MonoBehaviour
     private BuildingPlacementController _buildingPlacementController;
 
     [SerializeField]
-    private ConquestModeController _conquestModeController;
+    private UIManager _uiManager;
+
     [Tooltip("밤이 시작되면 빌드모드 패널을 자동으로 닫기 위해 구독한다.")]
     [SerializeField]
     private CycleManager _cycleManager;
@@ -133,13 +134,13 @@ public class UI_BuildModeWindow : MonoBehaviour
         _activeButtons.Remove.interactable = selected != null && selected.IsRemoveable;
     }
 
-    // BuildMode 버튼 토글.
+    // BuildMode 버튼 토글. 열 때는 UIManager를 거쳐 다른 배타 모드(점령 등)를 정리한다.
     private void ToggleBuildPanel()
     {
         if (_isOpen)
             CloseBuildPanel();
         else
-            OpenBuildPanel();
+            _uiManager.OpenExclusive(this);
     }
 
     private void OpenBuildPanel()
@@ -155,9 +156,6 @@ public class UI_BuildModeWindow : MonoBehaviour
             .SetLink(_buildModePanel);
 
         _buildingPlacementController.ShowOccupiedTiles();
-
-        // 건설 모드와 점령 모드는 상호 배타적이다.
-        _conquestModeController.SetConquestModeActive(false);
     }
 
     private void CloseBuildPanel()
@@ -212,5 +210,13 @@ public class UI_BuildModeWindow : MonoBehaviour
     private void OnSlotSelected(Building prefab)
     {
         _buildingPlacementController.SelectBuilding(prefab);
+    }
+
+    bool IExclusiveMode.IsOpen => _isOpen;
+    void IExclusiveMode.Open() => OpenBuildPanel();
+    void IExclusiveMode.Close()
+    {
+        if (_isOpen)
+            CloseBuildPanel();
     }
 }

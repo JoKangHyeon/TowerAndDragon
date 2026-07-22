@@ -16,8 +16,8 @@ public class FactoryPopulationCoordinator : MonoBehaviour
             return;
         }
 
-        _gridMap.OnBuildingAdded += HandleBuildingAdded;
-        _gridMap.OnBuildingRemoving += HandleBuildingRemoving;
+        _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
+        _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoving);
     }
 
     private void OnDisable()
@@ -27,8 +27,8 @@ public class FactoryPopulationCoordinator : MonoBehaviour
             return;
         }
 
-        _gridMap.OnBuildingAdded -= HandleBuildingAdded;
-        _gridMap.OnBuildingRemoving -= HandleBuildingRemoving;
+        _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingAdded);
+        _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingRemoving);
     }
 
     private void HandleBuildingAdded(Building building)

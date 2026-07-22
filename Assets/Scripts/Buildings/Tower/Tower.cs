@@ -46,12 +46,12 @@ public class Tower : Building, IMonsterTarget
 
         if (_isInitialized)
         {
-            _health.Died -= HandleDisabled;
+            _health.Died.RemoveListener(HandleDisabled);
         }
 
         _towerData = data;
         _health.Initialize(_towerData.MaxHealth);
-        _health.Died += HandleDisabled;
+        _health.Died.AddListener(HandleDisabled);
         _attack.Initialize(_towerData);
         _isInitialized = true;
     }
@@ -139,7 +139,7 @@ public class Tower : Building, IMonsterTarget
 
         if (_health != null)
         {
-            _health.Died -= HandleDisabled;
+            _health.Died.RemoveListener(HandleDisabled);
         }
     }
 }

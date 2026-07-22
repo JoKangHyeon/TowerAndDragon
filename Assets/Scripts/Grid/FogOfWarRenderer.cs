@@ -46,13 +46,13 @@ public class FogOfWarRenderer : MonoBehaviour
         await UniTask.Yield(cancellationToken);
 
         PaintAllCells();
-        _gridMap.OnCellChanged += HandleCellChanged;
+        _gridMap.OnCellChanged.AddListener(HandleCellChanged);
     }
 
     private void OnDestroy()
     {
         if (_gridMap != null)
-            _gridMap.OnCellChanged -= HandleCellChanged;
+            _gridMap.OnCellChanged.RemoveListener(HandleCellChanged);
     }
 
     private void PaintAllCells()

@@ -1,5 +1,5 @@
-using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// 아침 정산의 실행 시점과 단계별 호출 순서를 관리한다.
@@ -10,7 +10,7 @@ public class DailySettlementManager : MonoBehaviour
     [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private PopulationUpkeepSystem _populationUpkeepSystem;
 
-    public event Action<int, PopulationUpkeepResult> SettlementCompleted;
+    public UnityEvent<int, PopulationUpkeepResult> SettlementCompleted;
 
     private void OnEnable()
     {

@@ -72,7 +72,7 @@ public class UI_IngameWindow : MonoBehaviour
 
         if (_resourceManager != null)
         {
-            _resourceManager.ResourceChanged += RenderResource;
+            _resourceManager.ResourceChanged.AddListener(RenderResource);
             RenderAllResources();
         }
     }
@@ -94,7 +94,7 @@ public class UI_IngameWindow : MonoBehaviour
 
         if (_resourceManager != null)
         {
-            _resourceManager.ResourceChanged -= RenderResource;
+            _resourceManager.ResourceChanged.RemoveListener(RenderResource);
         }
     }
 

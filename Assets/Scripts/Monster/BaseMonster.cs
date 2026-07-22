@@ -51,7 +51,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
         _mainCastle = mainCastle != null ? mainCastle.GetComponent<Castle>() : null;
 
         _health.Initialize(_data.MaxHealth);
-        _health.Died += HandleDeath;
+        _health.Died.AddListener(HandleDeath);
 
         if (_shield != null && _data.HasShield)
         {
@@ -126,7 +126,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
                 break;
         }
 
-        _movement.Arrived += HandleArrivedAtCastle;
+        _movement.Arrived.AddListener(HandleArrivedAtCastle);
         _movement.Begin();
     }
 
@@ -155,12 +155,12 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
 
         if (_health != null)
         {
-            _health.Died -= HandleDeath;
+            _health.Died.RemoveListener(HandleDeath);
         }
 
         if (_movement != null)
         {
-            _movement.Arrived -= HandleArrivedAtCastle;
+            _movement.Arrived.RemoveListener(HandleArrivedAtCastle);
         }
     }
 }

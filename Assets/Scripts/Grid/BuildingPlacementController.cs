@@ -69,13 +69,13 @@ public class BuildingPlacementController : MonoBehaviour
             return;
         }
 
-        _gridMap.OnCellChanged += HandleCellChanged;
+        _gridMap.OnCellChanged.AddListener(HandleCellChanged);
     }
 
     private void OnDestroy()
     {
         if (_gridMap != null)
-            _gridMap.OnCellChanged -= HandleCellChanged;
+            _gridMap.OnCellChanged.RemoveListener(HandleCellChanged);
     }
 
     private void HandleCellChanged(GridCell cell) => RefreshOccupiedOverlay();

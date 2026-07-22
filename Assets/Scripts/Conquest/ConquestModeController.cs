@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 
 // 점령 모드 진입/청크 선택을 담당한다. 건설 모드(BuildingPlacementController)와 동일한
 // 입력 처리 패턴(InputActionReference Enable/Disable, 포인터-오버-UI 가드)을 따른다.
-public class ConquestModeController : MonoBehaviour
+public class ConquestModeController : MonoBehaviour, IExclusiveMode
 {
     [SerializeField]
     private GridMap _gridMap;
@@ -203,4 +203,8 @@ public class ConquestModeController : MonoBehaviour
                 target.Add(cell.Coord);
         }
     }
+
+    bool IExclusiveMode.IsOpen => IsActive;
+    void IExclusiveMode.Open() => SetConquestModeActive(true);
+    void IExclusiveMode.Close() => SetConquestModeActive(false);
 }
