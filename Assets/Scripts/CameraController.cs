@@ -214,6 +214,7 @@ public class CameraController : MonoBehaviour
     private void HandleZoom()
     {
         if (Mouse.current == null) return;
+        if (IsPointerOverUI()) return;
 
         float scroll = Mouse.current.scroll.ReadValue().y;
         if (Mathf.Abs(scroll) < SCROLL_DEADZONE) return;
