@@ -30,6 +30,10 @@ public class BuildingPlacementController : MonoBehaviour
 
     public bool IsMoving => _moveSourceCoord.HasValue;
 
+    // 점령 모드 등 다른 모드가 켜져 있을 때 이 컨트롤러의 클릭 처리를 막는다.
+    // (컴포넌트를 비활성화하면 공유 입력 액션까지 Disable되므로, 입력만 선택적으로 억제한다.)
+    public bool InputSuppressed { get; set; }
+
     public Building SelectedBuilding
     {
         get
@@ -96,6 +100,10 @@ public class BuildingPlacementController : MonoBehaviour
 
     private void Update()
     {
+        // 다른 모드(점령 등)가 클릭을 점유 중이면 건물 배치/선택 입력을 처리하지 않는다.
+        if (InputSuppressed)
+            return;
+
         HandlePlacementInput();
         HandleMoveCancelInput();
         HandleLongPressMove();
