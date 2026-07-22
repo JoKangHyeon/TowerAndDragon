@@ -1,5 +1,8 @@
 using UnityEngine;
 #if UNITY_EDITOR
+using System;
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine.InputSystem;
 #endif
 
@@ -28,6 +31,13 @@ public class ResourceNodeDebugger : MonoBehaviour
     private const float MIN_OVERLAY_ALPHA = 0.6f;
     private const float MAX_OVERLAY_ALPHA = 1f;
 
+    [Serializable]
+    private struct ResourceYieldEntry
+    {
+        public ResourceType Resource;
+        public int Yield;
+    }
+
     [Header("디버그 - 마우스로 선택한 셀의 자원 노드")]
     [SerializeField]
     private Vector3Int _debugSelectedCellCoord;
@@ -37,6 +47,9 @@ public class ResourceNodeDebugger : MonoBehaviour
 
     [SerializeField]
     private int _debugSelectedBaseYield;
+
+    [SerializeField]
+    private List<ResourceYieldEntry> _debugYieldByResource = new();
 
     private void Awake()
     {
@@ -66,7 +79,29 @@ public class ResourceNodeDebugger : MonoBehaviour
         _debugSelectedResourceNodes = resourceNodes;
         _debugSelectedBaseYield = baseYield;
 
-        Debug.Log($"[ResourceNodeDebugger] 선택 셀 {coord} - 자원 노드: {resourceNodes}, 생산량: {baseYield}");
+        _debugYieldByResource.Clear();
+        var sb = new StringBuilder();
+        sb.Append($"[ResourceNodeDebugger] 선택 셀 {coord} - 자원 노드: {resourceNodes}, 기본 생산력: {baseYield}");
+
+        bool first = true;
+        foreach (ResourceType flag in EnumerateResourceFlags(resourceNodes))
+        {
+            int yield = _gridMap.GetYield(coord, flag);
+            _debugYieldByResource.Add(new ResourceYieldEntry { Resource = flag, Yield = yield });
+            sb.Append(first ? $" | {flag}: {yield}" : $", {flag}: {yield}");
+            first = false;
+        }
+
+        Debug.Log(sb.ToString());
+    }
+
+    private static IEnumerable<ResourceType> EnumerateResourceFlags(ResourceType flags)
+    {
+        foreach (ResourceType value in (ResourceType[])Enum.GetValues(typeof(ResourceType)))
+        {
+            if (value != ResourceType.None && (flags & value) != 0)
+                yield return value;
+        }
     }
 
     // 전체 셀을 순회하며 자원 노드가 있는 셀마다 색칠된 오버레이를 깐다 - Play 모드 진입 즉시 게임 뷰에서 바로 보인다.

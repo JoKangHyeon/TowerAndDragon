@@ -4,6 +4,9 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "TowerAndDragon/Resource Production Data")]
 public class ResourceProductionData : ScriptableObject
 {
+    [Tooltip("빌드모드 슬롯에 표시할 이름 로컬라이제이션 키.")]
+    [SerializeField] private string _nameLocKey;
+
     [Tooltip("이 생산시설을 지으려면 풋프린트 전체 셀이 가져야 하는 자원 플래그.")]
     [SerializeField] private ResourceType _requiredResourceNode;
 
@@ -13,6 +16,7 @@ public class ResourceProductionData : ScriptableObject
     [Tooltip("배치 가능한 최대 인구.")]
     [SerializeField] private int _populationCapacity;
 
+    public string NameLocKey => _nameLocKey;
     public ResourceType RequiredResourceNode => _requiredResourceNode;
     public ResourceType ProducedResourceType => _producedResourceType;
     public int PopulationCapacity => _populationCapacity;

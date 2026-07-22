@@ -1,7 +1,6 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine.Tilemaps;
 
 public class GridMap : MonoBehaviour
@@ -37,6 +36,11 @@ public class GridMap : MonoBehaviour
 
     // 청크
     private Dictionary<Vector2Int, Chunk> _chunks = new();
+
+    private Dictionary<Vector2Int, Vector3> _chunkCenterWorldCache = new();
+    private Dictionary<Vector2Int, int> _chunkBaseYieldCache = new();
+
+    private readonly HashSet<Vector2Int> _touchedChunksBuffer = new();
 
     // 그리드 셀의 상태 변경 이벤트 - 건물 배치, 건물 파괴, 적 진입
     public event Action<GridCell> OnCellChanged;
@@ -99,10 +103,13 @@ public class GridMap : MonoBehaviour
     {
         foreach (Chunk chunk in _chunks.Values)
         {
+            int chunkBaseYieldSum = 0;
+
             foreach (GridCell cell in chunk.Cells)
             {
                 int baseYield = CalculateDistanceYield(cell.Coord);
                 cell.SetBaseYield(baseYield);
+                chunkBaseYieldSum += baseYield;
 
                 foreach (ResourceType resourceType in EnumerateResourceFlags(cell.AvailableResourceNodes))
                 {
@@ -113,6 +120,8 @@ public class GridMap : MonoBehaviour
                     cell.SetYield(resourceType, Mathf.RoundToInt(baseYield * multiplier));
                 }
             }
+
+            _chunkBaseYieldCache[chunk.ChunkCoord] = chunkBaseYieldSum;
         }
     }
 
@@ -133,10 +142,13 @@ public class GridMap : MonoBehaviour
         return BASELINE_YIELD + bonus;
     }
 
+    private static readonly ResourceType[] ALL_RESOURCE_FLAGS =
+        (ResourceType[])Enum.GetValues(typeof(ResourceType));
+
     // AvailableResourceNodes([Flags])에 실제로 켜진 개별 자원 비트만 순회한다.
     private static IEnumerable<ResourceType> EnumerateResourceFlags(ResourceType flags)
     {
-        foreach (ResourceType value in (ResourceType[])Enum.GetValues(typeof(ResourceType)))
+        foreach (ResourceType value in ALL_RESOURCE_FLAGS)
         {
             if (value != ResourceType.None && (flags & value) == value)
                 yield return value;
@@ -170,6 +182,18 @@ public class GridMap : MonoBehaviour
         foreach (var pair in grouped)
         {
             _chunks[pair.Key] = new Chunk(pair.Key, pair.Value);
+        }
+
+        foreach (var pair in _chunks)
+        {
+            Chunk chunk = pair.Value;
+            if (chunk.Cells.Count == 0)
+                continue;
+
+            Vector3 sum = Vector3.zero;
+            foreach (GridCell cell in chunk.Cells)
+                sum += ConvertGridToWorld(cell.Coord);
+            _chunkCenterWorldCache[pair.Key] = sum / chunk.Cells.Count;
         }
 
         Debug.Log($"[GridMap] 청크 생성 완료 - 청크 개수: {_chunks.Count}");
@@ -237,11 +261,21 @@ public class GridMap : MonoBehaviour
     public int GetBaseYield(Vector3Int coord) =>
         _cells.TryGetValue(coord, out GridCell cell) ? cell.BaseYield : 0;
 
+    // 디버그 전용 - 특정 셀의 자원별 실제 생산량(청크 배율 적용 후, 연구 강화 미적용).
+    public int GetYield(Vector3Int coord, ResourceType resourceType) =>
+        _cells.TryGetValue(coord, out GridCell cell) ? cell.GetYield(resourceType) : 0;
+
     public Building GetBuildingAt(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.OccupantBuilding : null;
 
-     public List<Vector3Int> GetAllOccupiedCoords() =>
-        _cells.Values.Where(cell => cell.HasBuilding).Select(cell => cell.Coord).ToList();
+    public List<Vector3Int> GetAllOccupiedCoords()
+    {
+        var result = new List<Vector3Int>();
+        foreach (List<GridCell> footprint in _buildingFootprintCells.Values)
+            foreach (GridCell cell in footprint)
+                result.Add(cell.Coord);
+        return result;
+    }
 
     public Chunk GetChunkAt(Vector3Int cellCoord)
     {
@@ -290,18 +324,8 @@ public class GridMap : MonoBehaviour
     public Chunk GetChunk(Vector2Int chunkCoord) =>
         _chunks.TryGetValue(chunkCoord, out Chunk chunk) ? chunk : null;
 
-    public Vector3 GetChunkCenterWorld(Vector2Int chunkCoord)
-    {
-        Chunk chunk = GetChunk(chunkCoord);
-        if (chunk == null || chunk.Cells.Count == 0)
-            return Vector3.zero;
-
-        Vector3 sum = Vector3.zero;
-        foreach (GridCell cell in chunk.Cells)
-            sum += ConvertGridToWorld(cell.Coord);
-
-        return sum / chunk.Cells.Count;
-    }
+    public Vector3 GetChunkCenterWorld(Vector2Int chunkCoord) =>
+        _chunkCenterWorldCache.TryGetValue(chunkCoord, out Vector3 center) ? center : Vector3.zero;
 
     public IEnumerable<Chunk> GetAdjacentChunks(Vector2Int chunkCoord)
     {
@@ -480,6 +504,10 @@ public class GridMap : MonoBehaviour
         return true;
     }
 
+    // 단일 셀이 자원 요건을 만족하는지 외부에서 조회할 수 있도록 공개한 버전(MouseSelectController 풋프린트 미리보기에서 셀별 색상 구분에 사용).
+    public bool CellSatisfiesResourceRequirement(Vector3Int coord, ResourceType requiredResourceNode) =>
+        _cells.TryGetValue(coord, out GridCell cell) && SatisfiesResourceRequirement(cell, requiredResourceNode);
+
     private bool SatisfiesResourceRequirement(GridCell cell, ResourceType requiredResourceNode) =>
         cell.HasResourceNode(requiredResourceNode) ||
         (ResearchUnlockQuery != null && ResearchUnlockQuery.IsUnlocked(ToChunkCoord(cell.Coord), requiredResourceNode));
@@ -511,9 +539,11 @@ public class GridMap : MonoBehaviour
         if (!_cells.TryGetValue(coord, out GridCell cell) || !cell.HasBuilding)
             return new List<Vector3Int>();
 
-        return _buildingFootprintCells[cell.OccupantBuilding]
-            .Select(footprintCell => footprintCell.Coord)
-            .ToList();
+        List<GridCell> footprint = _buildingFootprintCells[cell.OccupantBuilding];
+        var result = new List<Vector3Int>(footprint.Count);
+        foreach (GridCell footprintCell in footprint)
+            result.Add(footprintCell.Coord);
+        return result;
     }
 
     // 생산시설의 실제 생산량 - footprint에 속한 각 셀이 보유한 자원별 생산량(GridCell._yields)을 합산하고,
@@ -524,17 +554,17 @@ public class GridMap : MonoBehaviour
             return 0;
 
         int total = 0;
-        var touchedChunks = new HashSet<Vector2Int>();
+        _touchedChunksBuffer.Clear();
 
         foreach (GridCell cell in footprint)
         {
             total += cell.GetYield(resourceType);
-            touchedChunks.Add(ToChunkCoord(cell.Coord));
+            _touchedChunksBuffer.Add(ToChunkCoord(cell.Coord));
         }
 
         if (YieldBonusQuery != null)
         {
-            foreach (Vector2Int chunkCoord in touchedChunks)
+            foreach (Vector2Int chunkCoord in _touchedChunksBuffer)
                 total += YieldBonusQuery.GetYieldBonus(chunkCoord, resourceType);
         }
 
@@ -542,18 +572,8 @@ public class GridMap : MonoBehaviour
     }
 
     // 점령 UI 리워드 패널 등 표시 전용 - 자원별 배율을 적용하지 않은 청크 전체의 원시 생산력 합계다.
-    public int GetChunkBaseYield(Vector2Int chunkCoord)
-    {
-        Chunk chunk = GetChunk(chunkCoord);
-        if (chunk == null)
-            return 0;
-
-        int total = 0;
-        foreach (GridCell cell in chunk.Cells)
-            total += cell.BaseYield;
-
-        return total;
-    }
+    public int GetChunkBaseYield(Vector2Int chunkCoord) =>
+        _chunkBaseYieldCache.TryGetValue(chunkCoord, out int total) ? total : 0;
 
     public void RemoveBuilding(Vector3Int coord)
     {
@@ -568,15 +588,15 @@ public class GridMap : MonoBehaviour
         OnBuildingRemoving?.Invoke(building);
 
         List<GridCell> footprint = _buildingFootprintCells[building];
+        _buildingFootprintCells.Remove(building);
 
         foreach (GridCell footprintCell in footprint)
-        {
             footprintCell.RemoveBuilding();
-            OnCellChanged?.Invoke(footprintCell);
-        }
 
-        Debug.Log($"[GridMap] RemoveBuilding - 해제된 칸: {footprint.Count}, 건물의 실제 footprint 칸: {building.FootprintShape.GetOccupiedOffsets().Count()}");
-        _buildingFootprintCells.Remove(building);
+        foreach (GridCell footprintCell in footprint)
+            OnCellChanged?.Invoke(footprintCell);
+
+        Debug.Log($"[GridMap] RemoveBuilding - 해제된 칸: {footprint.Count}");
         Destroy(building.gameObject);
     }
 
@@ -602,21 +622,22 @@ public class GridMap : MonoBehaviour
             return false;
 
         foreach (GridCell footprintCell in oldFootprint)
-        {
             footprintCell.RemoveBuilding();
-            OnCellChanged?.Invoke(footprintCell);
-        }
 
         building.transform.position = GetFootprintCenterWorld(nextCoord, building.FootprintShape) + building.PlacementOffset;
 
         foreach (GridCell footprintCell in newFootprint)
-        {
             footprintCell.PlaceBuilding(building);
+
+        _buildingFootprintCells[building] = newFootprint;
+
+        foreach (GridCell footprintCell in oldFootprint)
             OnCellChanged?.Invoke(footprintCell);
-        }
+
+        foreach (GridCell footprintCell in newFootprint)
+            OnCellChanged?.Invoke(footprintCell);
 
         Debug.Log($"[GridMap] MoveBuilding - {prevCoord} -> {nextCoord}, 칸 수: {newFootprint.Count}");
-        _buildingFootprintCells[building] = newFootprint;
         return true;
     }
 

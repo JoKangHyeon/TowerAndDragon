@@ -28,6 +28,9 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private Color _occupiedOverlayColor = new Color(1f, 0f, 0f, 0.35f);
 
+    [SerializeField]
+    private Color _missingResourceTint = new Color(1f, 0.6f, 0f);
+
     private Camera _cam;
     private ComponentPool<SpriteRenderer> _highlightPool;
     private ComponentPool<SpriteRenderer> _occupiedOverlayPool;
@@ -122,8 +125,35 @@ public class MouseSelectController : MonoBehaviour
     private Vector3Int GetFootprintAnchor(Vector3Int hoveredCell, FootprintShape shape) =>
         hoveredCell - shape.CenterOffset;
 
+    // Factory일 때 셀별 색상 의미:
+    //   초록  — 지형 건설 가능 + 요구 자원 노드 보유 → 배치 가능
+    //   주황  — 지형 건설 가능이지만 요구 자원 노드 없음 → 이 Factory 종류만 배치 불가
+    //   빨강  — 점유되거나 지형이 건설 불가 → 어떤 건물도 배치 불가
     private void DrawFootprint(List<Vector3Int> footprint, bool canConstruct)
     {
+        if (_selectedBuildingRef is Factory factory)
+        {
+            ResourceType required = factory.RequiredResourceNode;
+
+            for (int i = 0; i < footprint.Count; i++)
+            {
+                SpriteRenderer highlight = _highlightPool.Get(i);
+                Vector3 cellPos = _gridMap.ConvertGridToWorld(footprint[i]);
+                cellPos.y += _yOffset;
+                highlight.transform.position = cellPos;
+
+                if (!_gridMap.CanConstructBuilding(footprint[i], _selectedBuildingRef))
+                    highlight.color = Color.red;
+                else if (!_gridMap.CellSatisfiesResourceRequirement(footprint[i], required))
+                    highlight.color = _missingResourceTint;
+                else
+                    highlight.color = Color.green;
+            }
+
+            _highlightPool.DeactivateFrom(footprint.Count);
+            return;
+        }
+
         Color highlightColor = canConstruct ? Color.green : Color.red;
         HighlightCells(footprint, highlightColor);
     }

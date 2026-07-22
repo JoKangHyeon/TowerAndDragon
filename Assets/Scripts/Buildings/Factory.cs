@@ -49,6 +49,8 @@ public class Factory : Building
         // 생산량은 이 생산시설의 footprint에 속한 셀들이 보유한 자원별 생산량의 합이다(GridMap.GetFootprintYield 참고).
         int footprintYield = _gridMap.GetFootprintYield(this, _data.ProducedResourceType);
         float staffingRatio = _population != null ? _population.StaffingRatio : 0f;
-        _resourceManager.Add(_data.ProducedResourceType, _data.CalculateYield(footprintYield, staffingRatio));
+        int produced = _data.CalculateYield(footprintYield, staffingRatio);
+        Debug.Log($"[Factory] {name} 정산 - footprintYield: {footprintYield}, staffingRatio: {staffingRatio:F2}, produced: {produced} ({_data.ProducedResourceType})");
+        _resourceManager.Add(_data.ProducedResourceType, produced);
     }
 }

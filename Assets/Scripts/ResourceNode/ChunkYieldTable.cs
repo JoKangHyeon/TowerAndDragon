@@ -26,25 +26,34 @@ public class ChunkYieldTable : ScriptableObject
 
     [SerializeField] private Entry[] _entries;
 
-    public float ResolveResourceMultiplier(Vector2Int chunkCoord, ResourceType resourceType)
+    private Dictionary<(Vector2Int, ResourceType), float> _cache;
+
+    private void EnsureCache()
     {
+        if (_cache != null)
+            return;
+
+        _cache = new Dictionary<(Vector2Int, ResourceType), float>();
+        if (_entries == null)
+            return;
+
         foreach (Entry entry in _entries)
         {
-            if (entry.ChunkCoord != chunkCoord)
+            if (entry.ResourceMultipliers == null)
                 continue;
 
-            if (entry.ResourceMultipliers == null)
-                return 1f;
-
-            foreach (ResourceMultiplierEntry multiplierEntry in entry.ResourceMultipliers)
-            {
-                if (multiplierEntry.ResourceType == resourceType)
-                    return multiplierEntry.Multiplier;
-            }
-
-            return 1f;
+            foreach (ResourceMultiplierEntry m in entry.ResourceMultipliers)
+                _cache[(entry.ChunkCoord, m.ResourceType)] = m.Multiplier;
         }
+    }
 
-        return 1f;
+#if UNITY_EDITOR
+    private void OnValidate() => _cache = null;
+#endif
+
+    public float ResolveResourceMultiplier(Vector2Int chunkCoord, ResourceType resourceType)
+    {
+        EnsureCache();
+        return _cache.TryGetValue((chunkCoord, resourceType), out float multiplier) ? multiplier : 1f;
     }
 }
