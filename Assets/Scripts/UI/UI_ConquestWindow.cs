@@ -223,9 +223,11 @@ public class UI_ConquestWindow : MonoBehaviour
             return;
         }
 
-        _conquestModeController.SetConquestModeActive(nextActive);
-
-        _uiManager.OpenExclusive(_conquestModeController);
+        // 켤 때는 UIManager를 거쳐 다른 배타 모드(건설 등)를 정리한다. 끌 때는 바로 끈다.
+        if (nextActive)
+            _uiManager.OpenExclusive(_conquestModeController);
+        else
+            _conquestModeController.SetConquestModeActive(false);
     }
 
     // ConquestModeController가 점령 가능한 청크를 클릭했을 때 호출하는 진입점.
