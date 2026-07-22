@@ -120,6 +120,9 @@ public class UI_ConquestWindow : MonoBehaviour
     [SerializeField]
     private ConquestModeController _conquestModeController;
 
+    [SerializeField]
+    private UIManager _uiManager;
+
     [Header("패널 열림/닫힘 연출")]
     [SerializeField]
     private float _slideDuration = 0.5f;
@@ -175,7 +178,10 @@ public class UI_ConquestWindow : MonoBehaviour
 
     public void ToggleConquestMode()
     {
-        _conquestModeController.SetConquestModeActive(!_conquestModeController.IsActive);
+        if (_conquestModeController.IsActive)
+            _conquestModeController.SetConquestModeActive(false);
+        else
+            _uiManager.OpenExclusive(_conquestModeController);
     }
 
     // ConquestModeController가 점령 가능한 청크를 클릭했을 때 호출하는 진입점.
