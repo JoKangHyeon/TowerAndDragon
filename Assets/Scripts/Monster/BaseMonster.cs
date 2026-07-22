@@ -65,7 +65,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
             0f,
             _enhancement.MaxHealth.Apply(_data.MaxHealth));
         _health.Initialize(maxHealth);
-        _health.Died += HandleDeath;
+        _health.Died.AddListener(HandleDeath);
 
         if (_shield != null && _data.HasShield)
         {
