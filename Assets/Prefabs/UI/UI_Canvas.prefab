@@ -130,7 +130,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 196090704533875161, guid: a72f18d9be1913c4ba1e5f796efaaa15, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 1.1495031
+      value: 0.0005020014
       objectReference: {fileID: 0}
     - target: {fileID: 974061594315192733, guid: a72f18d9be1913c4ba1e5f796efaaa15, type: 3}
       propertyPath: m_Name
@@ -364,6 +364,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8950973430069529632, guid: a72f18d9be1913c4ba1e5f796efaaa15, type: 3}
+      propertyPath: _buildButton
+      value: 
+      objectReference: {fileID: 4828921291314487639}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -804,8 +808,44 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8266691234962523830, guid: 9eee73abe496d824cb062beb4d5786ad, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7678819231077356130}
+    - targetCorrespondingSourceObject: {fileID: 8266691234962523830, guid: 9eee73abe496d824cb062beb4d5786ad, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8279410225203681215}
   m_SourcePrefab: {fileID: 100100000, guid: 9eee73abe496d824cb062beb4d5786ad, type: 3}
+--- !u!1 &1571844249896302291 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8266691234962523830, guid: 9eee73abe496d824cb062beb4d5786ad, type: 3}
+  m_PrefabInstance: {fileID: 7451627681907077221}
+  m_PrefabAsset: {fileID: 0}
+--- !u!225 &7678819231077356130
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1571844249896302291}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &8279410225203681215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1571844249896302291}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1610a74eceae784c9ba5f90319e9146, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_ButtonInteractableFade
+  _disabledAlpha: 0.4
 --- !u!114 &5354572978010979659 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3253353912659741998, guid: 9eee73abe496d824cb062beb4d5786ad, type: 3}
@@ -1592,3 +1632,14 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 5203282308667160987, guid: f908c939041044a459d5a135e39741fa, type: 3}
   m_PrefabInstance: {fileID: 7894278205759401133}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &4828921291314487639 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3354577436556348922, guid: f908c939041044a459d5a135e39741fa, type: 3}
+  m_PrefabInstance: {fileID: 7894278205759401133}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button

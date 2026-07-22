@@ -90,6 +90,9 @@ public class ConquestModeController : MonoBehaviour
         IsActive = isActive;
         _selectedChunkCoord = null;
 
+        // 점령 모드 동안에는 건물 배치 컨트롤러가 같은 클릭을 처리해 하이라이트를 지우지 못하도록 입력을 억제한다.
+        _buildingPlacementController.InputSuppressed = isActive;
+
         if (isActive)
         {
             _buildingPlacementController.CancelAll();
@@ -177,10 +180,19 @@ public class ConquestModeController : MonoBehaviour
         Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
         Chunk chunk = _gridMap.GetChunkAt(hoveredCell);
 
-        if (chunk == null || chunk.CurrentState != ChunkState.Visible || chunk.DominantTerrain == TerrainType.Default)
-            return;
+        bool isSelectableChunk = chunk != null
+            && chunk.CurrentState == ChunkState.Visible
+            && chunk.DominantTerrain != TerrainType.Default;
 
-        _conquestUI.OnChunkSelected(chunk.ChunkCoord);
+        if (isSelectableChunk)
+        {
+            _conquestUI.OnChunkSelected(chunk.ChunkCoord);
+            return;
+        }
+
+        // 선택 가능한 청크(그리드 표시가 뜬 곳)가 아닌 빈 공간을 클릭하면, 열려 있던 패널을 닫는다.
+        if (_isSelectionLocked)
+            _conquestUI.Close();
     }
 
     private static void AddChunkCellCoords(Chunk chunk, List<Vector3Int> target)
