@@ -58,18 +58,6 @@ public class BuildingPlacementController : MonoBehaviour
         }
     }
 
-    private void OnEnable()
-    {
-        if (_placeAction != null)
-            _placeAction.action.Enable();
-        
-        if (_cancelMoveAction != null)
-            _cancelMoveAction.action.Enable();
-        
-        if (_rotateAction != null)
-            _rotateAction.action.Enable();
-    }
-
     private void Awake()
     {
         if (_gridMap == null)
