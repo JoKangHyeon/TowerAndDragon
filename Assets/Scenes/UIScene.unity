@@ -493,6 +493,84 @@ MonoBehaviour:
   _conquestManager: {fileID: 710871206}
   _timerPrefab: {fileID: 8167959100412792240, guid: 630c54d8a18a0324498c6e7283d360f1, type: 3}
   _timerYOffset: 1
+--- !u!1 &359690075
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 359690079}
+  - component: {fileID: 359690078}
+  - component: {fileID: 359690077}
+  - component: {fileID: 359690076}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &359690076
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 359690075}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6058edc801175224292595a33c6f59d0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FactoryPopulationDebugGUI
+  _buildingPlacementController: {fileID: 1692054028}
+  _populationManager: {fileID: 914589614}
+  _cycleManager: {fileID: 914589611}
+--- !u!114 &359690077
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 359690075}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 479ea39f010d24543863878602c9f156, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FactoryResourceCoordinator
+  _gridMap: {fileID: 313449541}
+  _resourceManager: {fileID: 914589613}
+  _cycleManager: {fileID: 914589611}
+--- !u!114 &359690078
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 359690075}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0c52bfe7d2a9b048b5ca74e131e0dfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FactoryPopulationCoordinator
+  _gridMap: {fileID: 313449541}
+  _populationManager: {fileID: 914589614}
+--- !u!4 &359690079
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 359690075}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 417.34912, y: 409.50888, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &375627430
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12120,6 +12198,9 @@ MonoBehaviour:
   _mouseSelectController: {fileID: 1748892985}
   _placeAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cancelMoveAction: {fileID: -4090225696740746782, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _rotateAction: {fileID: 5325525921045608398, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _resourceManager: {fileID: 914589613}
+  _cycleManager: {fileID: 914589611}
   _moveHoldDuration: 2
 --- !u!4 &1692054029
 Transform:
@@ -12919,6 +13000,22 @@ PrefabInstance:
       propertyPath: _buildingPlacementController
       value: 
       objectReference: {fileID: 1692054028}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _filterTabs.Array.data[2].Buildings.Array.size
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[2].Buildings.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2529574679051624168, guid: 0757c15bc65c21841894cc8708558e44, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[2].Buildings.Array.data[1]'
+      value: 
+      objectReference: {fileID: 4211619759114365390, guid: 5e00ea73d80027940a0eef61e66fbf14, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[2].Buildings.Array.data[2]'
+      value: 
+      objectReference: {fileID: 1774243555800913366, guid: e76c64026a56db641bf0ea27093136ce, type: 3}
     - target: {fileID: 6007715785824057375, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -13231,3 +13328,4 @@ SceneRoots:
   - {fileID: 1840727303}
   - {fileID: 2050914424}
   - {fileID: 375627430}
+  - {fileID: 359690079}
