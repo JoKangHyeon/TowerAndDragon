@@ -1222,6 +1222,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2426799609749584309, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _cycleManager
+      value: 
+      objectReference: {fileID: 1205709760}
+    - target: {fileID: 2426799609749584309, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _resourceManager
       value: 
       objectReference: {fileID: 1205709759}
@@ -1303,7 +1307,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.00015390443
+      value: 0.00065840717
       objectReference: {fileID: 0}
     - target: {fileID: 3543463496763922537, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -1501,6 +1505,14 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5354572978010979659, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _uiManager
+      value: 
+      objectReference: {fileID: 993893987}
+    - target: {fileID: 5354572978010979659, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _cycleManager
+      value: 
+      objectReference: {fileID: 1205709760}
     - target: {fileID: 5354572978010979659, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _conquestManager
       value: 
@@ -1517,6 +1529,10 @@ PrefabInstance:
       propertyPath: _conquestModeController
       value: 
       objectReference: {fileID: 2003925185}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _uiManager
+      value: 
+      objectReference: {fileID: 993893987}
     - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _cycleManager
       value: 
@@ -12916,6 +12932,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dab5c7d4c32e743048dfca98e2d5914f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Splines::UnityEngine.Splines.SplineContainer
+--- !u!114 &993893987 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 516883971}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5db4aac255165ed4a83e68df370bf90c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIManager
 --- !u!1001 &1040295649
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12989,6 +13016,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1205709759}
     - target: {fileID: 8838851740384459434, guid: 95cfbe46075fb0a4daa3a07a8a9c5edb, type: 3}
+      propertyPath: _cancelMoveAction
+      value: 
+      objectReference: {fileID: -4090225696740746782, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    - target: {fileID: 8838851740384459434, guid: 95cfbe46075fb0a4daa3a07a8a9c5edb, type: 3}
       propertyPath: _mouseSelectController
       value: 
       objectReference: {fileID: 460916810}
@@ -13055,6 +13086,9 @@ MonoBehaviour:
   - {fileID: 740621128}
   _resourceManager: {fileID: 1205709759}
   _skillManager: {fileID: 1205709758}
+  GameOverOccurred:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &1205709758
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13091,6 +13125,9 @@ MonoBehaviour:
     Amount: 25
   - Type: 4
     Amount: 25
+  ResourceChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &1205709760
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -13173,6 +13210,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PopulationManager
   _maxPopulation: 40
+  PopulationChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &1205709765
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14615,6 +14655,7 @@ MonoBehaviour:
   - {fileID: 1463135023}
   - {fileID: 1225447684}
   - {fileID: 453765926}
+  _enemyEnhancementManager: {fileID: 0}
   _allSpawnCompleted:
     m_PersistentCalls:
       m_Calls: []

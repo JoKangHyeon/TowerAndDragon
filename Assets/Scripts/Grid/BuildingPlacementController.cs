@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using NUnit.Framework.Constraints;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -13,7 +14,6 @@ public class BuildingPlacementController : MonoBehaviour
 
     [SerializeField]
     private InputActionReference _placeAction;
-
     [SerializeField]
     private InputActionReference _cancelMoveAction;
 
@@ -56,6 +56,18 @@ public class BuildingPlacementController : MonoBehaviour
 
             return null;
         }
+    }
+
+    private void OnEnable()
+    {
+        if (_placeAction != null)
+            _placeAction.action.Enable();
+        
+        if (_cancelMoveAction != null)
+            _cancelMoveAction.action.Enable();
+        
+        if (_rotateAction != null)
+            _rotateAction.action.Enable();
     }
 
     private void Awake()
