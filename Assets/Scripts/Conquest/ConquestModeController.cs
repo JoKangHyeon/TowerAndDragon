@@ -35,10 +35,15 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
     [SerializeField]
     private Color _blockedHighlightColor = Color.red;
 
+    [Tooltip("누른 뒤 이 픽셀 이상 포인터가 움직이면 클릭이 아니라 드래그로 간주해 선택/닫힘을 무시한다.")]
+    [SerializeField]
+    private float _dragThreshold = 10f;
+
     public bool IsActive { get; private set; }
 
     private Vector2Int? _selectedChunkCoord;
     private bool _isSelectionLocked;
+    private Vector2 _pressScreenPosition;
 
     private readonly List<Vector3Int> _conquerableBuffer = new();
     private readonly List<Vector3Int> _blockedBuffer = new();
@@ -171,7 +176,20 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
 
     private void HandleSelectInput()
     {
-        if (_selectAction == null || !_selectAction.action.WasPerformedThisFrame())
+        if (_selectAction == null)
+            return;
+
+        // 누른 순간의 포인터 위치를 기록해 둔다.
+        if (_selectAction.action.WasPressedThisFrame())
+        {
+            _pressScreenPosition = PointerScreenPosition();
+        }
+
+        // 판정은 뗄 때 한다. 누른 지점에서 임계값 이상 움직였으면 드래그로 보고 선택/닫힘을 무시한다.
+        if (!_selectAction.action.WasReleasedThisFrame())
+            return;
+
+        if (Vector2.Distance(_pressScreenPosition, PointerScreenPosition()) > _dragThreshold)
             return;
 
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
@@ -194,6 +212,9 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
         if (_isSelectionLocked)
             _conquestUI.Close();
     }
+
+    private static Vector2 PointerScreenPosition() =>
+        Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
 
     private static void AddChunkCellCoords(Chunk chunk, List<Vector3Int> target)
     {
