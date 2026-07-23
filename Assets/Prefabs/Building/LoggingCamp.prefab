@@ -28,8 +28,8 @@ Transform:
   m_GameObject: {fileID: 5953248875134837354}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.8, z: 0}
-  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  m_LocalPosition: {x: 0, y: 0.9, z: 0}
+  m_LocalScale: {x: 0.75, y: 0.7, z: 0.7}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -83,12 +83,12 @@ SpriteRenderer:
   m_SortingLayer: 1
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 8d93fd23661a4d488db549abcb909787, type: 3}
+  m_Sprite: {fileID: 4684753817636463934, guid: 9a043fa9e43189c4bbabecb51549f1e7, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 9.52, y: 8.93}
+  m_Size: {x: 2.66, y: 1.32}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -105,21 +105,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c20f11d4fa5c7d44ae9c11087232f53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Factory
-  _sprite: {fileID: 21300000, guid: 8d93fd23661a4d488db549abcb909787, type: 3}
+  _sprite: {fileID: 4684753817636463934, guid: 9a043fa9e43189c4bbabecb51549f1e7, type: 3}
   _footprintShape:
     _width: 2
     _height: 2
-    _cells: 01000101
+    _cells: 00010101
   _rotationSprites:
-  - {fileID: 21300000, guid: 8d93fd23661a4d488db549abcb909787, type: 3}
-  - {fileID: 21300000, guid: 6e45e437d1fa45f2bc02d561c5267673, type: 3}
-  - {fileID: 8329388513821539132, guid: 5d2cbbf15713dfd47a7d4817e59dfd65, type: 3}
-  - {fileID: 21300000, guid: 14a9f66f4cc5bc2479a797d95a62af1d, type: 3}
+  - {fileID: 4684753817636463934, guid: 9a043fa9e43189c4bbabecb51549f1e7, type: 3}
+  - {fileID: 393437954805892800, guid: f63ad395c3eb5d948b7c008b07bc5890, type: 3}
+  - {fileID: 1175653726508767672, guid: 6c14edd22949f98439bf9eff0d588817, type: 3}
+  - {fileID: -6866160976304411973, guid: 01e0ccffc448072448ad32c16077cf5e, type: 3}
   _rotationOffsets:
   - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
-  - {x: 0, y: 0, z: 0}
+  - {x: 0.23, y: -0.1, z: 0}
+  - {x: 0, y: -0.3, z: 0}
+  - {x: -0.3, y: -0.1, z: 0}
+  _rotationScales:
+  - {x: 1, y: 1, z: 1}
+  - {x: 1.15, y: 1, z: 1}
+  - {x: 1, y: 0.85, z: 0.9}
+  - {x: 1.15, y: 1, z: 1}
   _isMoveable: 1
   _isRemoveable: 1
   _data: {fileID: 11400000, guid: 24e2d73fabce5aa4d812d27358a38b36, type: 2}

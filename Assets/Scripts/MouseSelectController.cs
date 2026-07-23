@@ -154,7 +154,9 @@ public class MouseSelectController : MonoBehaviour
         }
 
         _ghostRenderer.sprite = ghostSprite;
-        _ghostRenderer.transform.localScale = _selectedBuildingRef.transform.localScale;
+        _ghostRenderer.transform.localScale = Vector3.Scale(
+            _selectedBuildingRef.BaseLocalScale,
+            _selectedBuildingRef.ResolveRotationScale(_previewRotationSteps));
         _ghostRenderer.gameObject.SetActive(ghostSprite != null);
     }
 

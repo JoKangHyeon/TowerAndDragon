@@ -406,6 +406,7 @@ public class GridMap : MonoBehaviour
             return;
 
         Vector3 baseOffset = prefab.transform.localPosition;
+        Vector3 baseScale = prefab.transform.localScale;
         Vector3 worldPos = GetFootprintCenterWorld(anchor, rotatedShape)
             + prefab.ComputePlacementOffset(rotationSteps)
             + ComputeRotationCompensation(prefab.BaseFootprintShape, rotationSteps);
@@ -416,6 +417,7 @@ public class GridMap : MonoBehaviour
             prefab.transform.rotation,
             transform);
         building.SetPlacementOffset(baseOffset);
+        building.SetBaseScale(baseScale);
         building.SetRotation(rotationSteps);
 
         foreach (GridCell cell in footprint)
