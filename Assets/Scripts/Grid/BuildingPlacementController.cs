@@ -330,6 +330,9 @@ public class BuildingPlacementController : MonoBehaviour
         if (_selectedBuilding == null)
             return false;
 
+        if (_selectedBuilding is ResearchLab && _gridMap.HasBuilding<ResearchLab>())
+            return false;
+
         if (!_gridMap.CanConstructBuildingFootprint(anchor, _mouseSelectController.CurrentFootprintShape, _selectedBuilding, null))
             return false;
 
@@ -356,6 +359,9 @@ public class BuildingPlacementController : MonoBehaviour
     {
         if (building is Factory factory && factory.Data != null)
             return factory.Data.BuildCost;
+
+        if (building is ResearchLab researchLab && researchLab.Data != null)
+            return researchLab.Data.BuildCost;
 
         return System.Array.Empty<ResourceAmount>();
     }

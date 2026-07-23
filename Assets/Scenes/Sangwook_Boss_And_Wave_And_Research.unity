@@ -262,8 +262,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MinimapController
   _minimapCamera: {fileID: 61071323}
   _followTarget: {fileID: 519420032}
-  _zoomInButton: {fileID: 1159675642}
-  _zoomOutButton: {fileID: 719163259}
+  _zoomInButton: {fileID: 0}
+  _zoomOutButton: {fileID: 0}
   _boundsTilemap: {fileID: 362517319}
   _excludedBoundsTile: {fileID: 11400000, guid: 04dcc34faf83a7741bbc4c530fc16ba6, type: 2}
   _boundsMarginMin: {x: 2, y: 0}
@@ -11502,17 +11502,6 @@ Transform:
   - {fileID: 271384823}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &719163259 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 5814063707487697221, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-  m_PrefabInstance: {fileID: 944163938}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!114 &802675912 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5952906172798228213, guid: a5f46e54304c76041916faa81b1dabdc, type: 3}
@@ -11613,6 +11602,8 @@ GameObject:
   - component: {fileID: 914589618}
   - component: {fileID: 914589620}
   - component: {fileID: 914589621}
+  - component: {fileID: 914589622}
+  - component: {fileID: 914589623}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -11684,6 +11675,8 @@ MonoBehaviour:
   - {fileID: 653192660}
   _resourceManager: {fileID: 914589613}
   _skillManager: {fileID: 914589614}
+  _gridMap: {fileID: 313449541}
+  _researchManager: {fileID: 914589622}
   GameOverOccurred:
     m_PersistentCalls:
       m_Calls: []
@@ -11827,6 +11820,45 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac9add762445ff643b9ee93be055861b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyEnhancementManager
+--- !u!114 &914589622
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914589609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ec9ae8012a782c4ca8c28ff96f118b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchManager
+  _tree: {fileID: 11400000, guid: 1bede9b5e5bcb6a4f94c373c83e397f7, type: 2}
+  _balance: {fileID: 11400000, guid: c3dcd05343aa2e241b228a947598d99f, type: 2}
+  _researchPointsChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  _nodeCompleted:
+    m_PersistentCalls:
+      m_Calls: []
+  _activeLabChanged:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &914589623
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914589609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b13bcfa7303f7a74b8c45f3e8e7d647b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchLabCoordinator
+  _gridMap: {fileID: 313449541}
+  _populationManager: {fileID: 914589617}
+  _cycleManager: {fileID: 914589611}
+  _researchManager: {fileID: 914589622}
 --- !u!1001 &944163938
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11923,6 +11955,10 @@ PrefabInstance:
       propertyPath: '_exclusiveModeBehaviours.Array.data[1]'
       value: 
       objectReference: {fileID: 335626714}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_exclusiveModeBehaviours.Array.data[2]'
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 669374298561851492, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -11940,6 +11976,22 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 669374298561851492, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 763191650868757594, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 763191650868757594, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 763191650868757594, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 763191650868757594, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
@@ -12252,6 +12304,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -0.00018691768
       objectReference: {fileID: 0}
@@ -12491,6 +12547,14 @@ PrefabInstance:
       propertyPath: _buildingPlacementController
       value: 
       objectReference: {fileID: 1692054028}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _filterTabs.Array.data[1].Buildings.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[1].Buildings.Array.data[1]'
+      value: 
+      objectReference: {fileID: 2590161527083323499, guid: 8222f6620528e5a4b92f289bb3931488, type: 3}
     - target: {fileID: 6007715785824057375, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -12788,6 +12852,22 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8050365807496547011, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8491139785342318434, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8491139785342318434, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8491139785342318434, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8491139785342318434, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
@@ -13176,17 +13256,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
---- !u!114 &1159675642 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1777162882844599745, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-  m_PrefabInstance: {fileID: 944163938}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!114 &1161439827 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6681738151754636705, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
@@ -13382,6 +13451,55 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 18, y: 10, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1541409401
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1541409403}
+  - component: {fileID: 1541409402}
+  m_Layer: 0
+  m_Name: ResearchLabDebugGUI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1541409402
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1541409401}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 408c28dc63cd80a43a9008f017083b8f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchLabDebugGUI
+  _buildingPlacementController: {fileID: 1692054028}
+  _populationManager: {fileID: 914589617}
+  _cycleManager: {fileID: 914589611}
+  _researchManager: {fileID: 914589622}
+  _resourceManager: {fileID: 914589613}
+--- !u!4 &1541409403
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1541409401}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -13716,6 +13834,9 @@ MonoBehaviour:
   _mouseSelectController: {fileID: 1748892985}
   _placeAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cancelMoveAction: {fileID: -4090225696740746782, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _rotateAction: {fileID: 0}
+  _resourceManager: {fileID: 914589613}
+  _cycleManager: {fileID: 914589611}
   _moveHoldDuration: 2
 --- !u!4 &1692054029
 Transform:
@@ -14201,3 +14322,4 @@ SceneRoots:
   - {fileID: 1335152523}
   - {fileID: 1780604710}
   - {fileID: 836876630}
+  - {fileID: 1541409403}
