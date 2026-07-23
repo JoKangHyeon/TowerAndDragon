@@ -9,4 +9,9 @@ public abstract class ResearchEffectSO : ScriptableObject
     {
         return 0f;
     }
+
+    public virtual float GetTowerDamageMultiplierBonus(TowerData towerData)
+    {
+        return 0f;
+    }
 }

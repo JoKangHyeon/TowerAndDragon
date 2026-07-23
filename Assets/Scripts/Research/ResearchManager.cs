@@ -2,10 +2,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
-public sealed class ResearchManager : MonoBehaviour, IChunkYieldMultiplierQuery
+public sealed class ResearchManager : MonoBehaviour,
+    IChunkYieldMultiplierQuery,
+    ITowerDamageMultiplierQuery
 {
     private const int FIRST_TIER = 1;
     private const float BASE_YIELD_MULTIPLIER = 1f;
+    private const float BASE_DAMAGE_MULTIPLIER = 1f;
 
     [SerializeField] private ResearchTreeData _tree;
     [SerializeField] private ResearchBalanceData _balance;
@@ -55,6 +58,8 @@ public sealed class ResearchManager : MonoBehaviour, IChunkYieldMultiplierQuery
         if (_gridMap != null)
         {
             _gridMap.YieldMultiplierQuery = this;
+            _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
+            _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoving);
         }
 
         _isConstructed = true;
@@ -70,6 +75,12 @@ public sealed class ResearchManager : MonoBehaviour, IChunkYieldMultiplierQuery
         if (_gridMap != null && ReferenceEquals(_gridMap.YieldMultiplierQuery, this))
         {
             _gridMap.YieldMultiplierQuery = null;
+        }
+
+        if (_gridMap != null)
+        {
+            _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingAdded);
+            _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingRemoving);
         }
     }
 
@@ -197,6 +208,45 @@ public sealed class ResearchManager : MonoBehaviour, IChunkYieldMultiplierQuery
         }
 
         return BASE_YIELD_MULTIPLIER + bonusRatio;
+    }
+
+    public float GetDamageMultiplier(TowerData towerData)
+    {
+        float bonusRatio = 0f;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    bonusRatio += effect.GetTowerDamageMultiplierBonus(towerData);
+                }
+            }
+        }
+
+        return BASE_DAMAGE_MULTIPLIER + bonusRatio;
+    }
+
+    private void HandleBuildingAdded(Building building)
+    {
+        if (building is Tower tower && tower.Attack != null)
+        {
+            tower.Attack.SetDamageMultiplierQuery(this);
+        }
+    }
+
+    private void HandleBuildingRemoving(Building building)
+    {
+        if (building is Tower tower && tower.Attack != null)
+        {
+            tower.Attack.SetDamageMultiplierQuery(null);
+        }
     }
 
     private void CacheNodes()

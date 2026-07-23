@@ -8,6 +8,7 @@ public class TowerAttack : MonoBehaviour
     private TowerData _towerData;
     private BaseMonster _target;
     private TowerPopulation _towerPopulation;
+    private ITowerDamageMultiplierQuery _damageMultiplierQuery;
     private float _nextAttackTime;
     private bool _isAttackEnabled;
 
@@ -38,6 +39,12 @@ public class TowerAttack : MonoBehaviour
         {
             _target = null;
         }
+    }
+
+    public void SetDamageMultiplierQuery(
+        ITowerDamageMultiplierQuery damageMultiplierQuery)
+    {
+        _damageMultiplierQuery = damageMultiplierQuery;
     }
 
     private void Update()
@@ -141,7 +148,11 @@ public class TowerAttack : MonoBehaviour
     /// </summary>
     private void Fire()
     {
-        AttackContext context = new AttackContext(gameObject);
+        float damageMultiplier = _damageMultiplierQuery != null
+            ? _damageMultiplierQuery.GetDamageMultiplier(_towerData)
+            : 1f;
+        var damageModifier = new ResolvedEnemyStatModifier(0f, damageMultiplier);
+        AttackContext context = new AttackContext(gameObject, damageModifier);
 
         if (!_towerData.HasProjectile)
         {
