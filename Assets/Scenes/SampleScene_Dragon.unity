@@ -549,8 +549,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MinimapController
   _minimapCamera: {fileID: 61071323}
   _followTarget: {fileID: 519420032}
-  _zoomInButton: {fileID: 1022406360}
-  _zoomOutButton: {fileID: 1873785693}
+  _zoomInButton: {fileID: 0}
+  _zoomOutButton: {fileID: 0}
   _boundsTilemap: {fileID: 362517319}
   _excludedBoundsTile: {fileID: 11400000, guid: 04dcc34faf83a7741bbc4c530fc16ba6, type: 2}
   _boundsMarginMin: {x: 2, y: 0}
@@ -1527,104 +1527,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
---- !u!1 &271384822
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 271384823}
-  - component: {fileID: 271384824}
-  - component: {fileID: 271384825}
-  m_Layer: 0
-  m_Name: Global Light 2D Night
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &271384823
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 271384822}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 698739218}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &271384824
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 271384822}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 073797afb82c5a1438f328866b10b3f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_ComponentVersion: 2
-  m_LightType: 4
-  m_BlendStyleIndex: 0
-  m_FalloffIntensity: 0.5
-  m_Color: {r: 0.23686199, g: 0.18382876, b: 0.764151, a: 1}
-  m_Intensity: 0.15
-  m_LightVolumeIntensity: 1
-  m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 00000000c14bcbb0
-  m_LightCookieSprite: {fileID: 0}
-  m_DeprecatedPointLightCookieSprite: {fileID: 0}
-  m_LightOrder: 0
-  m_AlphaBlendOnOverlap: 0
-  m_OverlapOperation: 0
-  m_NormalMapDistance: 3
-  m_NormalMapQuality: 2
-  m_UseNormalMap: 0
-  m_ShadowsEnabled: 0
-  m_ShadowIntensity: 0.75
-  m_ShadowSoftness: 0
-  m_ShadowSoftnessFalloffIntensity: 0.5
-  m_ShadowVolumeIntensityEnabled: 0
-  m_ShadowVolumeIntensity: 0.75
-  m_LocalBounds:
-    m_Center: {x: 0, y: -0.00000011920929, z: 0}
-    m_Extent: {x: 0.9985302, y: 0.99853027, z: 0}
-  m_PointLightInnerAngle: 360
-  m_PointLightOuterAngle: 360
-  m_PointLightInnerRadius: 0
-  m_PointLightOuterRadius: 1
-  m_ShapeLightParametricSides: 5
-  m_ShapeLightParametricAngleOffset: 0
-  m_ShapeLightParametricRadius: 1
-  m_ShapeLightFalloffSize: 0.5
-  m_ShapeLightFalloffOffset: {x: 0, y: 0}
-  m_ShapePath:
-  - {x: -0.5, y: -0.5, z: 0}
-  - {x: 0.5, y: -0.5, z: 0}
-  - {x: 0.5, y: 0.5, z: 0}
-  - {x: -0.5, y: 0.5, z: 0}
---- !u!114 &271384825
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 271384822}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7d5ca42874ae31b44b3603acb4cc4b17, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CycleLight
-  _isOnWhileDay: 0
 --- !u!114 &313449541 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7475151901225264468, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
@@ -1891,7 +1793,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1617401858}
+  m_Father: {fileID: 1170639988}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -2894,6 +2796,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CycleLight
   _isOnWhileDay: 1
+  _isSingleGlobalLight: 1
+  _nightColor: {r: 0.237, g: 0.184, b: 0.764, a: 1}
+  _nightIntensity: 0.15
+  _transitionDuration: 3
+  _duskColor: {r: 1, g: 0.55, b: 0.25, a: 1}
+  _duskWeight: 0.6
 --- !u!1001 &647269805
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13100,7 +13008,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 619394802}
-  - {fileID: 271384823}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!224 &798080076 stripped
@@ -14120,7 +14027,6 @@ MonoBehaviour:
   _cycleManager: {fileID: 914589611}
   _defaultLights:
   - {fileID: 619394803}
-  - {fileID: 271384825}
   - {fileID: 653192660}
   _resourceManager: {fileID: 914589613}
   _skillManager: {fileID: 914589614}
@@ -14262,6 +14168,7 @@ MonoBehaviour:
   _selectAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _conquerableHighlightColor: {r: 0, g: 1, b: 0, a: 1}
   _blockedHighlightColor: {r: 1, g: 0, b: 0, a: 1}
+  _dragThreshold: 10
 --- !u!1 &919338263
 GameObject:
   m_ObjectHideFlags: 0
@@ -14524,17 +14431,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1022406360 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1777162882844599745, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-  m_PrefabInstance: {fileID: 1170639987}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &1044757330
 GameObject:
   m_ObjectHideFlags: 0
@@ -15451,6 +15347,10 @@ PrefabInstance:
       value: -50
       objectReference: {fileID: 0}
     - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0.00009020814
       objectReference: {fileID: 0}
@@ -16309,12 +16209,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1521450988358325637, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3757406685910292537}
+    - targetCorrespondingSourceObject: {fileID: 1521450988358325637, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 434206450}
     - targetCorrespondingSourceObject: {fileID: 475306219085694650, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       insertIndex: 0
       addedObject: {fileID: 897230768}
-    - targetCorrespondingSourceObject: {fileID: 220407591354839264, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 434206450}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
 --- !u!224 &1170639988 stripped
@@ -17474,11 +17374,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!224 &1617401858 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 220407591354839264, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-  m_PrefabInstance: {fileID: 1170639987}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1692054027
 GameObject:
   m_ObjectHideFlags: 0
@@ -17512,6 +17407,9 @@ MonoBehaviour:
   _mouseSelectController: {fileID: 1748892985}
   _placeAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cancelMoveAction: {fileID: -4090225696740746782, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _rotateAction: {fileID: 0}
+  _resourceManager: {fileID: 0}
+  _cycleManager: {fileID: 0}
   _moveHoldDuration: 2
 --- !u!4 &1692054029
 Transform:
@@ -17866,17 +17764,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1856048988}
   m_CullTransparentMesh: 1
---- !u!114 &1873785693 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 5814063707487697221, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-  m_PrefabInstance: {fileID: 1170639987}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &1916084096
 GameObject:
   m_ObjectHideFlags: 0
