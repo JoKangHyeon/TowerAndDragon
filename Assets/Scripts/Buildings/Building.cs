@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -52,6 +53,13 @@ public class Building : MonoBehaviour
     public int ConstructedCycle { get; private set; }
 
     public void SetConstructedCycle(int cycle) => ConstructedCycle = cycle;
+
+    // 건설 비용 - 서브클래스가 자신의 Data 에셋(TowerData/ResourceProductionData 등)에서 override해 제공한다.
+    // 비용이 없는 건물(Castle 등 플레이어가 짓지 않는 건물)은 기본값(빈 배열)을 그대로 쓴다.
+    public virtual IReadOnlyList<ResourceAmount> BuildCost => System.Array.Empty<ResourceAmount>();
+
+    // 배치 가능 최대 인구 - BuildCost와 동일한 패턴으로 서브클래스가 자신의 Data 에셋에서 override해 제공한다.
+    public virtual int PopulationCapacity => 0;
 
     // 배치/재배치 시 footprint 중심에 더할 오프셋 - 재배치시 localposition 더해줄 때 누적됨 방지
     public Vector3 PlacementOffset => ComputePlacementOffset(_rotationSteps);

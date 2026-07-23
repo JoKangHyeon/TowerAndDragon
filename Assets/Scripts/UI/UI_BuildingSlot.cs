@@ -1,13 +1,23 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 // 빌드모드 창의 건물 슬롯 하나. 클릭하면 자신이 나타내는 건물을 선택하고,
-// 이름 텍스트에 건물 정보를 표시한다. (아이콘/스탯 등은 추후 추가 예정)
+// 이름 텍스트에 건물 정보와 건설 비용을 표시한다.
 [RequireComponent(typeof(Button))]
 public class UI_BuildingSlot : MonoBehaviour
 {
+    // 건설 비용 한 종류를 표시하는 칸(Stat/stat_resource_0N) 하나 - 인스펙터에서 4칸을 순서대로 연결한다.
+    [Serializable]
+    private struct CostStatSlot
+    {
+        public GameObject Root;
+        public Image IconImage;
+        public TMP_Text CountText;
+    }
+
     [Tooltip("건물 이름을 표시할 텍스트 (Slot의 Text_name).")]
     [SerializeField]
     private TMP_Text _nameText;
@@ -15,6 +25,18 @@ public class UI_BuildingSlot : MonoBehaviour
     [Tooltip("건물 아이콘을 표시할 이미지 (Slot의 icon).")]
     [SerializeField]
     private Image _iconImage;
+
+    [Tooltip("건설 비용을 표시할 칸(Stat/stat_resource_01~04). 최대 4종류까지 표시 가능.")]
+    [SerializeField]
+    private CostStatSlot[] _costStatSlots;
+
+    [Tooltip("건설 비용 자원의 아이콘을 조회할 카탈로그 에셋.")]
+    [SerializeField]
+    private ResourceCatalog _resourceCatalog;
+
+    [Tooltip("최대 할당 인원수를 표시할 텍스트 (Tower_stat/stat_people의 Text (TMP)).")]
+    [SerializeField]
+    private TMP_Text _populationCapacityText;
 
     private Building _prefab;
     private Action<Building> _onSelected;
@@ -41,6 +63,48 @@ public class UI_BuildingSlot : MonoBehaviour
         {
             _iconImage.sprite = icon;
         }
+
+        ApplyBuildCost(prefab.BuildCost);
+
+        if (_populationCapacityText != null)
+        {
+            _populationCapacityText.text = prefab.PopulationCapacity.ToString();
+        }
+    }
+
+    // 건설 비용을 칸에 채운다. 항목 수만큼만 칸을 켜고 나머지는 꺼서
+    // GridLayoutGroup이 비활성 칸을 건너뛰고 남은 칸끼리 자동으로 채우게 한다.
+    private void ApplyBuildCost(IReadOnlyList<ResourceAmount> cost)
+    {
+        if (_costStatSlots == null)
+            return;
+
+        for (int i = 0; i < _costStatSlots.Length; i++)
+        {
+            CostStatSlot slot = _costStatSlots[i];
+            bool hasEntry = i < cost.Count;
+
+            if (slot.Root != null)
+                slot.Root.SetActive(hasEntry);
+
+            if (!hasEntry)
+                continue;
+
+            if (slot.IconImage != null)
+                slot.IconImage.sprite = ResolveResourceIcon(cost[i].Type);
+
+            if (slot.CountText != null)
+                slot.CountText.text = cost[i].Amount.ToString();
+        }
+    }
+
+    // 자원 아이콘은 데이터 에셋(ResourceCatalog)이 단일 출처 - 종류로 조회한다.
+    private Sprite ResolveResourceIcon(ResourceType type)
+    {
+        if (_resourceCatalog != null && _resourceCatalog.TryGet(type, out ResourceData data))
+            return data.Icon;
+
+        return null;
     }
 
     // Buildings에 들어간 건물 프리팹의 실제 스프라이트(SpriteRenderer)를 얻는다.

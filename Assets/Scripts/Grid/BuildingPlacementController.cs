@@ -165,7 +165,7 @@ public class BuildingPlacementController : MonoBehaviour
         bool isSameDay = _cycleManager != null && building.ConstructedCycle == _cycleManager.CurrentCycleNumber;
         float refundRatio = isSameDay ? DEMOLISH_REFUND_RATIO_SAME_DAY : DEMOLISH_REFUND_RATIO_LATE;
 
-        IReadOnlyList<ResourceAmount> cost = ResolveBuildCost(building);
+        IReadOnlyList<ResourceAmount> cost = building.BuildCost;
         var refund = new ResourceAmount[cost.Count];
         for (int i = 0; i < cost.Count; i++)
         {
@@ -336,7 +336,7 @@ public class BuildingPlacementController : MonoBehaviour
         if (!_gridMap.CanConstructBuildingFootprint(anchor, _mouseSelectController.CurrentFootprintShape, _selectedBuilding, null))
             return false;
 
-        IReadOnlyList<ResourceAmount> cost = ResolveBuildCost(_selectedBuilding);
+        IReadOnlyList<ResourceAmount> cost = _selectedBuilding.BuildCost;
         if (_resourceManager != null && !_resourceManager.CanAfford(cost))
             return false;
 
