@@ -147,7 +147,8 @@ public class GridMap : MonoBehaviour
         (ResourceType[])Enum.GetValues(typeof(ResourceType));
 
     // AvailableResourceNodes([Flags])에 실제로 켜진 개별 자원 비트만 순회한다.
-    private static IEnumerable<ResourceType> EnumerateResourceFlags(ResourceType flags)
+    // Factory가 풋프린트에 걸친 여러 자원(슬라임 하위 타입 등)을 각각 정산할 때도 재사용한다 - Factory.OnSettlement 참고.
+    public static IEnumerable<ResourceType> EnumerateResourceFlags(ResourceType flags)
     {
         foreach (ResourceType value in ALL_RESOURCE_FLAGS)
         {
@@ -372,19 +373,31 @@ public class GridMap : MonoBehaviour
         }
     }
 
-    public void ConstructBuilding(Building prefab, Vector3Int anchor)
+    public void ConstructBuilding(Building prefab, Vector3Int anchor) =>
+        ConstructBuilding(prefab, anchor, prefab != null ? prefab.RotationSteps : 0);
+
+    public void ConstructBuilding(Building prefab, Vector3Int anchor, int rotationSteps)
     {
-        if (prefab == null || !TryGetFootprint(anchor, prefab.FootprintShape, out List<GridCell> footprint))
+        if (prefab == null)
             return;
 
-        Vector3 offset = prefab.transform.localPosition;
-        Vector3 worldPos = GetFootprintCenterWorld(anchor, prefab.FootprintShape) + offset;
+        FootprintShape rotatedShape = prefab.BaseFootprintShape.Rotated(rotationSteps);
+
+        if (!TryGetFootprint(anchor, rotatedShape, out List<GridCell> footprint))
+            return;
+
+        Vector3 baseOffset = prefab.transform.localPosition;
+        Vector3 worldPos = GetFootprintCenterWorld(anchor, rotatedShape)
+            + prefab.ComputePlacementOffset(rotationSteps)
+            + ComputeRotationCompensation(prefab.BaseFootprintShape, rotationSteps);
+
         Building building = Instantiate(
             prefab,
             worldPos,
             prefab.transform.rotation,
             transform);
-        building.SetPlacementOffset(offset);
+        building.SetPlacementOffset(baseOffset);
+        building.SetRotation(rotationSteps);
 
         foreach (GridCell cell in footprint)
         {
@@ -394,6 +407,22 @@ public class GridMap : MonoBehaviour
 
         _buildingFootprintCells[building] = footprint;
         OnBuildingAdded?.Invoke(building);
+    }
+
+    // 회전 스텝에 따라 가로/세로 축의 짝홀이 서로 바뀌면서 생기는 어긋남(FootprintShape.ParityMismatch 차이)을
+    // 실제 월드 좌표(아이소메트릭 셀 크기 반영)로 환산한다 - 회전해도 시각적 중심이 유지되도록 하는 자동 보정.
+    // 기준(회전 0)과의 차이이므로, 어떤 두 스텝 사이를 옮겨도(예: 1->3) 일관되게 성립한다.
+    public Vector3 ComputeRotationCompensation(FootprintShape baseShape, int rotationSteps)
+    {
+        if (baseShape == null)
+            return Vector3.zero;
+
+        Vector2 mismatchDelta = baseShape.ParityMismatch - baseShape.Rotated(rotationSteps).ParityMismatch;
+
+        Vector3 unitX = ConvertGridToWorld(Vector3Int.right) - ConvertGridToWorld(Vector3Int.zero);
+        Vector3 unitY = ConvertGridToWorld(Vector3Int.up) - ConvertGridToWorld(Vector3Int.zero);
+
+        return unitX * mismatchDelta.x + unitY * mismatchDelta.y;
     }
 
     // 타일맵 셀 좌표계의 정중앙 셀.
@@ -585,15 +614,17 @@ public class GridMap : MonoBehaviour
     public int GetChunkBaseYield(Vector2Int chunkCoord) =>
         _chunkBaseYieldCache.TryGetValue(chunkCoord, out int total) ? total : 0;
 
-    public void RemoveBuilding(Vector3Int coord)
+    // 실제로 제거됐는지 반환한다 - 호출자가 이 값을 몰라도 되면 부작용(환불 등)을 잘못된 시점에 실행하기 쉽다
+    // (예: 제거 불가 건물에도 건설 비용을 환불해버리는 실수).
+    public bool RemoveBuilding(Vector3Int coord)
     {
         if (!_cells.TryGetValue(coord, out var cell) || !cell.HasBuilding)
-            return;
+            return false;
 
         Building building = cell.OccupantBuilding;
 
         if (!building.IsRemoveable)
-            return;
+            return false;
 
         OnBuildingRemoving?.Invoke(building);
 
@@ -608,9 +639,13 @@ public class GridMap : MonoBehaviour
 
         Debug.Log($"[GridMap] RemoveBuilding - 해제된 칸: {footprint.Count}");
         Destroy(building.gameObject);
+        return true;
     }
 
-    public bool MoveBuilding(Vector3Int prevCoord, Vector3Int nextCoord)
+    public bool MoveBuilding(Vector3Int prevCoord, Vector3Int nextCoord) =>
+        MoveBuilding(prevCoord, nextCoord, GetBuildingAt(prevCoord)?.RotationSteps ?? 0);
+
+    public bool MoveBuilding(Vector3Int prevCoord, Vector3Int nextCoord, int rotationSteps)
     {
         if (!_cells.TryGetValue(prevCoord, out GridCell cell) || !cell.HasBuilding)
             return false;
@@ -623,9 +658,11 @@ public class GridMap : MonoBehaviour
         if (!_buildingFootprintCells.TryGetValue(building, out List<GridCell> oldFootprint))
             return false;
 
+        FootprintShape newShape = building.BaseFootprintShape.Rotated(rotationSteps);
+
         // TryGetFootprint가 기본 배치 가능 여부(CanConstruct·점유·점령)를 이미 전부 검사하므로 별도로 재검사하지 않는다.
         // Factory는 이미 확보한 셀 목록에 대해 자원 플래그 요구사항만 추가로 검사한다(좌표 재계산 없음).
-        if (!TryGetFootprint(nextCoord, building.FootprintShape, building, out List<GridCell> newFootprint))
+        if (!TryGetFootprint(nextCoord, newShape, building, out List<GridCell> newFootprint))
             return false;
 
         if (building is Factory factory && !AllCellsSatisfyResourceRequirement(newFootprint, factory.RequiredResourceNode))
@@ -634,7 +671,10 @@ public class GridMap : MonoBehaviour
         foreach (GridCell footprintCell in oldFootprint)
             footprintCell.RemoveBuilding();
 
-        building.transform.position = GetFootprintCenterWorld(nextCoord, building.FootprintShape) + building.PlacementOffset;
+        building.transform.position = GetFootprintCenterWorld(nextCoord, newShape)
+            + building.ComputePlacementOffset(rotationSteps)
+            + ComputeRotationCompensation(building.BaseFootprintShape, rotationSteps);
+        building.SetRotation(rotationSteps);
 
         foreach (GridCell footprintCell in newFootprint)
             footprintCell.PlaceBuilding(building);

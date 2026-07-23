@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using NUnit.Framework.Constraints;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -12,13 +14,21 @@ public class BuildingPlacementController : MonoBehaviour
 
     [SerializeField]
     private InputActionReference _placeAction;
-
     [SerializeField]
     private InputActionReference _cancelMoveAction;
+
+    [SerializeField]
+    private InputActionReference _rotateAction;
+
+    [SerializeField]
+    private ResourceManager _resourceManager;
 
     [Tooltip("타워를 이만큼(초) 꾹 누르고 있으면 이동 모드로 진입한다.")]
     [SerializeField]
     private float _moveHoldDuration = 2f;
+
+    // 건물 철거 시 건설 비용 중 돌려주는 비율.
+    private const float DEMOLISH_REFUND_RATIO = 0.7f;
 
     private Building _selectedBuilding;
     private Vector3Int? _selectedExistingBuildingCoord;
@@ -80,24 +90,6 @@ public class BuildingPlacementController : MonoBehaviour
 
     private void HandleCellChanged(GridCell cell) => RefreshOccupiedOverlay();
 
-    private void OnEnable()
-    {
-        if (_placeAction != null)
-            _placeAction.action.Enable();
-
-        if (_cancelMoveAction != null)
-            _cancelMoveAction.action.Enable();
-    }
-
-    private void OnDisable()
-    {
-        if (_placeAction != null)
-            _placeAction.action.Disable();
-
-        if (_cancelMoveAction != null)
-            _cancelMoveAction.action.Disable();
-    }
-
     private void Update()
     {
         // 다른 모드(점령 등)가 클릭을 점유 중이면 건물 배치/선택 입력을 처리하지 않는다.
@@ -107,6 +99,18 @@ public class BuildingPlacementController : MonoBehaviour
         HandlePlacementInput();
         HandleMoveCancelInput();
         HandleLongPressMove();
+        HandleRotateInput();
+    }
+
+    // 배치/이동 미리보기 중일 때만 회전을 적용한다 - 이동 버튼을 누르지 않고 건물만 선택한 상태에서는
+    // 회전이 적용되지 않는다(제자리 회전은 지원하지 않음, 회전하려면 이동 모드로 들어가야 함).
+    private void HandleRotateInput()
+    {
+        if (_rotateAction == null || !_rotateAction.action.WasPerformedThisFrame())
+            return;
+
+        if (_selectedBuilding != null || _moveSourceCoord.HasValue)
+            _mouseSelectController.RotatePreview();
     }
 
     public void SelectBuilding(Building prefab)
@@ -134,14 +138,38 @@ public class BuildingPlacementController : MonoBehaviour
             return;
 
         Building building = _gridMap.GetBuildingAt(_selectedExistingBuildingCoord.Value);
-
-        _gridMap.RemoveBuilding(_selectedExistingBuildingCoord.Value);
+        bool removed = _gridMap.RemoveBuilding(_selectedExistingBuildingCoord.Value);
 
         if (building != null)
+        {
             building.SetHighlighted(false, default);
+
+            if (removed)
+                RefundBuildCost(building);
+        }
 
         _selectedExistingBuildingCoord = null;
         _mouseSelectController.ClearHighlights();
+    }
+
+    // 건설 비용의 DEMOLISH_REFUND_RATIO만큼 돌려준다.
+    private void RefundBuildCost(Building building)
+    {
+        if (_resourceManager == null)
+            return;
+
+        IReadOnlyList<ResourceAmount> cost = ResolveBuildCost(building);
+        var refund = new ResourceAmount[cost.Count];
+        for (int i = 0; i < cost.Count; i++)
+        {
+            refund[i] = new ResourceAmount
+            {
+                Type = cost[i].Type,
+                Amount = Mathf.RoundToInt(cost[i].Amount * DEMOLISH_REFUND_RATIO),
+            };
+        }
+
+        _resourceManager.Add(refund);
     }
 
     public void EnterMoveMode()
@@ -282,7 +310,7 @@ public class BuildingPlacementController : MonoBehaviour
         {
             Building building = _gridMap.GetBuildingAt(_moveSourceCoord.Value);
             if (building != null)
-                TryMoveSelectedTo(_mouseSelectController.GetHoveredAnchor(building.FootprintShape));
+                TryMoveSelectedTo(_mouseSelectController.GetHoveredAnchor(_mouseSelectController.CurrentFootprintShape));
 
             return;
         }
@@ -295,13 +323,31 @@ public class BuildingPlacementController : MonoBehaviour
         if (_selectedBuilding == null)
             return false;
 
-        if (!_gridMap.CanConstructBuildingFootprint(anchor, _selectedBuilding.FootprintShape, _selectedBuilding, null))
+        if (!_gridMap.CanConstructBuildingFootprint(anchor, _mouseSelectController.CurrentFootprintShape, _selectedBuilding, null))
+            return false;
+
+        IReadOnlyList<ResourceAmount> cost = ResolveBuildCost(_selectedBuilding);
+        if (_resourceManager != null && !_resourceManager.CanAfford(cost))
             return false;
 
         Debug.Log($"[BuildingPlacementController] 건설 위치: {anchor}");
-        _gridMap.ConstructBuilding(_selectedBuilding, anchor);
+        _gridMap.ConstructBuilding(_selectedBuilding, anchor, _mouseSelectController.PreviewRotationSteps);
+
+        if (_resourceManager != null)
+            _resourceManager.Spend(cost);
+
         CancelBuildMode();
         return true;
+    }
+
+    // 건물 종류별 건설 비용 데이터를 조회 - UI_BuildingSlot.ResolveName과 동일한 타입 분기 패턴.
+    // 아직 비용이 정의되지 않은 건물(예: Tower)은 빈 배열을 돌려줘 비용 없이 취급된다.
+    private static IReadOnlyList<ResourceAmount> ResolveBuildCost(Building building)
+    {
+        if (building is Factory factory && factory.Data != null)
+            return factory.Data.BuildCost;
+
+        return System.Array.Empty<ResourceAmount>();
     }
 
     public bool TryMoveSelectedTo(Vector3Int anchor)
@@ -314,7 +360,7 @@ public class BuildingPlacementController : MonoBehaviour
         if (building == null)
             return false;
 
-        if (!_gridMap.MoveBuilding(prevCoord, anchor))
+        if (!_gridMap.MoveBuilding(prevCoord, anchor, _mouseSelectController.PreviewRotationSteps))
             return false;
 
         building.SetHighlighted(false, default);

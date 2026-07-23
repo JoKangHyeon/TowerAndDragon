@@ -46,11 +46,17 @@ public class Factory : Building
         if (_data == null || _resourceManager == null || _gridMap == null)
             return;
 
-        // 생산량은 이 생산시설의 footprint에 속한 셀들이 보유한 자원별 생산량의 합이다(GridMap.GetFootprintYield 참고).
-        int footprintYield = _gridMap.GetFootprintYield(this, _data.ProducedResourceType);
         float staffingRatio = _population != null ? _population.StaffingRatio : 0f;
-        int produced = _data.CalculateYield(footprintYield, staffingRatio);
-        Debug.Log($"[Factory] {name} 정산 - footprintYield: {footprintYield}, staffingRatio: {staffingRatio:F2}, produced: {produced} ({_data.ProducedResourceType})");
-        _resourceManager.Add(_data.ProducedResourceType, produced);
+
+        // ProducedResourceType이 여러 비트를 동시에 가질 수 있다(슬라임 농장 - 풋프린트에 걸친 지형별 슬라임을
+        // 각각 따로 합산해서 정산). 단일 비트(기존 농장/벌목장/채석장)면 이 반복은 그냥 한 번만 돈다.
+        foreach (ResourceType resourceType in GridMap.EnumerateResourceFlags(_data.ProducedResourceType))
+        {
+            // 생산량은 이 생산시설의 footprint에 속한 셀들이 보유한 자원별 생산량의 합이다(GridMap.GetFootprintYield 참고).
+            int footprintYield = _gridMap.GetFootprintYield(this, resourceType);
+            int produced = _data.CalculateYield(footprintYield, staffingRatio);
+            Debug.Log($"[Factory] {name} 정산 - footprintYield: {footprintYield}, staffingRatio: {staffingRatio:F2}, produced: {produced} ({resourceType})");
+            _resourceManager.Add(resourceType, produced);
+        }
     }
 }

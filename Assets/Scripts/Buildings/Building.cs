@@ -3,11 +3,22 @@ using UnityEngine.Serialization;
 
 public class Building : MonoBehaviour
 {
+    public const int ROTATION_STEP_COUNT = FootprintShape.ROTATION_STEP_COUNT;
+
     [SerializeField]
     private Sprite _sprite;
 
+    [Tooltip("회전 0(기본 방향) 기준 원본 모양. 실제 판정/표시에는 여기에 현재 회전 스텝을 적용한 값(FootprintShape 프로퍼티)이 쓰인다.")]
     [SerializeField]
     private FootprintShape _footprintShape;
+
+    [Tooltip("회전 스텝(0~3, 90도 단위)별로 교체할 스프라이트. 회전해도 모양이 같은 건물은 전부 같은 스프라이트를 넣어도 된다.")]
+    [SerializeField]
+    private Sprite[] _rotationSprites = new Sprite[ROTATION_STEP_COUNT];
+
+    [Tooltip("회전 스텝별 시각 미세조정 오프셋(선택 사항). 가로/세로 짝홀이 다른 모양의 자동 보정(GridMap.ComputeRotationCompensation)에 추가로 더할 값 - 스프라이트 피벗이 중앙이 아닌 경우 등에만 채운다. 기본값 0으로 안전.")]
+    [SerializeField]
+    private Vector3[] _rotationOffsets = new Vector3[ROTATION_STEP_COUNT];
 
     [SerializeField]
     [FormerlySerializedAs("IsMoveable")]
@@ -21,17 +32,52 @@ public class Building : MonoBehaviour
     private SpriteRenderer _spriteRenderer;
     private Color _originalColor;
     private Vector3? _placementOffset;
+    private int _rotationSteps;
 
     public bool IsOpen => _isOpen;
     public Sprite Sprite => _sprite;
-    public FootprintShape FootprintShape => _footprintShape;
+
+    // 원본(회전 0도) 모양 - 회전 계산의 기준이 된다.
+    public FootprintShape BaseFootprintShape => _footprintShape;
+
+    // 현재 회전이 적용된 모양 - 기존 호출부(GridMap 등)는 이 프로퍼티만 보면 회전을 그대로 반영한다.
+    public FootprintShape FootprintShape => _footprintShape.Rotated(_rotationSteps);
+
+    public int RotationSteps => _rotationSteps;
 
     public bool IsMoveable => _isMoveable;
     public bool IsRemoveable => _isRemoveable;
 
     // 배치/재배치 시 footprint 중심에 더할 오프셋 - 재배치시 localposition 더해줄 때 누적됨 방지
-    public Vector3 PlacementOffset => _placementOffset ?? transform.localPosition;
+    public Vector3 PlacementOffset => ComputePlacementOffset(_rotationSteps);
+
+    // 지정한 회전 스텝 기준으로 오프셋을 미리 계산 - 아직 그 회전이 적용되지 않은 상태(미리보기 중인 프리팹 등)에서도 조회 가능.
+    // GridMap.ComputeRotationCompensation(자동 계산)과는 별개로, 여기 더해지는 건 수동 미세조정분(_rotationOffsets)뿐이다.
+    public Vector3 ComputePlacementOffset(int rotationSteps) =>
+        (_placementOffset ?? transform.localPosition) + ResolveRotationOffset(rotationSteps);
+
     public void SetPlacementOffset(Vector3 offset) => _placementOffset = offset;
+
+    // 지정한 회전 스텝의 스프라이트/미세조정 오프셋을 조회 - 프리팹 에셋을 직접 변경하지 않고도(미리보기용) 값을 읽을 수 있다.
+    public Sprite ResolveRotationSprite(int rotationSteps) =>
+        _rotationSprites != null && rotationSteps >= 0 && rotationSteps < _rotationSprites.Length
+            ? _rotationSprites[rotationSteps]
+            : null;
+
+    public Vector3 ResolveRotationOffset(int rotationSteps) =>
+        _rotationOffsets != null && rotationSteps >= 0 && rotationSteps < _rotationOffsets.Length
+            ? _rotationOffsets[rotationSteps]
+            : Vector3.zero;
+
+    // 이 인스턴스의 회전 상태를 바꾼다 - 프리팹 에셋에는 절대 호출하지 말 것(Instantiate로 만든 클론에만 호출).
+    public void SetRotation(int rotationSteps)
+    {
+        _rotationSteps = ((rotationSteps % ROTATION_STEP_COUNT) + ROTATION_STEP_COUNT) % ROTATION_STEP_COUNT;
+
+        Sprite sprite = ResolveRotationSprite(_rotationSteps);
+        if (_spriteRenderer != null && sprite != null)
+            _spriteRenderer.sprite = sprite;
+    }
 
     private void Awake()
     {
