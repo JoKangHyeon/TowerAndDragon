@@ -48,6 +48,11 @@ public class Building : MonoBehaviour
     public bool IsMoveable => _isMoveable;
     public bool IsRemoveable => _isRemoveable;
 
+    // 건설된 시점의 주기(CycleManager.CurrentCycleNumber) - 철거 시 당일 건설 여부 판정에 쓰인다.
+    public int ConstructedCycle { get; private set; }
+
+    public void SetConstructedCycle(int cycle) => ConstructedCycle = cycle;
+
     // 배치/재배치 시 footprint 중심에 더할 오프셋 - 재배치시 localposition 더해줄 때 누적됨 방지
     public Vector3 PlacementOffset => ComputePlacementOffset(_rotationSteps);
 

@@ -23,12 +23,16 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private ResourceManager _resourceManager;
 
+    [SerializeField]
+    private CycleManager _cycleManager;
+
     [Tooltip("타워를 이만큼(초) 꾹 누르고 있으면 이동 모드로 진입한다.")]
     [SerializeField]
     private float _moveHoldDuration = 2f;
 
-    // 건물 철거 시 건설 비용 중 돌려주는 비율.
-    private const float DEMOLISH_REFUND_RATIO = 0.7f;
+    // 건물 철거 시 건설 비용 중 돌려주는 비율 - 낮밤 사이클이 한 번도 돌지 않은 당일 철거는 전액, 그 외엔 일부만 환급.
+    private const float DEMOLISH_REFUND_RATIO_SAME_DAY = 1f;
+    private const float DEMOLISH_REFUND_RATIO_LATE = 0.7f;
 
     private Building _selectedBuilding;
     private Vector3Int? _selectedExistingBuildingCoord;
@@ -152,11 +156,14 @@ public class BuildingPlacementController : MonoBehaviour
         _mouseSelectController.ClearHighlights();
     }
 
-    // 건설 비용의 DEMOLISH_REFUND_RATIO만큼 돌려준다.
+    // 건설 비용을 환급한다 - 낮밤 사이클이 한 번도 돌지 않은 당일 건설/철거는 전액, 그 외엔 DEMOLISH_REFUND_RATIO_LATE만큼.
     private void RefundBuildCost(Building building)
     {
         if (_resourceManager == null)
             return;
+
+        bool isSameDay = _cycleManager != null && building.ConstructedCycle == _cycleManager.CurrentCycleNumber;
+        float refundRatio = isSameDay ? DEMOLISH_REFUND_RATIO_SAME_DAY : DEMOLISH_REFUND_RATIO_LATE;
 
         IReadOnlyList<ResourceAmount> cost = ResolveBuildCost(building);
         var refund = new ResourceAmount[cost.Count];
@@ -165,7 +172,7 @@ public class BuildingPlacementController : MonoBehaviour
             refund[i] = new ResourceAmount
             {
                 Type = cost[i].Type,
-                Amount = Mathf.RoundToInt(cost[i].Amount * DEMOLISH_REFUND_RATIO),
+                Amount = Mathf.RoundToInt(cost[i].Amount * refundRatio),
             };
         }
 
@@ -332,6 +339,9 @@ public class BuildingPlacementController : MonoBehaviour
 
         Debug.Log($"[BuildingPlacementController] 건설 위치: {anchor}");
         _gridMap.ConstructBuilding(_selectedBuilding, anchor, _mouseSelectController.PreviewRotationSteps);
+
+        if (_cycleManager != null)
+            _gridMap.GetBuildingAt(anchor)?.SetConstructedCycle(_cycleManager.CurrentCycleNumber);
 
         if (_resourceManager != null)
             _resourceManager.Spend(cost);
