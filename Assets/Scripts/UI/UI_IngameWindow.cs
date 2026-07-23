@@ -1,3 +1,4 @@
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -5,6 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 인게임 창 컨트롤러. 이 창에 부착해, 창 안의 UI 요소를 한곳에서 관리한다.
 /// - 낮/밤 심볼(Symbol_Day) 전환과 하단 컨트롤 표시 (CycleManager.OnCycleChanged 구독)
+/// - Panel_Label/Day 날짜 텍스트 표시 (CycleManager.OnDayStart 구독)
 /// - Panel_TopLeft 자원 보유량 표시 (ResourceManager 이벤트 구독)
 /// - People_amount 인구 표시: 가용/총 (PopulationManager 이벤트 구독)
 /// 활성화 시점의 현재 상태도 즉시 반영한다.
@@ -13,6 +15,12 @@ public class UI_IngameWindow : MonoBehaviour
 {
     // 인구 표기 형식: 가용 인구 / 총(최대) 인구.
     private const string POPULATION_FORMAT = "{0}/{1}";
+
+    // 날짜 표기 형식: DAY 01, DAY 02, ...
+    private const string DAY_FORMAT = "DAY {0:00}";
+
+    // 웨이브 진행 바가 가득 찰 때까지의 일수. 이 값째 클리어에 슬라이더가 가득 찬다.
+    private const int WAVE_FILL_LENGTH = 6;
 
     // 자원 표시 1칸: 자원 종류 ↔ 수량 텍스트.
     [System.Serializable]
@@ -29,6 +37,10 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private GameObject _imageDay;
     [Tooltip("밤에 켜질 아이콘.")]
     [SerializeField] private GameObject _imageLight;
+
+    [Header("날짜 표시")]
+    [Tooltip("날짜 텍스트(Day)")]
+    [SerializeField] private TMP_Text _dayText;
 
     [Header("낮/밤 하단 컨트롤")]
     [Tooltip("낮에 켜질 버튼(다음 밤으로 진행).")]
@@ -52,8 +64,36 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("점령 정보 창. 버튼 클릭 시 점령 모드를 토글한다.")]
     [SerializeField] private UI_ConquestWindow _conquestWindow;
 
+    [Header("웨이브 진행 바 (Panel_TopCenter/BossWave)")]
+    [Tooltip("웨이브 진행 슬라이더(Slider_wave).")]
+    [SerializeField] private Slider _waveSlider;
+    [Tooltip("현재 진행 위치를 가리키는 점(Icon_Point).")]
+    [SerializeField] private RectTransform _wavePoint;
+    [Tooltip("일수별 Point 위치. 순서대로 [0]=Day1(line_01, 시작/리셋 위치) … [6]=Day7(Icon_Boss). 총 7개.")]
+    [SerializeField] private RectTransform[] _wavePointStops;
+    [Tooltip("슬라이더/Point 이동 트윈 시간(초).")]
+    [SerializeField] private float _waveTweenDuration = 0.4f;
+
+    private Vector2 _wavePointStartPos;
+
+    // 가득 찬 다음 날(보스 격파 다음 날)에는 진행 바를 시작점으로 되돌린다. 즉 실제 한 주기는
+    // '가득 찬 뒤 되돌아가는 하루'까지 포함해 WAVE_FILL_LENGTH + 1일이다.
+    private int _resetInterval;
+
     private void Awake()
     {
+        // 시작/리셋 위치는 눈금 배열의 첫 칸(Day1, line_01)으로 잡는다.
+        if (_wavePointStops != null && _wavePointStops.Length > 0 && _wavePointStops[0] != null)
+        {
+            _wavePointStartPos = _wavePointStops[0].anchoredPosition;
+        }
+        else if (_wavePoint != null)
+        {
+            _wavePointStartPos = _wavePoint.anchoredPosition;
+        }
+
+        _resetInterval = WAVE_FILL_LENGTH + 1;
+
         // '다음 밤으로' 버튼: 누르면 낮을 종료하고 밤을 시작한다.
         if (_buttonNextNight != null)
         {
@@ -90,6 +130,14 @@ public class UI_IngameWindow : MonoBehaviour
             _populationManager.PopulationChanged.AddListener(RenderPopulation);
             RenderPopulation(_populationManager.CurrentState);
         }
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnNightEnd.AddListener(HandleWaveCleared);
+            ResetWaveBar();
+
+            _cycleManager.OnDayStart.AddListener(RenderDay);
+        }
     }
 
     private void GoToNight()
@@ -115,6 +163,31 @@ public class UI_IngameWindow : MonoBehaviour
         if (_populationManager != null)
         {
             _populationManager.PopulationChanged.RemoveListener(RenderPopulation);
+        }
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnNightEnd.RemoveListener(HandleWaveCleared);
+            _cycleManager.OnDayStart.RemoveListener(RenderDay);
+        }
+
+        if (_waveSlider != null)
+        {
+            _waveSlider.DOKill();
+        }
+
+        if (_wavePoint != null)
+        {
+            _wavePoint.DOKill();
+        }
+    }
+
+    // CycleManager.OnDayStart(day)로 갱신된다.
+    private void RenderDay(int day)
+    {
+        if (_dayText != null)
+        {
+            _dayText.text = string.Format(DAY_FORMAT, day);
         }
     }
 
@@ -144,6 +217,55 @@ public class UI_IngameWindow : MonoBehaviour
             {
                 slot.AmountText.text = amount.ToString();
             }
+        }
+    }
+
+    // 웨이브 바를 빈 상태(0칸, Point 시작 위치)로 되돌린다. 진행 중이던 트윈이 있다면 먼저 멈춘다.
+    private void ResetWaveBar()
+    {
+        if (_waveSlider != null)
+        {
+            _waveSlider.DOKill();
+            _waveSlider.value = 0f;
+        }
+
+        if (_wavePoint != null)
+        {
+            _wavePoint.DOKill();
+            _wavePoint.anchoredPosition = _wavePointStartPos;
+        }
+    }
+
+    // 웨이브 클리어(CycleManager.OnNightEnd) 시마다 호출된다. wave는 방금 끝난 웨이브(누적 클리어) 번호.
+    // Day1(0클리어)=시작점, Day2(1클리어)=1/6 … Day7(6클리어)=6/6(가득 참), Day8(7클리어)=시작점으로 리셋, 이후 반복.
+    // 리셋도 DOTween으로 부드럽게 시작점(line_01)/0으로 되돌린다.
+    private void HandleWaveCleared(int wave)
+    {
+        if (_wavePointStops == null || _wavePointStops.Length == 0)
+        {
+            return;
+        }
+
+        // cleared==0은 Day8(리셋) → 진행도 0, Point는 시작 칸(인덱스 0).
+        int cleared = wave % _resetInterval;
+        float progress = (float)cleared / WAVE_FILL_LENGTH;
+
+        if (_waveSlider != null)
+        {
+            _waveSlider.DOKill();
+            _waveSlider.DOValue(progress, _waveTweenDuration);
+        }
+
+        // 배열은 일수별 위치([0]=Day1 … [6]=Day7). cleared만큼 진행했으니 그 인덱스로 이동한다.
+        int stopIndex = Mathf.Min(cleared, _wavePointStops.Length - 1);
+        RectTransform stop = _wavePointStops[stopIndex];
+
+        if (_wavePoint != null && stop != null)
+        {
+            _wavePoint.DOKill();
+            _wavePoint.DOAnchorPos(stop.anchoredPosition, _waveTweenDuration)
+                .SetEase(Ease.OutCubic)
+                .SetLink(_wavePoint.gameObject);
         }
     }
 
