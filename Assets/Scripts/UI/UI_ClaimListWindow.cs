@@ -67,7 +67,7 @@ public class UI_ClaimListWindow : MonoBehaviour
         EnsureConquestManager();
         SubscribeToConquestManager();
 
-        if (_conquestManager == null)
+        if (_conquestManager == null || _slotPool == null)
         {
             return;
         }

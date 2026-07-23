@@ -31,27 +31,27 @@ public class CycleManager : MonoBehaviour
     public void StartDay()
     {
         _gameManager.CurrentRun.CurrentCycle += 1;
-        OnDayStart?.Invoke(_gameManager.CurrentRun.CurrentCycle);
+        SafeInvoke(OnDayStart, _gameManager.CurrentRun.CurrentCycle);
         CurrentCycle = CycleState.Day;
-        OnCycleChanged?.Invoke(CycleState.Day);
+        SafeInvoke(OnCycleChanged, CycleState.Day);
     }
 
     public void EndDay()
     {
-        OnDayEnd?.Invoke(_gameManager.CurrentRun.CurrentCycle);
+        SafeInvoke(OnDayEnd, _gameManager.CurrentRun.CurrentCycle);
         StartNight();
     }
 
     public void StartNight()
     {
         CurrentCycle = CycleState.Night;
-        OnNightStart?.Invoke(_gameManager.CurrentRun.CurrentCycle);
-        OnCycleChanged?.Invoke(CycleState.Night);
+        SafeInvoke(OnNightStart, _gameManager.CurrentRun.CurrentCycle);
+        SafeInvoke(OnCycleChanged, CycleState.Night);
     }
 
     public void EndNight()
     {
-        OnNightEnd?.Invoke(_gameManager.CurrentRun.CurrentCycle);
+        SafeInvoke(OnNightEnd, _gameManager.CurrentRun.CurrentCycle);
         StartDay();
     }
 
@@ -64,6 +64,20 @@ public class CycleManager : MonoBehaviour
         else
         {
             EndNight();
+        }
+    }
+
+    // 구독자(정산 UI 등) 중 하나가 예외를 던져도 낮/밤 전환 자체(다음 단계 호출, CurrentCycle 갱신,
+    // 조명 등 나머지 시스템)는 멈추지 않도록 각 이벤트 발행을 격리한다.
+    private static void SafeInvoke<T>(UnityEvent<T> unityEvent, T arg)
+    {
+        try
+        {
+            unityEvent?.Invoke(arg);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
         }
     }
 }

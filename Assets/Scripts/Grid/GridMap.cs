@@ -246,6 +246,12 @@ public class GridMap : MonoBehaviour
 
     // 전장의 안개(FogOfWarRenderer)가 지형 타일 자체를 SetColor로 어둡게 틴트하기 위해 참조한다.
     public Tilemap TerrainTilemap => _tilemap;
+
+    // 청크 전체를 스프라이트 한 장으로 표현하는 렌더러(FogCloudRenderer 등)가 참조 - 청크의 정중앙 셀 좌표를
+    // 반환한다. ToChunkCoord(CHUNK_ORIGIN_OFFSET 기반)와 대응하는 역연산이며, CHUNK_SIZE가 홀수이므로
+    // 정중앙 셀이 항상 정확히 존재한다.
+    public Vector3Int GetChunkAnchorCell(Vector2Int chunkCoord) =>
+        new Vector3Int(chunkCoord.x * Chunk.CHUNK_SIZE, chunkCoord.y * Chunk.CHUNK_SIZE, 0);
     public bool CanConstructBuilding(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) && cell.CanConstruct && cell.ExistTypeOnCell == ExistTypeOnCell.None &&
         IsChunkConquered(coord);
