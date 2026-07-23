@@ -6,10 +6,14 @@ using UnityEngine.UI;
 /// 인게임 창 컨트롤러. 이 창에 부착해, 창 안의 UI 요소를 한곳에서 관리한다.
 /// - 낮/밤 심볼(Symbol_Day) 전환과 하단 컨트롤 표시 (CycleManager.OnCycleChanged 구독)
 /// - Panel_TopLeft 자원 보유량 표시 (ResourceManager 이벤트 구독)
-/// 활성화 시점의 현재 상태도 즉시 반영한다. (인구 표시는 별도 인구 시스템에서 연결 예정)
+/// - People_amount 인구 표시: 가용/총 (PopulationManager 이벤트 구독)
+/// 활성화 시점의 현재 상태도 즉시 반영한다.
 /// </summary>
 public class UI_IngameWindow : MonoBehaviour
 {
+    // 인구 표기 형식: 가용 인구 / 총(최대) 인구.
+    private const string POPULATION_FORMAT = "{0}/{1}";
+
     // 자원 표시 1칸: 자원 종류 ↔ 수량 텍스트.
     [System.Serializable]
     private struct ResourceSlot
@@ -36,6 +40,11 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private ResourceManager _resourceManager;
     [Tooltip("자원 종류별 수량 텍스트. 기본 3종 + 특화 4종.")]
     [SerializeField] private ResourceSlot[] _resourceSlots;
+
+    [Header("인구 표시 (Panel_peopleAmount)")]
+    [SerializeField] private PopulationManager _populationManager;
+    [Tooltip("인구 수량 텍스트(People_amount). 가용/총으로 표시된다.")]
+    [SerializeField] private TMP_Text _populationText;
 
     [Header("점령 (Panel_BottomRight)")]
     [Tooltip("점령 모드 토글 버튼.")]
@@ -75,6 +84,12 @@ public class UI_IngameWindow : MonoBehaviour
             _resourceManager.ResourceChanged.AddListener(RenderResource);
             RenderAllResources();
         }
+
+        if (_populationManager != null)
+        {
+            _populationManager.PopulationChanged.AddListener(RenderPopulation);
+            RenderPopulation(_populationManager.CurrentState);
+        }
     }
 
     private void GoToNight()
@@ -95,6 +110,20 @@ public class UI_IngameWindow : MonoBehaviour
         if (_resourceManager != null)
         {
             _resourceManager.ResourceChanged.RemoveListener(RenderResource);
+        }
+
+        if (_populationManager != null)
+        {
+            _populationManager.PopulationChanged.RemoveListener(RenderPopulation);
+        }
+    }
+
+    // 가용 인구 / 총(최대) 인구로 표시한다.
+    private void RenderPopulation(PopulationState state)
+    {
+        if (_populationText != null)
+        {
+            _populationText.text = string.Format(POPULATION_FORMAT, state.AvailablePopulation, state.MaxPopulation);
         }
     }
 
