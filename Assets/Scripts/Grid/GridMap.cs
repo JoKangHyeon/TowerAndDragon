@@ -405,6 +405,9 @@ public class GridMap : MonoBehaviour
     public Building GetBuildingAt(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.OccupantBuilding : null;
 
+    // 현재 그리드에 등록된 모든 건물(읽기 전용). 생산량 예측 등 건물 전체 순회에 쓴다.
+    public IEnumerable<Building> Buildings => _buildingFootprintCells.Keys;
+
     public List<Vector3Int> GetAllOccupiedCoords()
     {
         var result = new List<Vector3Int>();

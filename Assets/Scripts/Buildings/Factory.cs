@@ -102,9 +102,36 @@ public class Factory : Building
         // 단일 비트(기존 농장/벌목장/채석장)면 이 반복은 그냥 한 번만 돈다.
         foreach (ResourceType resourceType in EnumerateProducedResourceTypes())
         {
-            int produced = GetCurrentYield(resourceType);
-            Debug.Log($"[Factory] {name} 정산 - footprintYield: {_gridMap.GetFootprintYield(this, resourceType)}, staffingRatio: {staffingRatio:F2}, areaMultiplier: ×{_areaYieldMultiplier:F2}, produced: {produced} ({resourceType})");
+            int produced = ComputeProjectedYield(resourceType, staffingRatio);
+            Debug.Log($"[Factory] {name} 정산 - staffingRatio: {staffingRatio:F2}, produced: {produced} ({resourceType})");
             _resourceManager.Add(resourceType, produced);
         }
+    }
+
+    // 정산 없이 '다음 정산 예상 생산량'을 자원 종류별로 into에 누적한다(UI 표기용).
+    // 실제 정산(OnSettlement)과 같은 공식을 쓰므로 표시값과 실제 지급값이 일치한다.
+    public void AccumulateProjectedProduction(IDictionary<ResourceType, int> into)
+    {
+        if (into == null || _data == null || _gridMap == null)
+            return;
+
+        float staffingRatio = _population != null ? _population.StaffingRatio : 0f;
+
+        foreach (ResourceType resourceType in GridMap.EnumerateResourceFlags(_data.ProducedResourceType))
+        {
+            int produced = ComputeProjectedYield(resourceType, staffingRatio);
+            if (produced <= 0)
+                continue;
+
+            into.TryGetValue(resourceType, out int current);
+            into[resourceType] = current + produced;
+        }
+    }
+
+    // 생산량은 이 생산시설의 footprint 셀들이 보유한 자원별 생산량 합에 충원율을 반영한 값이다(GridMap.GetFootprintYield 참고).
+    private int ComputeProjectedYield(ResourceType singleResourceType, float staffingRatio)
+    {
+        int footprintYield = _gridMap.GetFootprintYield(this, singleResourceType);
+        return _data.CalculateYield(footprintYield, staffingRatio);
     }
 }
