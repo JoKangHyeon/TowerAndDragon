@@ -34,9 +34,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.000036405716}
+  m_AnchoredPosition: {x: 0, y: -0.00012981688}
   m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0, y: 1}
+  m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1825987015568868342
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -323,7 +323,12 @@ MonoBehaviour:
     MenuDefault: {fileID: 9053993491558914030}
     SlotPrefab: {fileID: 3536144141363945427, guid: 2b89d9f32b2cd1c4287a134b4e273523, type: 3}
     Buildings:
-    - {fileID: 4751353425643375589, guid: 21bd02fe69745774b8162ddfd36bf622, type: 3}
+    - {fileID: 2529574679051624168, guid: 0757c15bc65c21841894cc8708558e44, type: 3}
+    - {fileID: 4211619759114365390, guid: 5e00ea73d80027940a0eef61e66fbf14, type: 3}
+    - {fileID: 1774243555800913366, guid: e76c64026a56db641bf0ea27093136ce, type: 3}
+    - {fileID: 1774243555800913366, guid: e76c64026a56db641bf0ea27093136ce, type: 3}
+    - {fileID: 1774243555800913366, guid: e76c64026a56db641bf0ea27093136ce, type: 3}
+    - {fileID: 1774243555800913366, guid: e76c64026a56db641bf0ea27093136ce, type: 3}
   _slotContainer: {fileID: 196090704533875161}
   _buildModePanel: {fileID: 974061594315192733}
   _buildingPlacementController: {fileID: 0}
@@ -502,14 +507,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.55285144, g: 0.54027236, b: 0.6698113, a: 1}
+  m_Color: {r: 0.5974546, g: 0.5517978, b: 0.754717, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 85d00a786d99e4b389a7c6bee30d627b, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ca01e7e09dd294638aa7178443e3a596, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2932,7 +2937,7 @@ RectTransform:
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 20, y: -17}
+  m_SizeDelta: {x: 20, y: 0}
   m_Pivot: {x: 1, y: 1}
 --- !u!222 &7145688119065988424
 CanvasRenderer:
@@ -2955,7 +2960,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.1898779, g: 0.16798684, b: 0.23584908, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3015,8 +3020,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 9203188573246942695}
   m_HandleRect: {fileID: 1025330747571804600}
   m_Direction: 2
-  m_Value: 0
-  m_Size: 1
+  m_Value: 1.0000061
+  m_Size: 0
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -3829,7 +3834,7 @@ MonoBehaviour:
   m_HorizontalScrollbar: {fileID: 0}
   m_VerticalScrollbar: {fileID: 1194125546542423874}
   m_HorizontalScrollbarVisibility: 2
-  m_VerticalScrollbarVisibility: 2
+  m_VerticalScrollbarVisibility: 0
   m_HorizontalScrollbarSpacing: -3
   m_VerticalScrollbarSpacing: -3
   m_OnValueChanged:
