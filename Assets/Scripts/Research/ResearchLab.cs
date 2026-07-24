@@ -1,6 +1,5 @@
 using UnityEngine;
 
-[RequireComponent(typeof(ResearchLabPopulation))]
 public sealed class ResearchLab : Building
 {
     [SerializeField] private ResearchLabData _data;
