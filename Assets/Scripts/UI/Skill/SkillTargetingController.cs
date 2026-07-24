@@ -20,7 +20,7 @@ public class SkillTargetingController : MonoBehaviour
     [Tooltip("스킬 발동자로 기록할 오브젝트. 비워두면 이 컨트롤러 자신.")]
     [SerializeField] private GameObject _caster;
     [Tooltip("GroundPoint 스킬 시전 중 커서를 따라다니며 실제 피해 범위를 보여줄 원형 인디케이터.")]
-    [SerializeField] private SkillRangeIndicator _rangeIndicator;
+    [SerializeField] private RangeIndicator _rangeIndicator;
     [Tooltip("Enemy 스킬 시전 중 커서 아래 유효한 적 위에 띄울 작은 삼각형 인디케이터.")]
     [SerializeField] private SkillTargetIndicator _targetIndicator;
 
@@ -89,7 +89,7 @@ public class SkillTargetingController : MonoBehaviour
 
         if (skill.Targeting == SkillTargeting.GroundPoint && _rangeIndicator != null)
         {
-            _rangeIndicator.Show(skill.AreaRadius, skill.AreaRadius * Skill.ISOMETRIC_RADIUS_Y_RATIO);
+            _rangeIndicator.Show(skill.AreaRadius, skill.AreaRadius * IsometricMath.RADIUS_Y_RATIO);
         }
     }
 

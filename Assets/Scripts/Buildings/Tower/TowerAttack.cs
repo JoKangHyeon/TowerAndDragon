@@ -94,7 +94,15 @@ public class TowerAttack : MonoBehaviour
             return false;
         }
 
-        return GetSqrDistance(_target.transform.position) <= Attack.Range * Attack.Range;
+        return IsWithinAttackRange(_target.transform.position);
+    }
+
+    // 판정 반경은 타일 종횡비를 반영한 타원이다 - 그리드 셀이 세로로 눌려있어(IsometricMath 참고)
+    // 월드 좌표 기준 진짜 원으로 판정하면 세로 방향으로 타일 두 배만큼 더 멀리 닿는 비대칭이 생긴다.
+    private bool IsWithinAttackRange(Vector3 targetPosition)
+    {
+        float radiusY = Attack.Range * IsometricMath.RADIUS_Y_RATIO;
+        return IsometricMath.IsWithinEllipse(targetPosition, transform.position, Attack.Range, radiusY);
     }
 
     private bool CanAttackWithCurrentPopulation()
@@ -107,13 +115,16 @@ public class TowerAttack : MonoBehaviour
     // 후에 몬스터의 종류, 및 타워종류에 따라 공격 우선도 다르게
     private BaseMonster FindClosestTarget()
     {
+        // 브로드페이즈: 타원의 두 반지름 중 더 큰 X 반지름의 원으로 넉넉히 후보를 모은 뒤
+        // 타원 방정식으로 정확히 걸러낸다 (IsWithinAttackRange와 동일한 판정).
         Collider2D[] candidates = Physics2D.OverlapCircleAll(
             transform.position,
             Attack.Range,
             _targetLayers);
 
         BaseMonster closestTarget = null;
-        float closestSqrDistance = float.PositiveInfinity;
+        float closestNormalizedDistanceSqr = float.PositiveInfinity;
+        float radiusY = Attack.Range * IsometricMath.RADIUS_Y_RATIO;
 
         foreach (Collider2D candidate in candidates)
         {
@@ -123,22 +134,19 @@ public class TowerAttack : MonoBehaviour
                 continue;
             }
 
-            float sqrDistance = GetSqrDistance(monster.transform.position);
-            if (sqrDistance >= closestSqrDistance)
+            float normalizedDistanceSqr = IsometricMath.EllipseNormalizedDistanceSqr(
+                monster.transform.position, transform.position, Attack.Range, radiusY);
+
+            if (normalizedDistanceSqr > 1f || normalizedDistanceSqr >= closestNormalizedDistanceSqr)
             {
                 continue;
             }
 
             closestTarget = monster;
-            closestSqrDistance = sqrDistance;
+            closestNormalizedDistanceSqr = normalizedDistanceSqr;
         }
 
         return closestTarget;
-    }
-
-    private float GetSqrDistance(Vector3 targetPosition)
-    {
-        return (targetPosition - transform.position).sqrMagnitude;
     }
 
     /// <summary>
@@ -193,9 +201,15 @@ public class TowerAttack : MonoBehaviour
         {
             return;
         }
-    
+
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, Attack.Range);
+
+        // 실제 판정(IsWithinAttackRange)과 같은 타원을 그린다 - Gizmos엔 타원 API가 없으므로
+        // Y축만 압축한 행렬로 원을 그려 근사한다.
+        Matrix4x4 previousMatrix = Gizmos.matrix;
+        Gizmos.matrix = Matrix4x4.TRS(transform.position, Quaternion.identity, new Vector3(1f, IsometricMath.RADIUS_Y_RATIO, 1f));
+        Gizmos.DrawWireSphere(Vector3.zero, Attack.Range);
+        Gizmos.matrix = previousMatrix;
     }
 #endif
 }

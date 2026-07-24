@@ -37,11 +37,6 @@ public abstract class Skill
 {
     private const int UNLIMITED_USE_PER_DAY = -1;
 
-    // 아이소메트릭 타일 종횡비(Grid_HeightVariant의 Grid.cellSize = 1.0 x, 0.5 y)에 맞춰
-    // 원형 판정/미리보기를 타원으로 납작하게 만드는 비율 - 판정(AreaCurrentHealthDamageSkill)과
-    // 미리보기(SkillRangeIndicator)가 항상 같은 값을 쓰도록 여기 한 곳에만 둔다.
-    public const float ISOMETRIC_RADIUS_Y_RATIO = 0.5f;
-
     private readonly SkillSO _skillData;
 
     private float _cooltimeLeft;
@@ -172,7 +167,7 @@ public class AreaCurrentHealthDamageSkill : Skill
     protected override void ApplyEffect(in SkillCastContext context)
     {
         float radiusX = AreaRadius;
-        float radiusY = AreaRadius * ISOMETRIC_RADIUS_Y_RATIO;
+        float radiusY = AreaRadius * IsometricMath.RADIUS_Y_RATIO;
 
         // 브로드페이즈: 더 큰 쪽인 X 반지름의 원으로 넉넉히 후보를 모은 뒤 타원 방정식으로 정확히 걸러낸다.
         Collider2D[] hits = Physics2D.OverlapCircleAll(context.TargetPoint, radiusX, TargetLayers);
@@ -185,7 +180,7 @@ public class AreaCurrentHealthDamageSkill : Skill
             if (monster == null)
                 continue;
 
-            if (!IsWithinEllipse(monster.transform.position, context.TargetPoint, radiusX, radiusY))
+            if (!IsometricMath.IsWithinEllipse(monster.transform.position, context.TargetPoint, radiusX, radiusY))
                 continue;
 
             targets.Add(monster);
@@ -198,14 +193,5 @@ public class AreaCurrentHealthDamageSkill : Skill
 
             monster.TakeDamage(new DamageInfo(monster.CurrentHealth * DamagePercent));
         }
-    }
-
-    private static bool IsWithinEllipse(Vector3 point, Vector3 center, float radiusX, float radiusY)
-    {
-        float dx = point.x - center.x;
-        float dy = point.y - center.y;
-        float normalizedDistanceSqr = (dx * dx) / (radiusX * radiusX) + (dy * dy) / (radiusY * radiusY);
-
-        return normalizedDistanceSqr <= 1f;
     }
 }

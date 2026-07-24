@@ -1,9 +1,9 @@
 using UnityEngine;
 
-/// <summary>GroundPoint 스킬 시전 중 커서 위치에 실제 피해 판정 범위와 동일한 타원 외곽선을
-/// 그려 보여준다. LineRenderer로 월드 공간에 타원을 그리며, 반지름이 바뀔 때만 정점을 다시 만든다.</summary>
+/// <summary>월드 공간의 한 지점을 중심으로 원/타원 외곽선을 그려 범위를 표시한다
+/// (예: 타워 공격 사거리, 스킬 판정 범위). LineRenderer로 그리며, 반지름이 바뀔 때만 정점을 다시 만든다.</summary>
 [RequireComponent(typeof(LineRenderer))]
-public class SkillRangeIndicator : MonoBehaviour
+public class RangeIndicator : MonoBehaviour
 {
     private const float CIRCLE_TOTAL_ANGLE_RADIANS = Mathf.PI * 2f;
 
@@ -24,21 +24,21 @@ public class SkillRangeIndicator : MonoBehaviour
         _lineRenderer.useWorldSpace = false;
     }
 
-    /// <summary>지정한 X/Y 반지름으로 타원 표시를 켠다. 스킬 타겟팅 시작 시 호출한다.
-    /// 실제 피해 판정(AreaCurrentHealthDamageSkill)과 동일한 반지름을 넘겨야 시각적으로 일치한다.</summary>
+    /// <summary>지정한 X/Y 반지름으로 표시를 켠다. 실제 판정 반경(공격 사거리, 스킬 판정 등)과
+    /// 동일한 값을 넘겨야 시각적으로 일치한다. 원으로 쓰려면 radiusX와 radiusY를 같은 값으로 넘긴다.</summary>
     public void Show(float radiusX, float radiusY)
     {
         gameObject.SetActive(true);
         RebuildEllipseIfNeeded(radiusX, radiusY);
     }
 
-    /// <summary>표시를 끈다. 시전 확정/취소 시 호출한다.</summary>
+    /// <summary>표시를 끈다.</summary>
     public void Hide()
     {
         gameObject.SetActive(false);
     }
 
-    /// <summary>표시 중심을 월드 좌표로 옮긴다. 타겟팅 중 매 프레임 커서 위치로 호출한다.</summary>
+    /// <summary>표시 중심을 월드 좌표로 옮긴다.</summary>
     public void SetCenter(Vector3 worldPoint)
     {
         transform.position = worldPoint;

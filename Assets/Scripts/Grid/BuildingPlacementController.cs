@@ -26,6 +26,10 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private CycleManager _cycleManager;
 
+    [Tooltip("타워 선택 시 공격 사거리를 타원으로 표시할 인디케이터.")]
+    [SerializeField]
+    private RangeIndicator _rangeIndicator;
+
     [Tooltip("타워를 이만큼(초) 꾹 누르고 있으면 이동 모드로 진입한다.")]
     [SerializeField]
     private float _moveHoldDuration = 2f;
@@ -60,6 +64,18 @@ public class BuildingPlacementController : MonoBehaviour
 
             return null;
         }
+    }
+
+    // _placeAction("Confirm")은 ConquestModeController와 공유하는 액션이라 GlobalInputBootstrap이
+    // 게임 시작 시 한 번만 Enable한다 - 여기서 다시 Enable/Disable하면 그 컨트롤러까지 영향을 준다.
+    // _cancelMoveAction/_rotateAction은 이 컨트롤러 전용이라 여기서 직접 관리한다.
+    private void OnEnable()
+    {
+        if (_cancelMoveAction != null)
+            _cancelMoveAction.action.Enable();
+
+        if (_rotateAction != null)
+            _rotateAction.action.Enable();
     }
 
     private void Awake()
@@ -101,7 +117,7 @@ public class BuildingPlacementController : MonoBehaviour
             return;
 
         HandlePlacementInput();
-        HandleMoveCancelInput();
+        HandleCancelInput();
         HandleLongPressMove();
         HandleRotateInput();
     }
@@ -154,6 +170,7 @@ public class BuildingPlacementController : MonoBehaviour
 
         _selectedExistingBuildingCoord = null;
         _mouseSelectController.ClearHighlights();
+        _rangeIndicator?.Hide();
     }
 
     // 건설 비용을 환급한다 - 낮밤 사이클이 한 번도 돌지 않은 당일 건설/철거는 전액, 그 외엔 DEMOLISH_REFUND_RATIO_LATE만큼.
@@ -224,14 +241,18 @@ public class BuildingPlacementController : MonoBehaviour
 
         _selectedExistingBuildingCoord = null;
         _mouseSelectController.ClearHighlights();
+        _rangeIndicator?.Hide();
     }
 
-    private void HandleMoveCancelInput()
+    // _cancelMoveAction(우클릭)으로 새 건물 배치 미리보기와 기존 건물 이동 미리보기를 모두 취소한다.
+    private void HandleCancelInput()
     {
-        if (!_moveSourceCoord.HasValue)
+        if (_cancelMoveAction == null || !_cancelMoveAction.action.WasPerformedThisFrame())
             return;
 
-        if (_cancelMoveAction != null && _cancelMoveAction.action.WasPerformedThisFrame())
+        if (_selectedBuilding != null)
+            CancelBuildMode();
+        else if (_moveSourceCoord.HasValue)
             CancelMove();
     }
 
@@ -400,6 +421,17 @@ public class BuildingPlacementController : MonoBehaviour
         _selectedExistingBuildingCoord = coord;
         _mouseSelectController.HighlightSelection(_gridMap.GetOccupiedCoords(coord));
         building.SetHighlighted(true, _mouseSelectController.SelectionHighlightColor);
+        ShowRangeIndicatorFor(building);
+    }
+
+    // 선택한 건물이 공격 가능한 타워면 실제 판정(TowerAttack.IsWithinAttackRange)과 같은 타원으로 사거리를 표시한다.
+    private void ShowRangeIndicatorFor(Building building)
+    {
+        if (_rangeIndicator == null || !(building is Tower tower) || !tower.Data.CanAttack)
+            return;
+
+        _rangeIndicator.SetCenter(tower.transform.position);
+        _rangeIndicator.Show(tower.Data.Attack.Range, tower.Data.Attack.Range * IsometricMath.RADIUS_Y_RATIO);
     }
 
     public void CancelAll()
