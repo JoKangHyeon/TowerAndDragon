@@ -348,12 +348,12 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: -1328854079
-  m_SortingLayer: 1
+  m_SortingLayerID: -932361497
+  m_SortingLayer: 5
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 2a3faa40bc8c4d52ac57ac18f93ca3a7, type: 3}
-  m_Color: {r: 0, g: 1, b: 0, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -2214,7 +2214,7 @@ MonoBehaviour:
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 00000000c14bcbb0
+  m_ApplyToSortingLayers: 00000000c14bcbb0e74a6dc8
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0
@@ -2259,6 +2259,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CycleLight
   _isOnWhileDay: 1
+  _isSingleGlobalLight: 0
+  _nightColor: {r: 0.237, g: 0.184, b: 0.764, a: 1}
+  _nightIntensity: 0.15
+  _transitionDuration: 3
+  _duskColor: {r: 1, g: 0.55, b: 0.25, a: 1}
+  _duskWeight: 0.6
 --- !u!1 &622343879
 GameObject:
   m_ObjectHideFlags: 0
@@ -2290,6 +2296,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CycleLight
   _isOnWhileDay: 0
+  _isSingleGlobalLight: 0
+  _nightColor: {r: 0.237, g: 0.184, b: 0.764, a: 1}
+  _nightIntensity: 0.15
+  _transitionDuration: 3
+  _duskColor: {r: 1, g: 0.55, b: 0.25, a: 1}
+  _duskWeight: 0.6
 --- !u!114 &622343881
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2310,7 +2322,7 @@ MonoBehaviour:
   m_Intensity: 0.15
   m_LightVolumeIntensity: 1
   m_LightVolumeEnabled: 0
-  m_ApplyToSortingLayers: 00000000c14bcbb0
+  m_ApplyToSortingLayers: 00000000c14bcbb0e74a6dc8
   m_LightCookieSprite: {fileID: 0}
   m_DeprecatedPointLightCookieSprite: {fileID: 0}
   m_LightOrder: 0
@@ -13126,6 +13138,8 @@ MonoBehaviour:
   - {fileID: 740621128}
   _resourceManager: {fileID: 1205709759}
   _skillManager: {fileID: 1205709758}
+  _gridMap: {fileID: 0}
+  _researchManager: {fileID: 0}
   GameOverOccurred:
     m_PersistentCalls:
       m_Calls: []
@@ -13160,11 +13174,11 @@ MonoBehaviour:
   _catalog: {fileID: 11400000, guid: 3c68623cfd9e6d74b8c4e6e8fa62c090, type: 2}
   _initialResources:
   - Type: 2
-    Amount: 25
+    Amount: 100
   - Type: 1
-    Amount: 25
+    Amount: 100
   - Type: 4
-    Amount: 25
+    Amount: 100
   ResourceChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -14027,9 +14041,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6058edc801175224292595a33c6f59d0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FactoryPopulationDebugGUI
-  _buildingPlacementController: {fileID: 1040295650}
-  _populationManager: {fileID: 1205709764}
-  _cycleManager: {fileID: 1205709760}
 --- !u!4 &1905391924
 Transform:
   m_ObjectHideFlags: 0
