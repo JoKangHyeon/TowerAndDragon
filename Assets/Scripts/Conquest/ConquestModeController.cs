@@ -5,7 +5,9 @@ using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 // 점령 모드 진입/청크 선택을 담당한다. 건설 모드(BuildingPlacementController)와 동일한
-// 입력 처리 패턴(InputActionReference Enable/Disable, 포인터-오버-UI 가드)을 따른다.
+// 입력 처리 패턴(포인터-오버-UI 가드)을 따른다.
+// _selectAction("Confirm")은 BuildingPlacementController._placeAction과 같은 공유 액션이며
+// GlobalInputBootstrap이 한 번만 Enable한다 - 이 컨트롤러는 스스로 Enable/Disable하지 않는다.
 public class ConquestModeController : MonoBehaviour, IExclusiveMode
 {
     [SerializeField]

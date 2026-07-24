@@ -11686,6 +11686,7 @@ GameObject:
   - component: {fileID: 914589615}
   - component: {fileID: 914589617}
   - component: {fileID: 914589620}
+  - component: {fileID: 914589621}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -11856,6 +11857,19 @@ MonoBehaviour:
   _activeLabChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &914589621
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914589609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 66bbc09ec1f09a34d8a66088b7fe2fcc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GlobalInputBootstrap
+  _confirmAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
 --- !u!1001 &944163938
 PrefabInstance:
   m_ObjectHideFlags: 0

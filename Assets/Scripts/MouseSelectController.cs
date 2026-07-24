@@ -31,6 +31,10 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private Color _missingResourceTint = new Color(1f, 0.6f, 0f);
 
+    [Tooltip("타워 배치/이동 미리보기 중 공격 사거리를 타원으로 표시할 인디케이터.")]
+    [SerializeField]
+    private RangeIndicator _rangeIndicator;
+
     private Camera _cam;
     private ComponentPool<SpriteRenderer> _highlightPool;
     private ComponentPool<SpriteRenderer> _occupiedOverlayPool;
@@ -107,6 +111,7 @@ public class MouseSelectController : MonoBehaviour
 
         DrawFootprint(footprint, canConstruct);
         DrawGhost(anchor, canConstruct);
+        DrawRangeIndicator(anchor);
     }
 
     public void BeginPlacementPreview(Building prefab) => SetPreviewTarget(prefab, 0);
@@ -254,12 +259,34 @@ public class MouseSelectController : MonoBehaviour
         _ghostRenderer.color = color;
     }
 
+    // 배치/이동 대상이 공격 가능한 타워일 때만, 실제 판정(TowerAttack.IsWithinAttackRange)과 같은
+    // 타원으로 사거리를 표시한다 - 그 외 건물이거나 인디케이터가 연결 안 됐으면 숨긴다.
+    private void DrawRangeIndicator(Vector3Int anchor)
+    {
+        if (_rangeIndicator == null)
+            return;
+
+        if (!(_selectedBuildingRef is Tower tower) || tower.Data == null || !tower.Data.CanAttack)
+        {
+            _rangeIndicator.Hide();
+            return;
+        }
+
+        Vector3 center = _gridMap.GetFootprintCenterWorld(anchor, _footprintShape) + _ghostLocalOffset;
+        float radiusX = tower.Data.Attack.Range;
+        float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
+
+        _rangeIndicator.SetCenter(center);
+        _rangeIndicator.Show(radiusX, radiusY);
+    }
+
     private void Deactivate()
     {
         if (_ghostRenderer != null)
             _ghostRenderer.gameObject.SetActive(false);
 
         ClearHighlights();
+        _rangeIndicator?.Hide();
         CanConstruct = false;
     }
 }
