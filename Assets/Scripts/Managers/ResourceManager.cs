@@ -40,7 +40,42 @@ public class ResourceManager : MonoBehaviour
 
         foreach (ResourceAmount initial in _initialResources)
         {
-            Add(initial.Type, initial.Amount);
+            AddInitial(initial.Type, initial.Amount);
+        }
+    }
+
+    // 초기 자원을 지급한다. 인스펙터에서 Everything처럼 복합 플래그를 고르면(모든 비트 켜짐),
+    // 카탈로그에 존재하는 단일 자원 각각에 같은 수량을 지급한다.
+    private void AddInitial(ResourceType type, int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        if (IsSingleType(type))
+        {
+            Add(type, amount);
+            return;
+        }
+
+        if (_catalog == null)
+        {
+            return;
+        }
+
+        foreach (ResourceData resource in _catalog.All)
+        {
+            if (resource == null || !IsSingleType(resource.Type))
+            {
+                continue;
+            }
+
+            // resource.Type의 비트가 복합 플래그 type에 포함돼 있으면 지급.
+            if ((type & resource.Type) == resource.Type)
+            {
+                Add(resource.Type, amount);
+            }
         }
     }
 
