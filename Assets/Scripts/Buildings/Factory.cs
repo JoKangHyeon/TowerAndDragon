@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 // 생산시설 공통 구현체. 서브클래스 없이 ResourceProductionData만 갈아끼워 벌목장/채굴장/광산 등을 표현한다(Tower/TowerData와 동일한 패턴).
@@ -16,6 +17,8 @@ public class Factory : Building
 
     // FactoryPopulation.Initialize에서 배치 가능 인구를 읽어가기 위해 필요(TowerPopulation과 동일한 용도).
     public ResourceProductionData Data => _data;
+    public override IReadOnlyList<ResourceAmount> BuildCost => _data != null ? _data.BuildCost : base.BuildCost;
+    public override int PopulationCapacity => _data != null ? _data.PopulationCapacity : base.PopulationCapacity;
 
     public bool IsInitialized => _isInitialized;
 

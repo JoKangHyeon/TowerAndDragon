@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 
@@ -12,6 +13,9 @@ public class TowerData : ScriptableObject
     [SerializeField]
     [Min(1)]
     private int _populationCapacity = 1;
+
+    [Tooltip("건설 비용. 자원 종류 + 수량 조합을 자유롭게 지정한다. (수치 미확정 - 기획 확정 후 채울 것)")]
+    [SerializeField] private ResourceAmount[] _buildCost;
 
     [Header("Durability")]
     [SerializeField] private float _maxHealth;
@@ -29,6 +33,7 @@ public class TowerData : ScriptableObject
 
     public string NameLocKey => _nameLocKey;
     public int PopulationCapacity => _populationCapacity;
+    public IReadOnlyList<ResourceAmount> BuildCost => _buildCost ?? System.Array.Empty<ResourceAmount>();
     public float MaxHealth => _maxHealth;
     public float ReviveDelay => _reviveDelay;
     public AttackSO Attack => _attack;

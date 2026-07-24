@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -20,6 +21,18 @@ public class Building : MonoBehaviour
     [SerializeField]
     private Vector3[] _rotationOffsets = new Vector3[ROTATION_STEP_COUNT];
 
+    [Tooltip("회전 스텝별 시각 미세조정 스케일 배율(선택 사항). 회전마다 다르게 그려진 스프라이트의 크기가 서로 안 맞을 때만 채운다. 기본값 (1,1,1)로 안전.")]
+    [SerializeField]
+    private Vector3[] _rotationScales = CreateDefaultRotationScales();
+
+    private static Vector3[] CreateDefaultRotationScales()
+    {
+        var scales = new Vector3[ROTATION_STEP_COUNT];
+        for (int i = 0; i < scales.Length; i++)
+            scales[i] = Vector3.one;
+        return scales;
+    }
+
     [SerializeField]
     [FormerlySerializedAs("IsMoveable")]
     private bool _isMoveable;
@@ -32,6 +45,7 @@ public class Building : MonoBehaviour
     private SpriteRenderer _spriteRenderer;
     private Color _originalColor;
     private Vector3? _placementOffset;
+    private Vector3? _baseScale;
     private int _rotationSteps;
 
     public bool IsOpen => _isOpen;
@@ -53,6 +67,13 @@ public class Building : MonoBehaviour
 
     public void SetConstructedCycle(int cycle) => ConstructedCycle = cycle;
 
+    // 건설 비용 - 서브클래스가 자신의 Data 에셋(TowerData/ResourceProductionData 등)에서 override해 제공한다.
+    // 비용이 없는 건물(Castle 등 플레이어가 짓지 않는 건물)은 기본값(빈 배열)을 그대로 쓴다.
+    public virtual IReadOnlyList<ResourceAmount> BuildCost => System.Array.Empty<ResourceAmount>();
+
+    // 배치 가능 최대 인구 - BuildCost와 동일한 패턴으로 서브클래스가 자신의 Data 에셋에서 override해 제공한다.
+    public virtual int PopulationCapacity => 0;
+
     // 배치/재배치 시 footprint 중심에 더할 오프셋 - 재배치시 localposition 더해줄 때 누적됨 방지
     public Vector3 PlacementOffset => ComputePlacementOffset(_rotationSteps);
 
@@ -62,6 +83,12 @@ public class Building : MonoBehaviour
         (_placementOffset ?? transform.localPosition) + ResolveRotationOffset(rotationSteps);
 
     public void SetPlacementOffset(Vector3 offset) => _placementOffset = offset;
+
+    // 회전 스케일 계산의 기준이 되는 원본(회전 0도) 로컬 스케일 - 아직 SetBaseScale이 호출되지 않은 경우
+    // (배치 미리보기 중인 프리팹 참조 등, Instantiate/Awake를 거치지 않은 상태) 현재 transform.localScale을 그대로 기준으로 쓴다.
+    public Vector3 BaseLocalScale => _baseScale ?? transform.localScale;
+
+    public void SetBaseScale(Vector3 scale) => _baseScale = scale;
 
     // 지정한 회전 스텝의 스프라이트/미세조정 오프셋을 조회 - 프리팹 에셋을 직접 변경하지 않고도(미리보기용) 값을 읽을 수 있다.
     public Sprite ResolveRotationSprite(int rotationSteps) =>
@@ -74,6 +101,11 @@ public class Building : MonoBehaviour
             ? _rotationOffsets[rotationSteps]
             : Vector3.zero;
 
+    public Vector3 ResolveRotationScale(int rotationSteps) =>
+        _rotationScales != null && rotationSteps >= 0 && rotationSteps < _rotationScales.Length
+            ? _rotationScales[rotationSteps]
+            : Vector3.one;
+
     // 이 인스턴스의 회전 상태를 바꾼다 - 프리팹 에셋에는 절대 호출하지 말 것(Instantiate로 만든 클론에만 호출).
     public void SetRotation(int rotationSteps)
     {
@@ -82,6 +114,8 @@ public class Building : MonoBehaviour
         Sprite sprite = ResolveRotationSprite(_rotationSteps);
         if (_spriteRenderer != null && sprite != null)
             _spriteRenderer.sprite = sprite;
+
+        transform.localScale = Vector3.Scale(BaseLocalScale, ResolveRotationScale(_rotationSteps));
     }
 
     private void Awake()

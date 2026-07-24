@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -18,6 +19,8 @@ public class Tower : Building, IMonsterTarget
     public bool IsDead => _health == null || _health.IsDead;
     public TowerAttack Attack => _attack;
     public TowerData Data => _towerData;
+    public override IReadOnlyList<ResourceAmount> BuildCost => _towerData != null ? _towerData.BuildCost : base.BuildCost;
+    public override int PopulationCapacity => _towerData != null ? _towerData.PopulationCapacity : base.PopulationCapacity;
     public MonsterTargetType TargetType => MonsterTargetType.Tower;
     public Transform TargetTransform => transform;
     public GameObject TargetObject => gameObject;
