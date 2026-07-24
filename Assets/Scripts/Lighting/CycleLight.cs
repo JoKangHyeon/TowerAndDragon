@@ -119,6 +119,18 @@ public class CycleLight : MonoBehaviour
 
         _light2D.enabled = true;
 
+        // 시작값과 목표값이 이미 같으면(예: 게임 시작 직후 첫 OnDayStart가 이미 Day 기본값인
+        // 라이트에 같은 Day 값을 목표로 걸 때) 실제로는 바뀔 게 없는데도 아래 노을색 블렌드가
+        // 무조건 섞여 들어가 라이트가 잠깐 노을색으로 물들었다 돌아오는 것처럼 보인다.
+        // 변화가 없는 전환은 그대로 스냅하고 애니메이션을 건너뛴다.
+        if (startColor == targetColor && Mathf.Approximately(startIntensity, targetIntensity))
+        {
+            _light2D.color = targetColor;
+            _light2D.intensity = targetIntensity;
+            _light2D.enabled = _isSingleGlobalLight || targetIntensity > 0f;
+            return;
+        }
+
         float elapsed = 0f;
         while (elapsed < _transitionDuration)
         {
