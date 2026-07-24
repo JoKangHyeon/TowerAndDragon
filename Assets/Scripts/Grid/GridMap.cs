@@ -26,8 +26,8 @@ public class GridMap : MonoBehaviour
     // 청크 단위 연구 해금 조회 - 연구 시스템이 아직 없는 씬에서는 null로 두면 항상 터레인 기본값만으로 판정된다.
     public IChunkResearchUnlockQuery ResearchUnlockQuery { get; set; }
 
-    // 청크 단위 생산량 강화 조회 - 연구 시스템이 아직 없는 씬에서는 null로 두면 땅의 기본 생산량만 적용된다.
-    public IChunkYieldBonusQuery YieldBonusQuery { get; set; }
+    // 청크 단위 생산량 배율 조회 - 연구 시스템이 없는 씬에서는 null로 두면 기본 배율 1을 적용한다.
+    public IChunkYieldMultiplierQuery YieldMultiplierQuery { get; set; }
 
     // 전체 맵
     private Dictionary<Vector3Int, GridCell> _cells = new();
@@ -41,7 +41,7 @@ public class GridMap : MonoBehaviour
     private Dictionary<Vector2Int, Vector3> _chunkCenterWorldCache = new();
     private Dictionary<Vector2Int, int> _chunkBaseYieldCache = new();
 
-    private readonly HashSet<Vector2Int> _touchedChunksBuffer = new();
+    private readonly Dictionary<Vector2Int, int> _chunkYieldBuffer = new();
 
     // 그리드 셀의 상태 변경 이벤트 - 건물 배치, 건물 파괴, 적 진입
     public UnityEvent<GridCell> OnCellChanged;
@@ -301,6 +301,19 @@ public class GridMap : MonoBehaviour
     }
 
     public IEnumerable<Chunk> GetAllChunks() => _chunks.Values;
+
+    public bool HasBuilding<T>() where T : Building
+    {
+        foreach (Building building in _buildingFootprintCells.Keys)
+        {
+            if (building is T)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public void SetCellState(Vector3Int coord, ChunkState newState)
     {
@@ -591,26 +604,30 @@ public class GridMap : MonoBehaviour
         return result;
     }
 
-    // 생산시설의 실제 생산량 - footprint에 속한 각 셀이 보유한 자원별 생산량(GridCell._yields)을 합산하고,
-    // footprint가 걸친 청크마다(중복 없이) 연구로 해금된 생산량 강화(YieldBonusQuery)를 더한다.
+    // 생산시설의 실제 생산량 - 청크별 셀 생산량 소계에 연구 배율을 적용한 뒤 합산한다.
+    // 청크별로 반올림하므로 여러 청크에 걸친 footprint도 각 지역 연구 효과를 정확히 반영한다.
     public int GetFootprintYield(Building building, ResourceType resourceType)
     {
         if (!_buildingFootprintCells.TryGetValue(building, out List<GridCell> footprint) || footprint.Count == 0)
             return 0;
 
         int total = 0;
-        _touchedChunksBuffer.Clear();
+        _chunkYieldBuffer.Clear();
 
         foreach (GridCell cell in footprint)
         {
-            total += cell.GetYield(resourceType);
-            _touchedChunksBuffer.Add(ToChunkCoord(cell.Coord));
+            Vector2Int chunkCoord = ToChunkCoord(cell.Coord);
+            _chunkYieldBuffer.TryGetValue(chunkCoord, out int chunkSubtotal);
+            _chunkYieldBuffer[chunkCoord] = chunkSubtotal + cell.GetYield(resourceType);
         }
 
-        if (YieldBonusQuery != null)
+        foreach (KeyValuePair<Vector2Int, int> entry in _chunkYieldBuffer)
         {
-            foreach (Vector2Int chunkCoord in _touchedChunksBuffer)
-                total += YieldBonusQuery.GetYieldBonus(chunkCoord, resourceType);
+            float multiplier = YieldMultiplierQuery != null
+                ? YieldMultiplierQuery.GetYieldMultiplier(entry.Key, resourceType)
+                : 1f;
+
+            total += Mathf.RoundToInt(entry.Value * multiplier);
         }
 
         return total;

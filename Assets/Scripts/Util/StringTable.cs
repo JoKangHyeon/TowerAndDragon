@@ -37,7 +37,7 @@ public static class StringTable
     }
 
     public const string c_TableLocation = "";
-    public const string c_DefaultLanguage = "ko_kr";
+    public const string c_DefaultLanguage = "en_us";
     public const string c_LanguageFolder = "Localization";
     public const string c_CsvExtension = ".csv";
     public const string c_CsvFilenameFormat = "{0}" + c_CsvExtension;

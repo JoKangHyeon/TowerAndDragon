@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tower and Dragons — 용 스킬트리 (별도 창)</title>
+<style>
+  :root{
+    --bg:#0e0a0a; --panel:#1a1414; --line:#3a2f2b; --line-active:#e08a3c;
+    --ink:#e6ddd4; --muted:#8f8175; --slime:#8fd14f; --node:#221a17; --node-br:#4a3a32;
+    --root:#2a2018; --root-br:#e08a3c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Segoe UI","Malgun Gothic",sans-serif;padding:20px}
+  h1{font-size:20px;font-weight:600;text-align:center;letter-spacing:2px;color:#f3e9de;margin-bottom:2px}
+  .sub{text-align:center;color:var(--muted);font-size:12px;margin-bottom:16px}
+  .tabs{display:flex;justify-content:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .tab{padding:8px 20px;border:1px solid var(--line);background:var(--panel);color:var(--muted);
+       border-radius:6px;cursor:pointer;font-size:14px;letter-spacing:1px;transition:.15s}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--line-active);border-color:var(--line-active);
+       box-shadow:0 0 12px rgba(224,138,60,.28)}
+  .legend{text-align:center;color:var(--muted);font-size:11px;margin:8px 0 14px}
+  .board{position:relative;max-width:1180px;margin:0 auto;border:1px solid var(--line);
+         border-radius:10px;background:linear-gradient(180deg,#15100e,#0b0807);overflow:hidden}
+  .grid{position:relative}
+  .tier-row{display:flex;align-items:stretch;border-bottom:1px solid var(--line);min-height:112px}
+  .tier-row:last-child{border-bottom:none}
+  .tier-label{width:92px;flex:0 0 92px;display:flex;flex-direction:column;align-items:center;
+       justify-content:center;border-right:1px solid var(--line);color:var(--muted);gap:4px}
+  .tier-num{font-size:22px;font-weight:700;color:#d8cabb}
+  .tier-cap{font-size:9px;text-align:center;line-height:1.2;padding:0 6px}
+  .nodes{flex:1;display:flex;align-items:center;gap:14px;padding:14px 22px;flex-wrap:wrap}
+  .node{position:relative;width:200px;min-height:76px;background:var(--node);
+       border:1px solid var(--node-br);border-radius:8px;padding:9px 11px;transition:.15s}
+  .node:hover{border-color:var(--line-active);box-shadow:0 0 10px rgba(224,138,60,.2)}
+  .node.root{background:var(--root);border-color:var(--root-br);box-shadow:0 0 14px rgba(224,138,60,.22)}
+  .node.tbd{opacity:.6;border-style:dashed}
+  .node.kin{border-color:#3f5a2c}
+  .n-name{font-size:12.5px;font-weight:600;color:#f3e9de;line-height:1.25}
+  .n-eff{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.3}
+  .n-cost{font-size:10px;color:var(--slime);margin-top:6px;letter-spacing:.3px}
+  .badge{position:absolute;top:-8px;right:8px;font-size:8.5px;background:#3a2f2b;color:#c8bcae;
+       padding:2px 6px;border-radius:4px}
+  .foot{max-width:1180px;margin:12px auto 0;color:var(--muted);font-size:11px;line-height:1.6}
+</style>
+</head>
+<body>
+  <h1>용 스킬트리 — 별도 창</h1>
+  <div class="sub">Tower and Dragons · 5속성 서브트리 · 속성 레벨 게이팅 · 슬라임·특화 자원 소모 (RP 미사용) · 코스트 즉시 적용</div>
+  <div class="sub" style="color:#e08a3c">※ 연구(연구소·3갈래)와 완전히 분리된 시스템입니다.</div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="legend">주황 = 각성(루트) 노드 · 초록 테두리 = 새끼용 노드 · 점선 = 기획 [미정] · 좌측 = 속성 레벨(L1~L5) · ◆ 코스트 = 슬라임 + 특화</div>
+
+  <div class="board"><div class="grid" id="grid"></div></div>
+
+  <div class="foot" id="foot"></div>
+
+<script>
+const LEVELS = [
+  {n:"L1", cap:"속성 각성"},
+  {n:"L2", cap:"레벨 도달"},
+  {n:"L3", cap:"레벨 도달"},
+  {n:"L4", cap:"상위 레벨"},
+  {n:"L5", cap:"최대 레벨"},
+];
+
+// 속성별 데이터. 어미용 5단 + 새끼용(kin) 노드. active/passive 텍스트는 기획 §10.
+function attr(passive, active, kinTower, kinArea, kinTbd){
+  return {
+    desc:`어미용: 패시브(${passive}) → 액티브(${active}) → 강화 → 궁극. 새끼용은 별도 노드.`,
+    nodes:[
+      {lv:1,name:"속성 각성",eff:`패시브 해금: ${passive}`,cost:"슬 소량",root:true},
+      {lv:2,name:"액티브 스킬 I",eff:`액티브 해금: ${active}`,cost:"슬·특화"},
+      {lv:3,name:"스킬 강화",eff:"패시브·액티브 수치 강화",cost:"슬·특화"},
+      {lv:3,name:"새끼용 스킬",eff:`타워: ${kinTower} / 지역: ${kinArea}`,cost:"슬·특화",kin:true,tbd:kinTbd},
+      {lv:4,name:"액티브 스킬 II",eff:"쿨다운↓·범위↑ 등 상위 효과",cost:"슬 다량·특화"},
+      {lv:5,name:"속성 궁극",eff:"속성별 최종 강화",cost:"슬 다량·특화 다량"},
+    ]
+  };
+}
+
+const DATA = {
+  "얼음": attr("타워 기본공격에 슬로우", "모든 적 빙결", "슬로우 타워", "주변 강 결빙→건물 배치", false),
+  "불":   attr("모든 적에게 화상", "화상 틱뎀 가속·전역 대미지", "화상 타워", "시야 범위 증가", false),
+  "시간": attr("타워 공격속도 증가", "파괴된 타워 즉시 수리", "[미정]", "점령 공격대 포함 가능", true),
+  "암석": attr("광산 생산량 증가", "메테오", "[미정]", "주변 광산 생산량↑", true),
+  "생명": attr("농장 생산량 증가", "바리케이드", "[미정]", "주변 농장 생산량↑", true),
+};
+
+const tabsEl = document.getElementById('tabs');
+const gridEl = document.getElementById('grid');
+const footEl = document.getElementById('foot');
+let active = "얼음";
+
+Object.keys(DATA).forEach(k=>{
+  const b=document.createElement('div');
+  b.className='tab'+(k===active?' active':'');
+  b.textContent=k;
+  b.onclick=()=>{active=k;render();};
+  tabsEl.appendChild(b);
+});
+
+function render(){
+  [...tabsEl.children].forEach(c=>c.classList.toggle('active',c.textContent===active));
+  const branch=DATA[active];
+  gridEl.innerHTML='';
+  LEVELS.forEach((lvl,i)=>{
+    const row=document.createElement('div');
+    row.className='tier-row';
+    const lbl=document.createElement('div');
+    lbl.className='tier-label';
+    lbl.innerHTML=`<div class="tier-num">${lvl.n}</div><div class="tier-cap">${lvl.cap}</div>`;
+    row.appendChild(lbl);
+    const nodes=document.createElement('div');
+    nodes.className='nodes';
+    branch.nodes.filter(n=>n.lv===i+1).forEach(n=>{
+      const el=document.createElement('div');
+      el.className='node'+(n.root?' root':'')+(n.kin?' kin':'')+(n.tbd?' tbd':'');
+      el.innerHTML=`${n.tbd?'<span class="badge">미정</span>':''}
+        <div class="n-name">${n.name}</div>
+        <div class="n-eff">${n.eff}</div>
+        <div class="n-cost">◆ ${n.cost}</div>`;
+      nodes.appendChild(el);
+    });
+    row.appendChild(nodes);
+    gridEl.appendChild(row);
+  });
+  footEl.textContent = branch.desc;
+}
+render();
+</script>
+</body>
+</html>

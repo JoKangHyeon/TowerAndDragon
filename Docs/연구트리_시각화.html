@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tower and Dragons — 연구 체계도 (연구소 · 3갈래)</title>
+<style>
+  :root{
+    --bg:#0c0d10; --panel:#14161b; --line:#2b2f38; --line-active:#4de1d0;
+    --ink:#d8dae0; --muted:#7b818e; --gold:#e6b25a; --node:#1b1e25; --node-br:#3a3f4b;
+    --root:#1e2a2c; --root-br:#4de1d0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Segoe UI","Malgun Gothic",sans-serif;padding:20px}
+  h1{font-size:20px;font-weight:600;text-align:center;letter-spacing:2px;color:#eef0f4;margin-bottom:2px}
+  .sub{text-align:center;color:var(--muted);font-size:12px;margin-bottom:16px}
+  .tabs{display:flex;justify-content:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  .tab{padding:8px 22px;border:1px solid var(--line);background:var(--panel);color:var(--muted);
+       border-radius:6px;cursor:pointer;font-size:14px;letter-spacing:1px;transition:.15s}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--line-active);border-color:var(--line-active);
+       box-shadow:0 0 12px rgba(77,225,208,.25)}
+  .legend{text-align:center;color:var(--muted);font-size:11px;margin:8px 0 14px}
+  .board{position:relative;max-width:1180px;margin:0 auto;border:1px solid var(--line);
+         border-radius:10px;background:linear-gradient(180deg,#101217,#0b0c0f);overflow:hidden}
+  .grid{position:relative}
+  .tier-row{display:flex;align-items:stretch;border-bottom:1px solid var(--line);min-height:118px}
+  .tier-row:last-child{border-bottom:none}
+  .tier-label{width:78px;flex:0 0 78px;display:flex;flex-direction:column;align-items:center;
+       justify-content:center;border-right:1px solid var(--line);color:var(--muted);gap:4px}
+  .tier-num{font-size:24px;font-weight:700;color:#c9ccd3}
+  .tier-cap{font-size:9px;text-align:center;line-height:1.2;padding:0 4px}
+  .nodes{flex:1;position:relative;display:flex;align-items:center;gap:14px;
+       padding:14px 22px;flex-wrap:wrap}
+  .node{position:relative;width:158px;min-height:78px;background:var(--node);
+       border:1px solid var(--node-br);border-radius:8px;padding:9px 10px;cursor:default;
+       transition:.15s;z-index:2}
+  .node:hover{border-color:var(--line-active);box-shadow:0 0 10px rgba(77,225,208,.2)}
+  .node.root{background:var(--root);border-color:var(--root-br);box-shadow:0 0 14px rgba(77,225,208,.22)}
+  .node.tbd{opacity:.6;border-style:dashed}
+  .n-name{font-size:12.5px;font-weight:600;color:#eef0f4;line-height:1.25}
+  .n-eff{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.3}
+  .n-cost{font-size:10px;color:var(--gold);margin-top:6px;letter-spacing:.3px}
+  .badge{position:absolute;top:-8px;right:8px;font-size:8.5px;background:#2b2f38;color:#aeb3bd;
+       padding:2px 6px;border-radius:4px}
+  .foot{max-width:1180px;margin:12px auto 0;color:var(--muted);font-size:11px;line-height:1.6}
+</style>
+</head>
+<body>
+  <h1>연구 체계도 — 연구소 (3갈래)</h1>
+  <div class="sub">Tower and Dragons · 3갈래 × 5티어 (주기 연동) · 연구소·RP 모델 · 코스트 즉시 소모/즉시 적용 · 수치는 예시(밸런싱 대상)</div>
+  <div class="sub" style="color:#e6b25a">※ 용 스킬트리는 별도 창(용_스킬트리_시각화.html) — 이 연구 창에 포함되지 않습니다.</div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="legend">진한 청록 = 진입(루트) 노드 · 점선 = 기획 [미정] 항목 · 좌측 숫자 = 티어(해금 주기) · ◆ 코스트 = RP(연구 포인트) + 자원, 소모 시 즉시 완료</div>
+
+  <div class="board"><div class="grid" id="grid"></div></div>
+
+  <div class="foot" id="foot"></div>
+
+<script>
+const TIERS = [
+  {n:1, cap:"게임 시작"},
+  {n:2, cap:"1주기 종료 / 포탈2"},
+  {n:3, cap:"2주기 종료 / 포탈3"},
+  {n:4, cap:"3주기 종료 / 포탈4"},
+  {n:5, cap:"4주기 진입"},
+];
+
+const DATA = {
+  "타워": {
+    desc:"방어력 강화. 스탯 강화 / 필요 인구 감소 / 속성 타워·유틸 분기.",
+    nodes:[
+      {t:1,name:"기본 훈련",eff:"전 타워 공격력 +10%",cost:"RP10 · 木20",root:true},
+      {t:2,name:"사거리 확장 I",eff:"사거리 +15%",cost:"RP25 · 木30·石20"},
+      {t:2,name:"연사 개량 I",eff:"공격속도 +12%",cost:"RP25 · 鑛20"},
+      {t:2,name:"인력 효율 I",eff:"타워 필요 인구 -1 (하한 1)",cost:"RP30 · 石30"},
+      {t:3,name:"속성 타워 해금",eff:"바이옴 특화 타워 건설 가능",cost:"RP50 · 특화×2"},
+      {t:3,name:"관통/스플래시",eff:"다중 타격 계열 해금",cost:"RP50 · 鑛40·특화"},
+      {t:4,name:"타워 티어2 강화",eff:"상위 티어 업그레이드 개방",cost:"RP90 · 石60·鑛40"},
+      {t:4,name:"속성 특화 분기",eff:"속성별 특화 효과 강화",cost:"RP90 · 특화 다량"},
+      {t:5,name:"타워 티어3 / 오버차지",eff:"최상위 강화 + 광역 오버차지",cost:"RP150 · 특화·鑛 다량"},
+    ]
+  },
+  "생산": {
+    desc:"생산 시설 효율. 초원 효율 → 외곽 채집 해금 → 특화·슬라임 생산.",
+    nodes:[
+      {t:1,name:"초원 경작",eff:"농장·광산 생산량 +10%",cost:"RP10 · 食10",root:true},
+      {t:2,name:"저장 확충",eff:"자원 저장 한도 상향",cost:"RP25 · 木30"},
+      {t:2,name:"외곽 기초자원 채집",eff:"외곽 바이옴 기초 4자원 채집 해금",cost:"RP25 · 木30·石30"},
+      {t:3,name:"특화 생산 시설",eff:"바이옴 특화 자원 효율 +20%",cost:"RP50 · 특화"},
+      {t:3,name:"슬라임 양식",eff:"특화 지역 슬라임 생산 +25%",cost:"RP50 · 특화·슬"},
+      {t:4,name:"생산 최적화",eff:"생산 시설 필요 인구 -1 (하한 1)",cost:"RP90 · 鑛40"},
+      {t:4,name:"대각선 지대 개발",eff:"고수익 대각선 지대 생산 보너스",cost:"RP90 · 특화 다량"},
+      {t:5,name:"자동 생산 라인",eff:"정산 시 일부 자원 자동 증산",cost:"RP150 · 특화·鑛 다량"},
+    ]
+  },
+  "편의": {
+    desc:"플레이 편의. 시야 확장 / 타워 이동 / 성 회복·수리 / 점령 보조 + 연구소 증축(RP 생성량↑).",
+    nodes:[
+      {t:1,name:"정찰 I",eff:"전장의 안개 가시 반경 +1단계",cost:"RP10 · 木15",root:true},
+      {t:1,name:"연구소 증축 I",eff:"연구소 배치 가능 최대 인구 +N (RP 생성량↑)",cost:"RP10 · 木20·石20",root:true},
+      {t:2,name:"타워 이동 해금",eff:"철거 없이 타워 이동 가능",cost:"RP25 · 石30"},
+      {t:2,name:"성 자동 회복 I",eff:"매일 낮 성 체력 패시브 회복",cost:"RP25 · 石20·鑛10"},
+      {t:3,name:"성 긴급 수리",eff:"낮 자원 소모 즉시 수리 효율↑",cost:"RP50 · 石40·鑛20"},
+      {t:3,name:"원정 물류",eff:"점령 출격 비용/소요 감소",cost:"RP50 · 木40·食20"},
+      {t:3,name:"연구소 증축 II",eff:"연구소 배치 가능 최대 인구 추가 확장",cost:"RP50 · 石40·鑛20"},
+      {t:4,name:"정찰 II",eff:"가시 반경 대폭 확장 + 랜드마크 표시",cost:"RP90 · 鑛30"},
+      {t:4,name:"일괄 배치/관리",eff:"타워·인구 배치 편의 UI 해금",cost:"RP90 · 石30"},
+      {t:5,name:"자동 정산 보조",eff:"정산·배분 자동화 편의",cost:"RP150 · 鑛 다량"},
+    ]
+  }
+};
+
+const tabsEl = document.getElementById('tabs');
+const gridEl = document.getElementById('grid');
+const footEl = document.getElementById('foot');
+let active = "타워";
+
+Object.keys(DATA).forEach(k=>{
+  const b=document.createElement('div');
+  b.className='tab'+(k===active?' active':'');
+  b.textContent=k;
+  b.onclick=()=>{active=k;render();};
+  tabsEl.appendChild(b);
+});
+
+function render(){
+  [...tabsEl.children].forEach(c=>c.classList.toggle('active',c.textContent===active));
+  const branch=DATA[active];
+  gridEl.innerHTML='';
+  TIERS.forEach(tier=>{
+    const row=document.createElement('div');
+    row.className='tier-row';
+    const lbl=document.createElement('div');
+    lbl.className='tier-label';
+    lbl.innerHTML=`<div class="tier-num">${tier.n}</div><div class="tier-cap">${tier.cap}</div>`;
+    row.appendChild(lbl);
+    const nodes=document.createElement('div');
+    nodes.className='nodes';
+    branch.nodes.filter(n=>n.t===tier.n).forEach(n=>{
+      const el=document.createElement('div');
+      el.className='node'+(n.root?' root':'')+(n.tbd?' tbd':'');
+      el.innerHTML=`${n.tbd?'<span class="badge">미정</span>':''}
+        <div class="n-name">${n.name}</div>
+        <div class="n-eff">${n.eff}</div>
+        <div class="n-cost">◆ ${n.cost}</div>`;
+      nodes.appendChild(el);
+    });
+    row.appendChild(nodes);
+    gridEl.appendChild(row);
+  });
+  footEl.textContent = branch.desc;
+}
+render();
+</script>
+</body>
+</html>

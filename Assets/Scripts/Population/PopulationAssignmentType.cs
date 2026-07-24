@@ -7,5 +7,6 @@ public enum PopulationAssignmentType
     None,
     Tower,
     Production,
-    Conquest
+    Conquest,
+    Research,
 }

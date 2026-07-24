@@ -23,11 +23,18 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private SkillManager _skillManager;
 
+    [SerializeField]
+    private GridMap _gridMap;
+
+    [SerializeField]
+    private ResearchManager _researchManager;
+
     public RunData CurrentRun => _currentRun;
     public CycleManager CycleManager => _cycleManager;
     public List<CycleLight> DefaultLights => _defaultLights;
     public ResourceManager ResourceManager => _resourceManager;
     public SkillManager SkillManager => _skillManager;
+    public ResearchManager ResearchManager => _researchManager;
 
     /// <summary>성이 파괴되어 게임오버가 되면 발생. 게임오버 UI 등이 구독한다.</summary>
     public UnityEvent GameOverOccurred;
@@ -42,6 +49,11 @@ public class GameManager : MonoBehaviour
         if (_skillManager != null)
         {
             _skillManager.Construct(_cycleManager);
+        }
+
+        if (_researchManager != null)
+        {
+            _researchManager.Construct(_cycleManager, _resourceManager, _gridMap);
         }
     }
 

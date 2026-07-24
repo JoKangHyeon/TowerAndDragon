@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>용 스킬트리 — 오각형 방사형 프로토타입</title>
+<style>
+  :root{
+    --bg:#0e0a0a; --panel:#1a1414; --line:#3a2f2b; --ink:#e6ddd4; --muted:#8f8175;
+    --kin:#8fd14f; --lock:#4a3f39; --slime:#8fd14f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Segoe UI","Malgun Gothic",sans-serif;padding:18px}
+  h1{font-size:19px;font-weight:600;text-align:center;letter-spacing:1.5px;color:#f3e9de}
+  .sub{text-align:center;color:var(--muted);font-size:12px;margin:4px 0 10px}
+  .wrap{max-width:1040px;margin:0 auto}
+  .bar{display:flex;justify-content:center;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  .stat{font-size:13px;color:var(--ink)}
+  .stat b{color:var(--kin);font-size:16px}
+  .btn{padding:6px 16px;border:1px solid var(--line);background:var(--panel);color:var(--muted);
+       border-radius:6px;cursor:pointer;font-size:12px}
+  .btn:hover{color:var(--ink);border-color:#e08a3c}
+  .own{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;font-size:12px;color:var(--muted)}
+  .chip{padding:4px 12px;border:1px solid var(--line);border-radius:14px;cursor:pointer;background:var(--panel);font-size:12px;transition:.12s}
+  .chip.owned{color:#0e0a0a;font-weight:700}
+  .stage{position:relative;border:1px solid var(--line);border-radius:12px;
+         background:radial-gradient(circle at 50% 46%,#1a1310,#0b0807 70%);overflow:hidden}
+  svg{display:block;width:100%;height:auto}
+  .info{min-height:44px;margin-top:10px;padding:10px 14px;border:1px solid var(--line);
+        border-radius:8px;background:var(--panel);font-size:12.5px;line-height:1.5;color:var(--muted)}
+  .info b{color:#f3e9de}
+  .legend{text-align:center;color:var(--muted);font-size:11px;margin-top:10px;line-height:1.7}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin:0 3px 0 10px}
+  .node-g{cursor:pointer}
+  .attr-label{cursor:pointer}
+  .node-g text,.attr-label text{pointer-events:none;user-select:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>용 스킬트리 — 오각형 방사형 프로토타입</h1>
+  <div class="sub">중앙 오각형(5속성)에서 어미용 가지 방사 · 코스트 = <b style="color:#8fd14f">바이옴 슬라임 + 특화</b>(즉시 소모, RP 없음) · 상위 노드는 <b style="color:#8fd14f">새끼용 N개</b> 선행</div>
+
+  <div class="bar">
+    <div class="stat">해금 새끼용 노드: <b id="kinCount">0</b> / 10</div>
+    <div class="stat">활성 속성: <b id="activeAttr">—</b> <span style="color:#8f8175;font-size:11px">(속성 라벨 클릭 · 활성 속성만 효과 발동)</span></div>
+    <button class="btn" id="resetBtn">전체 초기화</button>
+  </div>
+
+  <div class="own" id="ownRow"><span>새끼용 보유(클릭 토글):</span></div>
+
+  <div class="stage"><svg id="tree" viewBox="0 0 1000 880" role="img"
+       aria-label="오각형 중심 용 스킬트리 방사형 다이어그램"></svg></div>
+
+  <div class="info" id="info">노드를 클릭하면 해금됩니다. 새끼용 슬롯은 해당 속성 새끼용을 <b>보유</b>해야 하고, 강화·궁극은 새끼용 노드를 각각 2·4개 해금해야 합니다. 다시 클릭하면 해제됩니다.</div>
+
+  <div class="legend">
+    <span class="dot" style="background:#e08a3c"></span>어미용 각성(루트)
+    <span class="dot" style="background:#c9c2b8"></span>어미용 스킬
+    <span class="dot" style="background:#8fd14f"></span>새끼용 노드
+    <span class="dot" style="background:#4a3f39"></span>잠김
+    · 🔒 = 선행/보유/새끼용 수 미충족 · 해금은 영구 유지(속성 변경 무관)
+  </div>
+</div>
+
+<script>
+const CX = 500, CY = 445;
+const SVG = document.getElementById("tree");
+const NS = "http://www.w3.org/2000/svg";
+const rad = d => (d-90) * Math.PI/180;
+
+// 속성 ↔ 바이옴 ↔ 재화(슬라임+특화) 매핑 + 효과(기획 §10)
+const ATTRS = [
+  {key:"생명", ang:0,   color:"#7fd14f", slime:"초원슬라임", spec:"기초자원",
+   passive:"농장 생산량↑", active:"바리케이드", kinTower:"[미정]", kinArea:"주변 농장↑", kinTbd:true},
+  {key:"얼음", ang:72,  color:"#5bc0e0", slime:"설원슬라임", spec:"눈결정",
+   passive:"타워 공격 슬로우", active:"모든 적 빙결", kinTower:"슬로우 타워", kinArea:"강 결빙→건물배치", kinTbd:false},
+  {key:"불",   ang:144, color:"#e0603c", slime:"용암슬라임", spec:"불꽃심장",
+   passive:"모든 적 화상", active:"화상 가속·전역뎀", kinTower:"화상 타워", kinArea:"시야 범위 증가", kinTbd:false},
+  {key:"시간", ang:216, color:"#b07de0", slime:"사막슬라임", spec:"시간모래",
+   passive:"타워 공격속도↑", active:"파괴 타워 즉시 수리", kinTower:"[미정]", kinArea:"점령 공격대 포함", kinTbd:true},
+  {key:"암석", ang:288, color:"#c9a24a", slime:"암석슬라임", spec:"현자돌",
+   passive:"광산 생산량↑", active:"메테오", kinTower:"[미정]", kinArea:"주변 광산↑", kinTbd:true},
+];
+const ATTR_BY_KEY = Object.fromEntries(ATTRS.map(a=>[a.key,a]));
+
+const R_PENT = 74, R_M1 = 156, R_M2 = 236, R_M3 = 316, R_M4 = 396, R_KIN = 210, KIN_OFF = 24;
+
+const nodes = {};
+const edges = [];
+function addNode(n){ nodes[n.id]=n; return n; }
+
+ATTRS.forEach(a=>{
+  const base = a.ang, k = a.key;
+  const pos = (r,ang)=>({x:CX+r*Math.cos(rad(ang)), y:CY+r*Math.sin(rad(ang))});
+  const S = a.slime, P = a.spec;
+
+  const p1=pos(R_M1,base), p2=pos(R_M2,base), p3=pos(R_M3,base), p4=pos(R_M4,base);
+  addNode({id:k+"_m1", attr:k, kind:"root",   name:"각성",     desc:`활성 시 패시브: ${a.passive}`, x:p1.x,y:p1.y, color:a.color, prereq:[],        cost:`${S}5`});
+  addNode({id:k+"_m2", attr:k, kind:"mother", name:"액티브 I", desc:`액티브: ${a.active}`,          x:p2.x,y:p2.y, color:a.color, prereq:[k+"_m1"], cost:`${S}10 · ${P}3`});
+  addNode({id:k+"_m3", attr:k, kind:"mother", name:"강화",     desc:"패시브·액티브 수치 강화",        x:p3.x,y:p3.y, color:a.color, prereq:[k+"_m2"], gateKin:2, cost:`${S}20 · ${P}8`});
+  addNode({id:k+"_m4", attr:k, kind:"mother", name:"궁극",     desc:"속성 최종 강화",                x:p4.x,y:p4.y, color:a.color, prereq:[k+"_m3"], gateKin:4, cost:`${S}40 · ${P}15`});
+  edges.push([k+"_m1",k+"_m2"],[k+"_m2",k+"_m3"],[k+"_m3",k+"_m4"]);
+
+  const kp1=pos(R_KIN, base-KIN_OFF), kp2=pos(R_KIN, base+KIN_OFF);
+  addNode({id:k+"_k1", attr:k, kind:"kin", name:"새끼용 A", desc:`타워형: ${a.kinTower}`, x:kp1.x,y:kp1.y, color:a.color, prereq:[k+"_m1"], needOwn:true, tbd:a.kinTbd, cost:`${S}8 · ${P}3`});
+  addNode({id:k+"_k2", attr:k, kind:"kin", name:"새끼용 B", desc:`지역형: ${a.kinArea}`,  x:kp2.x,y:kp2.y, color:a.color, prereq:[k+"_m1"], needOwn:true, cost:`${S}8 · ${P}3`});
+  edges.push([k+"_m1",k+"_k1"],[k+"_m1",k+"_k2"]);
+
+  edges.push(["CENTER",k+"_m1"]);
+});
+
+// 상태
+let unlocked = new Set();
+let owned = new Set();          // 보유한 속성 새끼용
+let activeAttr = null;          // 활성 속성
+
+const kinCount = () => [...unlocked].filter(id=>nodes[id].kind==="kin").length;
+const prereqMet = n => n.prereq.every(p=>unlocked.has(p));
+const gateMet   = n => !n.gateKin || kinCount() >= n.gateKin;
+const ownMet    = n => !n.needOwn || owned.has(n.attr);
+const eligible  = n => prereqMet(n) && gateMet(n) && ownMet(n);
+
+function resolve(){
+  let changed=true;
+  while(changed){
+    changed=false;
+    for(const id of [...unlocked]){
+      if(!eligible(nodes[id])){ unlocked.delete(id); changed=true; }
+    }
+  }
+}
+
+function pentagonPoints(r){
+  return ATTRS.map(a=>{
+    const x=CX+r*Math.cos(rad(a.ang)), y=CY+r*Math.sin(rad(a.ang));
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+}
+function el(tag,attrs){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
+function setInfo(html){ document.getElementById("info").innerHTML=html; }
+
+// 보유 토글 칩
+const ownRow = document.getElementById("ownRow");
+ATTRS.forEach(a=>{
+  const chip=document.createElement("span");
+  chip.className="chip"; chip.textContent=a.key; chip.dataset.key=a.key;
+  chip.style.borderColor=a.color; chip.style.color=a.color;
+  chip.onclick=()=>{
+    if(owned.has(a.key)) owned.delete(a.key); else owned.add(a.key);
+    resolve(); render();
+    setInfo(`새끼용 <b>${a.key}</b> 보유 ${owned.has(a.key)?"ON":"OFF"} — 해당 속성 새끼용 슬롯 ${owned.has(a.key)?"활성":"비활성"}.`);
+  };
+  ownRow.appendChild(chip);
+});
+
+function renderChips(){
+  [...ownRow.querySelectorAll(".chip")].forEach(chip=>{
+    const a=ATTR_BY_KEY[chip.dataset.key];
+    const on=owned.has(a.key);
+    chip.classList.toggle("owned",on);
+    chip.style.background = on ? a.color : "var(--panel)";
+    chip.style.color = on ? "#0e0a0a" : a.color;
+  });
+}
+
+function render(){
+  document.getElementById("kinCount").textContent=kinCount();
+  const aEl=document.getElementById("activeAttr");
+  if(activeAttr){ aEl.textContent=activeAttr; aEl.style.color=ATTR_BY_KEY[activeAttr].color; }
+  else { aEl.textContent="—"; aEl.style.color="#8f8175"; }
+  renderChips();
+
+  SVG.innerHTML="";
+
+  // 간선
+  edges.forEach(([f,t])=>{
+    const A = f==="CENTER" ? {x:CX,y:CY} : nodes[f];
+    const B = nodes[t];
+    const on = (f==="CENTER" ? unlocked.has(t) : (unlocked.has(f)&&unlocked.has(t)));
+    SVG.appendChild(el("line",{x1:A.x,y1:A.y,x2:B.x,y2:B.y,
+      stroke: on?nodes[t].color:"#332c28", "stroke-width": on?3:2, "stroke-opacity":on?0.9:0.5}));
+  });
+
+  // 중앙 오각형
+  SVG.appendChild(el("polygon",{points:pentagonPoints(R_PENT), fill:"#160f0c", stroke:"#e08a3c", "stroke-width":2, "stroke-opacity":0.8}));
+  SVG.appendChild(el("polygon",{points:pentagonPoints(R_PENT-9), fill:"none", stroke:"#e08a3c", "stroke-width":1, "stroke-opacity":0.35}));
+  let c=el("text",{x:CX,y:CY-4,"text-anchor":"middle","font-size":13,fill:"#e08a3c","font-weight":"600"}); c.textContent="어미용"; SVG.appendChild(c);
+  let c2=el("text",{x:CX,y:CY+13,"text-anchor":"middle","font-size":9,fill:"#8f8175"}); c2.textContent="5속성"; SVG.appendChild(c2);
+
+  // 속성 라벨(클릭 → 활성 속성)
+  ATTRS.forEach(a=>{
+    const lr=R_PENT+18;
+    const lx=CX+lr*Math.cos(rad(a.ang)), ly=CY+lr*Math.sin(rad(a.ang));
+    const g=el("g",{class:"attr-label"});
+    if(activeAttr===a.key){
+      g.appendChild(el("circle",{cx:lx,cy:ly-3,r:15,fill:"none",stroke:a.color,"stroke-width":2,"stroke-opacity":0.9}));
+    }
+    const t=el("text",{x:lx,y:ly+1,"text-anchor":"middle","font-size":11,fill:a.color,"font-weight":"600"});
+    t.textContent=a.key; g.appendChild(t);
+    g.addEventListener("click",()=>{ activeAttr = (activeAttr===a.key?null:a.key); render();
+      setInfo(`활성 속성: <b>${activeAttr??"없음"}</b> — 활성 속성의 패시브만 발동(해금 상태는 영구 유지).`); });
+    SVG.appendChild(g);
+  });
+
+  // 노드
+  Object.values(nodes).forEach(n=>{
+    const isUn=unlocked.has(n.id), canGet=!isUn&&eligible(n);
+    const isRoot=n.kind==="root", isKin=n.kind==="kin";
+    const r=isKin?17:(isRoot?27:24);
+    const g=el("g",{class:"node-g"});
+    let fill,stroke;
+    if(isUn){ fill=isKin?"#2f4a1c":(isRoot?"#3a2a18":"#2a231e"); stroke=isKin?"#8fd14f":n.color; }
+    else if(canGet){ fill="#1c1613"; stroke=isKin?"#5f7a3c":"#7a6a5c"; }
+    else { fill="#141010"; stroke="#4a3f39"; }
+    g.appendChild(el("circle",{cx:n.x,cy:n.y,r:r,fill:fill,stroke:stroke,"stroke-width":isUn?3:2,"stroke-opacity":isUn?1:(canGet?0.9:0.5)}));
+
+    const nameFill=isUn?"#f3e9de":(canGet?"#c8bcae":"#6a5f57");
+    const nm=el("text",{x:n.x,y:n.y+3,"text-anchor":"middle","font-size":isKin?9:10,fill:nameFill,"font-weight":"600"});
+    nm.textContent=n.name; g.appendChild(nm);
+
+    // 배지: 게이트/보유 미충족
+    let badge=null;
+    if(!isUn && n.gateKin && !gateMet(n)) badge=`🔒 새끼용 ${n.gateKin}`;
+    else if(!isUn && n.needOwn && !ownMet(n)) badge=`🔒 ${n.attr} 보유`;
+    else if(n.gateKin) badge=`새끼용 ${n.gateKin} 필요`;
+    if(badge){
+      const bt=el("text",{x:n.x,y:n.y+r+11,"text-anchor":"middle","font-size":8.5,fill:(badge.startsWith("🔒")?"#e0a04c":"#8f8175")});
+      bt.textContent=badge; g.appendChild(bt);
+    }
+
+    g.addEventListener("click",()=>onClick(n));
+    g.addEventListener("mouseenter",()=>hover(n));
+    SVG.appendChild(g);
+  });
+}
+
+function hover(n){
+  const label=n.kind==="kin"?"새끼용":(n.kind==="root"?"어미용 각성":"어미용");
+  let extra="";
+  if(n.gateKin) extra+=` · <b>선행: 새끼용 ${n.gateKin}개</b>`;
+  if(n.needOwn) extra+=` · <b>${n.attr} 새끼용 보유 필요</b>`;
+  setInfo(`<b>[${n.attr}] ${n.name}</b> (${label}) — ${n.desc}${extra} · 코스트: <b style="color:#8fd14f">${n.cost}</b>`);
+}
+
+function onClick(n){
+  if(unlocked.has(n.id)){ unlocked.delete(n.id); resolve(); render(); setInfo(`<b>[${n.attr}] ${n.name}</b> 해제됨.`); return; }
+  if(!prereqMet(n)){ render(); setInfo(`<b>[${n.attr}] ${n.name}</b> — 선행 노드를 먼저 해금하세요.`); return; }
+  if(!ownMet(n)){ render(); setInfo(`<b>[${n.attr}] ${n.name}</b> — 잠김: <b>${n.attr} 새끼용</b>을 보유해야 합니다(상단 칩으로 토글).`); return; }
+  if(!gateMet(n)){ render(); setInfo(`<b>[${n.attr}] ${n.name}</b> — 잠김: 새끼용 노드 <b>${n.gateKin}개</b> 필요 (현재 ${kinCount()}개).`); return; }
+  unlocked.add(n.id); resolve(); render(); hover(n);
+}
+
+document.getElementById("resetBtn").addEventListener("click",()=>{ unlocked=new Set(); owned=new Set(); activeAttr=null; render(); setInfo("전체 초기화 완료."); });
+
+render();
+</script>
+</body>
+</html>

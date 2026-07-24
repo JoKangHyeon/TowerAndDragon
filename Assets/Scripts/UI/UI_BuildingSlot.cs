@@ -55,10 +55,13 @@ public class UI_BuildingSlot : MonoBehaviour
     private static string ResolveName(Building prefab)
     {
         if (prefab is Tower tower && tower.Data != null)
-            return tower.Data.NameLocKey;
+            return StringTable.GetString(tower.Data.NameLocKey);
 
         if (prefab is Factory factory && factory.Data != null)
-            return factory.Data.NameLocKey;
+            return StringTable.GetString(factory.Data.NameLocKey);
+
+        if (prefab is ResearchLab researchLab && researchLab.Data != null)
+            return StringTable.GetString(researchLab.Data.NameLocKey);
 
         return string.Empty;
     }

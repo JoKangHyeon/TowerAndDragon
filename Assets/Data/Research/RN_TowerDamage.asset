@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38ecfb0e94f007a42be5780914a37804, type: 3}
+  m_Name: RN_TowerDamage
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchNodeData
+  _nodeId: tower_damage
+  _nameLocKey: research_node_tower_damage
+  _descriptionLocKey: research_node_tower_damage_description
+  _branch: 0
+  _tier: 1
+  _prerequisites: []
+  _researchPointCost: 5
+  _resourceCost: []
+  _effects:
+  - {fileID: 11400000, guid: 47d9a37ea04a50b4eacafc49d68d777d, type: 2}
