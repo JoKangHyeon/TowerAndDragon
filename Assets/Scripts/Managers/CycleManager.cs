@@ -20,8 +20,11 @@ public class CycleManager : MonoBehaviour
 
     public CycleState CurrentCycle { get; private set; }
 
-    // 건설 시점 기록/철거 시 당일 여부 판정에 쓰는 주기 번호(RunData.CurrentCycle).
-    public int CurrentCycleNumber => _gameManager != null ? _gameManager.CurrentRun.CurrentCycle : 0;
+    public int CurrentDayNumber =>
+        _gameManager != null ? _gameManager.CurrentRun.CurrentCycle : 0;
+
+    // 기존 건설 코드와의 호환용 이름이다. 실제 값은 큰 단위 주기가 아니라 누적 일차다.
+    public int CurrentCycleNumber => CurrentDayNumber;
 
     public void Construct(GameManager gameManager)
     {
