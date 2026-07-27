@@ -205,8 +205,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
-  m_fontSizeBase: 30
+  m_fontSize: 25
+  m_fontSizeBase: 25
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -12393,7 +12393,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 658607606}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 408c28dc63cd80a43a9008f017083b8f, type: 3}
   m_Name: 
@@ -12410,7 +12410,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 658607606}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7fe31dabf625a4a1186dfb6f287911c6, type: 3}
   m_Name: 
@@ -12828,8 +12828,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
-  m_fontSizeBase: 30
+  m_fontSize: 25
+  m_fontSizeBase: 25
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -15710,6 +15710,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1617693614}
+  - component: {fileID: 1617693615}
   m_Layer: 5
   m_Name: PopulationAllocation_window
   m_TagString: Untagged
@@ -15737,6 +15738,31 @@ RectTransform:
   m_AnchoredPosition: {x: -20, y: 80}
   m_SizeDelta: {x: 500, y: 600}
   m_Pivot: {x: 1, y: 0.5}
+--- !u!114 &1617693615
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1617693613}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d93a25ae51ef4c8488e136874f1ca4cb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_PopulationAllocationWindow
+  _windowRoot: {fileID: 368146861}
+  _buildingPlacementController: {fileID: 1692054028}
+  _populationManager: {fileID: 914589617}
+  _cycleManager: {fileID: 914589611}
+  _buildingNameText: {fileID: 179074110}
+  _buildingPopulationText: {fileID: 823593695}
+  _totalPopulationText: {fileID: 15228175}
+  _assignAllButtonText: {fileID: 1591888618}
+  _unassignAllButtonText: {fileID: 365208597}
+  _assignButton: {fileID: 1284631423}
+  _unassignButton: {fileID: 1857462035}
+  _assignAllButton: {fileID: 805317062}
+  _unassignAllButton: {fileID: 137155590}
 --- !u!1 &1692054027
 GameObject:
   m_ObjectHideFlags: 0
