@@ -6,7 +6,6 @@ public sealed class ResearchManager : MonoBehaviour,
     IChunkYieldMultiplierQuery,
     ITowerDamageMultiplierQuery
 {
-    private const int FIRST_TIER = 1;
     private const float BASE_YIELD_MULTIPLIER = 1f;
     private const float BASE_DAMAGE_MULTIPLIER = 1f;
 
@@ -23,10 +22,20 @@ public sealed class ResearchManager : MonoBehaviour,
     private CycleManager _cycleManager;
     private ResourceManager _resourceManager;
     private GridMap _gridMap;
+    private WaveCycleProgression _cycleProgression;
     private int _researchPoints;
     private bool _isConstructed;
 
     public int ResearchPoints => _researchPoints;
+
+    /// <summary>
+    /// 티어 잠금 판정에 쓰는 현재 주기. 주기 진행 컴포넌트가 배선되지 않은 씬에서는
+    /// 첫 주기로 간주해 T1만 열어 둔다(기존 동작과 동일).
+    /// </summary>
+    public int CurrentCycleNumber =>
+        _cycleProgression != null
+            ? _cycleProgression.CurrentCycleNumber
+            : WaveCycleRules.FIRST_CYCLE_NUMBER;
     public ResearchLab ActiveLab { get; private set; }
     public bool HasActiveLab => ActiveLab != null;
     public ResearchTreeData Tree => _tree;
@@ -37,7 +46,8 @@ public sealed class ResearchManager : MonoBehaviour,
     public void Construct(
         CycleManager cycleManager,
         ResourceManager resourceManager,
-        GridMap gridMap)
+        GridMap gridMap,
+        WaveCycleProgression cycleProgression)
     {
         if (_isConstructed)
         {
@@ -47,6 +57,7 @@ public sealed class ResearchManager : MonoBehaviour,
         _cycleManager = cycleManager;
         _resourceManager = resourceManager;
         _gridMap = gridMap;
+        _cycleProgression = cycleProgression;
 
         CacheNodes();
 
@@ -130,7 +141,7 @@ public sealed class ResearchManager : MonoBehaviour,
             return ResearchNodeState.UnavailablePhase;
         }
 
-        if (node.Tier != FIRST_TIER)
+        if (!ResearchTierRules.IsTierUnlocked(node.Tier, CurrentCycleNumber))
         {
             return ResearchNodeState.TierLocked;
         }

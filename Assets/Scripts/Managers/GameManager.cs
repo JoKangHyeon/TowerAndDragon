@@ -30,6 +30,10 @@ public class GameManager : MonoBehaviour
     private ResearchManager _researchManager;
 
     [SerializeField]
+    [Tooltip("연구 티어 잠금을 주기와 연동하기 위한 참조. 비워 두면 T1만 열린다.")]
+    private WaveCycleProgression _waveCycleProgression;
+
+    [SerializeField]
     private DragonTreeManager _dragonTreeManager;
 
     public RunData CurrentRun => _currentRun;
@@ -57,7 +61,11 @@ public class GameManager : MonoBehaviour
 
         if (_researchManager != null)
         {
-            _researchManager.Construct(_cycleManager, _resourceManager, _gridMap);
+            _researchManager.Construct(
+                _cycleManager,
+                _resourceManager,
+                _gridMap,
+                _waveCycleProgression);
         }
 
         if (_dragonTreeManager != null)

@@ -14,6 +14,15 @@ public class WaveCycleProgression : MonoBehaviour
 
     public bool HasCurrentSnapshot { get; private set; }
     public WaveCycleSnapshot CurrentSnapshot { get; private set; }
+
+    /// <summary>
+    /// 현재 주기 번호. 스냅샷이 아직 없으면(첫 낮 시작 전·일정 데이터 누락) 첫 주기로 간주한다.
+    /// 주기에 따라 잠금이 풀리는 시스템(연구 티어 등)이 스냅샷 구조체를 몰라도 되도록 노출한다.
+    /// </summary>
+    public int CurrentCycleNumber =>
+        HasCurrentSnapshot
+            ? CurrentSnapshot.CycleNumber
+            : WaveCycleRules.FIRST_CYCLE_NUMBER;
     public UnityEvent<int> CycleStarted => _cycleStarted;
     public UnityEvent<int> CycleCompleted => _cycleCompleted;
     public UnityEvent AllCyclesCompleted => _allCyclesCompleted;

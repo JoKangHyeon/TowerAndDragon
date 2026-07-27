@@ -10,17 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 38ecfb0e94f007a42be5780914a37804, type: 3}
-  m_Name: RN_TowerDamage
+  m_Name: RN_ProductionSpecialized
   m_EditorClassIdentifier: Assembly-CSharp::ResearchNodeData
-  _nodeId: tower_damage
-  _nameLocKey: research_node_tower_damage_name
-  _descriptionLocKey: research_node_tower_damage_description
-  _branch: 0
-  _tier: 1
-  _prerequisites: []
-  _researchPointCost: 10
-  _resourceCost:
-  - Type: 2
-    Amount: 20
-  _effects:
-  - {fileID: 11400000, guid: 47d9a37ea04a50b4eacafc49d68d777d, type: 2}
+  _nodeId: production_specialized
+  _nameLocKey: research_node_production_specialized_name
+  _descriptionLocKey: research_node_production_specialized_description
+  _branch: 1
+  _tier: 3
+  _prerequisites:
+  - {fileID: 11400000, guid: 84b0f612abe933d4bb26b0204d94ec96, type: 2}
+  _researchPointCost: 50
+  _resourceCost: []
+  _effects: []

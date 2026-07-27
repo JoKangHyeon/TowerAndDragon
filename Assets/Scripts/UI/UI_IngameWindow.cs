@@ -70,6 +70,14 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("용 스킬 정보 창. 버튼 클릭 시 용 스킬 모드를 토글한다.")]
     [SerializeField] private UI_DragonSkillWindow _dragonSkillWindow;
 
+    [Header("연구 (Panel_BottomRight)")]
+    [Tooltip("연구 창 토글 버튼.")]
+    [SerializeField] private Button _buttonResearch;
+    [Tooltip("연구 창. 버튼 클릭 시 연구 창을 토글한다.")]
+    [SerializeField] private UI_ResearchWindow _researchWindow;
+    [Tooltip("연구 버튼 라벨. 스트링테이블에서 채운다.")]
+    [SerializeField] private TMP_Text _buttonResearchLabel;
+
     [Header("웨이브 진행 바 (Panel_TopCenter/BossWave)")]
     [Tooltip("웨이브 진행 슬라이더(Slider_wave).")]
     [SerializeField] private Slider _waveSlider;
@@ -119,6 +127,16 @@ public class UI_IngameWindow : MonoBehaviour
         if (_buttonDragonSkill != null && _dragonSkillWindow != null)
         {
             _buttonDragonSkill.onClick.AddListener(_dragonSkillWindow.ToggleFromEntryPoint);
+        }
+
+        if (_buttonResearch != null && _researchWindow != null)
+        {
+            _buttonResearch.onClick.AddListener(_researchWindow.ToggleFromEntryPoint);
+        }
+
+        if (_buttonResearchLabel != null)
+        {
+            _buttonResearchLabel.text = StringTable.GetString(ResearchLocKeys.WINDOW_HEADER);
         }
     }
 
