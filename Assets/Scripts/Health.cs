@@ -57,4 +57,19 @@ public class Health : MonoBehaviour
         _currentHealth = Mathf.Min(_maxHealth, _currentHealth + amount);
         HealthChanged?.Invoke(_currentHealth, _maxHealth);
     }
+
+    /// <summary>
+    /// 체력을 즉시 0으로 만들어 사망 처리한다. 자폭 등 스스로 죽는 행동이 사용한다.
+    /// </summary>
+    public void Kill()
+    {
+        if (IsDead)
+        {
+            return;
+        }
+    
+        _currentHealth = 0;
+        HealthChanged?.Invoke(_currentHealth, _maxHealth);
+        Died?.Invoke();
+    }
 }

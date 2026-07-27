@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -19,6 +20,7 @@ public class MonsterAttack : MonoBehaviour
     private Castle _finalTarget;
     private ResolvedEnemyStatModifier _attackPowerModifier;
     private Animator _animator;
+    private bool _isAutoAttackEnabled;
 
     private float _nextAttackTime;
     private bool _isInitialized;
@@ -29,6 +31,8 @@ public class MonsterAttack : MonoBehaviour
     public float Interval => _attack.Interval;
 
     public void Initialize(MonsterData data, MonsterMovement movement, Animator animator)
+
+    public void Initialize(MonsterData data, MonsterMovement movement)
     {
         Initialize(data, movement,animator, ResolvedEnemyStatModifier.Neutral);
     }
@@ -49,12 +53,13 @@ public class MonsterAttack : MonoBehaviour
 
         _currentTarget = null;
         _nextAttackTime = Time.time;
+        _isAutoAttackEnabled = true;
         _isInitialized = true;
     }
 
     private void Update()
     {
-        if (!_isInitialized)
+        if (!_isInitialized || !_isAutoAttackEnabled)
         {
             return;
         }
@@ -237,5 +242,46 @@ public class MonsterAttack : MonoBehaviour
 
         Fire(_finalTarget);
         _nextAttackTime = Time.time + Interval;
+    }
+
+    public void DisableAutoAttack()
+    {
+        _isAutoAttackEnabled = false;
+    }
+
+    public bool HasTargetInRange()
+    {
+        return FindClosestTarget() != null;
+    }
+
+    // 범위 만큼 폭발
+    public void ExecuteBlast(float radius)
+    {
+        if (!_isInitialized || radius <= 0)
+        {
+            return;
+        }
+
+        AttackContext context = new AttackContext(gameObject, _attackPowerModifier);
+
+        Collider2D[] candidates = Physics2D.OverlapCircleAll(
+            transform.position,
+            radius,
+            _targetLayers
+        );
+
+        HashSet<IMonsterTarget> hitTargets= new HashSet<IMonsterTarget>();
+
+        foreach (Collider2D candidate in candidates)
+        {
+            IMonsterTarget target = candidate.GetComponentInParent<IMonsterTarget>();
+
+            if (target == null || target.IsDead || !CanAttackTargetType(target.TargetType) || !hitTargets.Add(target))
+            {
+                continue;
+            }
+
+            _attack.Execute(target, in context);
+        }
     }
 }

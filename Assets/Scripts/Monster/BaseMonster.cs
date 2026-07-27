@@ -30,10 +30,11 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
 
     // 현재 체력 비례 데미지(스킬 등)를 산정하기 위해 노출한다 - Health 자체는 계속 private로 캡슐화.
     public float CurrentHealth => _health == null ? 0f : _health.CurrentHealth;
-
     public Transform TargetTransform => transform;
-
     public GameObject TargetObject => gameObject;
+    public MonsterAttack Attack => _attack;
+    public bool HasArrivedAtCastle => _movement != null && _movement.HasArrived;
+    
 
 
     private int _animKeyMove = Animator.StringToHash("Move");
@@ -131,6 +132,21 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
         }
 
         _health.Heal(amount);
+    }
+
+    public void HaltMovement()
+    {
+        _movement?.Stop();
+    }
+    
+    public void Kill()
+    {
+        if (IsDead)
+        {
+            return;
+        }
+    
+        _health.Kill();
     }
 
     /// <summary>테스트 진행을 위해 방어막과 관계없이 즉시 사망 처리한다.</summary>

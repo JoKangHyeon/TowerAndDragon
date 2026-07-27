@@ -10,16 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 809865e60fe22fd489822f264ce13c71, type: 3}
-  m_Name: MD_Ground_Attack
+  m_Name: MD_Ground_Bomber
   m_EditorClassIdentifier: Assembly-CSharp::MonsterData
-  _nameLocKey: monster_ground_attack
-  _maxHealth: 40
+  _nameLocKey: monster_ground_bomber
+  _maxHealth: 30
   _moveSpeed: 2
   _movementType: 0
   _hasShield: 0
   _shieldAmount: 0
-  _attack: {fileID: 11400000, guid: b19ac6cb35544fe4db5e83512a64c396, type: 2}
-  _enRouteTargetTypes: 1
-  _specialBehaviors: []
+  _attack: {fileID: 11400000, guid: d47c19f97b597ca49b020dd718bcaaad, type: 2}
+  _enRouteTargetTypes: -1
+  _specialBehaviors:
+  - {fileID: 11400000, guid: 9e07aaf730d60d64a84098b592ade2ad, type: 2}
   _projectilePrefab: {fileID: 0}
   _projectileSpeed: 0
