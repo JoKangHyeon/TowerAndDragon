@@ -61,6 +61,14 @@ public class DragonEggInventorySystem : MonoBehaviour
             return;
         }
 
+        // 초기 지급 등으로 FedDayCount가 이미 목표치를 채운 알은 그날 먹이 소비 성공 여부와
+        // 무관하게 바로 부화시킨다 - 이미 달성한 조건을 매일 재확인시키면 부화가 불필요하게 늦어진다.
+        if (egg.FedDayCount >= data.DaysToHatch)
+        {
+            Hatch(egg);
+            return;
+        }
+
         bool isFed = data.EggDailyFeed <= 0;
 
         if (!isFed)
