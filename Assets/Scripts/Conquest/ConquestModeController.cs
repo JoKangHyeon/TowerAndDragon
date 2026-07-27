@@ -31,6 +31,10 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
     [SerializeField]
     private InputActionReference _selectAction;
 
+    [Tooltip("점령 모드를 닫는 액션 - 패널이 열려 있으면 패널만 닫고, 없으면 점령 모드 자체를 끈다.")]
+    [SerializeField]
+    private InputActionReference _closeAction;
+
     [SerializeField]
     private Color _conquerableHighlightColor = Color.green;
 
@@ -70,6 +74,20 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
 
         HandleHover();
         HandleSelectInput();
+        HandleCloseInput();
+    }
+
+    // ESC 등 닫기 입력 처리 2단계 - 패널(청크 정보)이 열려 있으면 패널만 닫고,
+    // 패널이 없는 상태(청크만 하이라이트된 상태)면 점령 모드 자체를 끈다.
+    private void HandleCloseInput()
+    {
+        if (_closeAction == null || !_closeAction.action.WasPerformedThisFrame())
+            return;
+
+        if (_isSelectionLocked)
+            _conquestUI.Close();
+        else
+            SetConquestModeActive(false);
     }
 
     // 매 프레임 호버된 청크를 확인해, 바뀐 경우에만 노란색 선택 표시를 다시 계산한다(클릭을 기다리지 않는다).
