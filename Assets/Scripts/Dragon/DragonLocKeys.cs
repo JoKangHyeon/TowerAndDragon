@@ -1,0 +1,44 @@
+// 용 스킬트리 UI 스크립트 2개 이상이 공유하는 로컬 키 (CLAUDE.md 커밋규칙 §3.2).
+// 노드별 이름/설명 키는 DragonSkillNodeData가 직접 들고 있으므로 여기 포함하지 않는다.
+public static class DragonLocKeys
+{
+    public const string WINDOW_HEADER = "dragon_window_header";
+    public const string UPGRADE_BUTTON = "dragon_upgrade_button";
+    public const string UNKNOWN_RESOURCE = "dragon_unknown_resource";
+    public const string RESOURCE_COST = "dragon_resource_cost";
+
+    public const string STATE_INVALID = "dragon_state_invalid";
+    public const string STATE_COMPLETED = "dragon_state_completed";
+    public const string STATE_UNAVAILABLE_PHASE = "dragon_state_unavailable_phase";
+    public const string STATE_PREREQUISITE_LOCKED = "dragon_state_prerequisite_locked";
+    public const string STATE_GATE_LOCKED = "dragon_state_gate_locked";
+    public const string STATE_INSUFFICIENT_RESOURCES = "dragon_state_insufficient_resources";
+    public const string STATE_AVAILABLE = "dragon_state_available";
+
+    public static string ResolveStateLocKey(ProgressionNodeState state)
+    {
+        return state switch
+        {
+            ProgressionNodeState.Completed => STATE_COMPLETED,
+            ProgressionNodeState.UnavailablePhase => STATE_UNAVAILABLE_PHASE,
+            ProgressionNodeState.PrerequisiteLocked => STATE_PREREQUISITE_LOCKED,
+            ProgressionNodeState.GateLocked => STATE_GATE_LOCKED,
+            ProgressionNodeState.InsufficientResources => STATE_INSUFFICIENT_RESOURCES,
+            ProgressionNodeState.Available => STATE_AVAILABLE,
+            _ => STATE_INVALID,
+        };
+    }
+
+    public static string AttributeLocKey(DragonType attribute)
+    {
+        return attribute switch
+        {
+            DragonType.Ice => "dragon_attribute_ice",
+            DragonType.Fire => "dragon_attribute_fire",
+            DragonType.Time => "dragon_attribute_time",
+            DragonType.Stone => "dragon_attribute_stone",
+            DragonType.Life => "dragon_attribute_life",
+            _ => STATE_INVALID,
+        };
+    }
+}
