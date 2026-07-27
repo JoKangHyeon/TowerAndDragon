@@ -26,4 +26,8 @@ public class Portal : MonoBehaviour
         _groundPath != null &&
         _mainCastle != null;
 
+    public void SetSpawnActive(bool isActive)
+    {
+        _isActive = isActive;
+    }
 }

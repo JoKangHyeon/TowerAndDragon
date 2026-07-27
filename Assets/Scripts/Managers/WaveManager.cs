@@ -19,6 +19,8 @@ public class WaveManager : MonoBehaviour
     private CancellationTokenSource _waveCancellation;
     private readonly Dictionary<PortalDirection, Portal> _portalById = new();
     private readonly List<BaseMonster> _spawnedMonsters = new();
+    private bool _isDebugCompletionRequested;
+    private bool _hasCompletionEventBeenRaised;
 
     public bool IsRunning { get; private set; }
     public UnityEvent AllSpawnsCompleted => _allSpawnCompleted;
@@ -81,6 +83,8 @@ public class WaveManager : MonoBehaviour
 
         CancellationTokenSource currentCancellation = _waveCancellation;
         IsRunning = true;
+        _isDebugCompletionRequested = false;
+        _hasCompletionEventBeenRaised = false;
 
         try
         {
@@ -101,7 +105,7 @@ public class WaveManager : MonoBehaviour
                 cancellationToken: currentCancellation.Token
             );
 
-            _allMonstersDefeated?.Invoke();
+            RaiseAllMonstersDefeated();
         }
         catch (OperationCanceledException)
         {
@@ -116,12 +120,52 @@ public class WaveManager : MonoBehaviour
 
             currentCancellation.Dispose();
             IsRunning = false;
+            _isDebugCompletionRequested = false;
         }
     }
 
     public void CancelWave()
     {
         _waveCancellation?.Cancel();
+    }
+
+    /// <summary>
+    /// 테스트를 위해 진행 중인 웨이브를 즉시 완료한다.
+    /// 남은 스폰을 취소하고 이미 생성된 몬스터를 사망 처리한 뒤 기존 완료 이벤트를 발행한다.
+    /// </summary>
+    public void DebugForceCompleteWave()
+    {
+        if (!IsRunning || _isDebugCompletionRequested)
+        {
+            return;
+        }
+
+        _isDebugCompletionRequested = true;
+        _waveCancellation?.Cancel();
+
+        foreach (BaseMonster monster in _spawnedMonsters)
+        {
+            if (monster == null || monster.IsDead)
+            {
+                continue;
+            }
+
+            monster.DebugDefeatImmediately();
+        }
+
+        _spawnedMonsters.Clear();
+        RaiseAllMonstersDefeated();
+    }
+
+    private void RaiseAllMonstersDefeated()
+    {
+        if (_hasCompletionEventBeenRaised)
+        {
+            return;
+        }
+
+        _hasCompletionEventBeenRaised = true;
+        _allMonstersDefeated?.Invoke();
     }
 
     private bool TryBuildPortalMap()
