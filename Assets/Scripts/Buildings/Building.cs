@@ -120,7 +120,11 @@ public class Building : MonoBehaviour
 
     private void Awake()
     {
-        _spriteRenderer = GetComponent<SpriteRenderer>();
+        // 자식에서도 찾는다 - 스프라이트만 별도 자식으로 분리해 시각적 위치를 콜라이더/판정
+        // 기준점(이 오브젝트의 transform)과 독립적으로 조정하는 건물(예: BabyDragonTower)을 지원하기 위함.
+        // GetComponentInChildren은 자기 자신을 먼저 확인하므로, 루트에 바로 붙은 기존 건물들은
+        // 동작 변화가 없다(Castle/Garrison/ResearchLab/Tower 전부 루트에 직접 붙어있음, 확인 완료).
+        _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
 
         if (_spriteRenderer != null)
             _originalColor = _spriteRenderer.color;

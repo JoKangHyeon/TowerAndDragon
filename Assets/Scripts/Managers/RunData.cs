@@ -8,7 +8,8 @@ public class RunData
     public int CurrentCycle;
 
     public Dragon CurrentDragon;
-    public List<BabyDragon> BabyDragons;
+    public List<BabyDragon> BabyDragons = new();
+    public List<DragonEgg> DragonEggs = new();
 
     public GridMap Map;
 }
@@ -23,6 +24,7 @@ public enum DragonType
     Life
 }
 
+[Serializable]
 public class Dragon
 {
     public DragonType CurrentType;
@@ -54,6 +56,7 @@ public class Dragon
     }
 }
 
+[Serializable]
 public class BabyDragon
 {
     public string DragonName;
@@ -61,4 +64,11 @@ public class BabyDragon
 
     public bool IsInTower;
 
+}
+
+[Serializable]
+public class DragonEgg
+{
+    public DragonType DragonType;
+    public int FedDayCount; // 부화까지 성공적으로 먹은 날 수 누적
 }

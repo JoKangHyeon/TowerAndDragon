@@ -4,6 +4,9 @@ using UnityEngine;
 // 생산시설 공통 구현체. 서브클래스 없이 ResourceProductionData만 갈아끼워 벌목장/채굴장/광산 등을 표현한다(Tower/TowerData와 동일한 패턴).
 public class Factory : Building
 {
+    // 새끼용 버프가 없을 때의 생산량 배율(BabyDragonBuffSystem이 매일 밤 종료 시 갱신).
+    public const float NEUTRAL_YIELD_MULTIPLIER = 1f;
+
     [SerializeField] private ResourceProductionData _data;
     [SerializeField] private ResourceManager _resourceManager;
     [SerializeField] private CycleManager _cycleManager;
@@ -11,6 +14,12 @@ public class Factory : Building
 
     private bool _isInitialized;
     private FactoryPopulation _population;
+    private float _areaYieldMultiplier = NEUTRAL_YIELD_MULTIPLIER;
+
+    public void SetAreaYieldMultiplier(float multiplier)
+    {
+        _areaYieldMultiplier = multiplier;
+    }
 
     // 건설 가능 여부 판정에 필요 - GridMap.CanConstructResourceFootprint 호출 시 전달한다.
     public ResourceType RequiredResourceNode => _data != null ? _data.RequiredResourceNode : ResourceType.None;
@@ -58,6 +67,7 @@ public class Factory : Building
             // 생산량은 이 생산시설의 footprint에 속한 셀들이 보유한 자원별 생산량의 합이다(GridMap.GetFootprintYield 참고).
             int footprintYield = _gridMap.GetFootprintYield(this, resourceType);
             int produced = _data.CalculateYield(footprintYield, staffingRatio);
+            produced = Mathf.RoundToInt(produced * _areaYieldMultiplier);
             Debug.Log($"[Factory] {name} 정산 - footprintYield: {footprintYield}, staffingRatio: {staffingRatio:F2}, produced: {produced} ({resourceType})");
             _resourceManager.Add(resourceType, produced);
         }

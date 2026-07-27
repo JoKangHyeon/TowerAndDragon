@@ -30,6 +30,10 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private RangeIndicator _rangeIndicator;
 
+    [Tooltip("새끼용 선택 시 버프 반경을 타원으로 표시할 인디케이터. 공격 사거리와 별개 원이라 서로 다른 색으로 구분해둘 것.")]
+    [SerializeField]
+    private RangeIndicator _buffRangeIndicator;
+
     [Tooltip("타워를 이만큼(초) 꾹 누르고 있으면 이동 모드로 진입한다.")]
     [SerializeField]
     private float _moveHoldDuration = 2f;
@@ -146,6 +150,11 @@ public class BuildingPlacementController : MonoBehaviour
         Debug.Log($"[BuildingPlacementController] 선택된 건물: {prefab.name}");
     }
 
+    // BabyDragonTower처럼 프리팹 자체엔 스프라이트가 없고 배치 시점에야 데이터로 정해지는
+    // 건물의 고스트 미리보기 색을 지정할 때 쓴다. SelectBuilding 호출 직후에 불러야 한다 -
+    // SelectBuilding이 내부적으로 새 대상을 잡으며 이전 오버라이드를 해제하기 때문이다.
+    public void SetGhostSpriteOverride(Sprite sprite) => _mouseSelectController.SetGhostSpriteOverride(sprite);
+
     public void CancelBuildMode()
     {
         _selectedBuilding = null;
@@ -171,6 +180,7 @@ public class BuildingPlacementController : MonoBehaviour
         _selectedExistingBuildingCoord = null;
         _mouseSelectController.ClearHighlights();
         _rangeIndicator?.Hide();
+        _buffRangeIndicator?.Hide();
     }
 
     // 건설 비용을 환급한다 - 낮밤 사이클이 한 번도 돌지 않은 당일 건설/철거는 전액, 그 외엔 DEMOLISH_REFUND_RATIO_LATE만큼.
@@ -242,9 +252,10 @@ public class BuildingPlacementController : MonoBehaviour
         _selectedExistingBuildingCoord = null;
         _mouseSelectController.ClearHighlights();
         _rangeIndicator?.Hide();
+        _buffRangeIndicator?.Hide();
     }
 
-    // _cancelMoveAction(우클릭)으로 새 건물 배치 미리보기와 기존 건물 이동 미리보기를 모두 취소한다.
+    // _cancelMoveAction(우클릭)으로 새 건물 배치 미리보기, 기존 건물 이동 미리보기, 기존 건물 선택 하이라이트를 모두 취소한다.
     private void HandleCancelInput()
     {
         if (_cancelMoveAction == null || !_cancelMoveAction.action.WasPerformedThisFrame())
@@ -254,6 +265,8 @@ public class BuildingPlacementController : MonoBehaviour
             CancelBuildMode();
         else if (_moveSourceCoord.HasValue)
             CancelMove();
+        else if (_selectedExistingBuildingCoord.HasValue)
+            Deselect();
     }
 
     // 타워 위에서 클릭을 일정 시간 유지하면(롱프레스) 이동 모드로 진입한다.
@@ -424,14 +437,40 @@ public class BuildingPlacementController : MonoBehaviour
         ShowRangeIndicatorFor(building);
     }
 
-    // 선택한 건물이 공격 가능한 타워면 실제 판정(TowerAttack.IsWithinAttackRange)과 같은 타원으로 사거리를 표시한다.
     private void ShowRangeIndicatorFor(Building building)
     {
+        ShowAttackRangeIndicatorFor(building);
+        ShowBuffRangeIndicatorFor(building);
+    }
+
+    // 선택한 건물이 공격 가능한 타워면 실제 판정(TowerAttack.IsWithinAttackRange)과 같은 타원으로 사거리를 표시한다.
+    private void ShowAttackRangeIndicatorFor(Building building)
+    {
         if (_rangeIndicator == null || !(building is Tower tower) || !tower.Data.CanAttack)
+        {
+            _rangeIndicator?.Hide();
             return;
+        }
 
         _rangeIndicator.SetCenter(tower.transform.position);
         _rangeIndicator.Show(tower.Data.Attack.Range, tower.Data.Attack.Range * IsometricMath.RADIUS_Y_RATIO);
+    }
+
+    // 선택한 건물이 버프 반경을 가진 새끼용이면(BabyDragonBuffSystem과 동일한 조건) 타원으로 표시한다.
+    private void ShowBuffRangeIndicatorFor(Building building)
+    {
+        if (_buffRangeIndicator == null ||
+            !(building is BabyDragonTower babyDragon) ||
+            babyDragon.DragonData == null ||
+            babyDragon.DragonData.BuffRadius <= 0f)
+        {
+            _buffRangeIndicator?.Hide();
+            return;
+        }
+
+        float radiusX = babyDragon.DragonData.BuffRadius;
+        _buffRangeIndicator.SetCenter(babyDragon.transform.position);
+        _buffRangeIndicator.Show(radiusX, radiusX * IsometricMath.RADIUS_Y_RATIO);
     }
 
     public void CancelAll()

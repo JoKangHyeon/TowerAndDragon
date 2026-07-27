@@ -7,7 +7,7 @@ public class TowerAttack : MonoBehaviour
 
     private TowerData _towerData;
     private BaseMonster _target;
-    private TowerPopulation _towerPopulation;
+    private ITowerStaffing _staffing;
     private ITowerDamageMultiplierQuery _damageMultiplierQuery;
     private float _nextAttackTime;
     private bool _isAttackEnabled;
@@ -20,7 +20,7 @@ public class TowerAttack : MonoBehaviour
 
     private void Awake()
     {
-        _towerPopulation = GetComponent<TowerPopulation>();
+        _staffing = GetComponent<ITowerStaffing>();
     }
 
     public void Initialize(TowerData towerData)
@@ -49,7 +49,7 @@ public class TowerAttack : MonoBehaviour
 
     private void Update()
     {
-        if (!_isAttackEnabled || !CanAttackWithCurrentPopulation())
+        if (!_isAttackEnabled || !CanAttackWithCurrentStaffing())
         {
             return;
         }
@@ -77,7 +77,7 @@ public class TowerAttack : MonoBehaviour
 
     private float GetAttackInterval()
     {
-        float staffingRatio = _towerPopulation.StaffingRatio;
+        float staffingRatio = _staffing.StaffingRatio;
 
         if (staffingRatio <= 0f)
         {
@@ -105,11 +105,11 @@ public class TowerAttack : MonoBehaviour
         return IsometricMath.IsWithinEllipse(targetPosition, transform.position, Attack.Range, radiusY);
     }
 
-    private bool CanAttackWithCurrentPopulation()
+    // 구현체가 없으면 공격하지 않는다 - 인구 할당 생성에 실패한 타워가 지금처럼
+    // 침묵하도록 유지하기 위함(컴포넌트 부재를 만가동으로 오해하면 오설정이 묻힌다).
+    private bool CanAttackWithCurrentStaffing()
     {
-        return _towerPopulation != null &&
-            _towerPopulation.IsInitialized &&
-            _towerPopulation.HasAssignedPopulation;
+        return _staffing != null && _staffing.CanOperate;
     }
 
     // 후에 몬스터의 종류, 및 타워종류에 따라 공격 우선도 다르게
