@@ -5,7 +5,7 @@ using UnityEngine;
 /// 인구 변경은 PopulationManager를 통해서만 수행한다.
 /// </summary>
 [RequireComponent(typeof(Factory))]
-public class FactoryPopulation : MonoBehaviour
+public class FactoryPopulation : MonoBehaviour, IPopulationAllocationTarget
 {
     private Factory _factory;
     private PopulationManager _populationManager;

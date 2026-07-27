@@ -5,7 +5,7 @@ using UnityEngine;
 /// 인구 변경은 PopulationManager를 통해서만 수행한다.
 /// </summary>
 [RequireComponent(typeof(Tower))]
-public class TowerPopulation : MonoBehaviour
+public class TowerPopulation : MonoBehaviour, IPopulationAllocationTarget
 {
     private Tower _tower;
     private PopulationManager _populationManager;
