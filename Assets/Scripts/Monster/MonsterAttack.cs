@@ -31,8 +31,6 @@ public class MonsterAttack : MonoBehaviour
     public float Interval => _attack.Interval;
 
     public void Initialize(MonsterData data, MonsterMovement movement, Animator animator)
-
-    public void Initialize(MonsterData data, MonsterMovement movement)
     {
         Initialize(data, movement,animator, ResolvedEnemyStatModifier.Neutral);
     }
