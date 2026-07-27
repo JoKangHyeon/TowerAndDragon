@@ -7,5 +7,6 @@ using UnityEngine;
 public enum MonsterTargetType
 {
     None = 0,
-    Tower = 1 << 0
+    Tower = 1 << 0,
+    Dragon = 1 << 1
 }
