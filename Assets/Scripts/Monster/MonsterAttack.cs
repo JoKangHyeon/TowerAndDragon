@@ -18,23 +18,29 @@ public class MonsterAttack : MonoBehaviour
     private IMonsterTarget _currentTarget;
     private Castle _finalTarget;
     private ResolvedEnemyStatModifier _attackPowerModifier;
+    private Animator _animator;
 
     private float _nextAttackTime;
     private bool _isInitialized;
+    private int _animKeyEnemyAttack = Animator.StringToHash("EnemyAttack");
+
 
     public float Range => _attack.Range;
     public float Interval => _attack.Interval;
 
-    public void Initialize(MonsterData data, MonsterMovement movement)
+    public void Initialize(MonsterData data, MonsterMovement movement, Animator animator)
     {
-        Initialize(data, movement, ResolvedEnemyStatModifier.Neutral);
+        Initialize(data, movement,animator, ResolvedEnemyStatModifier.Neutral);
     }
 
     public void Initialize(
         MonsterData data,
         MonsterMovement movement,
+        Animator animator,
         ResolvedEnemyStatModifier attackPowerModifier)
     {
+        _animator= animator; 
+
         _data = data;
         _attack = data.Attack;
         _enRouteTargetTypes = data.EnRouteTargetTypes;
@@ -184,6 +190,7 @@ public class MonsterAttack : MonoBehaviour
             return;
         }
 
+        _animator.SetTrigger(_animKeyEnemyAttack);
         LaunchProjectile(target, in context);
     }
     private void LaunchProjectile(IAttackTarget target, in AttackContext context)

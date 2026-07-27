@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.Splines;
 
@@ -20,6 +21,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
     private MonsterMovement _movement;
     private MonsterAttack _attack;
     private Castle _mainCastle;
+    private Animator _animator;
     private EnemyEnhancementSnapshot _enhancement;
     private readonly SpecialBehaviorRunner _specialBehaviorRunner = new();
 
@@ -33,12 +35,18 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
 
     public GameObject TargetObject => gameObject;
 
+
+    private int _animKeyMove = Animator.StringToHash("Move");
+    private int _animKeyTakeDamage = Animator.StringToHash("TakeDamage");
+
+
     private void Awake()
     {
         _health = GetComponent<Health>();
         _shield = GetComponent<MonsterShield>();
         _movement = GetComponent<MonsterMovement>();
         _attack = GetComponent<MonsterAttack>();
+        _animator = GetComponent<Animator>();
     }
 
     /// <summary>
@@ -77,7 +85,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
 
         if (_attack != null && _data.Attack != null)
         {
-            _attack.Initialize(_data, _movement, _enhancement.AttackPower);
+            _attack.Initialize(_data, _movement, _animator, _enhancement.AttackPower);
         }
 
         _specialBehaviorRunner.Initialize(this, _data.SpecialBehaviors);
@@ -111,6 +119,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
         if (remaining > 0)
         {
             _health.TakeDamage(remaining);
+            _animator.SetTrigger(_animKeyTakeDamage);
         }
     }
 
@@ -146,6 +155,8 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
             0f,
             _enhancement.MoveSpeed.Apply(_data.MoveSpeed));
         _movement.SetSpeed(moveSpeed);
+
+        _animator.SetBool(_animKeyMove, moveSpeed > 0);
 
         switch (_movement)
         {
