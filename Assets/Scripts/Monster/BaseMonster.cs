@@ -33,6 +33,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
     public Transform TargetTransform => transform;
     public GameObject TargetObject => gameObject;
     public MonsterAttack Attack => _attack;
+    public bool HasArrivedAtCastle => _movement != null && _movement.HasArrived;
     
 
 
@@ -131,6 +132,21 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
         }
 
         _health.Heal(amount);
+    }
+
+    public void HaltMovement()
+    {
+        _movement?.Stop();
+    }
+    
+    public void Kill()
+    {
+        if (IsDead)
+        {
+            return;
+        }
+    
+        _health.Kill();
     }
 
     /// <summary>테스트 진행을 위해 방어막과 관계없이 즉시 사망 처리한다.</summary>
