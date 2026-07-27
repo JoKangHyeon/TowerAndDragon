@@ -881,6 +881,7 @@ MonoBehaviour:
   _selectionHighlightColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   _occupiedOverlayColor: {r: 1, g: 0, b: 0, a: 1}
   _missingResourceTint: {r: 1, g: 0.6, b: 0, a: 1}
+  _rangeIndicator: {fileID: 0}
 --- !u!4 &460916811
 Transform:
   m_ObjectHideFlags: 0
@@ -2676,6 +2677,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2502082030955664768, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: _cycleManager
+      value: 
+      objectReference: {fileID: 1205709760}
     - target: {fileID: 4628926043074815615, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.4
@@ -2820,17 +2825,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4628926043074815615, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
   m_PrefabInstance: {fileID: 740621124}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &740621128 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 4200142437119276163, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-  m_PrefabInstance: {fileID: 740621124}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7d5ca42874ae31b44b3603acb4cc4b17, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CycleLight
 --- !u!1001 &774180240
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13135,10 +13129,9 @@ MonoBehaviour:
   _defaultLights:
   - {fileID: 601351804}
   - {fileID: 622343880}
-  - {fileID: 740621128}
   _resourceManager: {fileID: 1205709759}
   _skillManager: {fileID: 1205709758}
-  _gridMap: {fileID: 0}
+  _gridMap: {fileID: 740621125}
   _researchManager: {fileID: 0}
   GameOverOccurred:
     m_PersistentCalls:
@@ -14012,50 +14005,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1852883777}
   m_CullTransparentMesh: 1
---- !u!1 &1905391922
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1905391924}
-  - component: {fileID: 1905391923}
-  m_Layer: 0
-  m_Name: FactoryPopulationDebugGUI
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1905391923
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1905391922}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6058edc801175224292595a33c6f59d0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FactoryPopulationDebugGUI
---- !u!4 &1905391924
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1905391922}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.2, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1999306333
 GameObject:
   m_ObjectHideFlags: 0
@@ -14766,5 +14715,4 @@ SceneRoots:
   - {fileID: 774180240}
   - {fileID: 2003925184}
   - {fileID: 1800231436}
-  - {fileID: 1905391924}
   - {fileID: 516883971}

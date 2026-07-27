@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="640" viewBox="0 0 768 640">
+  <rect width="768" height="640" fill="#ff00ff"/>
+  <!--
+    Unity isometric projection for logical occupied cells:
+      top row:    (1,1)
+      bottom row: (0,0), (1,0), (2,0)
+    Cell diamond: 256 x 128 (2:1).
+  -->
+  <g stroke="#172033" stroke-width="8" stroke-linejoin="round">
+    <polygon points="256,192 384,256 256,320 128,256" fill="#58b9ff"/>
+    <polygon points="512,192 640,256 512,320 384,256" fill="#ffc857"/>
+    <polygon points="384,256 512,320 384,384 256,320" fill="#8bd17c"/>
+    <polygon points="256,320 384,384 256,448 128,384" fill="#ff846e"/>
+  </g>
+</svg>
