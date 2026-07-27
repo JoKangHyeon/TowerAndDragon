@@ -30,10 +30,10 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
 
     // 현재 체력 비례 데미지(스킬 등)를 산정하기 위해 노출한다 - Health 자체는 계속 private로 캡슐화.
     public float CurrentHealth => _health == null ? 0f : _health.CurrentHealth;
-
     public Transform TargetTransform => transform;
-
     public GameObject TargetObject => gameObject;
+    public MonsterAttack Attack => _attack;
+    
 
 
     private int _animKeyMove = Animator.StringToHash("Move");
