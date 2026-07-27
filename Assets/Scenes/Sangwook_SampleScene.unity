@@ -13301,6 +13301,7 @@ GameObject:
   - component: {fileID: 1122431368}
   - component: {fileID: 1122431369}
   - component: {fileID: 1122431370}
+  - component: {fileID: 1122431371}
   m_Layer: 0
   m_Name: WaveManager
   m_TagString: Untagged
@@ -13371,6 +13372,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac9add762445ff643b9ee93be055861b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyEnhancementManager
+--- !u!114 &1122431371
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1122431367}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 124faeb4a8cc2564fa6cffb624900ab1, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::WaveDebugSkipController
+  _waveManager: {fileID: 1122431369}
 --- !u!1 &1151151217
 GameObject:
   m_ObjectHideFlags: 0

@@ -124,6 +124,17 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
         _health.Heal(amount);
     }
 
+    /// <summary>테스트 진행을 위해 방어막과 관계없이 즉시 사망 처리한다.</summary>
+    public void DebugDefeatImmediately()
+    {
+        if (_health == null || _health.IsDead)
+        {
+            return;
+        }
+
+        _health.TakeDamage(_health.CurrentHealth);
+    }
+
     private void ConfigureMovement(SplineContainer path, Transform mainCastle)
     {
         if (_movement == null)
