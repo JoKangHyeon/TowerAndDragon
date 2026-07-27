@@ -7,6 +7,7 @@ using UnityEngine.UI;
 public class UI_DragonSkillNode : MonoBehaviour
 {
     private const float AVAILABLE_TINT_RATIO = 0.55f;
+    private const float DEEP_LOCKED_ALPHA = 0.55f;
     private static readonly Color LOCKED_COLOR = new Color(0.08f, 0.06f, 0.05f, 1f);
 
     [SerializeField] private Image _background;
@@ -49,13 +50,23 @@ public class UI_DragonSkillNode : MonoBehaviour
         }
     }
 
+    // 자원 부족(InsufficientResources)은 "선행·게이트는 충족했고 자원만 모자란" 상태라
+    // 불투명하게 두고, 그 외 잠금 사유(선행·게이트·낮밤·무효)는 더 멀리 잠겨 있음을
+    // 나타내도록 살짝 투명하게 처리한다.
     private static Color ResolveColor(ProgressionNodeState state, Color attributeColor)
     {
-        return state switch
+        switch (state)
         {
-            ProgressionNodeState.Completed => attributeColor,
-            ProgressionNodeState.Available => Color.Lerp(LOCKED_COLOR, attributeColor, AVAILABLE_TINT_RATIO),
-            _ => LOCKED_COLOR,
-        };
+            case ProgressionNodeState.Completed:
+                return attributeColor;
+            case ProgressionNodeState.Available:
+                return Color.Lerp(LOCKED_COLOR, attributeColor, AVAILABLE_TINT_RATIO);
+            case ProgressionNodeState.InsufficientResources:
+                return LOCKED_COLOR;
+            default:
+                Color deepLocked = LOCKED_COLOR;
+                deepLocked.a = DEEP_LOCKED_ALPHA;
+                return deepLocked;
+        }
     }
 }

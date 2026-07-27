@@ -564,7 +564,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7475151901225264468, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
   m_PrefabInstance: {fileID: 2046588818}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1263275076}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26941716a71269f4bb95dbd977f72da9, type: 3}
@@ -11676,6 +11676,8 @@ GameObject:
   - component: {fileID: 914589617}
   - component: {fileID: 914589620}
   - component: {fileID: 914589621}
+  - component: {fileID: 914589622}
+  - component: {fileID: 914589623}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -11748,6 +11750,7 @@ MonoBehaviour:
   _skillManager: {fileID: 914589614}
   _gridMap: {fileID: 313449541}
   _researchManager: {fileID: 914589620}
+  _dragonTreeManager: {fileID: 914589622}
   GameOverOccurred:
     m_PersistentCalls:
       m_Calls: []
@@ -11859,6 +11862,39 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GlobalInputBootstrap
   _confirmAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+--- !u!114 &914589622
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914589609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c29f15af5fa54d344ac44a99f8756d59, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DragonTreeManager
+  _nodeUnlocked:
+    m_PersistentCalls:
+      m_Calls: []
+  _tree: {fileID: 11400000, guid: 1a4132b210003fd4eab8cdb285292035, type: 2}
+  _activeAttributeChanged:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &914589623
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914589609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f09cb77eb9c38a84fbeee085881e6f5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DragonTreeDebugGUI
+  _dragonTreeManager: {fileID: 914589622}
+  _resourceManager: {fileID: 914589613}
 --- !u!1001 &944163938
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13342,11 +13378,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d5ca42874ae31b44b3603acb4cc4b17, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CycleLight
---- !u!1 &1263275076 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-  m_PrefabInstance: {fileID: 2046588818}
-  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1351215206 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -14134,46 +14165,12 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1460990098537314003, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
   m_PrefabInstance: {fileID: 2046588818}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1263275076}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4045de5de46a3144b38fb3fd1b08f0e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ConquestManager
---- !u!114 &1721790488
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1263275076}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5c07941abd51c44ca1eaf685a34b4cb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ExpeditionMarkerRenderer
-  _conquestManager: {fileID: 1721790482}
-  _timerPrefab: {fileID: 8167959100412792240, guid: 630c54d8a18a0324498c6e7283d360f1, type: 3}
-  _timerYOffset: 1
---- !u!114 &1721790489
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1263275076}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 84bea500230f4d6409653ed54a659c9b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ResourceNodeDebugger
-  _showResourceNodeGizmos: 0
-  _mouseSelectController: {fileID: 1748892985}
-  _resourceNodeOverlaySpritePrefab: {fileID: 1044757331}
-  _debugSelectedCellCoord: {x: 0, y: 0, z: 0}
-  _debugSelectedResourceNodes: 0
-  _debugSelectedBaseYield: 0
-  _debugYieldByResource: []
 --- !u!1 &1748892984
 GameObject:
   m_ObjectHideFlags: 0
@@ -14245,38 +14242,14 @@ PrefabInstance:
       propertyPath: _enemyEnhancementManager
       value: 
       objectReference: {fileID: 1122431370}
-    - target: {fileID: 2034387597279232280, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 2502082030955664768, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: _cycleManager
       value: 
       objectReference: {fileID: 914589611}
-    - target: {fileID: 4628926043074815615, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 0.4
-      objectReference: {fileID: 0}
-    - target: {fileID: 4628926043074815615, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 0.4
-      objectReference: {fileID: 0}
-    - target: {fileID: 4628926043074815615, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      propertyPath: m_LocalScale.z
-      value: 0.4
-      objectReference: {fileID: 0}
-    - target: {fileID: 4628926043074815615, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -5
-      objectReference: {fileID: 0}
     - target: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: m_Name
       value: Grid_HeightVariant
       objectReference: {fileID: 0}
-    - target: {fileID: 5052275632073346087, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      propertyPath: _mouseSelectController
-      value: 
-      objectReference: {fileID: 1748892985}
     - target: {fileID: 5230962588699654996, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: _mouseSelectController
       value: 
@@ -14285,26 +14258,18 @@ PrefabInstance:
       propertyPath: _chunkOverlaySpritePrefab
       value: 
       objectReference: {fileID: 1044757331}
-    - target: {fileID: 5959431859424174035, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      propertyPath: _gradientBandWidth
-      value: 4
-      objectReference: {fileID: 0}
+    - target: {fileID: 5927149215166704037, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: _mouseSelectController
+      value: 
+      objectReference: {fileID: 1748892985}
+    - target: {fileID: 5927149215166704037, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: _resourceNodeOverlaySpritePrefab
+      value: 
+      objectReference: {fileID: 1044757331}
     - target: {fileID: 6681738151754636705, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: _gameManager
       value: 
       objectReference: {fileID: 914589612}
-    - target: {fileID: 7475151901225264468, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      propertyPath: _chunkYieldTable
-      value: 
-      objectReference: {fileID: 11400000, guid: c57c431f70103ba428e42a6fa14f5ab3, type: 2}
-    - target: {fileID: 7475151901225264468, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      propertyPath: _resourceNodeAreaTable
-      value: 
-      objectReference: {fileID: 11400000, guid: 1397a635f4f256f4b85b62a5384ef4a2, type: 2}
-    - target: {fileID: 7475151901225264468, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      propertyPath: _cellYieldOverrideTable
-      value: 
-      objectReference: {fileID: 11400000, guid: 8e9caa2e973bb95438cec249838b1102, type: 2}
     - target: {fileID: 8228429161871257706, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -14346,10 +14311,6 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8324432385230451432, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      propertyPath: _conquestManager
-      value: 
-      objectReference: {fileID: 1721790482}
-    - target: {fileID: 8324432385230451432, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: _mouseSelectController
       value: 
       objectReference: {fileID: 1748892985}
@@ -14358,16 +14319,9 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1560119868}
     m_RemovedComponents: []
-    m_RemovedGameObjects:
-    - {fileID: 4997526250000123913, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+    m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1721790488}
-    - targetCorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1721790489}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
 --- !u!1 &2099483113
 GameObject:

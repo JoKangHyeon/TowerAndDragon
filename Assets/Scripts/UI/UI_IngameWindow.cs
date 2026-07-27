@@ -64,6 +64,12 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("점령 정보 창. 버튼 클릭 시 점령 모드를 토글한다.")]
     [SerializeField] private UI_ConquestWindow _conquestWindow;
 
+    [Header("용 스킬트리 (Panel_BottomRight)")]
+    [Tooltip("용 스킬 모드 토글 버튼.")]
+    [SerializeField] private Button _buttonDragonSkill;
+    [Tooltip("용 스킬 정보 창. 버튼 클릭 시 용 스킬 모드를 토글한다.")]
+    [SerializeField] private UI_DragonSkillWindow _dragonSkillWindow;
+
     [Header("웨이브 진행 바 (Panel_TopCenter/BossWave)")]
     [Tooltip("웨이브 진행 슬라이더(Slider_wave).")]
     [SerializeField] private Slider _waveSlider;
@@ -108,6 +114,11 @@ public class UI_IngameWindow : MonoBehaviour
         if (_buttonConquest != null && _conquestWindow != null)
         {
             _buttonConquest.onClick.AddListener(_conquestWindow.ToggleConquestMode);
+        }
+
+        if (_buttonDragonSkill != null && _dragonSkillWindow != null)
+        {
+            _buttonDragonSkill.onClick.AddListener(_dragonSkillWindow.ToggleFromEntryPoint);
         }
     }
 
