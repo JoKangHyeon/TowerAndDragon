@@ -26,21 +26,9 @@
   자원(기본4 + 특화4 + 슬라임) / 연구 4갈래
 - 승리: 최종 보스 격파 or 4포탈 동시 봉인 / 패배: 메인 성 파괴
 
-## 개발 환경
-
-- Unity 6000.3.15f1 (Unity 6.3)
-- URP 2D + Isometric Tilemap
-- Input System (신형, `InputSystem_Actions.inputactions`)
-- 빌드 타겟: Windows
-
 ## 폴더 구조 (Assets/)
 
-- `Scenes/`   : 씬
-- `Scripts/`  : C# 스크립트
-- `Settings/` : URP·프로젝트 설정
 - `Imported/` : 외부 번들 에셋 (수정 금지, 원본 유지)
-- `Data/`     : ScriptableObject·CSV
-- `Prefabs/`  : 프리팹
 
 ## 도구 규칙 — Coplay MCP
 
