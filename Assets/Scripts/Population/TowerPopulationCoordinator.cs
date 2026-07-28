@@ -38,6 +38,11 @@ public class TowerPopulationCoordinator : MonoBehaviour
             return;
         }
 
+        if (!tower.RequiresPopulation)
+        {
+            return;
+        }
+
         TowerPopulation towerPopulation = tower.GetComponent<TowerPopulation>();
         if (towerPopulation == null)
         {
@@ -63,6 +68,11 @@ public class TowerPopulationCoordinator : MonoBehaviour
     private void HandleBuildingRemoving(Building building)
     {
         if (!(building is Tower tower))
+        {
+            return;
+        }
+
+        if (!tower.RequiresPopulation)
         {
             return;
         }

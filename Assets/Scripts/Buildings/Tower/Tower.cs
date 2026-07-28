@@ -22,6 +22,9 @@ public class Tower : Building, IMonsterTarget
     public override IReadOnlyList<ResourceAmount> BuildCost => _towerData != null ? _towerData.BuildCost : base.BuildCost;
     public override int PopulationCapacity => _towerData != null ? _towerData.PopulationCapacity : base.PopulationCapacity;
     public MonsterTargetType TargetType => MonsterTargetType.Tower;
+
+    // 인구로 가동하지 않는 타워(새끼용 등)는 false로 override한다.
+    public virtual bool RequiresPopulation => true;
     public Transform TargetTransform => transform;
     public GameObject TargetObject => gameObject;
 
