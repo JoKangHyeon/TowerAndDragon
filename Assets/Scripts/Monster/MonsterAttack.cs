@@ -193,7 +193,8 @@ public class MonsterAttack : MonoBehaviour
             return;
         }
 
-        _animator.SetTrigger(_animKeyEnemyAttack);
+        if (_animator != null)
+            _animator.SetTrigger(_animKeyEnemyAttack);
         LaunchProjectile(target, in context);
     }
     private void LaunchProjectile(IAttackTarget target, in AttackContext context)

@@ -120,7 +120,8 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
         if (remaining > 0)
         {
             _health.TakeDamage(remaining);
-            _animator.SetTrigger(_animKeyTakeDamage);
+            if(_animator!=null)
+                _animator.SetTrigger(_animKeyTakeDamage);
         }
     }
 
@@ -172,7 +173,8 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
             _enhancement.MoveSpeed.Apply(_data.MoveSpeed));
         _movement.SetSpeed(moveSpeed);
 
-        _animator.SetBool(_animKeyMove, moveSpeed > 0);
+        if(_animator != null)
+            _animator.SetBool(_animKeyMove, moveSpeed > 0);
 
         switch (_movement)
         {
