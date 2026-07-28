@@ -47,13 +47,28 @@ public class UI_SkillIndicator : MonoBehaviour
 
         if (!_skill.IsUsePerDayLeft)
         {
-            _skillCooltimeFillImage.fillAmount = 1f;
-            _button.interactable = false;
-            _skillRemainText.text = _skill.IsUnlimitedUse ? string.Empty : _skill.UsePerDayLeft.ToString();
+            if (_skillCooltimeFillImage != null)
+            {
+                _skillCooltimeFillImage.fillAmount = 1f;
+            }
+
+            if (_button != null)
+            {
+                _button.interactable = false;
+            }
+
+            if (_skillRemainText != null)
+            {
+                _skillRemainText.text = _skill.IsUnlimitedUse ? string.Empty : _skill.UsePerDayLeft.ToString();
+            }
+
             return;
         }
 
-        _button.interactable = _skill.CanUse;
+        if (_button != null)
+        {
+            _button.interactable = _skill.CanUse;
+        }
 
         if (_skillCooltimeFillImage != null)
         {

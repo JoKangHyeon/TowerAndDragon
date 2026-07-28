@@ -14,6 +14,7 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private EnemyEnhancementManager _enemyEnhancementManager;
     [SerializeField] private UnityEvent _allSpawnCompleted;
     [SerializeField] private UnityEvent _allMonstersDefeated;
+    [SerializeField] private UnityEvent<BaseMonster> _monsterSpawned;
 
 
     private CancellationTokenSource _waveCancellation;
@@ -25,6 +26,10 @@ public class WaveManager : MonoBehaviour
     public bool IsRunning { get; private set; }
     public UnityEvent AllSpawnsCompleted => _allSpawnCompleted;
     public UnityEvent AllMonstersDefeated => _allMonstersDefeated;
+    public UnityEvent<BaseMonster> MonsterSpawned => _monsterSpawned;
+
+    // 용 스킬트리 전역형 액티브(빙결·전역 대미지)가 대상 목록을 얻는 데 쓴다.
+    public IReadOnlyList<BaseMonster> SpawnedMonsters => _spawnedMonsters;
 
     public async UniTask StartWaveAsync(WaveDefinitionSO waveDefinition)
     {
@@ -319,6 +324,7 @@ public class WaveManager : MonoBehaviour
             runtimeGroup.Enhancement);
 
         _spawnedMonsters.Add(monster);
+        _monsterSpawned?.Invoke(monster);
 
         return monster;
     }

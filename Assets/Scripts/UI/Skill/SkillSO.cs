@@ -11,14 +11,17 @@ public class SkillSO:ScriptableObject
     public float DefaultCooltime;
     public int DefaultUsePerDay;
 
-    [Header("µ¥¹ÌÁö ½ºÅ³ Àü¿ë - ÇöÀç Ã¼·Â ºñ·Ê µ¥¹ÌÁö")]
+    [Header("ì²´ë ¥ë¹„ë¡€ ìŠ¤í‚¬ ìˆ˜ì¹˜ - í˜„ì¬ ì²´ë ¥ ê¸°ì¤€ ë°ë¯¸ì§€")]
     [Range(0f, 1f)]
     public float DamagePercentOfCurrentHealth;
-    [Tooltip("±¤¿ª ½ºÅ³ÀÇ ÆÇÁ¤ ¹İ°æ.")]
+    [Tooltip("ê´‘ì—­ ìŠ¤í‚¬ì˜ ì ìš© ë°˜ê²½.")]
     public float AreaRadius;
-    [Tooltip("Å¸°ÙÀ¸·Î ÀÎ½ÄÇÒ ·¹ÀÌ¾î - º¸Åë Enemy ·¹ÀÌ¾î.")]
+    [Tooltip("íƒ€ê²ŸíŒ… ì‹œ ì¸ì‹í•  ë ˆì´ì–´ - ë³´í†µ Enemy ë ˆì´ì–´.")]
     public LayerMask TargetLayers;
 
+    [Header("ìš© ìŠ¤í‚¬íŠ¸ë¦¬ ì•¡í‹°ë¸Œ - ìƒíƒœì´ìƒ ë¶€ì—¬í˜•")]
+    [Tooltip("ë°œë™ ì‹œ ëŒ€ìƒì— ë¶€ì—¬í•  ìƒíƒœì´ìƒ(ë¹™ê²°Â·í™”ìƒ ì¬ë¶€ì—¬ ë“±). í•„ìš” ì—†ëŠ” ìŠ¤í‚¬ì€ ë¹„ì›Œ ë‘”ë‹¤.")]
+    public StatusEffectSO AppliedStatus;
 
     public Skill GetSkill()
     {
@@ -30,6 +33,12 @@ public class SkillSO:ScriptableObject
                 return new SingleCurrentHealthDamageSkill(this);
             case SkillType.AREA_CURRENT_HEALTH_DAMAGE:
                 return new AreaCurrentHealthDamageSkill(this);
+            case SkillType.FREEZE_ALL:
+                return new FreezeAllSkill(this);
+            case SkillType.GLOBAL_CURRENT_HEALTH_DAMAGE:
+                return new GlobalCurrentHealthDamageSkill(this);
+            case SkillType.REPAIR_TOWERS:
+                return new RepairTowersSkill(this);
             default:
                 return null;
         }

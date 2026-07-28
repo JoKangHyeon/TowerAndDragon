@@ -6,7 +6,8 @@ public sealed class ResearchManager : MonoBehaviour,
     IChunkYieldMultiplierQuery,
     ITowerStatMultiplierQuery,
     IConquestModifierQuery,
-    IPopulationCapacityModifierQuery
+    IPopulationCapacityModifierQuery,
+    IVisionRadiusBonusQuery
 {
     private const float BASE_YIELD_MULTIPLIER = 1f;
     private const float BASE_DAMAGE_MULTIPLIER = 1f;
@@ -16,6 +17,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     [SerializeField] private ResearchTreeData _tree;
     [SerializeField] private ResearchBalanceData _balance;
+
+    // 소비 지점(GridMap/TowerAttack)에 이 매니저를 직접 대입하지 않고 Composite에 등록한다 -
+    // 용 스킬트리 등 다른 시스템도 같은 지점에 기여할 수 있어야 하기 때문이다
+    // (단일 슬롯이면 서로 덮어쓴다). 시야·점령 쪽 등록은 각각 CastleVisionCoordinator·
+    // ConquestResearchCoordinator가 담당한다(이 매니저를 이미 참조하고 있어 중복 배선이 없다).
+    [SerializeField] private ChunkYieldMultiplierComposite _yieldComposite;
+    [SerializeField] private TowerStatMultiplierComposite _statComposite;
 
     [SerializeField] private UnityEvent<int> _researchPointsChanged = new();
     [SerializeField] private UnityEvent<ResearchNodeData> _nodeCompleted = new();
@@ -78,12 +86,22 @@ public sealed class ResearchManager : MonoBehaviour,
             _cycleManager.OnNightEnd.AddListener(GrantResearchPoints);
         }
 
-        if (_gridMap != null)
+        if (_yieldComposite == null)
         {
-            _gridMap.YieldMultiplierQuery = this;
-            _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
-            _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoving);
+            Debug.LogError(
+                "[ResearchManager] ChunkYieldMultiplierComposite 참조가 없어 연구 생산 배율이 전혀 적용되지 않습니다.",
+                this);
         }
+
+        if (_statComposite == null)
+        {
+            Debug.LogError(
+                "[ResearchManager] TowerStatMultiplierComposite 참조가 없어 연구 타워 배율이 전혀 적용되지 않습니다.",
+                this);
+        }
+
+        _yieldComposite?.Register(this);
+        _statComposite?.Register(this);
 
         _isConstructed = true;
     }
@@ -95,16 +113,8 @@ public sealed class ResearchManager : MonoBehaviour,
             _cycleManager.OnNightEnd.RemoveListener(GrantResearchPoints);
         }
 
-        if (_gridMap != null && ReferenceEquals(_gridMap.YieldMultiplierQuery, this))
-        {
-            _gridMap.YieldMultiplierQuery = null;
-        }
-
-        if (_gridMap != null)
-        {
-            _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingAdded);
-            _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingRemoving);
-        }
+        _yieldComposite?.Unregister(this);
+        _statComposite?.Unregister(this);
     }
 
     public bool RegisterLab(ResearchLab lab)
@@ -438,22 +448,6 @@ public sealed class ResearchManager : MonoBehaviour,
         }
 
         return moveAllowance;
-    }
-
-    private void HandleBuildingAdded(Building building)
-    {
-        if (building is Tower tower && tower.Attack != null)
-        {
-            tower.Attack.SetStatMultiplierQuery(this);
-        }
-    }
-
-    private void HandleBuildingRemoving(Building building)
-    {
-        if (building is Tower tower && tower.Attack != null)
-        {
-            tower.Attack.SetStatMultiplierQuery(null);
-        }
     }
 
     private void CacheNodes()

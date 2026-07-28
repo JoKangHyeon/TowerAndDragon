@@ -9,6 +9,7 @@ public class TowerAttack : MonoBehaviour
     private BaseMonster _target;
     private ITowerStaffing _staffing;
     private ITowerStatMultiplierQuery _statMultiplierQuery;
+    private ITowerHitStatusQuery _hitStatusQuery;
     private float _nextAttackTime;
     private bool _isAttackEnabled;
 
@@ -61,6 +62,11 @@ public class TowerAttack : MonoBehaviour
         ITowerStatMultiplierQuery statMultiplierQuery)
     {
         _statMultiplierQuery = statMultiplierQuery;
+    }
+
+    public void SetHitStatusQuery(ITowerHitStatusQuery hitStatusQuery)
+    {
+        _hitStatusQuery = hitStatusQuery;
     }
 
     private void Update()
@@ -181,7 +187,13 @@ public class TowerAttack : MonoBehaviour
             ? _statMultiplierQuery.GetDamageMultiplier(_towerData)
             : 1f;
         var damageModifier = new ResolvedEnemyStatModifier(0f, damageMultiplier);
-        AttackContext context = new AttackContext(gameObject, damageModifier);
+
+        StatusEffectSO hitStatus = _hitStatusQuery?.GetTowerHitStatus(_towerData);
+        StatusEffectSO[] extraStatuses = hitStatus != null
+            ? new[] { hitStatus }
+            : null;
+
+        AttackContext context = new AttackContext(gameObject, damageModifier, extraStatuses);
 
         if(_animator != null)
         {
