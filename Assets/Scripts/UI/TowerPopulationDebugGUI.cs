@@ -38,6 +38,7 @@ public class TowerPopulationDebugGUI : MonoBehaviour
     private TowerPopulation _selectedTowerPopulation;
     private FactoryPopulation _selectedFactoryPopulation;
     private Vector2 _babyDragonScrollPosition;
+    private bool _isVisible;
 
     private bool IsDay =>
         _cycleManager != null &&
@@ -47,8 +48,35 @@ public class TowerPopulationDebugGUI : MonoBehaviour
     // 다른 타입의 창이 "기억"되어 계속 떠 있는 일이 없도록, 값을 유지하지 않고 항상 새로 계산한다.
     private void Update()
     {
+        HandleVisibilityToggle();
+
         _selectionKind = ResolveSelectionKind();
+
+        if (!_isVisible)
+        {
+            return;
+        }
+
         HandleKeyInput();
+    }
+
+    // F1로 디버그 창 전체를 켜고 끈다(토글), ESC는 항상 닫기만 한다.
+    private void HandleVisibilityToggle()
+    {
+        if (Keyboard.current == null)
+        {
+            return;
+        }
+
+        if (Keyboard.current.f1Key.wasPressedThisFrame)
+        {
+            _isVisible = !_isVisible;
+        }
+
+        if (_isVisible && Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            _isVisible = false;
+        }
     }
 
     private SelectionKind ResolveSelectionKind()
@@ -116,6 +144,11 @@ public class TowerPopulationDebugGUI : MonoBehaviour
 
     private void OnGUI()
     {
+        if (!_isVisible)
+        {
+            return;
+        }
+
         switch (_selectionKind)
         {
             case SelectionKind.Tower:

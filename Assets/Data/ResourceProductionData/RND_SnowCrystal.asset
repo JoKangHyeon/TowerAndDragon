@@ -12,6 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00717fc5bb6674c478f5f330f40d69a5, type: 3}
   m_Name: RND_SnowCrystal
   m_EditorClassIdentifier: Assembly-CSharp::ResourceProductionData
+  _nameLocKey: Snow Crystal
   _requiredResourceNode: 16
   _producedResourceType: 16
-  _yieldPerCycle: 1
+  _populationCapacity: 5
+  _buildCost:
+  - Type: 1
+    Amount: 10
+  - Type: 2
+    Amount: 10
+  - Type: 4
+    Amount: 10

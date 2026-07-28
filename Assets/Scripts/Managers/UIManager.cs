@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// UI 창을 켜고 끄는 관리자. 창 표시/숨김(Show/Hide)을 담당하고,
@@ -22,7 +23,14 @@ public class UIManager : MonoBehaviour
     [Tooltip("한 번에 하나만 열려야 하는 UI 모드 목록(IExclusiveMode 구현체). 예: UI_BuildModeWindow, ConquestModeController.")]
     [SerializeField] private MonoBehaviour[] _exclusiveModeBehaviours;
 
+    [Header("새끼용 인벤토리 단축키")]
+    [Tooltip("새끼용 인벤토리 창 열기/닫기 토글 - 보통 Tab.")]
+    [SerializeField] private InputActionReference _babyDragonInventoryToggleAction;
+    [Tooltip("IExclusiveMode를 구현한 UI_DragonInventoryWindow - _exclusiveModeBehaviours에 넣은 것과 같은 오브젝트를 지정할 것(안 그러면 빌드모드/점령 창을 열 때 이 창이 안 닫힘).")]
+    [SerializeField] private MonoBehaviour _babyDragonInventoryWindow;
+
     private IExclusiveMode[] _exclusiveModes;
+    private IExclusiveMode _babyDragonInventoryMode;
 
     private void Awake()
     {
@@ -31,6 +39,28 @@ public class UIManager : MonoBehaviour
         Hide(_victoryWindow);
 
         CacheExclusiveModes();
+        _babyDragonInventoryMode = _babyDragonInventoryWindow as IExclusiveMode;
+    }
+
+    // 새끼용 인벤토리 창은 열려있는 동안 자기 오브젝트(_panel)를 스스로 비활성화하므로(BuildMode와 같은 패턴)
+    // 창 자신의 Update()로는 다시 열 수 없다 - 항상 켜져있는 UIManager가 단축키를 폴링해 직접 열어준다.
+    private void Update()
+    {
+        if (_babyDragonInventoryToggleAction == null ||
+            _babyDragonInventoryMode == null ||
+            !_babyDragonInventoryToggleAction.action.WasPerformedThisFrame())
+        {
+            return;
+        }
+
+        if (_babyDragonInventoryMode.IsOpen)
+        {
+            _babyDragonInventoryMode.Close();
+        }
+        else
+        {
+            OpenExclusive(_babyDragonInventoryMode);
+        }
     }
 
     // 인스펙터에는 MonoBehaviour로 받고(유니티가 인터페이스 필드를 직렬화하지 못하므로)

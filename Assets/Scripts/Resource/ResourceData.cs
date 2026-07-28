@@ -1,10 +1,11 @@
 using UnityEngine;
 
-// 자원 분류. 기본(중앙 초원 생산) / 특화(외곽 바이옴 점령 필요).
+// 자원 분류. 기본(중앙 초원 생산) / 특화(외곽 바이옴 점령 필요) / 슬라임(새끼용 먹이).
 public enum ResourceCategory
 {
     Basic,
     Specialized,
+    Slime,
 }
 
 /// <summary>자원 1종의 메타데이터(표시 이름 key/아이콘/분류). 보유량 관리는 ResourceManager가 담당한다.</summary>
