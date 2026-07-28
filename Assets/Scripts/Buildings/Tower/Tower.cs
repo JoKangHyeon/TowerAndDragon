@@ -12,6 +12,8 @@ public class Tower : Building, IMonsterTarget
     private Health _health;
     private TowerAttack _attack;
     private CancellationTokenSource _reviveCts;
+    private Animator _animator;
+
     private bool _isInitialized;
     private bool _isDisabled;
     private float _disabledAtTime;
@@ -28,10 +30,15 @@ public class Tower : Building, IMonsterTarget
     public Transform TargetTransform => transform;
     public GameObject TargetObject => gameObject;
 
+    private static readonly int HIT_ANIM_KEY = Animator.StringToHash("Hit");
+    private static readonly int BROKEN_ANIM_KEY = Animator.StringToHash("Broken");
+
+
     private void Awake()
     {
         _health = GetComponent<Health>();
         _attack = GetComponent<TowerAttack>();
+        _animator = GetComponent<Animator>();
     }
 
     private void Start()
@@ -58,7 +65,7 @@ public class Tower : Building, IMonsterTarget
         _towerData = data;
         _health.Initialize(_towerData.MaxHealth);
         _health.Died.AddListener(HandleDisabled);
-        _attack.Initialize(_towerData);
+        _attack.Initialize(_towerData, _animator);
         _isInitialized = true;
     }
 
@@ -74,6 +81,10 @@ public class Tower : Building, IMonsterTarget
             this);
 
         _health.TakeDamage(damage.Amount);
+        if (_animator != null && damage.Amount > 0)
+        {
+            _animator.SetTrigger(HIT_ANIM_KEY);
+        }
     }
 
     private void HandleDisabled()
@@ -89,6 +100,11 @@ public class Tower : Building, IMonsterTarget
         CancelRevive();
         _reviveCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
         ReviveAfterDelayAsync(_reviveCts.Token).Forget();
+
+        if (_animator != null)
+        {
+            _animator.SetBool(BROKEN_ANIM_KEY, true);
+        }
     }
 
     public void RestoreAtMorning()
@@ -132,6 +148,11 @@ public class Tower : Building, IMonsterTarget
         if (!wasDisabled)
         {
             return;
+        }
+
+        if (_animator != null)
+        {
+            _animator.SetBool(BROKEN_ANIM_KEY, false);
         }
 
         Debug.Log(

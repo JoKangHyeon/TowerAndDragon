@@ -12,23 +12,27 @@ public class TowerAttack : MonoBehaviour
     private float _nextAttackTime;
     private bool _isAttackEnabled;
 
+    private Animator _animator;
+
     [SerializeField] private bool _showDebugLogs;
 
     private AttackSO Attack => _towerData.Attack;
 
     public BaseMonster CurrentTarget => _target;
+    private static readonly int ATTACK_ANIM_KEY = Animator.StringToHash("Attack");
 
     private void Awake()
     {
         _staffing = GetComponent<ITowerStaffing>();
     }
 
-    public void Initialize(TowerData towerData)
+    public void Initialize(TowerData towerData, Animator animator)
     {
         _towerData = towerData;
         _target = null;
         _nextAttackTime = Time.time;
         _isAttackEnabled = _towerData != null && _towerData.CanAttack;
+        _animator = animator;
     }
 
     public void SetAttackEnabled(bool isEnabled)
@@ -166,6 +170,11 @@ public class TowerAttack : MonoBehaviour
             : 1f;
         var damageModifier = new ResolvedEnemyStatModifier(0f, damageMultiplier);
         AttackContext context = new AttackContext(gameObject, damageModifier);
+
+        if(_animator != null)
+        {
+            _animator.SetTrigger(ATTACK_ANIM_KEY);
+        }
 
         if (!_towerData.HasProjectile)
         {
