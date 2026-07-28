@@ -11,8 +11,9 @@ GameObject:
   - component: {fileID: 955767294230875541}
   - component: {fileID: 6213527619325306365}
   - component: {fileID: 4751353425643375589}
+  - component: {fileID: 1720565871956862942}
   m_Layer: 0
-  m_Name: TimeSandFactory
+  m_Name: Factory_TimeSand
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -28,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 1.5, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.45, y: 0.55, z: 0.45}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -82,7 +83,7 @@ SpriteRenderer:
   m_SortingLayer: 1
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 24aea91a65f6f9647971eaf9dadfd834, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ac4bfc943b338674faf3dd8b049bf766, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -104,11 +105,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1c20f11d4fa5c7d44ae9c11087232f53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Factory
-  _sprite: {fileID: 21300000, guid: 24aea91a65f6f9647971eaf9dadfd834, type: 3}
+  _sprite: {fileID: 21300000, guid: ac4bfc943b338674faf3dd8b049bf766, type: 3}
   _footprintShape:
-    _width: 1
-    _height: 1
-    _cells: 01
+    _width: 2
+    _height: 2
+    _cells: 01010101
   _rotationSprites:
   - {fileID: 0}
   - {fileID: 0}
@@ -130,3 +131,15 @@ MonoBehaviour:
   _resourceManager: {fileID: 0}
   _cycleManager: {fileID: 0}
   _gridMap: {fileID: 0}
+--- !u!114 &1720565871956862942
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5371113626611376232}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9447adaa12e5e5942bf00c1eb9928978, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FactoryPopulation
