@@ -2,36 +2,91 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+// 선택한 건물 하나의 산출량·인구 현황을 보여주고 인구를 배치/회수하는 창(이슈 #110).
+// 산출 행은 건물 종류마다 의미가 달라 타입별로 채운다 - 생산시설은 자원 생산량,
+// 타워는 가동 여부·충원율, 연구소는 정산 시 받는 연구 포인트.
+// 생산시설은 ProducedResourceType이 다중 비트일 수 있어(슬라임 농장) 산출 행이 여러 개가 되므로
+// 행을 풀링한다. 항상 하나인 인구/가용 인구 행은 프리팹에 고정 배치해 값만 갱신한다
+// (점령 창 UI_ConquestWindow와 같은 2단 방식).
 public class UI_PopulationAllocationWindow : MonoBehaviour
 {
     private const int POPULATION_STEP = 1;
-    private const string BUILDING_POPULATION_FORMAT_LOC_KEY =
-        "population_allocation_building_population_format";
-    private const string TOTAL_POPULATION_FORMAT_LOC_KEY =
-        "population_allocation_total_population_format";
+    private const float PERCENT_MULTIPLIER = 100f;
+    private const string VALUE_FORMAT = "{0} / {1}";
+
     private const string ASSIGN_ALL_LOC_KEY =
         "population_allocation_assign_all";
     private const string UNASSIGN_ALL_LOC_KEY =
         "population_allocation_unassign_all";
+    private const string ASSIGN_ONE_LOC_KEY =
+        "building_window_assign_one";
+    private const string UNASSIGN_ONE_LOC_KEY =
+        "building_window_unassign_one";
+    private const string CLOSE_LOC_KEY =
+        "building_window_close";
+    private const string POPULATION_LABEL_LOC_KEY =
+        "building_window_population_label";
+    private const string AVAILABLE_POPULATION_LABEL_LOC_KEY =
+        "building_window_available_population_label";
+    private const string OPERATION_LABEL_LOC_KEY =
+        "building_window_operation_label";
+    private const string OPERATION_ON_FORMAT_LOC_KEY =
+        "building_window_operation_on_format";
+    private const string OPERATION_OFF_LOC_KEY =
+        "building_window_operation_off";
+    private const string RESEARCH_LABEL_LOC_KEY =
+        "building_window_research_label";
+    private const string NIGHT_LOCKED_LOC_KEY =
+        "building_window_night_locked";
 
     [SerializeField] private GameObject _windowRoot;
     [SerializeField] private BuildingPlacementController _buildingPlacementController;
     [SerializeField] private PopulationManager _populationManager;
     [SerializeField] private CycleManager _cycleManager;
+    [SerializeField] private ResourceManager _resourceManager;
+    [SerializeField] private ResearchManager _researchManager;
 
     [SerializeField] private TMP_Text _buildingNameText;
-    [SerializeField] private TMP_Text _buildingPopulationText;
-    [SerializeField] private TMP_Text _totalPopulationText;
-    [SerializeField] private TMP_Text _assignAllButtonText;
-    [SerializeField] private TMP_Text _unassignAllButtonText;
+    [SerializeField] private TMP_Text _nightLockedText;
 
+    [Header("산출 행 - 건물 종류에 따라 개수가 달라 풀링한다")]
+    [Tooltip("산출 행 프리팹(Slot__EnemyConquest).")]
+    [SerializeField] private UI_ConquestInfoSlot _outputRowPrefab;
+    [SerializeField] private Transform _outputRowContainer;
+
+    [Tooltip("프리팹에 미리 배치해 둔 첫 산출 행 - 풀의 0번으로 재사용한다.")]
+    [SerializeField] private UI_ConquestInfoSlot _outputRowSeed;
+
+    [Header("항상 존재하는 행 - 값만 갱신한다")]
+    [SerializeField] private UI_ConquestInfoSlot _populationRow;
+    [SerializeField] private UI_ConquestInfoSlot _availablePopulationRow;
+
+    [Tooltip("인구 행 아이콘. 인구는 자원이 아니라 ResourceData가 없어 별도 지정한다.")]
+    [SerializeField] private Sprite _populationIcon;
+
+    [Tooltip("타워 가동 행 아이콘.")]
+    [SerializeField] private Sprite _operationIcon;
+
+    [Tooltip("연구소 연구 포인트 행 아이콘.")]
+    [SerializeField] private Sprite _researchPointIcon;
+
+    [Header("버튼")]
     [SerializeField] private Button _assignButton;
     [SerializeField] private Button _unassignButton;
     [SerializeField] private Button _assignAllButton;
     [SerializeField] private Button _unassignAllButton;
+    [SerializeField] private Button _closeButton;
+
+    [SerializeField] private TMP_Text _assignButtonText;
+    [SerializeField] private TMP_Text _unassignButtonText;
+    [SerializeField] private TMP_Text _assignAllButtonText;
+    [SerializeField] private TMP_Text _unassignAllButtonText;
+    [SerializeField] private TMP_Text _closeButtonText;
 
     private Building _selectedBuilding;
     private IPopulationAllocationTarget _selectedTarget;
+    private ComponentPool<UI_ConquestInfoSlot> _outputRowPool;
+    private bool _wasInputSuppressed;
 
     private bool IsDay =>
         _cycleManager != null &&
@@ -39,6 +94,11 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
 
     private void Awake()
     {
+        _outputRowPool = new ComponentPool<UI_ConquestInfoSlot>(
+            _outputRowPrefab,
+            _outputRowContainer,
+            _outputRowSeed);
+
         AddButtonListeners();
         ApplyLocalizedLabels();
 
@@ -83,6 +143,8 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
         RemoveButtonListeners();
     }
 
+    // BuildingPlacementController에는 선택 변경 이벤트가 없어(SelectedBuilding은 파생 getter)
+    // 매 프레임 확인한다 - UI_BuildModeWindow 등 기존 소비자들과 같은 방식이다.
     private void Update()
     {
         if (_buildingPlacementController == null)
@@ -92,12 +154,16 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
 
         Building selectedBuilding =
             _buildingPlacementController.SelectedBuilding;
+        bool inputSuppressed =
+            _buildingPlacementController.InputSuppressed;
 
-        if (_selectedBuilding == selectedBuilding)
+        if (_selectedBuilding == selectedBuilding &&
+            _wasInputSuppressed == inputSuppressed)
         {
             return;
         }
 
+        _wasInputSuppressed = inputSuppressed;
         Bind(selectedBuilding);
     }
 
@@ -108,9 +174,12 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
             ? building.GetComponent<IPopulationAllocationTarget>()
             : null;
 
+        // 점령 모드 등 다른 모드가 클릭을 점유한 동안에는 그쪽 창(Claim_window)이 같은 자리를
+        // 쓰므로 이 창을 숨긴다.
         bool hasTarget =
             _selectedTarget != null &&
-            _selectedTarget.IsInitialized;
+            _selectedTarget.IsInitialized &&
+            !_wasInputSuppressed;
 
         if (_windowRoot != null)
         {
@@ -137,23 +206,142 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
             _buildingNameText.text = ResolveBuildingName(_selectedBuilding);
         }
 
-        if (_buildingPopulationText != null)
+        RefreshOutputRows();
+
+        if (_populationRow != null)
         {
-            _buildingPopulationText.text = string.Format(
-                StringTable.GetString(BUILDING_POPULATION_FORMAT_LOC_KEY),
-                _selectedTarget.AssignedPopulation,
-                _selectedTarget.Capacity);
+            _populationRow.Setup(
+                _populationIcon,
+                StringTable.GetString(POPULATION_LABEL_LOC_KEY),
+                string.Format(
+                    VALUE_FORMAT,
+                    _selectedTarget.AssignedPopulation,
+                    _selectedTarget.Capacity));
         }
 
-        if (_totalPopulationText != null)
+        if (_availablePopulationRow != null)
         {
-            _totalPopulationText.text = string.Format(
-                StringTable.GetString(TOTAL_POPULATION_FORMAT_LOC_KEY),
-                _populationManager.AvailablePopulation,
-                _populationManager.MaxPopulation);
+            _availablePopulationRow.Setup(
+                _populationIcon,
+                StringTable.GetString(AVAILABLE_POPULATION_LABEL_LOC_KEY),
+                string.Format(
+                    VALUE_FORMAT,
+                    _populationManager.AvailablePopulation,
+                    _populationManager.MaxPopulation));
         }
 
         RefreshButtonState();
+    }
+
+    // 건물 종류별로 "산출"의 의미가 달라 여기서 갈라 채운다
+    // (UI_BuildingSlot.ResolveName / ResolveBuildingName과 같은 타입 스위치 관례).
+    // BabyDragonTower도 Tower 파생이므로 Factory·ResearchLab을 먼저 확인한다.
+    private void RefreshOutputRows()
+    {
+        int usedCount = 0;
+
+        if (_selectedBuilding is Factory factory)
+        {
+            foreach (ResourceType resourceType in
+                factory.EnumerateProducedResourceTypes())
+            {
+                // 슬라임 농장처럼 산출 종류가 여러 개면 이 자리에서 실제로 나오지 않는 종류가 섞인다
+                // (풋프린트 셀이 그 자원을 안 가진 경우). 최대 생산량이 0인 종류는 표시하지 않는다.
+                int maxYield = factory.GetMaxYield(resourceType);
+                if (maxYield == 0)
+                {
+                    continue;
+                }
+
+                SetOutputRow(
+                    usedCount++,
+                    ResolveResourceIcon(resourceType),
+                    ResolveResourceName(resourceType),
+                    string.Format(
+                        VALUE_FORMAT,
+                        factory.GetCurrentYield(resourceType),
+                        maxYield));
+            }
+        }
+        else if (_selectedBuilding is ResearchLab researchLab)
+        {
+            SetOutputRow(
+                usedCount++,
+                _researchPointIcon,
+                StringTable.GetString(RESEARCH_LABEL_LOC_KEY),
+                string.Format(
+                    VALUE_FORMAT,
+                    ResolveResearchPointsPerDay(
+                        researchLab, _selectedTarget.AssignedPopulation),
+                    ResolveResearchPointsPerDay(
+                        researchLab, _selectedTarget.Capacity)));
+        }
+        else if (_selectedBuilding is Tower)
+        {
+            SetOutputRow(
+                usedCount++,
+                _operationIcon,
+                StringTable.GetString(OPERATION_LABEL_LOC_KEY),
+                ResolveTowerOperationText());
+        }
+
+        _outputRowPool.DeactivateFrom(usedCount);
+    }
+
+    private void SetOutputRow(int index, Sprite icon, string label, string value)
+    {
+        _outputRowPool.Get(index).Setup(icon, label, value);
+    }
+
+    private int ResolveResearchPointsPerDay(
+        ResearchLab researchLab, int population)
+    {
+        return _researchManager != null
+            ? _researchManager.PreviewResearchPointsPerDay(
+                researchLab, population)
+            : 0;
+    }
+
+    private string ResolveTowerOperationText()
+    {
+        if (_selectedTarget is not ITowerStaffing staffing ||
+            !staffing.CanOperate)
+        {
+            return StringTable.GetString(OPERATION_OFF_LOC_KEY);
+        }
+
+        int staffingPercent = Mathf.RoundToInt(
+            staffing.StaffingRatio * PERCENT_MULTIPLIER);
+
+        return string.Format(
+            StringTable.GetString(OPERATION_ON_FORMAT_LOC_KEY),
+            staffingPercent);
+    }
+
+    // 자원 아이콘·이름은 데이터 에셋(ResourceData)이 단일 출처 - 카탈로그에서 종류로 조회한다
+    // (UI_ConquestWindow.ResolveResourceIcon과 같은 경로).
+    private bool TryGetResourceData(ResourceType type, out ResourceData data)
+    {
+        data = null;
+        return _resourceManager != null &&
+            _resourceManager.Catalog != null &&
+            _resourceManager.Catalog.TryGet(type, out data);
+    }
+
+    private Sprite ResolveResourceIcon(ResourceType type)
+    {
+        return TryGetResourceData(type, out ResourceData data)
+            ? data.Icon
+            : null;
+    }
+
+    // 슬라임 5종은 아직 ResourceData 에셋이 없어 카탈로그 조회가 실패한다. 그때는 종류 이름을
+    // 그대로 쓴다(점령 보상 슬롯 UI_ConquestWindow.SpawnRewardSlot과 동일한 대체 방식).
+    private string ResolveResourceName(ResourceType type)
+    {
+        return TryGetResourceData(type, out ResourceData data)
+            ? StringTable.GetString(data.NameLocKey)
+            : type.ToString();
     }
 
     private void RefreshButtonState()
@@ -177,6 +365,12 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
         SetInteractable(_assignAllButton, canAssign);
         SetInteractable(_unassignButton, canUnassign);
         SetInteractable(_unassignAllButton, canUnassign);
+
+        // 버튼이 회색인 이유(밤)를 알려준다 - 정원/가용 한도는 숫자 행에서 이미 드러난다.
+        if (_nightLockedText != null)
+        {
+            _nightLockedText.gameObject.SetActive(hasValidTarget && !IsDay);
+        }
     }
 
     private void AssignOne()
@@ -202,6 +396,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
             return;
         }
 
+        // PopulationManager.TryAssign은 all-or-nothing이라 정원/가용 중 작은 쪽으로 먼저 클램프한다.
         int amount = Mathf.Min(
             _selectedTarget.AvailableCapacity,
             _populationManager.AvailablePopulation);
@@ -226,6 +421,15 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
         }
     }
 
+    // 선택을 해제하면 Update가 창을 자동으로 닫는다(ResearchLabDebugGUI의 ESC 처리와 동일).
+    private void CloseWindow()
+    {
+        if (_buildingPlacementController != null)
+        {
+            _buildingPlacementController.Deselect();
+        }
+    }
+
     private bool CanEditTarget()
     {
         return _selectedBuilding != null &&
@@ -241,6 +445,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
 
     private void HandleCycleChanged(CycleManager.CycleState state)
     {
+        // 밤이 되면 생산량 표시는 그대로 두고 조작만 잠근다.
         RefreshButtonState();
     }
 
@@ -250,6 +455,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
         _unassignButton?.onClick.AddListener(UnassignOne);
         _assignAllButton?.onClick.AddListener(AssignAll);
         _unassignAllButton?.onClick.AddListener(UnassignAll);
+        _closeButton?.onClick.AddListener(CloseWindow);
     }
 
     private void RemoveButtonListeners()
@@ -258,20 +464,24 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
         _unassignButton?.onClick.RemoveListener(UnassignOne);
         _assignAllButton?.onClick.RemoveListener(AssignAll);
         _unassignAllButton?.onClick.RemoveListener(UnassignAll);
+        _closeButton?.onClick.RemoveListener(CloseWindow);
     }
 
     private void ApplyLocalizedLabels()
     {
-        if (_assignAllButtonText != null)
-        {
-            _assignAllButtonText.text =
-                StringTable.GetString(ASSIGN_ALL_LOC_KEY);
-        }
+        SetLabel(_assignButtonText, ASSIGN_ONE_LOC_KEY);
+        SetLabel(_unassignButtonText, UNASSIGN_ONE_LOC_KEY);
+        SetLabel(_assignAllButtonText, ASSIGN_ALL_LOC_KEY);
+        SetLabel(_unassignAllButtonText, UNASSIGN_ALL_LOC_KEY);
+        SetLabel(_closeButtonText, CLOSE_LOC_KEY);
+        SetLabel(_nightLockedText, NIGHT_LOCKED_LOC_KEY);
+    }
 
-        if (_unassignAllButtonText != null)
+    private static void SetLabel(TMP_Text text, string locKey)
+    {
+        if (text != null)
         {
-            _unassignAllButtonText.text =
-                StringTable.GetString(UNASSIGN_ALL_LOC_KEY);
+            text.text = StringTable.GetString(locKey);
         }
     }
 

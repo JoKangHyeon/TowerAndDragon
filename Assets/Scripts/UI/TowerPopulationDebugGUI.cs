@@ -1,42 +1,23 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
-/// Canvas와 무관하게 현재 선택 상태에 맞는 디버그 정보를 보여주는 IMGUI 도구다.
-/// 원래 타워/생산시설 인구용이었으나, 새끼용 알 지급/배치용(구 BabyDragonDebugGUI)을
-/// 여기로 통합했다 - 연구소용은 ResearchLabDebugGUI로 별도 유지한다(통합하지 않음).
-/// 창을 각자 따로 띄우면 선택이 바뀌어도 이전 창이 안 닫혀 서로 겹쳐 보이는 문제가
-/// 있었기 때문에, 매 프레임 현재 선택 상태(_selectionKind)를 하나로 판정해 정확히
-/// 창 하나만 그린다. 아무것도 선택 안 된 기본 상태에는 새끼용 알 창을 보여준다.
+/// Canvas와 무관하게 새끼용 알 지급/배치를 조작하는 IMGUI 디버그 도구다(구 BabyDragonDebugGUI).
+/// 원래 타워/생산시설 인구 조작도 여기 있었으나, 정식 건물 창(UI_PopulationAllocationWindow,
+/// 이슈 #110)이 그 역할을 대체하면서 제거했다 - 연구소용은 ResearchLabDebugGUI로 별도 유지한다.
+/// 클래스명이 내용과 어긋나지만 여러 씬과 프리팹이 이 스크립트를 참조하고 있어 이름은 유지한다.
 /// </summary>
 public class TowerPopulationDebugGUI : MonoBehaviour
 {
-    private enum SelectionKind
-    {
-        None,
-        Tower,
-        Factory,
-    }
-
-    private const int POPULATION_STEP = 1;
-    private const float PERCENT_MULTIPLIER = 100f;
     private const float WINDOW_WIDTH = 320f;
     private const float WINDOW_HEIGHT = 250f;
     private const float WINDOW_MARGIN = 20f;
-
-    [SerializeField] private BuildingPlacementController _buildingPlacementController;
-    [SerializeField] private PopulationManager _populationManager;
-    [SerializeField] private CycleManager _cycleManager;
 
     [Header("Baby Dragon")]
     [SerializeField] private GameManager _gameManager;
     [SerializeField] private DragonEggInventorySystem _eggInventorySystem;
     [SerializeField] private BabyDragonPlacementCoordinator _placementCoordinator;
 
-    private SelectionKind _selectionKind;
-    private TowerPopulation _selectedTowerPopulation;
-    private FactoryPopulation _selectedFactoryPopulation;
     private Vector2 _babyDragonScrollPosition;
     private bool _isVisible;
 
@@ -161,143 +142,12 @@ public class TowerPopulationDebugGUI : MonoBehaviour
                 DrawBabyDragonWindow();
                 break;
         }
-    }
-
-    // --- 타워 / 생산시설 인구 ---
-
-    private void DrawWindow(System.Action drawInformation, System.Action drawControls)
+    private void OnGUI()
     {
-        Rect windowRect = new Rect(
-            Screen.width - WINDOW_WIDTH - WINDOW_MARGIN,
-            WINDOW_MARGIN,
-            WINDOW_WIDTH,
-            WINDOW_HEIGHT);
-
-        GUILayout.BeginArea(windowRect, GUI.skin.window);
-        drawInformation();
-        drawControls();
-        GUILayout.EndArea();
+        DrawBabyDragonWindow();
     }
 
-    private void DrawTowerInformation()
-    {
-        PopulationState state = _populationManager != null
-            ? _populationManager.CurrentState
-            : default;
-
-        int staffingPercent = Mathf.RoundToInt(
-            _selectedTowerPopulation.StaffingRatio * PERCENT_MULTIPLIER);
-
-        GUILayout.Label("타워 인구 테스트 (1: 배치, 2: 회수)");
-        GUILayout.Label($"대상: {_selectedTowerPopulation.name}");
-        GUILayout.Label(
-            $"전체 {state.MaxPopulation} / 할당 {state.AssignedPopulation} / 가용 {state.AvailablePopulation}");
-        GUILayout.Label(
-            $"타워 {_selectedTowerPopulation.AssignedPopulation} / {_selectedTowerPopulation.Capacity}");
-        GUILayout.Label($"충원율: {staffingPercent}%");
-        GUILayout.Label(IsDay ? "낮: 변경 가능" : "밤: 변경 불가");
-        GUILayout.Space(WINDOW_MARGIN);
-    }
-
-    private void DrawTowerControls()
-    {
-        PopulationState state = _populationManager != null
-            ? _populationManager.CurrentState
-            : default;
-
-        bool canEdit = IsDay && _selectedTowerPopulation.IsInitialized;
-        bool previousEnabled = GUI.enabled;
-
-        GUI.enabled =
-            canEdit &&
-            _selectedTowerPopulation.AvailableCapacity >= POPULATION_STEP &&
-            state.AvailablePopulation >= POPULATION_STEP;
-
-        if (GUILayout.Button("+1 배치"))
-        {
-            _selectedTowerPopulation.TryAssign(POPULATION_STEP);
-        }
-
-        GUI.enabled =
-            canEdit &&
-            _selectedTowerPopulation.AssignedPopulation >= POPULATION_STEP;
-
-        if (GUILayout.Button("-1 회수"))
-        {
-            _selectedTowerPopulation.TryUnassign(POPULATION_STEP);
-        }
-
-        if (GUILayout.Button("전체 회수"))
-        {
-            int assignedPopulation = _selectedTowerPopulation.AssignedPopulation;
-            _selectedTowerPopulation.TryUnassign(assignedPopulation);
-        }
-
-        GUI.enabled = previousEnabled;
-    }
-
-    private void DrawFactoryInformation()
-    {
-        PopulationState state = _populationManager != null
-            ? _populationManager.CurrentState
-            : default;
-
-        int staffingPercent = Mathf.RoundToInt(
-            _selectedFactoryPopulation.StaffingRatio * PERCENT_MULTIPLIER);
-
-        GUILayout.Label("생산시설 인구 테스트 (1: 배치, 2: 회수)");
-        GUILayout.Label($"대상: {_selectedFactoryPopulation.name}");
-        GUILayout.Label(
-            $"전체 {state.MaxPopulation} / 할당 {state.AssignedPopulation} / 가용 {state.AvailablePopulation}");
-        GUILayout.Label(
-            $"생산시설 {_selectedFactoryPopulation.AssignedPopulation} / {_selectedFactoryPopulation.Capacity}");
-        GUILayout.Label($"충원율: {staffingPercent}%");
-        GUILayout.Label(IsDay ? "낮: 변경 가능" : "밤: 변경 불가");
-        GUILayout.Space(WINDOW_MARGIN);
-    }
-
-    private void DrawFactoryControls()
-    {
-        PopulationState state = _populationManager != null
-            ? _populationManager.CurrentState
-            : default;
-
-        bool canEdit = IsDay && _selectedFactoryPopulation.IsInitialized;
-        bool previousEnabled = GUI.enabled;
-
-        GUI.enabled =
-            canEdit &&
-            _selectedFactoryPopulation.AvailableCapacity >= POPULATION_STEP &&
-            state.AvailablePopulation >= POPULATION_STEP;
-
-        if (GUILayout.Button("+1 배치"))
-        {
-            _selectedFactoryPopulation.TryAssign(POPULATION_STEP);
-        }
-
-        GUI.enabled =
-            canEdit &&
-            _selectedFactoryPopulation.AssignedPopulation >= POPULATION_STEP;
-
-        if (GUILayout.Button("-1 회수"))
-        {
-            _selectedFactoryPopulation.TryUnassign(POPULATION_STEP);
-        }
-
-        if (GUILayout.Button("전체 회수"))
-        {
-            int assignedPopulation = _selectedFactoryPopulation.AssignedPopulation;
-            _selectedFactoryPopulation.TryUnassign(assignedPopulation);
-        }
-
-        GUI.enabled = previousEnabled;
-    }
-
-    // --- 새끼용 알 (구 BabyDragonDebugGUI) ---
-
-    // 타워/생산시설 인구 창과 같은 자리(우측 상단)·같은 크기를 재사용한다 - 둘 다 상호
-    // 배타적으로 그려지므로(OnGUI의 switch) 자리를 공유해도 겹치지 않고, 화면 하단의
-    // 점령 패널 등 다른 UI와도 겹치지 않는다.
+    // 화면 우측 상단 - 화면 하단의 점령 패널 등 다른 UI와 겹치지 않는 자리다.
     private void DrawBabyDragonWindow()
     {
         if (_gameManager == null || _eggInventorySystem == null)

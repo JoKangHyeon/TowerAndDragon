@@ -292,16 +292,28 @@ public sealed class ResearchManager : MonoBehaviour,
         }
     }
 
+    // 정산 시 이 연구소가 받게 될 RP. RP는 ActiveLab 한 곳에서만 나오므로
+    // 활성 연구소가 아니면 인구를 배치해도 0이다(UI가 그 사실을 그대로 보여줄 수 있게 public).
+    public int PreviewResearchPointsPerDay(ResearchLab lab, int assignedPopulation)
+    {
+        if (lab == null || lab != ActiveLab || _balance == null)
+        {
+            return 0;
+        }
+
+        return assignedPopulation * _balance.ResearchPointsPerPopulation;
+    }
+
     private void GrantResearchPoints(int currentDay)
     {
-        if (ActiveLab == null || ActiveLab.Population == null || _balance == null)
+        if (ActiveLab == null || ActiveLab.Population == null)
         {
             return;
         }
 
-        int gained =
-            ActiveLab.Population.AssignedPopulation *
-            _balance.ResearchPointsPerPopulation;
+        int gained = PreviewResearchPointsPerDay(
+            ActiveLab,
+            ActiveLab.Population.AssignedPopulation);
 
         if (gained <= 0)
         {

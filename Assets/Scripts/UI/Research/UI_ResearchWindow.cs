@@ -39,6 +39,8 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private float _columnWidth = 500f;
     [SerializeField] private float _rowHeight = 104f;
     [SerializeField] private float _nodeSpacing = 166f;
+    [Header("우측 여백(UI 겹침 해소)")]
+    [SerializeField] private float _columnSpacingWidth = 500f;
     [Tooltip("가장 왼쪽 갈래 열 중심에서 티어 라벨까지의 거리.")]
     [SerializeField] private float _tierLabelOffsetX = 300f;
     [Tooltip("티어 번호와 캡션을 행 중심에서 위아래로 벌리는 거리.")]
@@ -173,7 +175,8 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         }
 
         _content.localScale = Vector3.one;
-        _content.anchoredPosition = Vector2.zero;
+        var spancing = new Vector2(_columnSpacingWidth, 0f);
+        _content.anchoredPosition = spancing / 2f;
     }
 
     public void Close()
@@ -292,6 +295,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         var min = new Vector2(float.MaxValue, float.MaxValue);
         var max = new Vector2(float.MinValue, float.MinValue);
+        var spancing = new Vector2(_columnSpacingWidth, 0f);
 
         foreach (RectTransform child in _content)
         {
@@ -300,7 +304,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             max = Vector2.Max(max, child.anchoredPosition + half);
         }
 
-        Vector2 center = (min + max) * 0.5f;
+        Vector2 center = (min + max + spancing) * 0.5f;
 
         foreach (RectTransform child in _content)
         {
@@ -312,12 +316,15 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         {
             _nodePositions[nodeId] -= center;
         }
+        max.x += _columnSpacingWidth;
 
         _content.anchorMin = new Vector2(0.5f, 0.5f);
         _content.anchorMax = new Vector2(0.5f, 0.5f);
         _content.pivot = new Vector2(0.5f, 0.5f);
         _content.sizeDelta = (max - min) + _contentPadding;
-        _content.anchoredPosition = Vector2.zero;
+
+        Canvas.ForceUpdateCanvases();
+        _content.anchoredPosition = spancing/2f;
     }
 
     private void PlaceNode(
