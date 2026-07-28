@@ -4,10 +4,15 @@ using UnityEngine.Events;
 
 public sealed class ResearchManager : MonoBehaviour,
     IChunkYieldMultiplierQuery,
-    ITowerDamageMultiplierQuery
+    ITowerStatMultiplierQuery,
+    IConquestModifierQuery,
+    IPopulationCapacityModifierQuery
 {
     private const float BASE_YIELD_MULTIPLIER = 1f;
     private const float BASE_DAMAGE_MULTIPLIER = 1f;
+    private const float BASE_RANGE_MULTIPLIER = 1f;
+    private const float BASE_ATTACK_SPEED_MULTIPLIER = 1f;
+    private const int MINIMUM_POPULATION_CAPACITY = 1;
 
     [SerializeField] private ResearchTreeData _tree;
     [SerializeField] private ResearchBalanceData _balance;
@@ -251,11 +256,195 @@ public sealed class ResearchManager : MonoBehaviour,
         return BASE_DAMAGE_MULTIPLIER + bonusRatio;
     }
 
+    public float GetRangeMultiplier(TowerData towerData)
+    {
+        float bonusRatio = 0f;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    bonusRatio += effect.GetTowerRangeMultiplierBonus(towerData);
+                }
+            }
+        }
+
+        return BASE_RANGE_MULTIPLIER + bonusRatio;
+    }
+
+    public float GetAttackSpeedMultiplier(TowerData towerData)
+    {
+        float bonusRatio = 0f;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    bonusRatio += effect.GetTowerAttackSpeedMultiplierBonus(towerData);
+                }
+            }
+        }
+
+        return BASE_ATTACK_SPEED_MULTIPLIER + bonusRatio;
+    }
+
+    public float GetConquestCostReductionRatio()
+    {
+        float reductionRatio = 0f;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    reductionRatio += effect.GetConquestCostReductionRatio();
+                }
+            }
+        }
+
+        return reductionRatio;
+    }
+
+    public int GetConquestDaysReduction()
+    {
+        int daysReduction = 0;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    daysReduction += effect.GetConquestDaysReduction();
+                }
+            }
+        }
+
+        return daysReduction;
+    }
+
+    public float GetCastleDailyRegenAmount()
+    {
+        float regenAmount = 0f;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    regenAmount += effect.GetCastleDailyRegenAmount();
+                }
+            }
+        }
+
+        return regenAmount;
+    }
+
+    public int ResolveCapacity(PopulationAssignmentType assignmentType, int baseCapacity)
+    {
+        int capacityDelta = 0;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    capacityDelta += effect.GetPopulationCapacityDelta(assignmentType);
+                }
+            }
+        }
+
+        return Mathf.Max(MINIMUM_POPULATION_CAPACITY, baseCapacity + capacityDelta);
+    }
+
+    public int GetVisionRadiusBonus()
+    {
+        int radiusBonus = 0;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    radiusBonus += effect.GetVisionRadiusBonus();
+                }
+            }
+        }
+
+        return radiusBonus;
+    }
+
+    public int GetMoveAllowance()
+    {
+        int moveAllowance = 0;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    moveAllowance += effect.GetMoveAllowanceBonus();
+                }
+            }
+        }
+
+        return moveAllowance;
+    }
+
     private void HandleBuildingAdded(Building building)
     {
         if (building is Tower tower && tower.Attack != null)
         {
-            tower.Attack.SetDamageMultiplierQuery(this);
+            tower.Attack.SetStatMultiplierQuery(this);
         }
     }
 
@@ -263,7 +452,7 @@ public sealed class ResearchManager : MonoBehaviour,
     {
         if (building is Tower tower && tower.Attack != null)
         {
-            tower.Attack.SetDamageMultiplierQuery(null);
+            tower.Attack.SetStatMultiplierQuery(null);
         }
     }
 

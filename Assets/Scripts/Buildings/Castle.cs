@@ -19,6 +19,8 @@ public class Castle : Building, IAttackTarget
     [SerializeField] private GameManager _gameManager;
 
     private Health _health;
+    private Vector2Int _homeChunkCoord;
+    private bool _hasHomeChunk;
     public bool IsDead => _health == null || _health.IsDead;
     public float CurrentHealth => _health == null ? 0 : _health.CurrentHealth;
     public float MaxHealth => _health == null ? 0 : _health.MaxHealth;
@@ -82,21 +84,54 @@ public class Castle : Building, IAttackTarget
         if (homeChunk == null)
             return;
 
-        for (int dx = -_inactiveChunkRadius; dx <= _inactiveChunkRadius; dx++)
+        _homeChunkCoord = homeChunk.ChunkCoord;
+        _hasHomeChunk = true;
+
+        RevealSurroundingChunks(0);
+        _gridMap.SetChunkState(_homeChunkCoord, ChunkState.Conquered);
+    }
+
+    /// <summary>
+    /// 성 주변 (기본 반경 + bonusRadius) 청크를 공개한다. 연구로 시야가 확장될 때마다
+    /// 재호출 가능하다. 이미 Visible/Conquered인 청크는 건드리지 않는다 -
+    /// GridMap.SetChunkState는 상태를 무조건 덮어쓰므로 가드 없이 재호출하면
+    /// 이미 점령한 청크가 강등되고 점령 테두리 렌더링이 깨진다.
+    /// </summary>
+    public void RevealSurroundingChunks(int bonusRadius)
+    {
+        if (!_hasHomeChunk)
         {
-            for (int dy = -_inactiveChunkRadius; dy <= _inactiveChunkRadius; dy++)
+            return;
+        }
+
+        int radius = _inactiveChunkRadius + bonusRadius;
+
+        for (int dx = -radius; dx <= radius; dx++)
+        {
+            for (int dy = -radius; dy <= radius; dy++)
             {
-                Vector2Int neighborCoord = homeChunk.ChunkCoord + new Vector2Int(dx, dy);
-                _gridMap.SetChunkState(neighborCoord, ChunkState.Visible);
+                Vector2Int neighborCoord = _homeChunkCoord + new Vector2Int(dx, dy);
+                Chunk neighbor = _gridMap.GetChunk(neighborCoord);
+
+                if (neighbor != null && neighbor.CurrentState == ChunkState.Hidden)
+                {
+                    _gridMap.SetChunkState(neighborCoord, ChunkState.Visible);
+                }
             }
         }
-        _gridMap.SetChunkState(homeChunk.ChunkCoord, ChunkState.Conquered);
     }
 
     public void TakeDamage(DamageInfo damage)
     {
         // 죽음/음수 처리는 Health가 담당하므로 여기서 재검사하지 않는다.
         _health.TakeDamage(damage.Amount);
+    }
+
+    // convenience_castle_regen_1(매일 낮 자동 회복)과 convenience_castle_repair(자원 소모 즉시 수리)가
+    // 공유하는 회복 경로. 사망 상태 가드는 Health.Heal이 담당한다.
+    public void Repair(float amount)
+    {
+        _health.Heal(amount);
     }
 
     private void HandleHealthChanged(float current, float max)

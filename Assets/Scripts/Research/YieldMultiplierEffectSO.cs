@@ -10,6 +10,10 @@ public sealed class YieldMultiplierEffectSO : ResearchEffectSO
     [Min(0f)]
     [SerializeField] private float _bonusRatio;
 
+    // 특화 자원·슬라임은 자원 종류 자체가 바이옴을 특정하므로 지형 게이트가 중복이다.
+    // 기본값 false이므로 기존 RE_GrassYieldMultiplier의 동작은 바뀌지 않는다.
+    [SerializeField] private bool _ignoresTerrain;
+
     public TerrainType TargetTerrain => _targetTerrain;
     public ResourceType TargetResources => _targetResources;
     public float BonusRatio => _bonusRatio;
@@ -22,8 +26,9 @@ public sealed class YieldMultiplierEffectSO : ResearchEffectSO
         bool isTargetResource =
             resourceType != ResourceType.None &&
             (_targetResources & resourceType) == resourceType;
+        bool isTargetTerrain = _ignoresTerrain || terrainType == _targetTerrain;
 
-        return terrainType == _targetTerrain && isTargetResource
+        return isTargetTerrain && isTargetResource
             ? _bonusRatio
             : 0f;
     }

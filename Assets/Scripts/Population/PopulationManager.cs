@@ -9,11 +9,15 @@ using UnityEngine.Events;
 /// </summary>
 public class PopulationManager : MonoBehaviour
 {
-    [SerializeField] 
-    [Min(0)]    
+    [SerializeField]
+    [Min(0)]
     private int _maxPopulation;
     private readonly List<PopulationAllocation> _allocations = new();
     public int MaxPopulation => _maxPopulation;
+
+    // 코디네이터(PopulationResearchCoordinator)가 배선한다 - 배선되지 않은 씬에서는 null로 남아
+    // 모든 PopulationAllocation.Capacity가 BaseCapacity를 그대로 반환한다(기존 동작 유지).
+    public IPopulationCapacityModifierQuery CapacityModifierQuery { get; set; }
     public int AssignedPopulation
     {
         get
@@ -41,7 +45,7 @@ public class PopulationManager : MonoBehaviour
 
     public bool TryCreateAllocation(
         PopulationAssignmentType assignmentType,
-        int capacity,
+        int baseCapacity,
         out PopulationAllocation allocation
     )
     {
@@ -52,14 +56,15 @@ public class PopulationManager : MonoBehaviour
             return false;
         }
 
-        if (capacity <= 0)
+        if (baseCapacity <= 0)
         {
             return false;
         }
 
         allocation = new PopulationAllocation(
             assignmentType,
-            capacity
+            baseCapacity,
+            this
         );
 
         _allocations.Add(allocation);
@@ -246,6 +251,24 @@ public class PopulationManager : MonoBehaviour
 
         NotifyPopulationChanged();
         return true;
+    }
+
+    // 연구로 정원이 줄어든 뒤 호출한다. 정원을 넘긴 배치 인구의 초과분만 가용 인구로 되돌린다
+    // (_maxPopulation은 변하지 않는다). 초과가 없어도 UI가 새 정원을 다시 그리도록
+    // NotifyPopulationChanged를 무조건 한 번 호출한다.
+    public void ReconcileAssignedPopulation()
+    {
+        foreach (PopulationAllocation allocation in _allocations)
+        {
+            int excess = allocation.AssignedPopulation - allocation.Capacity;
+
+            if (excess > 0)
+            {
+                allocation.Unassign(excess);
+            }
+        }
+
+        NotifyPopulationChanged();
     }
 
     public bool TryRemoveAllocation(

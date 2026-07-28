@@ -4,6 +4,11 @@ using UnityEngine.Events;
 
 public class ConquestManager : MonoBehaviour
 {
+    private const int MINIMUM_DAYS_REQUIRED = 1;
+
+    // 코디네이터(ConquestResearchCoordinator)가 배선한다 - 배선되지 않은 씬에서는 null로 남아
+    // 할인·기간감소가 적용되지 않는다(기존 동작 유지).
+    public IConquestModifierQuery ResearchModifierQuery { get; set; }
 
     // terrainType이 디폴토인 경우 아예 점령이 안되게 -> 호버 하이라이트도 안되게 수정 필요
     [SerializeField]
@@ -53,13 +58,47 @@ public class ConquestManager : MonoBehaviour
             _cycleManager.OnNightEnd.RemoveListener(OnSettlement);
     }
 
-    public bool TryGetExpeditionCost(Vector2Int targetChunkCoord, out ResourceCost cost) =>
-        _chunkCostTable.TryResolve(targetChunkCoord, out cost);
+    // 표시(UI 미리보기)와 실제 차감(SendExpedition)이 반드시 같은 값을 보도록,
+    // 원정 비용을 조회하는 모든 지점이 이 메서드를 거친다.
+    public bool TryGetExpeditionCost(Vector2Int targetChunkCoord, out ResourceCost cost)
+    {
+        if (!_chunkCostTable.TryResolve(targetChunkCoord, out ResourceCost baseCost))
+        {
+            cost = default;
+            return false;
+        }
+
+        cost = ApplyCostReduction(baseCost);
+        return true;
+    }
 
     public int GetDaysRequired(Vector2Int chunkCoord)
     {
         Chunk chunk = _gridMap.GetChunk(chunkCoord);
-        return _durationTable.ResolveDaysRequired(chunk.DominantTerrain);
+        return ResolveDaysRequired(_durationTable.ResolveDaysRequired(chunk.DominantTerrain));
+    }
+
+    private ResourceCost ApplyCostReduction(ResourceCost baseCost)
+    {
+        float reductionRatio = Mathf.Clamp01(
+            ResearchModifierQuery?.GetConquestCostReductionRatio() ?? 0f);
+
+        return new ResourceCost
+        {
+            Population = baseCost.Population,
+            Food = ReduceAmount(baseCost.Food, reductionRatio),
+            Wood = ReduceAmount(baseCost.Wood, reductionRatio),
+            Stone = ReduceAmount(baseCost.Stone, reductionRatio),
+        };
+    }
+
+    private static int ReduceAmount(int amount, float reductionRatio) =>
+        Mathf.Max(0, Mathf.RoundToInt(amount * (1f - reductionRatio)));
+
+    private int ResolveDaysRequired(int baseDaysRequired)
+    {
+        int daysReduction = ResearchModifierQuery?.GetConquestDaysReduction() ?? 0;
+        return Mathf.Max(MINIMUM_DAYS_REQUIRED, baseDaysRequired - daysReduction);
     }
 
     public EnemyEnhancementProfileSO PreviewEnemyEnhancementProfile(Vector2Int chunkCoord) =>
@@ -143,7 +182,7 @@ public class ConquestManager : MonoBehaviour
     // 지금은 호출자가 직접 준비해서 넘김
     public bool CanAffordExpedition(Vector2Int targetChunkCoord, ResourceCost available)
     {
-        if (!_chunkCostTable.TryResolve(targetChunkCoord, out ResourceCost cost))
+        if (!TryGetExpeditionCost(targetChunkCoord, out ResourceCost cost))
             return false;
 
         return available.CanAfford(cost);
@@ -154,7 +193,7 @@ public class ConquestManager : MonoBehaviour
         if (!CanSendExpedition(targetChunkCoord))
             return false;
 
-        if (!_chunkCostTable.TryResolve(targetChunkCoord, out ResourceCost cost))
+        if (!TryGetExpeditionCost(targetChunkCoord, out ResourceCost cost))
         {
             Debug.LogWarning($"[ConquestManager] 청크 {targetChunkCoord}의 점령 비용이 설정되지 않았습니다.");
             return false;
@@ -167,7 +206,7 @@ public class ConquestManager : MonoBehaviour
         }
 
         Chunk chunk = _gridMap.GetChunk(targetChunkCoord);
-        int daysRequired = _durationTable.ResolveDaysRequired(chunk.DominantTerrain);
+        int daysRequired = ResolveDaysRequired(_durationTable.ResolveDaysRequired(chunk.DominantTerrain));
 
         _activeExpeditions.Add(new ConquestExpedition(targetChunkCoord, cost, daysRequired));
         OnExpeditionSent?.Invoke(targetChunkCoord, cost);

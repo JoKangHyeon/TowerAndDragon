@@ -47,6 +47,7 @@ public class Building : MonoBehaviour
     private Vector3? _placementOffset;
     private Vector3? _baseScale;
     private int _rotationSteps;
+    private IBuildingMoveGrantQuery _moveGrantQuery;
 
     public bool IsOpen => _isOpen;
     public Sprite Sprite => _sprite;
@@ -59,8 +60,17 @@ public class Building : MonoBehaviour
 
     public int RotationSteps => _rotationSteps;
 
-    public bool IsMoveable => _isMoveable;
+    // _isMoveable은 "이동 가능한 종류인가"를 뜻한다. 실제 이동 가부는 연구 기반 일일 예산과
+    // AND로 판정한다 - 쿼리가 배선되지 않은 씬(팀원 테스트 씬 등)은 무제한 이동을 유지한다.
+    public bool IsMoveable =>
+        _isMoveable && (_moveGrantQuery == null || _moveGrantQuery.HasRemainingMoveGrant);
     public bool IsRemoveable => _isRemoveable;
+
+    public void SetMoveGrantQuery(IBuildingMoveGrantQuery moveGrantQuery) =>
+        _moveGrantQuery = moveGrantQuery;
+
+    // 실제 이동에 성공했을 때만 호출한다 - 취소·실패한 시도는 예산을 소비하지 않는다.
+    public void NotifyMoved() => _moveGrantQuery?.ConsumeMoveGrant();
 
     // 건설된 시점의 주기(CycleManager.CurrentCycleNumber) - 철거 시 당일 건설 여부 판정에 쓰인다.
     public int ConstructedCycle { get; private set; }
