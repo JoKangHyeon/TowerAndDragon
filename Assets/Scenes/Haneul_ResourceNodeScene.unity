@@ -1718,6 +1718,9 @@ MonoBehaviour:
   _researchManager: {fileID: 838319721}
   _waveCycleProgression: {fileID: 0}
   _dragonTreeManager: {fileID: 0}
+  _victoryOccurred:
+    m_PersistentCalls:
+      m_Calls: []
   GameOverOccurred:
     m_PersistentCalls:
       m_Calls: []
@@ -2274,7 +2277,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1401049263130308687, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.0009905513
+      value: -0.00067810173
       objectReference: {fileID: 0}
     - target: {fileID: 1521450988358325637, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_Pivot.x
@@ -2510,7 +2513,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.00096290244
+      value: -0.0008762483
       objectReference: {fileID: 0}
     - target: {fileID: 3543463496763922537, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -2828,6 +2831,26 @@ PrefabInstance:
       propertyPath: _buildingPlacementController
       value: 
       objectReference: {fileID: 410126145}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _filterTabs.Array.data[2].Buildings.Array.size
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[2].Buildings.Array.data[4]'
+      value: 
+      objectReference: {fileID: 4751353425643375589, guid: 0cba0fd7f5d677b409b586766beb9181, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[2].Buildings.Array.data[5]'
+      value: 
+      objectReference: {fileID: 4751353425643375589, guid: 3ab4e920409fbb14c9ee4c0d8bf00202, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[2].Buildings.Array.data[6]'
+      value: 
+      objectReference: {fileID: 4751353425643375589, guid: 0aac1a24b62270644923f7c35bc28dc7, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[2].Buildings.Array.data[7]'
+      value: 
+      objectReference: {fileID: 4751353425643375589, guid: 96852b6a7c2641646ab070f7150b8044, type: 3}
     - target: {fileID: 6007715785824057375, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
