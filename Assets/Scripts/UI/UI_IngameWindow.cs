@@ -78,6 +78,12 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("연구 버튼 라벨. 스트링테이블에서 채운다.")]
     [SerializeField] private TMP_Text _buttonResearchLabel;
 
+    [Header("새끼용 인벤토리 (Panel_BottomRight)")]
+    [Tooltip("새끼용 인벤토리 창 토글 버튼.")]
+    [SerializeField] private Button _buttonBabyDragonInventory;
+    [Tooltip("새끼용 인벤토리 창. 버튼 클릭 시 토글한다.")]
+    [SerializeField] private UI_DragonInventoryWindow _babyDragonInventoryWindow;
+
     [Header("웨이브 진행 바 (Panel_TopCenter/BossWave)")]
     [Tooltip("웨이브 진행 슬라이더(Slider_wave).")]
     [SerializeField] private Slider _waveSlider;
@@ -137,6 +143,11 @@ public class UI_IngameWindow : MonoBehaviour
         if (_buttonResearchLabel != null)
         {
             _buttonResearchLabel.text = StringTable.GetString(ResearchLocKeys.WINDOW_HEADER);
+        }
+
+        if (_buttonBabyDragonInventory != null && _babyDragonInventoryWindow != null)
+        {
+            _buttonBabyDragonInventory.onClick.AddListener(_babyDragonInventoryWindow.ToggleFromEntryPoint);
         }
     }
 

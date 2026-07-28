@@ -85,7 +85,10 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
         babyDragonTower.Setup(data);
         ApplySprite(babyDragonTower, data);
 
-        _gameManager.CurrentRun.BabyDragons.Remove(_pendingRecord);
+        // 리스트에서 지우지 않고 IsInTower만 켠다 - KinOwnedGateSO/DragonTreeManager.HasBabyDragon이
+        // 이 리스트를 "보유 여부" 판정에 그대로 쓰므로, 설치했다고 보유 목록에서 사라지면 안 된다.
+        // 배치 후보 제외는 IsInTower 필터(UI_DragonInventoryWindow, TowerPopulationDebugGUI)가 담당한다.
+        _pendingRecord.IsInTower = true;
         _pendingRecord = null;
         _gameManager.CurrentRun.OnInventoryChanged.Invoke();
     }
@@ -116,11 +119,23 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
             return;
         }
 
-        _gameManager.CurrentRun.BabyDragons.Add(new BabyDragon
+        DragonType dragonType = babyDragonTower.DragonData.DragonType;
+
+        // 새 레코드를 추가하지 않는다 - 레코드는 속성만으로 구분되는 fungible한 값이라,
+        // 설치 중(IsInTower=true)인 같은 속성 레코드를 찾아 도로 꺼내는 것만으로 충분하다.
+        // (설치 시 리스트에서 지우지 않고 IsInTower만 켜 두었기 때문에 항상 존재해야 한다.)
+        BabyDragon record = _gameManager.CurrentRun.BabyDragons
+            .Find(dragon => dragon.IsInTower && dragon.DragonType == dragonType);
+
+        if (record == null)
         {
-            DragonType = babyDragonTower.DragonData.DragonType,
-            IsInTower = false,
-        });
+            Debug.LogError(
+                $"[BabyDragonPlacementCoordinator] 설치된 속성 {dragonType} 새끼용에 대응하는 보유 레코드를 찾지 못했습니다.",
+                babyDragonTower);
+            return;
+        }
+
+        record.IsInTower = false;
         _gameManager.CurrentRun.OnInventoryChanged.Invoke();
     }
 }

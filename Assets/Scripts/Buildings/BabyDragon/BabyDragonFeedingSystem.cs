@@ -105,23 +105,11 @@ public class BabyDragonFeedingSystem : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 새끼용 한 마리가 하루에 먹어야 하는 슬라임 양.
-    /// 추후 연구로 새끼용을 강화하면 먹이도 늘어나므로, 그 항은 여기에만 더한다.
-    /// </summary>
-    private int ResolveRequiredFeed(BabyDragonData data)
-    {
-        _installedCountByDragonType.TryGetValue(data.DragonType, out int sameTypeCount);
-
-        return data.BaseFeed
-            + data.AdditionalFeedPerSameType * Mathf.Max(0, sameTypeCount - 1)
-            + data.AdditionalFeedPerTotal * Mathf.Max(0, _babyDragons.Count - 1);
-    }
-
     private void Feed(BabyDragonTower babyDragon)
     {
         BabyDragonData data = babyDragon.DragonData;
-        int requiredFeed = ResolveRequiredFeed(data);
+        _installedCountByDragonType.TryGetValue(data.DragonType, out int sameTypeCount);
+        int requiredFeed = BabyDragonFeedFormula.ResolveDailyFeed(data, sameTypeCount, _babyDragons.Count);
 
         if (requiredFeed <= 0)
         {
@@ -142,7 +130,6 @@ public class BabyDragonFeedingSystem : MonoBehaviour
         bool isFed = _resourceManager.TrySpend(slimeType, requiredFeed);
         babyDragon.SetFed(isFed);
 
-        _installedCountByDragonType.TryGetValue(data.DragonType, out int sameTypeCount);
         Debug.Log(
             $"[BabyDragonFeedingSystem] {babyDragon.name} 먹이 {slimeType}" +
             $" 필요 {requiredFeed} (기본 {data.BaseFeed}" +
