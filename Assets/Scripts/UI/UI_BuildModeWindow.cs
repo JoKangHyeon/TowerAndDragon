@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using DG.Tweening;
 
@@ -62,6 +63,10 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("닫힐 때 도착 오프셋(홈 기준). 홈에서 여기로 슬라이드 아웃 후 비활성화.")]
     [SerializeField]
     private Vector2 _closeToOffset = new Vector2(-500f, 0f);
+
+    [Tooltip("빌드모드 패널을 닫는 액션 - 보통 ESC.")]
+    [SerializeField]
+    private InputActionReference _closeAction;
 
     private RectTransform _panelRect;
     private Vector2 _homePos;
@@ -132,6 +137,18 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         // 이동/철거 불가 건물(성, 주둔지 등) 선택 시 버튼을 비활성화해 클릭해도 아무 반응 없는 상황을 방지
         _activeButtons.Move.interactable = selected != null && selected.IsMoveable;
         _activeButtons.Remove.interactable = selected != null && selected.IsRemoveable;
+
+        HandleCloseInput();
+    }
+
+    // ESC 입력 시 빌드모드 패널을 닫고 배치/이동 중이던 상태도 함께 취소한다.
+    private void HandleCloseInput()
+    {
+        if (!_isOpen)
+            return;
+
+        if (_closeAction != null && _closeAction.action.WasPerformedThisFrame())
+            CloseBuildPanel();
     }
 
     // BuildMode 버튼 토글. 열 때는 UIManager를 거쳐 다른 배타 모드(점령 등)를 정리한다.

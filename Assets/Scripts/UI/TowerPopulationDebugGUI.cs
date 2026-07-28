@@ -1,9 +1,14 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Canvas와 무관하게 선택한 타워/생산시설의 인구 배치 상태를 확인하는 IMGUI 디버그 도구다.
-/// 마지막으로 선택한 타워 또는 생산시설을 유지해 IMGUI 클릭이 맵 선택을 해제해도 테스트를 계속할 수 있다.
+/// Canvas와 무관하게 현재 선택 상태에 맞는 디버그 정보를 보여주는 IMGUI 도구다.
+/// 원래 타워/생산시설 인구용이었으나, 새끼용 알 지급/배치용(구 BabyDragonDebugGUI)을
+/// 여기로 통합했다 - 연구소용은 ResearchLabDebugGUI로 별도 유지한다(통합하지 않음).
+/// 창을 각자 따로 띄우면 선택이 바뀌어도 이전 창이 안 닫혀 서로 겹쳐 보이는 문제가
+/// 있었기 때문에, 매 프레임 현재 선택 상태(_selectionKind)를 하나로 판정해 정확히
+/// 창 하나만 그린다. 아무것도 선택 안 된 기본 상태에는 새끼용 알 창을 보여준다.
 /// </summary>
 public class TowerPopulationDebugGUI : MonoBehaviour
 {
@@ -24,34 +29,52 @@ public class TowerPopulationDebugGUI : MonoBehaviour
     [SerializeField] private PopulationManager _populationManager;
     [SerializeField] private CycleManager _cycleManager;
 
+    [Header("Baby Dragon")]
+    [SerializeField] private GameManager _gameManager;
+    [SerializeField] private DragonEggInventorySystem _eggInventorySystem;
+    [SerializeField] private BabyDragonPlacementCoordinator _placementCoordinator;
+
     private SelectionKind _selectionKind;
     private TowerPopulation _selectedTowerPopulation;
     private FactoryPopulation _selectedFactoryPopulation;
+    private Vector2 _babyDragonScrollPosition;
 
     private bool IsDay =>
         _cycleManager != null &&
         _cycleManager.CurrentCycle == CycleManager.CycleState.Day;
 
+    // 매 프레임 현재 선택된 건물 타입 하나로 _selectionKind를 다시 판정한다 - 이전에 선택했던
+    // 다른 타입의 창이 "기억"되어 계속 떠 있는 일이 없도록, 값을 유지하지 않고 항상 새로 계산한다.
     private void Update()
+    {
+        _selectionKind = ResolveSelectionKind();
+        HandleKeyInput();
+    }
+
+    private SelectionKind ResolveSelectionKind()
     {
         if (_buildingPlacementController == null)
         {
-            return;
+            return SelectionKind.None;
         }
 
         Building selectedBuilding = _buildingPlacementController.SelectedBuilding;
+
         if (selectedBuilding is Tower selectedTower)
         {
             _selectedTowerPopulation = selectedTower.GetComponent<TowerPopulation>();
-            _selectionKind = SelectionKind.Tower;
-        }
-        else if (selectedBuilding is Factory selectedFactory)
-        {
-            _selectedFactoryPopulation = selectedFactory.GetComponent<FactoryPopulation>();
-            _selectionKind = SelectionKind.Factory;
+            // 새끼용처럼 TowerPopulation이 없는 Tower 파생 건물은 이 창을 그릴 게 없으니
+            // None으로 떨어뜨려 기본 창(새끼용 알)이 보이게 한다.
+            return _selectedTowerPopulation != null ? SelectionKind.Tower : SelectionKind.None;
         }
 
-        HandleKeyInput();
+        if (selectedBuilding is Factory selectedFactory)
+        {
+            _selectedFactoryPopulation = selectedFactory.GetComponent<FactoryPopulation>();
+            return SelectionKind.Factory;
+        }
+
+        return SelectionKind.None;
     }
 
     private void HandleKeyInput()
@@ -93,15 +116,21 @@ public class TowerPopulationDebugGUI : MonoBehaviour
 
     private void OnGUI()
     {
-        if (_selectionKind == SelectionKind.Tower && _selectedTowerPopulation != null)
+        switch (_selectionKind)
         {
-            DrawWindow(DrawTowerInformation, DrawTowerControls);
-        }
-        else if (_selectionKind == SelectionKind.Factory && _selectedFactoryPopulation != null)
-        {
-            DrawWindow(DrawFactoryInformation, DrawFactoryControls);
+            case SelectionKind.Tower:
+                DrawWindow(DrawTowerInformation, DrawTowerControls);
+                break;
+            case SelectionKind.Factory:
+                DrawWindow(DrawFactoryInformation, DrawFactoryControls);
+                break;
+            default:
+                DrawBabyDragonWindow();
+                break;
         }
     }
+
+    // --- 타워 / 생산시설 인구 ---
 
     private void DrawWindow(System.Action drawInformation, System.Action drawControls)
     {
@@ -229,5 +258,100 @@ public class TowerPopulationDebugGUI : MonoBehaviour
         }
 
         GUI.enabled = previousEnabled;
+    }
+
+    // --- 새끼용 알 (구 BabyDragonDebugGUI) ---
+
+    // 타워/생산시설 인구 창과 같은 자리(우측 상단)·같은 크기를 재사용한다 - 둘 다 상호
+    // 배타적으로 그려지므로(OnGUI의 switch) 자리를 공유해도 겹치지 않고, 화면 하단의
+    // 점령 패널 등 다른 UI와도 겹치지 않는다.
+    private void DrawBabyDragonWindow()
+    {
+        if (_gameManager == null || _eggInventorySystem == null)
+        {
+            return;
+        }
+
+        Rect windowRect = new Rect(
+            Screen.width - WINDOW_WIDTH - WINDOW_MARGIN,
+            WINDOW_MARGIN,
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT);
+
+        GUILayout.BeginArea(windowRect, GUI.skin.window);
+        _babyDragonScrollPosition = GUILayout.BeginScrollView(_babyDragonScrollPosition);
+        DrawEggGrantButtons();
+        GUILayout.Space(WINDOW_MARGIN);
+        DrawEggList();
+        GUILayout.Space(WINDOW_MARGIN);
+        DrawPlacementButtons();
+        GUILayout.EndScrollView();
+        GUILayout.EndArea();
+    }
+
+    private void DrawEggGrantButtons()
+    {
+        GUILayout.Label("새끼용 디버그 - 알 지급");
+
+        foreach (DragonType dragonType in System.Enum.GetValues(typeof(DragonType)))
+        {
+            if (GUILayout.Button($"+ {dragonType} 알"))
+            {
+                _eggInventorySystem.GrantEgg(dragonType);
+            }
+        }
+    }
+
+    private void DrawEggList()
+    {
+        GUILayout.Label("보유 중인 알");
+
+        List<DragonEgg> eggs = _gameManager.CurrentRun.DragonEggs;
+        if (eggs.Count == 0)
+        {
+            GUILayout.Label("(없음)");
+            return;
+        }
+
+        foreach (DragonEgg egg in eggs)
+        {
+            GUILayout.Label($"{egg.DragonType}: {DescribeEggProgress(egg)}");
+        }
+    }
+
+    private string DescribeEggProgress(DragonEgg egg)
+    {
+        BabyDragonDataCatalog dataCatalog = _eggInventorySystem.DataCatalog;
+        if (dataCatalog == null || !dataCatalog.TryResolve(egg.DragonType, out BabyDragonData data))
+        {
+            return $"{egg.FedDayCount}일째 (카탈로그 없음)";
+        }
+
+        return $"{egg.FedDayCount}/{data.DaysToHatch}일";
+    }
+
+    private void DrawPlacementButtons()
+    {
+        if (_placementCoordinator == null)
+        {
+            return;
+        }
+
+        GUILayout.Label("배치 시작 (보유 개체)");
+
+        // BeginPlacement 확정이 같은 프레임의 다음 OnGUI 패스에서 리스트를 변경할 수 있으므로
+        // (OnGUI는 프레임당 여러 번 호출됨) 스냅샷을 순회한다.
+        foreach (BabyDragon babyDragon in _gameManager.CurrentRun.BabyDragons.ToArray())
+        {
+            if (babyDragon.IsInTower)
+            {
+                continue;
+            }
+
+            if (GUILayout.Button($"배치: {babyDragon.DragonType}"))
+            {
+                _placementCoordinator.BeginPlacement(babyDragon);
+            }
+        }
     }
 }
