@@ -55,6 +55,12 @@ public class CycleManager : MonoBehaviour
     public void EndNight()
     {
         SafeInvoke(OnNightEnd, _gameManager.CurrentRun.CurrentCycle);
+
+        if (_gameManager.IsGameEnded)
+        {
+            return;
+        }
+        
         StartDay();
     }
 

@@ -5,6 +5,13 @@ using UnityEngine.Serialization;
 
 public class GameManager : MonoBehaviour
 {
+    public enum GameResult
+    {
+        None,
+        Victory,
+        Defeat,
+    }
+
     [SerializeField]
     [FormerlySerializedAs("CurrentRun")]
     private RunData _currentRun;
@@ -36,6 +43,8 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private DragonTreeManager _dragonTreeManager;
 
+    [SerializeField] private UnityEvent _victoryOccurred = new();
+
     public RunData CurrentRun => _currentRun;
     public CycleManager CycleManager => _cycleManager;
     public List<CycleLight> DefaultLights => _defaultLights;
@@ -46,9 +55,17 @@ public class GameManager : MonoBehaviour
 
     /// <summary>성이 파괴되어 게임오버가 되면 발생. 게임오버 UI 등이 구독한다.</summary>
     public UnityEvent GameOverOccurred;
+    public UnityEvent VictoryOccurred => _victoryOccurred;
+    public GameResult CurrentGameResult {get; private set;} = GameResult.None;
+    public bool IsGameEnded => CurrentGameResult != GameResult.None;
 
-    private bool _isGameOver;
-
+    private void OnEnable()
+    {
+        if (_waveCycleProgression != null)
+        {
+            _waveCycleProgression.AllCyclesCompleted.AddListener(Victory);
+        }
+    }
 
     private void Awake()
     {
@@ -92,15 +109,43 @@ public class GameManager : MonoBehaviour
         _cycleManager.StartDay();
     }
 
+    private void OnDisable()
+    {
+        if (_waveCycleProgression != null)
+        {
+            _waveCycleProgression.AllCyclesCompleted.RemoveListener(Victory);
+        }
+    }
+
     // 성이 파괴되면 성이 호출한다(중복 호출 무시). 실제 창 표시는 이벤트 구독자가 담당.
     public void GameOver()
     {
-        if (_isGameOver)
+        if (!TrySetGameResult(GameResult.Defeat))
         {
             return;
         }
 
-        _isGameOver = true;
         GameOverOccurred?.Invoke();
+    }
+
+    public void Victory()
+    {
+        if (!TrySetGameResult(GameResult.Victory))
+        {
+            return;
+        }
+
+        _victoryOccurred?.Invoke();
+    }
+
+    private bool TrySetGameResult(GameResult result)
+    {
+        if (IsGameEnded || result == GameResult.None)
+        {
+            return false;
+        }
+
+        CurrentGameResult = result;
+        return true;
     }
 }
