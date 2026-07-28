@@ -269,16 +269,19 @@ public class MonsterAttack : MonoBehaviour
             _targetLayers
         );
 
+
         HashSet<IMonsterTarget> hitTargets= new HashSet<IMonsterTarget>();
 
         foreach (Collider2D candidate in candidates)
         {
             IMonsterTarget target = candidate.GetComponentInParent<IMonsterTarget>();
 
+
             if (target == null || target.IsDead || !CanAttackTargetType(target.TargetType) || !hitTargets.Add(target))
             {
                 continue;
             }
+
 
             _attack.Execute(target, in context);
         }

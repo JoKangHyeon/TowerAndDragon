@@ -6,17 +6,22 @@ using UnityEngine;
 
 [RequireComponent(typeof(Health))]
 [RequireComponent(typeof(TowerAttack))]
-public class Tower : Building, IMonsterTarget
+public class Tower : Building, IMonsterTarget, IParalyzable
 {
     [SerializeField] private TowerData _towerData;
     private Health _health;
     private TowerAttack _attack;
     private CancellationTokenSource _reviveCts;
+    private CancellationTokenSource _paralysisCts;
     private Animator _animator;
 
     private bool _isInitialized;
     private bool _isDisabled;
     private float _disabledAtTime;
+
+    // 감전 효과
+    private bool _isParalyzed;
+    private float _paralyzedUntil;
 
     public bool IsDead => _health == null || _health.IsDead;
     public TowerAttack Attack => _attack;
@@ -29,6 +34,8 @@ public class Tower : Building, IMonsterTarget
     public virtual bool RequiresPopulation => true;
     public Transform TargetTransform => transform;
     public GameObject TargetObject => gameObject;
+
+    public bool IsParalyzed => _isParalyzed;
 
     private static readonly int HIT_ANIM_KEY = Animator.StringToHash("Hit");
     private static readonly int BROKEN_ANIM_KEY = Animator.StringToHash("Broken");
@@ -61,12 +68,17 @@ public class Tower : Building, IMonsterTarget
         {
             _health.Died.RemoveListener(HandleDisabled);
         }
+        CancelParalysisRecovery();
+        _isParalyzed = false;
+        _paralyzedUntil = 0f;
+
 
         _towerData = data;
         _health.Initialize(_towerData.MaxHealth);
         _health.Died.AddListener(HandleDisabled);
         _attack.Initialize(_towerData, _animator);
         _isInitialized = true;
+        RefreshAttackEnabled();
     }
 
     public void TakeDamage(DamageInfo damage)
@@ -89,9 +101,10 @@ public class Tower : Building, IMonsterTarget
 
     private void HandleDisabled()
     {
-        _attack.SetAttackEnabled(false);
         _isDisabled = true;
         _disabledAtTime = Time.time;
+
+        RefreshAttackEnabled();
 
         Debug.Log(
             $"[Tower] {name}이 비활성화되었습니다. 재활성화 대기시간: {_towerData.ReviveDelay}초",
@@ -142,8 +155,9 @@ public class Tower : Building, IMonsterTarget
         float disabledDuration = Time.time - _disabledAtTime;
 
         _health.RestoreToFull();
-        _attack.SetAttackEnabled(_towerData.CanAttack);
         _isDisabled = false;
+
+        RefreshAttackEnabled();
 
         if (!wasDisabled)
         {
@@ -164,9 +178,84 @@ public class Tower : Building, IMonsterTarget
     {
         CancelRevive();
 
+        CancelParalysisRecovery();
+
         if (_health != null)
         {
             _health.Died.RemoveListener(HandleDisabled);
         }
+    }
+
+    public void ApplyParalysis(float duration)
+    {
+
+        if (!_isInitialized || IsDead || duration <= 0f)
+        {
+            return;
+        }
+
+        float requestedEndTime = Time.time + duration;
+
+        if (requestedEndTime <= _paralyzedUntil)
+        {
+            return;
+        }
+
+        _paralyzedUntil = requestedEndTime;
+        _isParalyzed = true;
+
+
+        RefreshAttackEnabled();
+
+        CancelParalysisRecovery();
+
+        _paralysisCts = CancellationTokenSource.CreateLinkedTokenSource(
+            this.GetCancellationTokenOnDestroy());
+        RecoverFromParalysisAfterDelayAsync(_paralysisCts.Token).Forget();
+    }
+
+    private async UniTaskVoid RecoverFromParalysisAfterDelayAsync(
+        CancellationToken token)
+    {
+        float remainingDuration = Mathf.Max(
+            0f,
+            _paralyzedUntil - Time.time
+        );
+
+        await UniTask.Delay(
+            TimeSpan.FromSeconds(remainingDuration),
+            cancellationToken: token
+        );
+
+        _paralysisCts?.Dispose();
+        _paralysisCts = null;
+
+        _isParalyzed = false;
+        _paralyzedUntil = 0f;
+
+
+        RefreshAttackEnabled();
+    }
+
+    private void CancelParalysisRecovery()
+    {
+        if (_paralysisCts == null)
+        {
+            return;
+        }
+
+        _paralysisCts.Cancel();
+        _paralysisCts.Dispose();
+        _paralysisCts = null;
+    }
+
+    private void RefreshAttackEnabled()
+    {
+        bool isAttackEnabled =
+            _isInitialized &&
+            !_isDisabled &&
+            !_isParalyzed;
+
+        _attack?.SetAttackEnabled(isAttackEnabled);
     }
 }
