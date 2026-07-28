@@ -1,11 +1,19 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 using System.Collections.Generic;
 
 public class MouseSelectController : MonoBehaviour
 {
+    [FormerlySerializedAs("_spriteRenderer")]
     [SerializeField]
-    private SpriteRenderer _spriteRenderer;
+    private SpriteRenderer _selectionHighlightRenderer;
+
+    [SerializeField]
+    private SpriteRenderer _occupiedHighlightRenderer;
+
+    [SerializeField]
+    private SpriteRenderer _conquestHighlightRenderer;
 
     [SerializeField]
     private GridMap _gridMap;
@@ -40,8 +48,9 @@ public class MouseSelectController : MonoBehaviour
     private RangeIndicator _buffRangeIndicator;
 
     private Camera _cam;
-    private ComponentPool<SpriteRenderer> _highlightPool;
-    private ComponentPool<SpriteRenderer> _occupiedOverlayPool;
+    private ComponentPool<SpriteRenderer> _selectionHighlightPool;
+    private ComponentPool<SpriteRenderer> _occupiedHighlightPool;
+    private ComponentPool<SpriteRenderer> _conquestHighlightPool;
     private FootprintShape _baseFootprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private FootprintShape _footprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private int _previewRotationSteps;
@@ -68,14 +77,110 @@ public class MouseSelectController : MonoBehaviour
 
     private void Awake()
     {
-        _cam = Camera.main;
-        _highlightPool = new ComponentPool<SpriteRenderer>(_spriteRenderer, transform, seedInstance: _spriteRenderer);
-        _occupiedOverlayPool = new ComponentPool<SpriteRenderer>(_spriteRenderer, transform);
+        EnsureRuntimeState();
         Deactivate();
     }
 
+    private void OnEnable()
+    {
+        EnsureRuntimeState();
+    }
+
+    private void OnDisable()
+    {
+        _selectionHighlightPool?.DeactivateAll();
+        _occupiedHighlightPool?.DeactivateAll();
+        _conquestHighlightPool?.DeactivateAll();
+
+        if (_ghostRenderer != null)
+            _ghostRenderer.gameObject.SetActive(false);
+
+        _rangeIndicator?.Hide();
+        _buffRangeIndicator?.Hide();
+    }
+
+    // 플레이 중 스크립트 리컴파일로 비직렬화 런타임 필드가 초기화돼도 다시 사용할 수 있게 복구한다.
+    // 풀 목록만 유실되고 기존 복제 렌더러가 씬에 남았을 수 있으므로 재생성 전에 고아 복제본도 정리한다.
+    private void EnsureRuntimeState()
+    {
+        if (_cam == null)
+            _cam = Camera.main;
+
+        if (_selectionHighlightPool != null &&
+            _occupiedHighlightPool != null &&
+            _conquestHighlightPool != null)
+            return;
+
+        RemoveOrphanedPoolObjects();
+
+        _selectionHighlightPool = CreatePool(_selectionHighlightRenderer, true);
+
+        _occupiedHighlightPool = _occupiedHighlightRenderer != null
+            ? CreatePool(_occupiedHighlightRenderer, true)
+            : CreatePool(_selectionHighlightRenderer, false);
+
+        _conquestHighlightPool = _conquestHighlightRenderer != null
+            ? CreatePool(_conquestHighlightRenderer, true)
+            : _selectionHighlightPool;
+
+        _selectionHighlightPool?.DeactivateAll();
+        _occupiedHighlightPool?.DeactivateAll();
+        _conquestHighlightPool?.DeactivateAll();
+    }
+
+    private ComponentPool<SpriteRenderer> CreatePool(SpriteRenderer renderer, bool useSeedInstance)
+    {
+        if (renderer == null)
+            return null;
+
+        return new ComponentPool<SpriteRenderer>(
+            renderer,
+            renderer.transform.parent,
+            useSeedInstance ? renderer : null);
+    }
+
+    // 도메인 리로드로 풀 목록만 유실된 경우, 등록된 템플릿/고스트가 아닌 런타임 복제 렌더러를 정리한다.
+    // 이름에 의존하지 않고 각 템플릿의 부모 아래만 검사하므로 전용 Highlight 부모 구조에서도 그대로 동작한다.
+    private void RemoveOrphanedPoolObjects()
+    {
+        var poolParents = new HashSet<Transform>();
+        AddPoolParent(poolParents, _selectionHighlightRenderer);
+        AddPoolParent(poolParents, _occupiedHighlightRenderer);
+        AddPoolParent(poolParents, _conquestHighlightRenderer);
+
+        foreach (Transform poolParent in poolParents)
+        {
+            for (int i = poolParent.childCount - 1; i >= 0; i--)
+            {
+                Transform child = poolParent.GetChild(i);
+                if (!child.TryGetComponent(out SpriteRenderer renderer) || IsRegisteredRenderer(renderer))
+                    continue;
+
+                child.gameObject.SetActive(false);
+
+                if (Application.isPlaying)
+                    Destroy(child.gameObject);
+                else
+                    DestroyImmediate(child.gameObject);
+            }
+        }
+    }
+
+    private static void AddPoolParent(HashSet<Transform> poolParents, SpriteRenderer renderer)
+    {
+        if (renderer != null && renderer.transform.parent != null)
+            poolParents.Add(renderer.transform.parent);
+    }
+
+    private bool IsRegisteredRenderer(SpriteRenderer renderer) =>
+        renderer == _selectionHighlightRenderer ||
+        renderer == _occupiedHighlightRenderer ||
+        renderer == _conquestHighlightRenderer ||
+        renderer == _ghostRenderer;
+
     public void SetPlacementActive(bool isActive)
     {
+        EnsureRuntimeState();
         _isPlacementActive = isActive;
 
         if (_isPlacementActive)
@@ -90,6 +195,7 @@ public class MouseSelectController : MonoBehaviour
     // 화면에 보이는 타일과 클릭 지점이 일치한다.
     public Vector3Int GetHoveredCell()
     {
+        EnsureRuntimeState();
         Vector3 worldPos = _cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         worldPos.z = 0f;
         worldPos.y -= _yOffset;
@@ -104,6 +210,7 @@ public class MouseSelectController : MonoBehaviour
         if (!_isPlacementActive)
             return;
 
+        EnsureRuntimeState();
         Vector3Int hoveredCell = GetHoveredCell();
         Vector3Int anchor = GetFootprintAnchor(hoveredCell, _footprintShape);
 
@@ -199,13 +306,15 @@ public class MouseSelectController : MonoBehaviour
     //   빨강  — 점유되거나 지형이 건설 불가 → 어떤 건물도 배치 불가
     private void DrawFootprint(List<Vector3Int> footprint, bool canConstruct)
     {
+        EnsureRuntimeState();
+
         if (_selectedBuildingRef is Factory factory)
         {
             ResourceType required = factory.RequiredResourceNode;
 
             for (int i = 0; i < footprint.Count; i++)
             {
-                SpriteRenderer highlight = _highlightPool.Get(i);
+                SpriteRenderer highlight = _selectionHighlightPool.Get(i);
                 Vector3 cellPos = _gridMap.ConvertGridToWorld(footprint[i]);
                 cellPos.y += _yOffset;
                 highlight.transform.position = cellPos;
@@ -218,7 +327,7 @@ public class MouseSelectController : MonoBehaviour
                     highlight.color = Color.green;
             }
 
-            _highlightPool.DeactivateFrom(footprint.Count);
+            _selectionHighlightPool.DeactivateFrom(footprint.Count);
             return;
         }
 
@@ -226,7 +335,11 @@ public class MouseSelectController : MonoBehaviour
         HighlightCells(footprint, highlightColor);
     }
 
-    public void HighlightCells(List<Vector3Int> coords, Color color) => HighlightCells(coords, color, _highlightPool);
+    public void HighlightCells(List<Vector3Int> coords, Color color)
+    {
+        EnsureRuntimeState();
+        HighlightCells(coords, color, _selectionHighlightPool);
+    }
 
     private void HighlightCells(List<Vector3Int> coords, Color color, ComponentPool<SpriteRenderer> pool)
     {
@@ -242,16 +355,17 @@ public class MouseSelectController : MonoBehaviour
         pool.DeactivateFrom(coords.Count);
     }
 
-    // 색상이 서로 다른 여러 좌표 묶음을 같은 하이라이트 풀(_highlightPool) 위에 한 번에 칠한다 - 예: 점령 가능/불가능 청크를 동시에 표시.
+    // 색상이 서로 다른 여러 좌표 묶음을 점령 전용 하이라이트 풀 위에 한 번에 칠한다.
     public void HighlightCellGroups(IReadOnlyList<(List<Vector3Int> Coords, Color Color)> groups)
     {
+        EnsureRuntimeState();
         int index = 0;
 
         foreach (var group in groups)
         {
             foreach (Vector3Int coord in group.Coords)
             {
-                SpriteRenderer highlight = _highlightPool.Get(index);
+                SpriteRenderer highlight = _conquestHighlightPool.Get(index);
                 Vector3 cellPos = _gridMap.ConvertGridToWorld(coord);
                 cellPos.y += _yOffset;
                 highlight.transform.position = cellPos;
@@ -260,17 +374,30 @@ public class MouseSelectController : MonoBehaviour
             }
         }
 
-        _highlightPool.DeactivateFrom(index);
+        _conquestHighlightPool.DeactivateFrom(index);
     }
 
     public void HighlightSelection(List<Vector3Int> coords) => HighlightCells(coords, _selectionHighlightColor);
 
     // 건설 모드에서 이미 건물이 배치된 타일을 표시 - 어떤 땅이 비어있는지 한눈에 파악 가능
-    public void ShowOccupiedOverlay(List<Vector3Int> coords) => HighlightCells(coords, _occupiedOverlayColor, _occupiedOverlayPool);
+    public void ShowOccupiedOverlay(List<Vector3Int> coords)
+    {
+        EnsureRuntimeState();
+        HighlightCells(coords, _occupiedOverlayColor, _occupiedHighlightPool);
+    }
 
-    public void ClearOccupiedOverlay() => _occupiedOverlayPool.DeactivateAll();
+    public void ClearOccupiedOverlay()
+    {
+        EnsureRuntimeState();
+        _occupiedHighlightPool?.DeactivateAll();
+    }
 
-    public void ClearHighlights() => _highlightPool.DeactivateAll();
+    public void ClearHighlights()
+    {
+        EnsureRuntimeState();
+        _selectionHighlightPool?.DeactivateAll();
+        _conquestHighlightPool?.DeactivateAll();
+    }
 
     private void DrawGhost(Vector3Int anchor, bool canConstruct)
     {

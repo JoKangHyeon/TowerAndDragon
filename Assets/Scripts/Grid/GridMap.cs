@@ -541,12 +541,13 @@ public class GridMap : MonoBehaviour
         building.SetRotation(rotationSteps);
 
         foreach (GridCell cell in footprint)
-        {
             cell.PlaceBuilding(building);
-            OnCellChanged?.Invoke(cell);
-        }
 
         _buildingFootprintCells[building] = footprint;
+
+        foreach (GridCell cell in footprint)
+            OnCellChanged?.Invoke(cell);
+
         OnBuildingAdded?.Invoke(building);
     }
 
