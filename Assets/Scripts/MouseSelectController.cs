@@ -35,6 +35,10 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private RangeIndicator _rangeIndicator;
 
+    [Tooltip("새끼용 배치/이동 미리보기 중 버프 반경을 타원으로 표시할 인디케이터. 공격 사거리와 별개 원이라 서로 다른 색으로 구분해둘 것.")]
+    [SerializeField]
+    private RangeIndicator _buffRangeIndicator;
+
     private Camera _cam;
     private ComponentPool<SpriteRenderer> _highlightPool;
     private ComponentPool<SpriteRenderer> _occupiedOverlayPool;
@@ -42,6 +46,7 @@ public class MouseSelectController : MonoBehaviour
     private FootprintShape _footprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private int _previewRotationSteps;
     private Vector3 _ghostLocalOffset;
+    private Sprite _ghostSpriteOverride;
     private bool _isPlacementActive;
     private Vector3Int? _lastDrawnAnchor;
     private Building _selectedBuildingRef; // 재배치 중이면 실제 인스턴스 - 자기 자신과 겹치는 위치도 유효하게 판정하기 위함
@@ -123,12 +128,24 @@ public class MouseSelectController : MonoBehaviour
 
     private void SetPreviewTarget(Building building, int initialRotationSteps)
     {
+        // 새 배치/이동을 시작할 때마다 이전 대상용으로 걸려 있던 강제 스프라이트를 해제한다 -
+        // 그대로 두면 예를 들어 새끼용 배치 취소 후 일반 건물을 선택했을 때 새끼용 색이 남는다.
+        _ghostSpriteOverride = null;
         _selectedBuildingRef = building;
         _baseFootprintShape = building.BaseFootprintShape;
         _previewRotationSteps = initialRotationSteps;
         _footprintShape = _baseFootprintShape.Rotated(_previewRotationSteps);
         _lastDrawnAnchor = null;
 
+        RefreshGhostVisual();
+    }
+
+    // BabyDragonTower처럼 프리팹 자체엔 스프라이트가 없고 배치 시점에야 데이터로 정해지는
+    // 건물의 고스트를 위해, 외부에서 강제로 스프라이트를 지정할 수 있게 한다.
+    // BeginPlacementPreview/BeginRepositionPreview로 새 대상을 잡을 때 자동으로 해제된다.
+    public void SetGhostSpriteOverride(Sprite sprite)
+    {
+        _ghostSpriteOverride = sprite;
         RefreshGhostVisual();
     }
 
@@ -155,7 +172,11 @@ public class MouseSelectController : MonoBehaviour
         if (_ghostRenderer == null)
             return;
 
-        Sprite ghostSprite = _selectedBuildingRef.ResolveRotationSprite(_previewRotationSteps);
+        Sprite ghostSprite = _ghostSpriteOverride;
+        if (ghostSprite == null)
+        {
+            ghostSprite = _selectedBuildingRef.ResolveRotationSprite(_previewRotationSteps);
+        }
         if (ghostSprite == null)
         {
             SpriteRenderer prefabRenderer = _selectedBuildingRef.GetComponent<SpriteRenderer>();
@@ -263,9 +284,17 @@ public class MouseSelectController : MonoBehaviour
         _ghostRenderer.color = color;
     }
 
+    private void DrawRangeIndicator(Vector3Int anchor)
+    {
+        Vector3 center = _gridMap.GetFootprintCenterWorld(anchor, _footprintShape) + _ghostLocalOffset;
+
+        DrawAttackRangeIndicator(center);
+        DrawBuffRangeIndicator(center);
+    }
+
     // 배치/이동 대상이 공격 가능한 타워일 때만, 실제 판정(TowerAttack.IsWithinAttackRange)과 같은
     // 타원으로 사거리를 표시한다 - 그 외 건물이거나 인디케이터가 연결 안 됐으면 숨긴다.
-    private void DrawRangeIndicator(Vector3Int anchor)
+    private void DrawAttackRangeIndicator(Vector3 center)
     {
         if (_rangeIndicator == null)
             return;
@@ -276,12 +305,32 @@ public class MouseSelectController : MonoBehaviour
             return;
         }
 
-        Vector3 center = _gridMap.GetFootprintCenterWorld(anchor, _footprintShape) + _ghostLocalOffset;
         float radiusX = tower.Data.Attack.Range;
         float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
 
         _rangeIndicator.SetCenter(center);
         _rangeIndicator.Show(radiusX, radiusY);
+    }
+
+    // 배치/이동 대상이 버프 반경을 가진 새끼용일 때만(BabyDragonBuffSystem과 동일한 조건) 표시한다.
+    private void DrawBuffRangeIndicator(Vector3 center)
+    {
+        if (_buffRangeIndicator == null)
+            return;
+
+        if (!(_selectedBuildingRef is BabyDragonTower babyDragon) ||
+            babyDragon.DragonData == null ||
+            babyDragon.DragonData.BuffRadius <= 0f)
+        {
+            _buffRangeIndicator.Hide();
+            return;
+        }
+
+        float radiusX = babyDragon.DragonData.BuffRadius;
+        float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
+
+        _buffRangeIndicator.SetCenter(center);
+        _buffRangeIndicator.Show(radiusX, radiusY);
     }
 
     private void Deactivate()
@@ -291,6 +340,7 @@ public class MouseSelectController : MonoBehaviour
 
         ClearHighlights();
         _rangeIndicator?.Hide();
+        _buffRangeIndicator?.Hide();
         CanConstruct = false;
     }
 }

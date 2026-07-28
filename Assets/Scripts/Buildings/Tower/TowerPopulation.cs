@@ -5,7 +5,7 @@ using UnityEngine;
 /// 인구 변경은 PopulationManager를 통해서만 수행한다.
 /// </summary>
 [RequireComponent(typeof(Tower))]
-public class TowerPopulation : MonoBehaviour
+public class TowerPopulation : MonoBehaviour, IPopulationAllocationTarget, ITowerStaffing
 {
     private Tower _tower;
     private PopulationManager _populationManager;
@@ -27,6 +27,8 @@ public class TowerPopulation : MonoBehaviour
     public bool HasAssignedPopulation => AssignedPopulation > 0f;
 
     public bool IsInitialized => _isInitialized;
+
+    public bool CanOperate => IsInitialized && HasAssignedPopulation;
 
     private void Awake()
     {

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [RequireComponent(typeof(ResearchLab))]
-public sealed class ResearchLabPopulation : MonoBehaviour
+public sealed class ResearchLabPopulation : MonoBehaviour, IPopulationAllocationTarget
 {
     private PopulationManager _populationManager;
     private CycleManager _cycleManager;
