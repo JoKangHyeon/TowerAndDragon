@@ -72,5 +72,5 @@ public class BabyDragon
 public class DragonEgg
 {
     public DragonType DragonType;
-    public int FedDayCount; // 부화까지 성공적으로 먹은 날 수 누적
+    public int FedDayCount; 
 }

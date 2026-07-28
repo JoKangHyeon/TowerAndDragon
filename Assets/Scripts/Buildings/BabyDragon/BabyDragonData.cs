@@ -21,10 +21,7 @@ public class BabyDragonData : TowerData
     [SerializeField] [Min(0)] private int _additionalFeedPerTotal;
 
     [Header("Egg Growth")]
-    [Tooltip("알 상태에서 하루에 먹는 슬라임 양. 0이면 즉시 부화 취급(성공 처리). 수치 미확정.")]
-    [SerializeField] [Min(0)] private int _eggDailyFeed;
-
-    [Tooltip("부화까지 필요한 누적 '성공적으로 먹은 날' 수. 0이면 즉시 부화. 수치 미확정.")]
+    [Tooltip("부화까지 필요한 누적 일수(슬라임 소비 없이 day count만으로 증가). 0이면 즉시 부화. 수치 미확정.")]
     [SerializeField] [Min(0)] private int _daysToHatch;
 
     [Header("Area Buff")]
@@ -39,7 +36,6 @@ public class BabyDragonData : TowerData
     public int BaseFeed => _baseFeed;
     public int AdditionalFeedPerSameType => _additionalFeedPerSameType;
     public int AdditionalFeedPerTotal => _additionalFeedPerTotal;
-    public int EggDailyFeed => _eggDailyFeed;
     public int DaysToHatch => _daysToHatch;
     public float BuffRadius => _buffRadius;
     public float BuffYieldMultiplier => _buffYieldMultiplier;
