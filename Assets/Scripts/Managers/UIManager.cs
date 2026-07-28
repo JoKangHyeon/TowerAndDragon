@@ -17,6 +17,7 @@ public class UIManager : MonoBehaviour
 
     [SerializeField] private GameManager _gameManager;
     [SerializeField] private GameObject _gameOverWindow;
+    [SerializeField] private GameObject _victoryWindow;
 
     [Tooltip("한 번에 하나만 열려야 하는 UI 모드 목록(IExclusiveMode 구현체). 예: UI_BuildModeWindow, ConquestModeController.")]
     [SerializeField] private MonoBehaviour[] _exclusiveModeBehaviours;
@@ -27,6 +28,7 @@ public class UIManager : MonoBehaviour
     {
         // 게임오버 창은 시작 시 항상 꺼진 상태로 보장한다(씬 체크 상태와 무관).
         Hide(_gameOverWindow);
+        Hide(_victoryWindow);
 
         CacheExclusiveModes();
     }
@@ -74,6 +76,7 @@ public class UIManager : MonoBehaviour
         if (_gameManager != null)
         {
             _gameManager.GameOverOccurred.AddListener(HandleGameOver);
+            _gameManager.VictoryOccurred.AddListener(HandleVictory);
         }
     }
 
@@ -106,6 +109,11 @@ public class UIManager : MonoBehaviour
         ShowGameOverAfterDelay().Forget();
     }
 
+    private void HandleVictory()
+    {
+        ShowVictoryAfterDelay().Forget();
+    }
+
     private async UniTaskVoid ShowGameOverAfterDelay()
     {
         await UniTask.Delay(
@@ -113,5 +121,15 @@ public class UIManager : MonoBehaviour
             cancellationToken: this.GetCancellationTokenOnDestroy());
 
         Show(_gameOverWindow);
+    }
+
+    private async UniTaskVoid ShowVictoryAfterDelay()
+    {
+        await UniTask.Delay(
+            TimeSpan.FromSeconds(GAME_OVER_SHOW_DELAY),
+            cancellationToken: this.GetCancellationTokenOnDestroy()
+        );
+
+        Show(_victoryWindow);
     }
 }
