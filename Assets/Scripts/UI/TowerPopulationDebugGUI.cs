@@ -144,6 +144,8 @@ public class TowerPopulationDebugGUI : MonoBehaviour
         }
     private void OnGUI()
     {
+    private void OnGUI()
+    {
         DrawBabyDragonWindow();
     }
 
