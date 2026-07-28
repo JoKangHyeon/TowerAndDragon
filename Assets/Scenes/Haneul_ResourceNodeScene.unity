@@ -1691,6 +1691,9 @@ MonoBehaviour:
     DragonEggs:
     - DragonType: 4
       FedDayCount: 0
+    OnInventoryChanged:
+      m_PersistentCalls:
+        m_Calls: []
     Map: {fileID: 1136365028}
   _cycleManager: {fileID: 838319717}
   _defaultLights:
@@ -3287,62 +3290,23 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
---- !u!1 &1136365023 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-  m_PrefabInstance: {fileID: 1467016241}
-  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1136365024 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1460990098537314003, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
   m_PrefabInstance: {fileID: 1467016241}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1136365023}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4045de5de46a3144b38fb3fd1b08f0e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ConquestManager
---- !u!114 &1136365026
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1136365023}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 84bea500230f4d6409653ed54a659c9b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ResourceNodeDebugger
-  _showResourceNodeGizmos: 0
-  _mouseSelectController: {fileID: 2088484515}
-  _resourceNodeOverlaySpritePrefab: {fileID: 553269234}
-  _debugSelectedCellCoord: {x: 0, y: 0, z: 0}
-  _debugSelectedResourceNodes: 0
-  _debugSelectedBaseYield: 0
-  _debugYieldByResource: []
---- !u!114 &1136365027
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1136365023}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5c07941abd51c44ca1eaf685a34b4cb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ExpeditionMarkerRenderer
-  _conquestManager: {fileID: 1136365024}
-  _timerPrefab: {fileID: 8167959100412792240, guid: 630c54d8a18a0324498c6e7283d360f1, type: 3}
-  _timerYOffset: 1
 --- !u!114 &1136365028 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7475151901225264468, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
   m_PrefabInstance: {fileID: 1467016241}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1136365023}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26941716a71269f4bb95dbd977f72da9, type: 3}
@@ -3798,6 +3762,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2088484515}
     - target: {fileID: 5927149215166704037, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: _showResourceNodeGizmos
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5927149215166704037, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: _resourceNodeOverlaySpritePrefab
       value: 
       objectReference: {fileID: 553269234}
@@ -3877,13 +3845,7 @@ PrefabInstance:
     m_RemovedGameObjects:
     - {fileID: 4997526250000123913, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1136365027}
-    - targetCorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1136365026}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
 --- !u!4 &1550773535 stripped
 Transform:

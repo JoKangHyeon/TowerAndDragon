@@ -99,6 +99,7 @@ public class BabyDragonBuffSystem : MonoBehaviour
 
         foreach (KeyValuePair<Factory, float> entry in multiplierByFactory)
         {
+            Debug.Log($"[BabyDragonBuffSystem] 최종 배율 → {entry.Key.name}: ×{entry.Value}");
             entry.Key.SetAreaYieldMultiplier(entry.Value);
         }
     }
@@ -120,11 +121,13 @@ public class BabyDragonBuffSystem : MonoBehaviour
         {
             if (!IsometricMath.IsWithinEllipse(factory.transform.position, center, radius, radiusY))
             {
+                Debug.Log($"[BabyDragonBuffSystem] {factory.name}: 범위 밖 → 버프 없음");
                 continue;
             }
 
+            float before = multiplierByFactory[factory];
             multiplierByFactory[factory] *= babyDragon.DragonData.BuffYieldMultiplier;
-            Debug.Log($"[BabyDragonBuffSystem] {multiplierByFactory[factory]}에 {babyDragon.DragonData.BuffYieldMultiplier}만큼 버프 적용");
+            Debug.Log($"[BabyDragonBuffSystem] {factory.name}: 범위 안 → ×{before} → ×{multiplierByFactory[factory]} (새끼용 배율 ×{babyDragon.DragonData.BuffYieldMultiplier})");
         }
     }
 }

@@ -34,6 +34,7 @@ public class DragonEggInventorySystem : MonoBehaviour
     public void GrantEgg(DragonType dragonType)
     {
         _gameManager.CurrentRun.DragonEggs.Add(new DragonEgg { DragonType = dragonType });
+        _gameManager.CurrentRun.OnInventoryChanged.Invoke();
     }
 
     // OnDayStart의 일차 인자는 쓰지 않는다 - 부화 속도는 날짜와 무관하다.
@@ -106,6 +107,7 @@ public class DragonEggInventorySystem : MonoBehaviour
             DragonType = egg.DragonType,
             IsInTower = false,
         });
+        _gameManager.CurrentRun.OnInventoryChanged.Invoke();
 
         Debug.Log($"[DragonEggInventorySystem] 알(속성 {egg.DragonType})이 부화했습니다.");
     }

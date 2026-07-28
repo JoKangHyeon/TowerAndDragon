@@ -29,7 +29,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0.95, z: 0}
-  m_LocalScale: {x: 0.34, y: 0.33, z: 0.34}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -110,17 +110,21 @@ MonoBehaviour:
     _width: 2
     _height: 2
     _cells: 00010101
-  _rotationSprites: []
+  _rotationSprites:
+  - {fileID: 21300000, guid: bf01c79c99602954582bc27b15c94d17, type: 3}
+  - {fileID: -6331630724565514977, guid: 6d6b8c4eaf8704f269e29e9d61f61e64, type: 3}
+  - {fileID: -6533045209412939306, guid: 2002266aab3414bbdb73e19bdb2d8349, type: 3}
+  - {fileID: 5433267167999802151, guid: 5f9abe4918d9b452399768fd3d0eb3fb, type: 3}
   _rotationOffsets:
-  - {x: 0, y: 0.4, z: 0}
-  - {x: -0.255, y: 0.255, z: 0}
-  - {x: 0, y: 0.29, z: 0}
-  - {x: 0.255, y: 0.3, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0.17, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0.2, z: 0}
   _rotationScales:
-  - {x: 1, y: 1, z: 1}
-  - {x: 1, y: 1, z: 1}
-  - {x: 1, y: 1, z: 1}
-  - {x: 1, y: 1, z: 1}
+  - {x: 0.34, y: 0.33, z: 0.34}
+  - {x: 0.34, y: 0.33, z: 0.34}
+  - {x: 0.34, y: 0.33, z: 0.34}
+  - {x: 0.34, y: 0.33, z: 0.34}
   _isMoveable: 1
   _isRemoveable: 1
   _data: {fileID: 11400000, guid: 24e2d73fabce5aa4d812d27358a38b36, type: 2}

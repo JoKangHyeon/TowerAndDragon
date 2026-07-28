@@ -68,7 +68,7 @@ public class Factory : Building
             int footprintYield = _gridMap.GetFootprintYield(this, resourceType);
             int produced = _data.CalculateYield(footprintYield, staffingRatio);
             produced = Mathf.RoundToInt(produced * _areaYieldMultiplier);
-            Debug.Log($"[Factory] {name} 정산 - footprintYield: {footprintYield}, staffingRatio: {staffingRatio:F2}, produced: {produced} ({resourceType})");
+            Debug.Log($"[Factory] {name} 정산 - footprintYield: {footprintYield}, staffingRatio: {staffingRatio:F2}, areaMultiplier: ×{_areaYieldMultiplier:F2}, produced: {produced} ({resourceType})");
             _resourceManager.Add(resourceType, produced);
         }
     }

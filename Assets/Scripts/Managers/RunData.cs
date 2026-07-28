@@ -11,6 +11,8 @@ public class RunData
     public List<BabyDragon> BabyDragons = new();
     public List<DragonEgg> DragonEggs = new();
 
+    public UnityEvent OnInventoryChanged = new();
+
     public GridMap Map;
 }
 

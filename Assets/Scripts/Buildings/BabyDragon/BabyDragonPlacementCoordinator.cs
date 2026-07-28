@@ -87,6 +87,7 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
 
         _gameManager.CurrentRun.BabyDragons.Remove(_pendingRecord);
         _pendingRecord = null;
+        _gameManager.CurrentRun.OnInventoryChanged.Invoke();
     }
 
     // 5속성이 프리팹 1개를 공유하므로, 배치 시점에 속성별 스프라이트로 갈아끼운다.
@@ -120,5 +121,6 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
             DragonType = babyDragonTower.DragonData.DragonType,
             IsInTower = false,
         });
+        _gameManager.CurrentRun.OnInventoryChanged.Invoke();
     }
 }

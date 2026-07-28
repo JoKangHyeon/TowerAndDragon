@@ -156,6 +156,11 @@ public class TowerAttack : MonoBehaviour
     /// </summary>
     private void Fire()
     {
+        if (_showDebugLogs)
+        {
+            Debug.Log($"[TowerAttack] {name} → {_target.name} 공격 발사!", this);
+        }
+
         float damageMultiplier = _damageMultiplierQuery != null
             ? _damageMultiplierQuery.GetDamageMultiplier(_towerData)
             : 1f;
