@@ -18,6 +18,11 @@ public abstract class MonsterMovement : MonoBehaviour
     public bool HasArrived { get; protected set; }
     public UnityEvent Arrived;
 
+    // 지형 고저차만큼 들어올리기 전의 평면 좌표. 이 유닛이 "논리적으로 서 있는" 셀을 알아야 하는 쪽
+    // (안개 틴트 등)이 화면 픽셀 기준으로 되짚지 않고 바로 쓰도록 노출한다 - 되짚으면 앞쪽 절벽에
+    // 가려진 경우 엉뚱한 셀이 나온다. 들어올리지 않는 이동 방식은 현재 위치가 그대로 평면 좌표다.
+    public virtual Vector3 GroundPlanePosition => transform.position;
+
     public virtual void SetSpeed(float speed)
     {
         _speed = speed;

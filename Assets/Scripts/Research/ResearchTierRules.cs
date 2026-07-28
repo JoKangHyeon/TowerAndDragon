@@ -1,6 +1,7 @@
 // 연구 티어(1~5)와 웨이브 주기(1~4)의 잠금 매핑. Docs/Sangwook/연구트리_로드맵.md §3 기준.
-// T1 게임 시작 / T2 1주기 종료 / T3 2주기 종료 / T4 3주기 종료 / T5 4주기 진입.
-// "3주기 종료"와 "4주기 진입"은 같은 시점이므로 T4·T5는 모두 4주기에 열린다.
+// T1 게임 시작 / T2 1주기 종료 / T3 2주기 종료 / T4·T5 3주기 종료.
+// 로드맵의 "T5 4주기 진입"은 "3주기 종료"와 같은 시점을 다르게 쓴 것이므로 T4와 조건을 통일했다
+// (팀 확정, 2026-07-28). UI 캡션도 같은 키를 쓴다 - ResearchLocKeys.TierCaptionLocKey 참조.
 // 매핑은 밸런싱 대상(로드맵 §7)이므로 WaveCycleRules.PORTAL_UNLOCK_ORDER와 같은
 // 정적 순서 배열 한 곳에서만 관리한다.
 public static class ResearchTierRules

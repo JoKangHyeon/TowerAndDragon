@@ -79,13 +79,17 @@ public class MouseSelectController : MonoBehaviour
             Deactivate();
     }
 
+    // 하이라이트를 그릴 때(HighlightCells 등) ConvertGridToWorld 결과에 _yOffset을 더하므로,
+    // 역방향인 여기서도 같은 양을 빼서 "하이라이트가 그려진 자리"를 기준으로 셀을 찾는다.
+    // 셀 판정은 ConvertWorldToGrid가 아니라 PickCellAtWorldPoint로 해야 단차가 높은 지형에서도
+    // 화면에 보이는 타일과 클릭 지점이 일치한다.
     public Vector3Int GetHoveredCell()
     {
         Vector3 worldPos = _cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         worldPos.z = 0f;
         worldPos.y -= _yOffset;
 
-        return _gridMap.ConvertWorldToGrid(worldPos);
+        return _gridMap.PickCellAtWorldPoint(worldPos);
     }
 
     public Vector3Int GetHoveredAnchor(FootprintShape shape) => GetFootprintAnchor(GetHoveredCell(), shape);

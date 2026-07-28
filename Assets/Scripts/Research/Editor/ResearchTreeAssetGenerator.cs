@@ -505,8 +505,8 @@ public static class ResearchTreeAssetGenerator
         AddLocRow("research_tier_caption_1", "Game Start", "게임 시작");
         AddLocRow("research_tier_caption_2", "End of Cycle 1", "1주기 종료");
         AddLocRow("research_tier_caption_3", "End of Cycle 2", "2주기 종료");
+        // T5는 T4와 같은 시점에 열리므로 캡션 키를 공유한다(research_tier_caption_5 없음).
         AddLocRow("research_tier_caption_4", "End of Cycle 3", "3주기 종료");
-        AddLocRow("research_tier_caption_5", "Entering Cycle 4", "4주기 진입");
 
         AddLocRow("research_tier_label", "T{0}", "T{0}");
         AddLocRow("research_tier_locked_badge", "Cycle {0}", "{0}주기");

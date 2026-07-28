@@ -14,8 +14,12 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
 
     // 점령지 경계가 항상 원정 중 경계보다 위에 그려지도록 고정 - 두 선이 맞닿는 경계에서
     // 어느 쪽이 위로 오는지가 렌더러 순서에 따라 불안정하게 결정되는 것을 방지한다.
-    private const int CONQUERED_BORDER_SORTING_ORDER = 1;
-    private const int IN_PROGRESS_BORDER_SORTING_ORDER = 0;
+    // 두 값 모두 같은 정렬 레이어(Default)에 있는 지형 타일맵보다 커야 한다
+    // (Ground 타일맵 order 0 · 폴리지 스프라이트 order 0 · Structures 타일맵 order 1).
+    // 지형과 order가 같으면 z가 전부 0이라 정렬 키가 동률이 되고, Ground 타일맵이 Individual
+    // 모드라 타일마다 위아래가 제각각 결정되어 선이 지형에 파묻힌 것처럼 일부만 보인다.
+    private const int CONQUERED_BORDER_SORTING_ORDER = 3;
+    private const int IN_PROGRESS_BORDER_SORTING_ORDER = 2;
 
     [SerializeField]
     private LineRenderer _borderLineRendererPrefab;

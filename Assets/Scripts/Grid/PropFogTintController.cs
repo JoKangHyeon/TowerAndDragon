@@ -27,9 +27,12 @@ public class PropFogTintController : MonoBehaviour
         var renderers = new List<SpriteRenderer>();
         GetComponentsInChildren(true, renderers);
 
+        // 장식물은 렌더된 지형 위에 직접 놓여 있어 단차만큼 올라간 Y를 그대로 갖는다. 평면 역변환
+        // (ConvertWorldToGrid)으로는 그 Y를 되돌리지 못해 언덕 위 장식물이 이웃 셀로 잡히므로,
+        // 고저차를 감안해 실제로 그 지점을 덮고 있는 타일을 고르는 PickCellAtWorldPoint를 쓴다.
         foreach (SpriteRenderer renderer in renderers)
         {
-            Vector3Int coord = _gridMap.ConvertWorldToGrid(renderer.transform.position);
+            Vector3Int coord = _gridMap.PickCellAtWorldPoint(renderer.transform.position);
             _props.Add((renderer, coord));
         }
     }

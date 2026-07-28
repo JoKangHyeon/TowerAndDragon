@@ -59,6 +59,13 @@ public sealed class ResearchManager : MonoBehaviour,
         _gridMap = gridMap;
         _cycleProgression = cycleProgression;
 
+        if (_cycleProgression == null)
+        {
+            Debug.LogError(
+                "[ResearchManager] WaveCycleProgression 참조가 없어 주기가 진행돼도 T1만 열립니다.",
+                this);
+        }
+
         CacheNodes();
 
         if (_cycleManager != null)

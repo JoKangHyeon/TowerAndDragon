@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// Canvas와 무관하게 선택한 연구소의 인구와 연구 상태를 조작하는 IMGUI 디버그 도구다.
@@ -41,6 +42,26 @@ public sealed class ResearchLabDebugGUI : MonoBehaviour
         {
             _selectedLab = selectedLab;
         }
+
+        HandleCloseInput();
+    }
+
+    // ESC로 창을 닫는다. 맵의 연구소 선택이 남아 있으면 다음 프레임 Update에서 다시 열리므로
+    // 건물 선택까지 함께 해제한다. (다시 열려면 연구소를 클릭)
+    private void HandleCloseInput()
+    {
+        if (_selectedLab == null || Keyboard.current == null)
+        {
+            return;
+        }
+
+        if (!Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            return;
+        }
+
+        _selectedLab = null;
+        _buildingPlacementController.Deselect();
     }
 
     private void OnGUI()
@@ -71,7 +92,7 @@ public sealed class ResearchLabDebugGUI : MonoBehaviour
             : default;
         ResearchLabPopulation labPopulation = _selectedLab.Population;
 
-        GUILayout.Label("Research Lab Test");
+        GUILayout.Label("Research Lab Test (ESC: Close)");
         GUILayout.Label($"Target: {_selectedLab.name}");
         GUILayout.Label($"Research Points: {_researchManager.ResearchPoints}");
         GUILayout.Label(

@@ -15,11 +15,12 @@ public static class ResearchLocKeys
     public const string BRANCH_PRODUCTION = "research_branch_production";
     public const string BRANCH_CONVENIENCE = "research_branch_convenience";
 
+    // T4·T5는 같은 시점("3주기 종료" = "4주기 진입")에 열리므로 캡션 키를 공유한다.
+    // 따로 두면 같은 시점이 서로 다른 문구로 표시돼 조건이 다른 것처럼 보인다.
     public const string TIER_CAPTION_1 = "research_tier_caption_1";
     public const string TIER_CAPTION_2 = "research_tier_caption_2";
     public const string TIER_CAPTION_3 = "research_tier_caption_3";
     public const string TIER_CAPTION_4 = "research_tier_caption_4";
-    public const string TIER_CAPTION_5 = "research_tier_caption_5";
 
     public const string STATE_INVALID = "research_state_invalid";
     public const string STATE_COMPLETED = "research_state_completed";
@@ -58,6 +59,7 @@ public static class ResearchLocKeys
 
     // 티어 캡션은 "해금 시점" 안내 문구다(로드맵 §3). 키를 문자열 조합으로 만들지 않고
     // 티어마다 명시적으로 매핑해 오타·미등록 키를 컴파일 시점에 드러낸다.
+    // 해금 주기가 같은 티어는 같은 키를 돌려준다 - 판정은 ResearchTierRules가 단독으로 관리한다.
     public static string TierCaptionLocKey(int tier)
     {
         return tier switch
@@ -66,7 +68,7 @@ public static class ResearchLocKeys
             2 => TIER_CAPTION_2,
             3 => TIER_CAPTION_3,
             4 => TIER_CAPTION_4,
-            5 => TIER_CAPTION_5,
+            5 => TIER_CAPTION_4,
             _ => TIER_CAPTION_1,
         };
     }

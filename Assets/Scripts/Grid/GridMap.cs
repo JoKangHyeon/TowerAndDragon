@@ -32,6 +32,17 @@ public class GridMap : MonoBehaviour
     // 전체 맵
     private Dictionary<Vector3Int, GridCell> _cells = new();
 
+    // 고저차 역변환(PickCellAtWorldPoint)에서 쓰는 탐색 파라미터 - CacheHeightSearchRange가 채운다.
+    private const int HEIGHT_SEARCH_RANGE_UNINITIALIZED = -1;
+
+    // 절벽 옆면을 짚었을 때 위쪽 타일을 찾아 올라가는 간격을 셀 한 칸의 몇 분의 1로 할지.
+    // 촘촘할수록 얇은 다이아몬드 모서리를 건너뛰지 않는다.
+    private const int SKIRT_PROBE_SUBDIVISION = 4;
+
+    private int _heightSearchStepCount = HEIGHT_SEARCH_RANGE_UNINITIALIZED;
+    private float _maxHeightOffset;
+    private float _skirtProbeStep;
+
     // 건물이 차지하는 타일 맵
     private Dictionary<Building, List<GridCell>> _buildingFootprintCells = new();
 
@@ -65,6 +76,8 @@ public class GridMap : MonoBehaviour
 
     private void GenerateGridFromTilemap()
     {
+        float maxHeightOffset = 0f;
+
         foreach (var pos in _tilemap.cellBounds.allPositionsWithin)
         {
             if (!_tilemap.HasTile(pos))
@@ -77,9 +90,49 @@ public class GridMap : MonoBehaviour
             GridCell cell = new GridCell(pos, terrain, canConstruct);
             cell.AddResourceNodes(_terrainTileMap.ResolveDefaultResourceNodes(tile));
             _cells[pos] = cell;
+
+            maxHeightOffset = Mathf.Max(maxHeightOffset, GetHeightOffset(pos));
         }
 
-        Debug.Log($"[GridMap] 그리드맵 생성 완료 - 셀의 개수: {_cells.Count}");
+        CacheHeightSearchRange(maxHeightOffset);
+
+        Debug.Log($"[GridMap] 그리드맵 생성 완료 - 셀의 개수: {_cells.Count}, 최대 고저차: {maxHeightOffset}");
+    }
+
+    // PickCellAtWorldPoint가 후보 셀을 몇 칸까지 거슬러 검사할지 결정한다.
+    // 셀 한 칸(그리드 +Y 1)이 화면에서 올라가는 높이로 최대 고저차를 나누면, 가장 높은 타일이
+    // 자기 자리에서 몇 칸 뒤쪽까지 겹쳐 보이는지가 나온다. 타일 고저차는 런타임에 바뀌지 않으므로 한 번만 계산한다.
+    // 오브젝트 간 Awake 순서는 보장되지 않으므로, GridMap.Awake보다 먼저 도는 쪽이 PickCellAtWorldPoint를
+    // 부를 수 있다(PropFogTintController가 Awake에서 프롭 셀을 캐싱하는 경우 등). 그때 탐색 범위가 비어 있으면
+    // 단차를 무시한 좌표가 조용히 나와버리므로, 아직 계산 전이면 여기서 한 번 직접 훑어 채운다.
+    private void EnsureHeightSearchRange()
+    {
+        if (_heightSearchStepCount != HEIGHT_SEARCH_RANGE_UNINITIALIZED)
+            return;
+
+        float maxHeightOffset = 0f;
+
+        foreach (var pos in _tilemap.cellBounds.allPositionsWithin)
+        {
+            if (_tilemap.HasTile(pos))
+                maxHeightOffset = Mathf.Max(maxHeightOffset, GetHeightOffset(pos));
+        }
+
+        CacheHeightSearchRange(maxHeightOffset);
+    }
+
+    private void CacheHeightSearchRange(float maxHeightOffset)
+    {
+        float worldYPerCellStep =
+            _tilemap.GetCellCenterWorld(new Vector3Int(0, 1, 0)).y - _tilemap.GetCellCenterWorld(Vector3Int.zero).y;
+
+        _maxHeightOffset = maxHeightOffset;
+
+        _heightSearchStepCount = worldYPerCellStep > 0f
+            ? Mathf.CeilToInt(maxHeightOffset / worldYPerCellStep)
+            : 0;
+
+        _skirtProbeStep = worldYPerCellStep / SKIRT_PROBE_SUBDIVISION;
     }
 
     // 터레인 기본값(GenerateGridFromTilemap) 다음 단계 - 수기 지정 영역을 추가로 누적 적용한다.
@@ -243,6 +296,73 @@ public class GridMap : MonoBehaviour
     // 지형 타일에 심어둔 고저차(Y 오프셋)를 읽어온다 - Isometric Z As Y 레이아웃에서 셀의 Z좌표는
     // 정렬용으로만 쓰이고 높이는 SetTransformMatrix로 부여한 타일별 렌더 오프셋으로 표현된다.
     public float GetHeightOffset(Vector3Int cellCoord) => _tilemap.GetTransformMatrix(cellCoord).GetColumn(3).y;
+
+    // 화면상의 한 점(마우스 위치 등)이 실제로 어느 타일 위인지 고른다.
+    // ConvertWorldToGrid는 고저차를 무시한 평면 역변환이라, ConvertGridToWorld가 더해준 Y 오프셋을
+    // 되돌리지 못한다 - 그래서 단차가 높은 곳에서는 눈에 보이는 타일과 몇 칸씩 어긋난 셀이 나온다.
+    // 여기서는 후보 셀마다 "그 셀의 고저차만큼 내려서 평면 역변환하면 자기 자신이 나오는가"를 직접
+    // 검사해, 그 점을 실제로 덮고 있는 타일만 남긴다. 한 점을 여러 타일이 덮으면 더 높은 쪽이 더 앞쪽
+    // (카메라에 가까운 셀)이라 화면에서도 그쪽이 위에 그려지므로, 가장 높은 타일을 고른다.
+    public Vector3Int PickCellAtWorldPoint(Vector3 worldCoord)
+    {
+        EnsureHeightSearchRange();
+
+        if (TryPickCoveringCell(worldCoord, out Vector3Int coveringCoord))
+            return coveringCoord;
+
+        // 어느 타일의 윗면도 이 점을 덮지 않는다 = 단차의 옆면(절벽면)을 가리키고 있다는 뜻이다.
+        // 옆면은 바로 위 타일이 아래로 드리운 부분이므로, 조금씩 위로 올라가며 처음 만나는 윗면의
+        // 타일을 고른다. 여기서 평면 역변환 결과를 그대로 쓰면 안 된다 - 그 셀은 절벽 뒤에 가려져
+        // 보이지도 않는 데다 커서에서 최대 5칸 이상 떨어져 있어, 커서와 동떨어진 곳이 선택된다.
+        // 탐침 간격이 0이면(고저차가 없는 그리드 등) 올라갈 이유도 없고 무한 루프가 되므로 건너뛴다.
+        if (_skirtProbeStep > 0f)
+        {
+            for (float lift = _skirtProbeStep; lift <= _maxHeightOffset; lift += _skirtProbeStep)
+            {
+                if (TryPickCoveringCell(worldCoord + new Vector3(0f, lift, 0f), out Vector3Int aboveCoord))
+                    return aboveCoord;
+            }
+        }
+
+        return ConvertWorldToGrid(worldCoord);
+    }
+
+    // 이 점을 윗면으로 덮고 있는 타일을 찾는다. 후보 셀마다 "그 셀의 고저차만큼 내려서 평면 역변환하면
+    // 자기 자신이 나오는가"를 검사하는 방식이라 판정이 정확하다. 한 점을 여러 타일이 덮으면 더 높은 쪽이
+    // 더 앞쪽(카메라에 가까운 셀)이라 화면에서도 위에 그려지므로, 가장 높은 타일을 고른다.
+    private bool TryPickCoveringCell(Vector3 worldCoord, out Vector3Int coveringCoord)
+    {
+        Vector3Int flatCoord = ConvertWorldToGrid(worldCoord);
+
+        coveringCoord = flatCoord;
+        bool hasCovering = false;
+        float pickedHeight = 0f;
+
+        for (int xStep = 0; xStep <= _heightSearchStepCount; xStep++)
+        {
+            for (int yStep = 0; xStep + yStep <= _heightSearchStepCount; yStep++)
+            {
+                Vector3Int candidateCoord = new Vector3Int(flatCoord.x - xStep, flatCoord.y - yStep, flatCoord.z);
+
+                if (!_tilemap.HasTile(candidateCoord))
+                    continue;
+
+                // 이미 찾아둔 것보다 낮은(=뒤쪽) 후보는 그 타일에 가려지므로 검사할 필요가 없다.
+                float candidateHeight = GetHeightOffset(candidateCoord);
+                if (hasCovering && candidateHeight <= pickedHeight)
+                    continue;
+
+                if (ConvertWorldToGrid(worldCoord - new Vector3(0f, candidateHeight, 0f)) != candidateCoord)
+                    continue;
+
+                coveringCoord = candidateCoord;
+                pickedHeight = candidateHeight;
+                hasCovering = true;
+            }
+        }
+
+        return hasCovering;
+    }
 
     // 전장의 안개(FogOfWarRenderer)가 지형 타일 자체를 SetColor로 어둡게 틴트하기 위해 참조한다.
     public Tilemap TerrainTilemap => _tilemap;
