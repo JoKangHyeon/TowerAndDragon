@@ -26,10 +26,6 @@ public class ConquestManager : MonoBehaviour
     [SerializeField]
     private ConquestChunkCostTable _chunkCostTable;
 
-    [SerializeField]
-    private Building _garrisonPrefab;
-    public Building GarrisonPrefab => _garrisonPrefab;
-
     private readonly List<ConquestExpedition> _activeExpeditions = new();
     public IReadOnlyList<ConquestExpedition> ActiveExpeditions => _activeExpeditions;
 
@@ -109,22 +105,6 @@ public class ConquestManager : MonoBehaviour
 
     public ResourceType GetUnlockedResources(Vector2Int chunkCoord) =>
         _chunkCostTable.ResolveUnlockedResources(chunkCoord);
-
-    // 아직 점령 전이라 다른 건물이 들어올 수 없는 청크이므로, 완료 전에도 안정적으로 미리 계산 가능하다.
-    public bool TryGetGarrisonPreviewCell(Vector2Int chunkCoord, out Vector3Int cellCoord)
-    {
-        Chunk chunk = _gridMap.GetChunk(chunkCoord);
-        GridCell cell = chunk != null ? FindConstructableCellNearestCenter(chunk) : null;
-
-        if (cell == null)
-        {
-            cellCoord = default;
-            return false;
-        }
-
-        cellCoord = cell.Coord;
-        return true;
-    }
 
     public TerrainType GetDominantTerrain(Vector2Int chunkCoord) =>
         _gridMap.GetChunk(chunkCoord).DominantTerrain;
@@ -235,7 +215,6 @@ public class ConquestManager : MonoBehaviour
     {
         _gridMap.SetChunkState(targetChunkCoord, ChunkState.Conquered);
         ExpandVisibility(targetChunkCoord);
-        PlaceGarrison(targetChunkCoord);
         ApplyEnemyEnhancement(targetChunkCoord);
         OnConquestCompleted?.Invoke(targetChunkCoord);
     }
@@ -274,7 +253,6 @@ public class ConquestManager : MonoBehaviour
         foreach (Vector2Int chunkCoord in chunksToConquer)
         {
             ExpandVisibility(chunkCoord);
-            PlaceGarrison(chunkCoord);
             ApplyEnemyEnhancement(chunkCoord);
             OnConquestCompleted?.Invoke(chunkCoord);
         }
@@ -318,48 +296,4 @@ public class ConquestManager : MonoBehaviour
             profile);
     }
 
-    private void PlaceGarrison(Vector2Int chunkCoord)
-    {
-        if (_garrisonPrefab == null)
-        {
-            Debug.LogWarning("[ConquestManger] 주둔지 프리팹 없음");
-            return;
-        }
-
-        Chunk chunk = _gridMap.GetChunk(chunkCoord);
-        GridCell anchorCell = FindConstructableCellNearestCenter(chunk);
-        if (anchorCell == null)
-        {
-            Debug.LogWarning($"[ConquestManager] 주둔지 배치 가능한 셀이 없습니다 - {chunkCoord}");
-            return;
-        }
-
-        _gridMap.ConstructBuilding(_garrisonPrefab, anchorCell.Coord);
-    }
-
-    private GridCell FindConstructableCellNearestCenter(Chunk chunk)
-    {
-        var sum = Vector3Int.zero;
-        foreach (GridCell cell in chunk.Cells)
-            sum += cell.Coord;
-        
-        Vector3 center = (Vector3) sum / chunk.Cells.Count;
-
-        GridCell nearestCell = null;
-        float nearestSqrDistance = float.MaxValue;
-
-        foreach(GridCell cell in chunk.Cells)
-        {
-            if (!cell.CanConstruct || cell.ExistTypeOnCell != ExistTypeOnCell.None)
-                continue;
-            
-            float sqrDistance = Vector3.SqrMagnitude((Vector3)cell.Coord - center);
-            if (sqrDistance < nearestSqrDistance)
-            {
-                nearestSqrDistance = sqrDistance;
-                nearestCell = cell;
-            }
-        }
-        return nearestCell;
-    }
 }
