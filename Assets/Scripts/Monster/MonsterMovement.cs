@@ -28,6 +28,8 @@ public abstract class MonsterMovement : MonoBehaviour
         _speed = speed;
     }
 
+    public virtual float GetSpeed() => _speed;
+
     public virtual void Begin()
     {
         _isMoving = true;

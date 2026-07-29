@@ -173,8 +173,8 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
             _enhancement.MoveSpeed.Apply(_data.MoveSpeed));
         _movement.SetSpeed(moveSpeed);
 
-        if(_animator != null)
-            _animator.SetBool(_animKeyMove, moveSpeed > 0);
+        if (_animator != null)
+            _animator.SetBool(_animKeyMove, _movement.GetSpeed() > 0);
 
         switch (_movement)
         {

@@ -259601,13 +259601,11 @@ GameObject:
   - component: {fileID: 8228429161871257706}
   - component: {fileID: 7528598282634872239}
   - component: {fileID: 7475151901225264468}
-  - component: {fileID: 5230962588699654996}
   - component: {fileID: 8324432385230451432}
   - component: {fileID: 1460990098537314003}
   - component: {fileID: 5959431859424174035}
   - component: {fileID: 2502082030955664768}
   - component: {fileID: 4378088409639116855}
-  - component: {fileID: 5927149215166704037}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -259675,25 +259673,6 @@ MonoBehaviour:
   OnBuildingRemoving:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &5230962588699654996
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4676293131000406741}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7cb5978c4fb97e4b8856f9fd18435b2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ChunkDebugger
-  _showChunkGizmos: 0
-  _mouseSelectController: {fileID: 0}
-  _chunkOverlaySpritePrefab: {fileID: 0}
-  _debugSelectedCellCoord: {x: 0, y: 0, z: 0}
-  _debugSelectedCellState: 0
-  _debugSelectedChunkCoord: {x: 0, y: 0}
-  _debugSelectedChunkState: 0
 --- !u!114 &8324432385230451432
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -259785,25 +259764,6 @@ MonoBehaviour:
   _conquestManager: {fileID: 1460990098537314003}
   _timerPrefab: {fileID: 8167959100412792240, guid: 630c54d8a18a0324498c6e7283d360f1, type: 3}
   _timerYOffset: 1
---- !u!114 &5927149215166704037
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4676293131000406741}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 84bea500230f4d6409653ed54a659c9b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ResourceNodeDebugger
-  _showResourceNodeGizmos: 0
-  _mouseSelectController: {fileID: 0}
-  _resourceNodeOverlaySpritePrefab: {fileID: 0}
-  _debugSelectedCellCoord: {x: 0, y: 0, z: 0}
-  _debugSelectedResourceNodes: 0
-  _debugSelectedBaseYield: 0
-  _debugYieldByResource: []
 --- !u!1 &5005351438975735588
 GameObject:
   m_ObjectHideFlags: 0
