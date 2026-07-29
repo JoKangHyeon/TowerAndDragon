@@ -542,9 +542,6 @@ public class GridMap : MonoBehaviour
         }
     }
 
-    public void ConstructBuilding(Building prefab, Vector3Int anchor) =>
-        ConstructBuilding(prefab, anchor, prefab != null ? prefab.RotationSteps : 0);
-
     public void ConstructBuilding(Building prefab, Vector3Int anchor, int rotationSteps)
     {
         if (prefab == null)
