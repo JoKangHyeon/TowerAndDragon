@@ -40,14 +40,10 @@ public class UI_ChunkInfoCard : MonoBehaviour
             _terrainImage.sprite = terrainSprite;
         }
 
-        if (_rewardSlotPool == null)
-        {
-            return;
-        }
-
         for (int i = 0; i < rewards.Count; i++)
         {
             UI_ConquestRewardSlot slot = _rewardSlotPool.Get(i);
+            Debug.Log(rewards[i].Label);
             slot.Setup(rewards[i].Icon, rewards[i].IconColor, rewards[i].Label);
         }
 

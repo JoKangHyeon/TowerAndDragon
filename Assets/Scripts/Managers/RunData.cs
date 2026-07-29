@@ -66,6 +66,11 @@ public class BabyDragon
 
     public bool IsInTower;
 
+    // 버프모드/공격모드 선택 - 철거 후 재설치해도 유지되도록 레코드에 저장한다.
+    // IsModeInitialized가 false인 동안은 Mode(기본값 Attack)가 "아직 정해지지 않음"을 뜻한다 -
+    // BabyDragonTower.BindRecord가 데이터 기반 기본값(공격 불가면 Buff)으로 한 번 채운다.
+    public BabyDragonMode Mode;
+    public bool IsModeInitialized;
 }
 
 [Serializable]

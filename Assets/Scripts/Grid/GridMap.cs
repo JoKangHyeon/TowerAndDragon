@@ -65,6 +65,11 @@ public class GridMap : MonoBehaviour
     public UnityEvent<Building> OnBuildingAdded;
     public UnityEvent<Building> OnBuildingRemoving;
 
+    // 건물이 같은 인스턴스를 유지한 채 좌표만 옮겨졌음을 알린다(MoveBuilding 전용).
+    // OnBuildingAdded/OnBuildingRemoving은 발행하지 않으므로, 위치 기반 판정(예: 새끼용 버프 범위)을
+    // 이동 시에도 갱신해야 하는 구독자는 이 이벤트를 따로 구독해야 한다.
+    public UnityEvent<Building> OnBuildingMoved;
+
     private void Awake()
     {
         GenerateGridFromTilemap();
@@ -863,6 +868,7 @@ public class GridMap : MonoBehaviour
             OnCellChanged?.Invoke(footprintCell);
 
         Debug.Log($"[GridMap] MoveBuilding - {prevCoord} -> {nextCoord}, 칸 수: {newFootprint.Count}");
+        OnBuildingMoved?.Invoke(building);
         return true;
     }
 

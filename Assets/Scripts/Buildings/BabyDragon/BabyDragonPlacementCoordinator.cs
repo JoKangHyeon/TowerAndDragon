@@ -14,6 +14,9 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
     [SerializeField] private BabyDragonDataCatalog _dataCatalog;
     [SerializeField] private BabyDragonTower _babyDragonPrefab;
 
+    [Tooltip("배치된 새끼용에 낮 제한(밤에는 재배치 불가)을 주입하기 위해 필요하다 - BabyDragonTower.SetCycleManager.")]
+    [SerializeField] private CycleManager _cycleManager;
+
     private BabyDragon _pendingRecord;
 
     private void OnEnable()
@@ -84,6 +87,11 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
         // Start()의 `if (!_isInitialized && _towerData != null)` 가드가 중복 호출을 막는다.
         babyDragonTower.Setup(data);
         ApplySprite(babyDragonTower, data);
+        babyDragonTower.SetCycleManager(_cycleManager);
+
+        // 인스턴스 ↔ 레코드 결속. 모드가 아직 정해지지 않았다면(첫 배치) 데이터 기반 기본값을 채운다 -
+        // 철거 후 재설치라면 이전에 고른 모드가 여기서 그대로 유지된다.
+        babyDragonTower.BindRecord(_pendingRecord);
 
         // 리스트에서 지우지 않고 IsInTower만 켠다 - KinOwnedGateSO/DragonTreeManager.HasBabyDragon이
         // 이 리스트를 "보유 여부" 판정에 그대로 쓰므로, 설치했다고 보유 목록에서 사라지면 안 된다.
@@ -121,10 +129,10 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
 
         DragonType dragonType = babyDragonTower.DragonData.DragonType;
 
-        // 새 레코드를 추가하지 않는다 - 레코드는 속성만으로 구분되는 fungible한 값이라,
-        // 설치 중(IsInTower=true)인 같은 속성 레코드를 찾아 도로 꺼내는 것만으로 충분하다.
-        // (설치 시 리스트에서 지우지 않고 IsInTower만 켜 두었기 때문에 항상 존재해야 한다.)
-        BabyDragon record = _gameManager.CurrentRun.BabyDragons
+        // 인스턴스에 결속된 레코드를 우선 사용한다 - 같은 속성 두 마리가 서로 다른 모드일 때
+        // 속성만으로 찾으면 엉뚱한 쪽이 돌아올 수 있다. Record가 없는 경우(에디터에서 직접
+        // 씬에 놓은 개체 등)에만 기존 fungible 매칭으로 폴백한다.
+        BabyDragon record = babyDragonTower.Record ?? _gameManager.CurrentRun.BabyDragons
             .Find(dragon => dragon.IsInTower && dragon.DragonType == dragonType);
 
         if (record == null)

@@ -60,17 +60,27 @@ public class Building : MonoBehaviour
 
     public int RotationSteps => _rotationSteps;
 
+    // 연구 기반 일일 이동 예산의 적용 대상인지. 새끼용처럼 '건물'이 아닌 설치물은 false로
+    // override해 예산과 무관하게(단, 서브클래스가 정한 별도 조건 하에) 이동한다.
+    protected virtual bool UsesMoveGrant => true;
+
     // _isMoveable은 "이동 가능한 종류인가"를 뜻한다. 실제 이동 가부는 연구 기반 일일 예산과
     // AND로 판정한다 - 쿼리가 배선되지 않은 씬(팀원 테스트 씬 등)은 무제한 이동을 유지한다.
-    public bool IsMoveable =>
-        _isMoveable && (_moveGrantQuery == null || _moveGrantQuery.HasRemainingMoveGrant);
+    // 예산 대상이 아닌 건물(UsesMoveGrant == false)은 예산 확인 자체를 건너뛴다.
+    public virtual bool IsMoveable =>
+        _isMoveable && (!UsesMoveGrant || _moveGrantQuery == null || _moveGrantQuery.HasRemainingMoveGrant);
     public bool IsRemoveable => _isRemoveable;
 
     public void SetMoveGrantQuery(IBuildingMoveGrantQuery moveGrantQuery) =>
         _moveGrantQuery = moveGrantQuery;
 
     // 실제 이동에 성공했을 때만 호출한다 - 취소·실패한 시도는 예산을 소비하지 않는다.
-    public void NotifyMoved() => _moveGrantQuery?.ConsumeMoveGrant();
+    // 예산 대상이 아닌 건물은 소비할 예산 자체가 없으므로 호출을 건너뛴다.
+    public void NotifyMoved()
+    {
+        if (UsesMoveGrant)
+            _moveGrantQuery?.ConsumeMoveGrant();
+    }
 
     // 건설된 시점의 주기(CycleManager.CurrentCycleNumber) - 철거 시 당일 건설 여부 판정에 쓰인다.
     public int ConstructedCycle { get; private set; }

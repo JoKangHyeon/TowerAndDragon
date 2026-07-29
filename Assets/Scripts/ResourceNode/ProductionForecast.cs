@@ -14,6 +14,10 @@ public class ProductionForecast : MonoBehaviour
     [Tooltip("인구 배치(충원율) 변경 시 예상치를 다시 계산하기 위해 구독한다.")]
     [SerializeField] private PopulationManager _populationManager;
 
+    [Tooltip("새끼용 지역 생산 버프가 재확정될 때 예상치를 다시 계산하기 위해 구독한다. " +
+        "미연결이면 이 값 변동만으로는 예상치가 갱신되지 않는다(다음 건물 추가/제거·인구 변경 때 함께 반영됨).")]
+    [SerializeField] private BabyDragonBuffSystem _babyDragonBuffSystem;
+
     /// <summary>예상 생산량이 바뀌었을 때 발화. UI가 구독해 표기를 갱신한다.</summary>
     public UnityEvent ForecastChanged;
 
@@ -32,6 +36,11 @@ public class ProductionForecast : MonoBehaviour
             _populationManager.PopulationChanged.AddListener(HandlePopulationChanged);
         }
 
+        if (_babyDragonBuffSystem != null)
+        {
+            _babyDragonBuffSystem.BuffsRecomputed.AddListener(HandleBuffsRecomputed);
+        }
+
         Recompute();
     }
 
@@ -47,6 +56,11 @@ public class ProductionForecast : MonoBehaviour
         {
             _populationManager.PopulationChanged.RemoveListener(HandlePopulationChanged);
         }
+
+        if (_babyDragonBuffSystem != null)
+        {
+            _babyDragonBuffSystem.BuffsRecomputed.RemoveListener(HandleBuffsRecomputed);
+        }
     }
 
     // 자원 종류별 예상 하루 생산량. 없으면 0.
@@ -55,6 +69,7 @@ public class ProductionForecast : MonoBehaviour
 
     private void HandleBuildingChanged(Building building) => Recompute();
     private void HandlePopulationChanged(PopulationState state) => Recompute();
+    private void HandleBuffsRecomputed() => Recompute();
 
     private void Recompute()
     {

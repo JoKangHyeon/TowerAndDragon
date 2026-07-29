@@ -4,7 +4,8 @@ using UnityEngine;
 // 생산시설 공통 구현체. 서브클래스 없이 ResourceProductionData만 갈아끼워 벌목장/채굴장/광산 등을 표현한다(Tower/TowerData와 동일한 패턴).
 public class Factory : Building
 {
-    // 새끼용 버프가 없을 때의 생산량 배율(BabyDragonBuffSystem이 매일 밤 종료 시 갱신).
+    // 새끼용 버프가 없을 때의 생산량 배율(BabyDragonBuffSystem이 배치/철거/이동 즉시,
+    // 그리고 매일 밤 종료 시 갱신).
     public const float NEUTRAL_YIELD_MULTIPLIER = 1f;
 
     // 정원을 100% 채웠을 때의 충원율 - 최대 생산량(GetMaxYield) 계산에 쓴다.
@@ -102,14 +103,14 @@ public class Factory : Building
         // 단일 비트(기존 농장/벌목장/채석장)면 이 반복은 그냥 한 번만 돈다.
         foreach (ResourceType resourceType in EnumerateProducedResourceTypes())
         {
-            int produced = ComputeProjectedYield(resourceType, staffingRatio);
-            Debug.Log($"[Factory] {name} 정산 - staffingRatio: {staffingRatio:F2}, produced: {produced} ({resourceType})");
+            int produced = CalculateYield(resourceType, staffingRatio);
+            Debug.Log($"[Factory] {name} 정산 - staffingRatio: {staffingRatio:F2}, areaYieldMultiplier: {_areaYieldMultiplier:F2}, produced: {produced} ({resourceType})");
             _resourceManager.Add(resourceType, produced);
         }
     }
 
     // 정산 없이 '다음 정산 예상 생산량'을 자원 종류별로 into에 누적한다(UI 표기용).
-    // 실제 정산(OnSettlement)과 같은 공식을 쓰므로 표시값과 실제 지급값이 일치한다.
+    // 실제 정산(OnSettlement)과 같은 공식(CalculateYield)을 쓰므로 표시값과 실제 지급값이 일치한다.
     public void AccumulateProjectedProduction(IDictionary<ResourceType, int> into)
     {
         if (into == null || _data == null || _gridMap == null)
@@ -117,21 +118,14 @@ public class Factory : Building
 
         float staffingRatio = _population != null ? _population.StaffingRatio : 0f;
 
-        foreach (ResourceType resourceType in GridMap.EnumerateResourceFlags(_data.ProducedResourceType))
+        foreach (ResourceType resourceType in EnumerateProducedResourceTypes())
         {
-            int produced = ComputeProjectedYield(resourceType, staffingRatio);
+            int produced = CalculateYield(resourceType, staffingRatio);
             if (produced <= 0)
                 continue;
 
             into.TryGetValue(resourceType, out int current);
             into[resourceType] = current + produced;
         }
-    }
-
-    // 생산량은 이 생산시설의 footprint 셀들이 보유한 자원별 생산량 합에 충원율을 반영한 값이다(GridMap.GetFootprintYield 참고).
-    private int ComputeProjectedYield(ResourceType singleResourceType, float staffingRatio)
-    {
-        int footprintYield = _gridMap.GetFootprintYield(this, singleResourceType);
-        return _data.CalculateYield(footprintYield, staffingRatio);
     }
 }

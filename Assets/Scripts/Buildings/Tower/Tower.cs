@@ -32,6 +32,9 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
 
     // 인구로 가동하지 않는 타워(새끼용 등)는 false로 override한다.
     public virtual bool RequiresPopulation => true;
+
+    // 공격 가능 여부에 추가 조건을 거는 서브클래스 훅(새끼용 버프모드 등). 기본은 항상 허용.
+    protected virtual bool CanAttackInCurrentMode => true;
     public Transform TargetTransform => transform;
     public GameObject TargetObject => gameObject;
 
@@ -161,8 +164,11 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         bool wasDisabled = _isDisabled;
         float disabledDuration = Time.time - _disabledAtTime;
 
-        _health.RestoreToFull();
+        // IsReviving(=_isDisabled)이 false로 먼저 바뀌어야, RestoreToFull이 쏘는
+        // HealthChanged를 체력바가 "만피"로 인식해 즉시 사라진다. 순서가 바뀌면
+        // 부활 게이지가 완료 후에도 화면에 남는다.
         _isDisabled = false;
+        _health.RestoreToFull();
 
         RefreshAttackEnabled();
 
@@ -256,12 +262,13 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         _paralysisCts = null;
     }
 
-    private void RefreshAttackEnabled()
+    protected void RefreshAttackEnabled()
     {
         bool isAttackEnabled =
             _isInitialized &&
             !_isDisabled &&
-            !_isParalyzed;
+            !_isParalyzed &&
+            CanAttackInCurrentMode;
 
         _attack?.SetAttackEnabled(isAttackEnabled);
     }
