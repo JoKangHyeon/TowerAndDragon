@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tower and Dragons — 개발 진행현황 보고 (2026-07-29)</title>
+<style>
+:root{
+  --bg:#0d1117; --bg2:#151b23; --card:#161d26; --line:#26303d;
+  --tx:#e6edf3; --tx2:#9fb0c3; --tx3:#6b7c91;
+  --gold:#e8b64c; --fire:#e5623c; --ice:#4ea3d9; --life:#5cb87a;
+  --warn:#d9a13b; --bad:#d9534f; --good:#4caf7d; --mid:#c9a227;
+  --shadow:0 1px 0 rgba(255,255,255,.03), 0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--tx);
+  font-family:"Pretendard","Malgun Gothic","맑은 고딕",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.68; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+a{color:var(--ice);text-decoration:none}
+
+/* ── nav ── */
+nav{position:sticky;top:0;z-index:50;background:rgba(13,17,23,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:6px;height:52px;overflow-x:auto;scrollbar-width:none}
+nav .wrap::-webkit-scrollbar{display:none}
+nav .brand{font-weight:800;color:var(--gold);margin-right:14px;white-space:nowrap;letter-spacing:-.2px}
+nav a{color:var(--tx2);font-size:13px;padding:6px 11px;border-radius:7px;white-space:nowrap}
+nav a:hover{background:var(--bg2);color:var(--tx)}
+
+/* ── hero ── */
+header{
+  padding:60px 0 46px;
+  background:
+    radial-gradient(900px 340px at 82% -8%, rgba(232,182,76,.14), transparent 62%),
+    radial-gradient(700px 300px at 8% 10%, rgba(78,163,217,.10), transparent 60%),
+    var(--bg);
+  border-bottom:1px solid var(--line);
+}
+.eyebrow{font-size:12px;letter-spacing:.22em;color:var(--gold);font-weight:700;text-transform:uppercase}
+h1{font-size:42px;line-height:1.16;margin:14px 0 10px;letter-spacing:-1px;font-weight:800}
+h1 small{display:block;font-size:17px;font-weight:500;color:var(--tx2);letter-spacing:0;margin-top:12px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.chip{font-size:12.5px;padding:5px 12px;border:1px solid var(--line);border-radius:999px;color:var(--tx2);background:var(--bg2)}
+
+/* ── section ── */
+section{padding:56px 0;border-bottom:1px solid var(--line)}
+.sec-h{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
+.sec-n{font-size:12px;font-weight:800;color:var(--gold);letter-spacing:.14em;padding-top:6px}
+h2{font-size:27px;margin:0;letter-spacing:-.5px;font-weight:750}
+.lead{color:var(--tx2);margin:6px 0 30px;max-width:860px;font-size:15px}
+h3{font-size:17px;margin:34px 0 12px;font-weight:700}
+
+/* ── KPI ── */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 16px;box-shadow:var(--shadow)}
+.kpi b{display:block;font-size:29px;font-weight:800;letter-spacing:-1px;line-height:1.15}
+.kpi span{font-size:12.5px;color:var(--tx3);display:block;margin-top:3px}
+.kpi.k1 b{color:var(--gold)} .kpi.k2 b{color:var(--ice)} .kpi.k3 b{color:var(--life)} .kpi.k4 b{color:var(--fire)}
+
+/* ── overall bar ── */
+.overall{margin-top:26px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;box-shadow:var(--shadow)}
+.overall .top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px}
+.overall .top b{font-size:34px;color:var(--gold);letter-spacing:-1.5px}
+.track{height:12px;border-radius:99px;background:#0a0e13;overflow:hidden;display:flex;border:1px solid var(--line)}
+.track i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:12.5px;color:var(--tx2)}
+.legend em{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+
+/* ── loop diagram ── */
+.loop{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:8px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;position:relative;box-shadow:var(--shadow)}
+.step:not(:last-child):after{content:"›";position:absolute;right:-13px;top:50%;transform:translateY(-60%);font-size:26px;color:var(--tx3);z-index:2}
+.step h4{margin:0 0 4px;font-size:15.5px}
+.step .tag{font-size:11px;color:var(--tx3);letter-spacing:.1em;font-weight:700}
+.step ul{margin:10px 0 0;padding-left:16px;font-size:13px;color:var(--tx2)}
+.step ul li{margin:3px 0}
+.step.day{border-top:3px solid var(--gold)}
+.step.night{border-top:3px solid #6b5bd2}
+.step.settle{border-top:3px solid var(--life)}
+.step.next{border-top:3px solid var(--ice)}
+
+/* ── system cards ── */
+.filters{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px}
+.filters button{font:inherit;font-size:12.5px;padding:6px 13px;border-radius:99px;border:1px solid var(--line);background:var(--bg2);color:var(--tx2);cursor:pointer}
+.filters button.on{background:var(--gold);border-color:var(--gold);color:#1a1408;font-weight:700}
+.sys{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:19px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.card .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.card h4{margin:0;font-size:16px;letter-spacing:-.2px}
+.card .own{font-size:11.5px;color:var(--tx3);margin-top:2px}
+.pct{font-size:20px;font-weight:800;letter-spacing:-.6px;white-space:nowrap}
+.bar{height:6px;border-radius:99px;background:#0a0e13;margin:12px 0 14px;overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;border-radius:99px}
+.card p{margin:0 0 10px;font-size:13.4px;color:var(--tx2)}
+.card .kv{font-size:12.7px;color:var(--tx3);border-top:1px dashed var(--line);padding-top:10px;margin-top:auto}
+.card .kv div{margin:3px 0}
+.card .kv b{color:var(--tx2);font-weight:600}
+.gap{margin-top:10px;font-size:12.7px;color:var(--warn);background:rgba(217,161,59,.08);border-left:2px solid var(--warn);padding:7px 10px;border-radius:0 6px 6px 0}
+code{font-family:"Cascadia Mono",Consolas,monospace;font-size:12.3px;background:#0a0e13;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:#c8d6e5}
+
+/* ── tables ── */
+table{width:100%;border-collapse:collapse;font-size:13.3px;margin-top:6px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--tx3);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;background:var(--bg2)}
+tr:hover td{background:rgba(255,255,255,.015)}
+td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:11px;background:var(--card)}
+.st{font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap;display:inline-block}
+.st.ok{background:rgba(76,175,125,.15);color:#67c99a;border:1px solid rgba(76,175,125,.3)}
+.st.part{background:rgba(201,162,39,.15);color:#dcb63f;border:1px solid rgba(201,162,39,.32)}
+.st.no{background:rgba(217,83,79,.14);color:#e2726e;border:1px solid rgba(217,83,79,.3)}
+
+/* ── arch ── */
+.arch{display:grid;gap:11px;margin-top:6px}
+.layer{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--ice);border-radius:11px;padding:15px 18px}
+.layer b{display:block;font-size:14.5px;margin-bottom:5px}
+.layer span{font-size:13.2px;color:var(--tx2)}
+.layer:nth-child(2){border-left-color:var(--gold)}
+.layer:nth-child(3){border-left-color:var(--life)}
+.layer:nth-child(4){border-left-color:var(--fire)}
+.layer:nth-child(5){border-left-color:#6b5bd2}
+
+/* ── risks ── */
+.risk{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:17px 19px;margin-bottom:11px;display:grid;grid-template-columns:52px 1fr;gap:16px;align-items:start}
+.risk .sev{font-size:11px;font-weight:800;text-align:center;padding:5px 0;border-radius:7px;letter-spacing:.05em}
+.risk.p1 .sev{background:rgba(217,83,79,.18);color:#e2726e;border:1px solid rgba(217,83,79,.35)}
+.risk.p2 .sev{background:rgba(217,161,59,.15);color:#dcb63f;border:1px solid rgba(217,161,59,.32)}
+.risk.p3 .sev{background:rgba(78,163,217,.13);color:#6cb6e3;border:1px solid rgba(78,163,217,.3)}
+.risk b{font-size:14.8px;display:block;margin-bottom:3px}
+.risk p{margin:0;font-size:13.3px;color:var(--tx2)}
+.risk .fix{margin-top:7px;font-size:12.7px;color:var(--life)}
+
+/* ── milestone ── */
+.ms{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+.msc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:17px;position:relative;overflow:hidden}
+.msc.now{border-color:var(--gold);box-shadow:0 0 0 1px rgba(232,182,76,.3),var(--shadow)}
+.msc .d{font-size:11.5px;color:var(--tx3);letter-spacing:.06em}
+.msc b{display:block;font-size:16px;margin:3px 0 8px}
+.msc p{margin:0;font-size:12.8px;color:var(--tx2)}
+.msc .badge{position:absolute;top:14px;right:14px;font-size:10.5px;font-weight:800;color:#1a1408;background:var(--gold);padding:2px 8px;border-radius:99px}
+
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.note{background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:13.3px;color:var(--tx2)}
+.note b{color:var(--tx)}
+ul.tight{margin:8px 0 0;padding-left:18px;font-size:13.3px;color:var(--tx2)}
+ul.tight li{margin:5px 0}
+footer{padding:36px 0 60px;color:var(--tx3);font-size:12.5px}
+
+@media (max-width:900px){
+  .loop,.ms{grid-template-columns:1fr 1fr}
+  .step:not(:last-child):after{display:none}
+  .cols2{grid-template-columns:1fr}
+  h1{font-size:31px}
+}
+@media print{
+  body{background:#fff;color:#111}
+  nav{display:none} section{break-inside:avoid;border-color:#ddd}
+  .card,.kpi,.risk,.msc,.layer,.tw,.note,.overall,.step{background:#fff;border-color:#ccc;box-shadow:none}
+  .tx2,.lead,p,span,td{color:#333 !important}
+  h1,h2,h3,h4{color:#111 !important}
+}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <span class="brand">🐉 Tower and Dragons</span>
+  <a href="#sum">요약</a>
+  <a href="#loop">코어 루프</a>
+  <a href="#sys">시스템별 현황</a>
+  <a href="#how">구현 방식</a>
+  <a href="#data">데이터 현황</a>
+  <a href="#req">요건 충족</a>
+  <a href="#risk">리스크</a>
+  <a href="#plan">다음 단계</a>
+</div></nav>
+
+<header><div class="wrap">
+  <div class="eyebrow">Progress Report · 프로토타입 마감 D-2</div>
+  <h1>개발 진행현황 보고
+    <small>“낮의 선택이 밤의 생존을 결정한다” — 타워디펜스 + 도시건설 · Unity 6 / URP 2D Isometric</small>
+  </h1>
+  <div class="meta">
+    <span class="chip">기준일 2026-07-29</span>
+    <span class="chip">브랜치 master · 최신 <code>512267e</code></span>
+    <span class="chip">수성록 프로젝트 3팀</span>
+    <span class="chip">조강현 · 김지해 · 이하늘 · 나상욱</span>
+  </div>
+</div></header>
+
+<!-- ══════════ 1. 요약 ══════════ -->
+<section id="sum"><div class="wrap">
+  <div class="sec-h"><span class="sec-n">01</span><h2>한눈에 보는 현황</h2></div>
+  <p class="lead">개발 착수 4주차. <b>코어 루프(낮→밤→정산→다음날)가 처음부터 끝까지 실제로 돌아가고</b>, 승리·패배까지 도달 가능한 상태입니다.
+  남은 작업은 새 시스템 제작보다 <b>이미 만든 시스템을 씬에 연결하고 수치를 채우는 일</b>에 집중돼 있습니다.</p>
+
+  <div class="kpis">
+    <div class="kpi k1"><b>591</b><span>커밋 (7/3 착수, 26일)</span></div>
+    <div class="kpi k2"><b>232</b><span>C# 스크립트 · 21,580 LOC</span></div>
+    <div class="kpi k3"><b>187</b><span>ScriptableObject 데이터 에셋</span></div>
+    <div class="kpi k4"><b>82</b><span>프리팹</span></div>
+    <div class="kpi"><b>28</b><span>제작 완료 웨이브 (4주기×7일)</span></div>
+    <div class="kpi"><b>4</b><span>개발 참여 인원</span></div>
+  </div>
+
+  <div class="overall">
+    <div class="top">
+      <div><b>72%</b> <span style="color:var(--tx2);font-size:14px">프로토타입 목표 대비 종합 진척도</span></div>
+      <div style="color:var(--tx3);font-size:12.5px">15개 시스템 가중 평균</div>
+    </div>
+    <div class="track">
+      <i style="width:47%;background:linear-gradient(90deg,#4caf7d,#67c99a)"></i>
+      <i style="width:25%;background:linear-gradient(90deg,#c9a227,#dcb63f)"></i>
+      <i style="width:28%;background:#1c2530"></i>
+    </div>
+    <div class="legend">
+      <span><em style="background:#4caf7d"></em>동작 검증 완료 47%</span>
+      <span><em style="background:#c9a227"></em>구현했으나 배선·데이터 미완 25%</span>
+      <span><em style="background:#1c2530"></em>미착수 28% (연출·사운드·튜토리얼·밸런싱)</span>
+    </div>
+  </div>
+
+  <div class="cols2" style="margin-top:24px">
+    <div class="note">
+      <b>✅ 이번 주 완료된 것</b>
+      <ul class="tight">
+        <li>웨이브 시스템 완성 — 4주기 × 7일 = 28일 스케줄 데이터 전량 제작, 포탈 순차 개방 연동</li>
+        <li>보스 웨이브 · 게임 승리 UI 연결 (승리/패배 양쪽 판정 도달 가능)</li>
+        <li>연구 트리 UI(27노드) · 용 스킬트리 UI(30노드) 런타임 자동 생성 방식으로 완성</li>
+        <li>새끼용 시스템 — 알 인벤토리, 부화, 설치·이동, 생산/공격 버프</li>
+        <li>특수형 몬스터 3종 — 자폭형 · 감전(마비)형 · 힐러형</li>
+        <li>인구 할당 UI, 건물별 창, 특화자원 생산시설 프리팹·스프라이트</li>
+      </ul>
+    </div>
+    <div class="note">
+      <b>⚠️ 지금 가장 급한 것</b>
+      <ul class="tight">
+        <li><b>일일 정산 매니저가 메인 씬에 배치되지 않음</b> → 식량 소모·기아가 실행되지 않는 상태</li>
+        <li><b>특화자원 생산시설 4종이 메인 씬 건설 목록에 미등록</b> → 자원 순환의 후반부가 막힘</li>
+        <li>연구 27노드 중 실제 효과가 붙은 노드가 2개, 용 스킬 30노드는 효과 전부 미연결</li>
+        <li>어미용 액티브 스킬 HUD가 메인 씬에 없어 발동 경로 부재</li>
+        <li>승리 조건 2트랙 중 <b>“4포탈 봉인”은 미착수</b></li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- ══════════ 2. 코어 루프 ══════════ -->
+<section id="loop"><div class="wrap">
+  <div class="sec-h"><span class="sec-n">02</span><h2>게임이 실제로 도는 방식</h2></div>
+  <p class="lead">하루는 4단계로 순환합니다. <code>CycleManager</code>가 <code>Day</code>/<code>Night</code> 두 상태와 5개 이벤트
+  (<code>OnDayStart · OnDayEnd · OnNightStart · OnNightEnd · OnCycleChanged</code>)만 발행하고,
+  각 시스템이 필요한 이벤트를 스스로 구독하는 <b>중앙 상태머신 없는 이벤트 구독형</b> 구조입니다.</p>
+
+  <div class="loop">
+    <div class="step day">
+      <div class="tag">PHASE 1 · 시간 무제한</div>
+      <h4>낮 — 운영</h4>
+      <ul>
+        <li>격자에 타워·생산시설 건설 (고스트 미리보기·회전·철거 환불)</li>
+        <li>인구를 생산/방어/점령/연구 4갈래에 배분</li>
+        <li>점령 원정 출격 · 연구 실행 · 용 속성 변경</li>
+        <li>플레이어가 “밤으로” 버튼을 눌러야 진행</li>
+      </ul>
+    </div>
+    <div class="step night">
+      <div class="tag">PHASE 2 · 전멸까지</div>
+      <h4>밤 — 방어</h4>
+      <ul>
+        <li>개방된 포탈에서 스플라인 경로로 적 진격</li>
+        <li>타워 자동 전투 (인구 배치율 = 공격속도)</li>
+        <li>어미용 액티브 스킬로 개입</li>
+        <li>적 전멸 시 자동으로 밤 종료</li>
+      </ul>
+    </div>
+    <div class="step settle">
+      <div class="tag">PHASE 3 · 자동</div>
+      <h4>정산 — 결과</h4>
+      <ul>
+        <li>생산시설 산출 → 자원 획득</li>
+        <li>연구소 배치 인구 × 5 = 연구포인트(RP)</li>
+        <li>점령 원정 일수 진행 / 완료 시 영토·인구 획득</li>
+        <li>인구 유지비(식량) 소모, 부족 시 기아</li>
+      </ul>
+    </div>
+    <div class="step next">
+      <div class="tag">PHASE 4 · 진행</div>
+      <h4>다음 날 — 확장</h4>
+      <ul>
+        <li>7일차마다 보스 웨이브</li>
+        <li>주기 종료 시 새 포탈 개방 (北→南→東→西)</li>
+        <li>점령한 땅의 가치만큼 적 강화 누적</li>
+        <li>28일차 최종 보스 격파 = 승리</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:16px">
+    <b>실제 세팅된 진행 규칙</b> — <code>WaveCycleRules</code>에 상수로 고정:
+    주기당 <b>7일</b> · 총 <b>4주기 = 28일</b> · 포탈 개방 순서 <b>North → South → East → West</b>.
+    28일 전체 웨이브 데이터가 제작되어 있으며, 7·14·21·28일차가 보스 웨이브입니다.
+    포탈은 누적 개방되어 4주기에는 4방향에서 동시에 진격합니다.
+  </div>
+</div></section>
+
+<!-- ══════════ 3. 시스템별 현황 ══════════ -->
+<section id="sys"><div class="wrap">
+  <div class="sec-h"><span class="sec-n">03</span><h2>시스템별 구현 현황</h2></div>
+  <p class="lead">15개 주요 시스템의 진척도와, 각각이 <b>어떤 방식으로 구현되어 있는지</b> 정리했습니다.
+  퍼센트는 “프로토타입에서 요구되는 범위” 기준입니다.</p>
+
+  <div class="filters">
+    <button class="on" data-f="all">전체 15</button>
+    <button data-f="core">코어 루프</button>
+    <button data-f="econ">경제 · 확장</button>
+    <button data-f="battle">전투</button>
+    <button data-f="growth">성장</button>
+    <button data-f="ui">UI · 연출</button>
+  </div>
+
+  <div class="sys">
+
+    <div class="card" data-c="core">
+      <div class="hd"><div><h4>격자 맵 · 건물 배치</h4><div class="own">GridMap · Chunk · BuildingPlacementController</div></div><div class="pct" style="color:var(--good)">90%</div></div>
+      <div class="bar"><i style="width:90%;background:linear-gradient(90deg,#4caf7d,#67c99a)"></i></div>
+      <p>145×145 타일맵을 <b>9×9 셀 = 1청크</b> 단위로 묶어 관리. 아이소메트릭 고저차(단차) 역변환 픽킹까지 구현되어 절벽 옆면 클릭도 정확히 처리합니다.</p>
+      <div class="kv">
+        <div><b>배치</b> 고스트 미리보기 · 풋프린트 셀별 색상(가능/자원없음/점유) · R키 4방향 회전</div>
+        <div><b>철거</b> 당일 100% / 이후 70% 환불 · 롱프레스 2초로 이동 모드</div>
+        <div><b>규모</b> 실지형 61청크 · 3,864셀 · 지형 6종(초원/암석/화산/사막/설원/기타)</div>
+      </div>
+      <div class="gap">생산량 계산 기준점이 <code>(3,3)</code>으로 하드코딩되어 실제 성 위치 <code>(0,0)</code>과 3칸 어긋남 → 수정 필요</div>
+    </div>
+
+    <div class="card" data-c="core">
+      <div class="hd"><div><h4>낮/밤 · 웨이브 · 포탈</h4><div class="own">CycleManager · WaveManager · WaveCycleProgression</div></div><div class="pct" style="color:var(--good)">88%</div></div>
+      <div class="bar"><i style="width:88%;background:linear-gradient(90deg,#4caf7d,#67c99a)"></i></div>
+      <p>웨이브는 <b>4계층 SO 구조</b>(스케줄 → 일별 정의 → 포탈별 편성 → 스폰 그룹)로 데이터화. 포탈별 스폰을 <code>UniTask.WhenAll</code>로 동시 실행하고, 개방 안 된 포탈 편성은 자동 스킵합니다.</p>
+      <div class="kv">
+        <div><b>데이터</b> 웨이브 정의 28개 전량 제작 (wave_1 ~ wave_28_Boss)</div>
+        <div><b>종료 판정</b> <code>WaitUntil(전멸)</code> → 자동 <code>EndNight</code> → 다음 낮</div>
+        <div><b>테스트</b> 주기/일차 변환 · 포탈 순차 개방 EditMode 테스트 통과</div>
+      </div>
+      <div class="gap">3주기(15~20일)·4주기(22~27일) 웨이브가 각각 동일 데이터 복제 상태 → 난이도 곡선 미조정</div>
+    </div>
+
+    <div class="card" data-c="battle">
+      <div class="hd"><div><h4>타워 · 자동 전투</h4><div class="own">Tower · TowerAttack · AttackSO</div></div><div class="pct" style="color:var(--mid)">70%</div></div>
+      <div class="bar"><i style="width:70%;background:linear-gradient(90deg,#c9a227,#dcb63f)"></i></div>
+      <p>공격을 <b>AttackSO + 효과 배열</b>로 데이터화해 타워와 몬스터가 같은 구조를 공유합니다. 사거리 판정은 아이소메트릭 타원(<code>RADIUS_Y_RATIO 0.5</code>)으로, UI 표시와 실제 판정이 동일 수식을 씁니다.</p>
+      <div class="kv">
+        <div><b>인구 On/Off</b> 인구 0 → 공격 정지, 배치율에 비례해 공격속도 변화</div>
+        <div><b>체력 소진</b> 파괴 대신 <b>비활성화 후 자동 부활</b>(일반 10초 / 새끼용 2초) — 기획 그대로</div>
+        <div><b>현재 스탯</b> HP 100 · 사거리 5 · 공격간격 1 · 데미지 10 · 인구 5</div>
+      </div>
+      <div class="gap">일반 타워 데이터가 <code>TD_Normal</code> 1종뿐 (티어·분기 미착수). 속성 시스템(Element)이 코드에 아직 없어 속성 타워는 새끼용으로만 표현</div>
+    </div>
+
+    <div class="card" data-c="battle">
+      <div class="hd"><div><h4>적 AI · 몬스터</h4><div class="own">BaseMonster · Movement · SpecialBehavior</div></div><div class="pct" style="color:var(--good)">82%</div></div>
+      <div class="bar"><i style="width:82%;background:linear-gradient(90deg,#4caf7d,#67c99a)"></i></div>
+      <p>상속이 아닌 <b>컴포넌트 조립</b>(체력+공격+이동+특수행동) 방식. 지상은 스플라인 경로를 따라가며 셀 고저차만큼 Y를 보간해 들어올리고, 공중은 성으로 직진합니다.</p>
+      <div class="kv">
+        <div><b>8종 구현</b> 기본 · 타워공격형 · 원거리 · 공중 · 힐러 · 자폭형 · 감전(마비)형 · 보스</div>
+        <div><b>특수행동</b> 자폭(도화선 4초, 반경 3, 40딜) · 힐오라(반경 3, 2초당 5회복) · 마비(3초)</div>
+        <div><b>보스</b> HP 600 · 이동속도 0.5 — 주기 말 웨이브에 배치</div>
+      </div>
+      <div class="gap">자폭형·감전형이 메인 28일 웨이브 데이터에 아직 미편성. 보스 전용 공격 데이터(<code>MA_Boss_1</code>)가 연결되지 않아 보스 데미지가 잡몹과 동일</div>
+    </div>
+
+    <div class="card" data-c="econ">
+      <div class="hd"><div><h4>인구 시스템</h4><div class="own">PopulationManager · 4개 Coordinator</div></div><div class="pct" style="color:var(--good)">85%</div></div>
+      <div class="bar"><i style="width:85%;background:linear-gradient(90deg,#4caf7d,#67c99a)"></i></div>
+      <p>인구를 <b>생산 / 방어 / 점령 / 연구</b> 4갈래에 배분. 각 배분처마다 Coordinator가 <code>GridMap</code>의 건물 추가/제거 이벤트를 구독해 할당을 자동 생성·해제합니다.</p>
+      <div class="kv">
+        <div><b>획득</b> 점령 완료 시 청크별 보상(+2 ~ +5)으로 최대 인구 증가</div>
+        <div><b>유지비</b> 최대 인구 1명당 식량 1 소모, 부족 시 기아(가용→방어→생산→점령 순 감소)</div>
+        <div><b>UI</b> 건물 선택 시 산출량·배치 현황 표시 + 배치/회수 (밤에는 잠금)</div>
+      </div>
+      <div class="gap">정산 매니저 미배치로 <b>유지비·기아가 실제로 실행되지 않음</b>. 기아 처리에 연구소 인구가 누락되어 있음</div>
+    </div>
+
+    <div class="card" data-c="econ">
+      <div class="hd"><div><h4>자원 · 생산 시설</h4><div class="own">ResourceManager · Factory · 산출 테이블 3종</div></div><div class="pct" style="color:var(--mid)">68%</div></div>
+      <div class="bar"><i style="width:68%;background:linear-gradient(90deg,#c9a227,#dcb63f)"></i></div>
+      <p>자원 <b>12종</b>(기본 3 + 특화 4 + 슬라임 5)을 <code>[Flags]</code> enum으로 정의. 셀별 산출량은 <b>성으로부터의 거리 공식 → 청크 배율 → 셀 개별 오버라이드</b> 3단으로 결정됩니다.</p>
+      <div class="kv">
+        <div><b>산출량</b> 청크 배율 75건 · 셀 오버라이드 395건 입력 완료</div>
+        <div><b>시설 8종</b> 농장 · 벌목장 · 채석장 · 슬라임 농장 · 특화자원 4종</div>
+        <div><b>공식</b> 풋프린트 산출량 × 인구 배치율 × 새끼용 버프 배율</div>
+      </div>
+      <div class="gap"><b>특화자원 생산시설 4종이 메인 씬 건설 목록에 미등록 → 특화자원 획득 불가.</b> 슬라임은 건설 가능하나 산출 배율 데이터가 0건이라 기본값만 나옴 → 용 성장 경로가 사실상 막힘</div>
+    </div>
+
+    <div class="card" data-c="econ">
+      <div class="hd"><div><h4>점령 · 영토 확장</h4><div class="own">ConquestManager · ConquestExpedition</div></div><div class="pct" style="color:var(--good)">80%</div></div>
+      <div class="bar"><i style="width:80%;background:linear-gradient(90deg,#4caf7d,#67c99a)"></i></div>
+      <p>기획대로 <b>출격 → 밤 방어 성공 → 영토 획득</b>. 점령 완료 시 주둔지 자동 건설 + 인접 8방향 시야 확장 + 적 강화 프로필 적용까지 한 번에 처리합니다.</p>
+      <div class="kv">
+        <div><b>조건</b> 시야 확보 + 상하좌우 인접 점령지 필요 (여러 청크 동시 출격 가능)</div>
+        <div><b>비용/기간</b> 61청크 전량 입력 — 초원 1일 ~ 사막 4일, 인구 5~10 + 자원</div>
+        <div><b>패널티</b> 지형별 적 강화 프로필 누적(체력/방어막/공격력/이동속도/스폰수)</div>
+      </div>
+      <div class="gap">적 강화 프로필이 2개뿐이고 61청크 중 4개만 연결. 포탈 프리팹의 지형 타입이 미설정되어 대부분의 강화가 실효 없음</div>
+    </div>
+
+    <div class="card" data-c="core">
+      <div class="hd"><div><h4>전장의 안개</h4><div class="own">FogOfWarRenderer · FogCloudRenderer</div></div><div class="pct" style="color:var(--good)">95%</div></div>
+      <div class="bar"><i style="width:95%;background:linear-gradient(90deg,#4caf7d,#67c99a)"></i></div>
+      <p><b>2중 구조</b> — 미탐색 청크는 구름 타일로 완전 차폐, 탐색된 미점령지는 지형 타일 자체를 어둡게 틴트(그라데이션 2셀). 낮/밤에 구름 스프라이트도 교체됩니다.</p>
+      <div class="kv">
+        <div><b>알파</b> 미탐색 0.85 / 시야 내 0.45 / 점령 0(원색)</div>
+        <div><b>연동</b> 몬스터·장식물도 서 있는 셀의 밝기를 따라 틴트</div>
+      </div>
+    </div>
+
+    <div class="card" data-c="growth">
+      <div class="hd"><div><h4>연구 트리</h4><div class="own">ResearchManager · 연구소 · RP</div></div><div class="pct" style="color:var(--mid)">60%</div></div>
+      <div class="bar"><i style="width:60%;background:linear-gradient(90deg,#c9a227,#dcb63f)"></i></div>
+      <p>기획 확정대로 <b>연구소 1채 · RP 전역 풀 · 즉시 완료</b> 방식. 27개 노드가 3갈래(타워/생산/편의) × 5티어로 구성되고, 티어는 주기 진행에 따라 해금됩니다.</p>
+      <div class="kv">
+        <div><b>RP 수급</b> 밤 종료 시 연구소 배치 인구 × 5</div>
+        <div><b>노드</b> 27개 전량 SO 제작 · 에디터 생성기로 자동 생성(멱등)</div>
+        <div><b>UI</b> 3열×5행 격자를 런타임 생성, 선행 관계로 연결선 자동 유도</div>
+      </div>
+      <div class="gap"><b>27노드 중 실제 효과가 붙은 것은 2개</b>(타워 데미지 +10%, 초원 산출 +10%). 나머지 25개는 해금해도 변화 없음</div>
+    </div>
+
+    <div class="card" data-c="growth">
+      <div class="hd"><div><h4>어미용 · 용 스킬트리</h4><div class="own">DragonTreeManager · ProgressionRules</div></div><div class="pct" style="color:var(--mid)">45%</div></div>
+      <div class="bar"><i style="width:45%;background:linear-gradient(90deg,#c9a227,#dcb63f)"></i></div>
+      <p>5속성(얼음·불·시간·암석·생명) × 6단계 = <b>30노드</b>를 방사형 UI로 구현. 연구와 분리된 별도 창이며, 슬라임+특화자원으로 해금하는 구조까지 완성됐습니다.</p>
+      <div class="kv">
+        <div><b>구조</b> 각성 → 액티브 → 강화 → 궁극 + 새끼용 타워/지역 효과 2슬롯</div>
+        <div><b>게이트</b> 새끼용 보유 여부 판정은 동작. 보유 수량 게이트는 임시로 0</div>
+        <div><b>속성 변경</b> 낮 1회 제한 로직 구현</div>
+      </div>
+      <div class="gap"><b>30노드의 효과 SO가 전부 stub</b> — 해금해도 게임플레이 효과 0. 액티브 스킬 연결(<code>_skill</code>)도 전부 비어 있음</div>
+    </div>
+
+    <div class="card" data-c="growth">
+      <div class="hd"><div><h4>새끼용</h4><div class="own">알 인벤토리 · 급여 · 버프 · 배치</div></div><div class="pct" style="color:var(--good)">75%</div></div>
+      <div class="bar"><i style="width:75%;background:linear-gradient(90deg,#4caf7d,#67c99a)"></i></div>
+      <p>가장 최근에 완성된 영역. <b>알 획득 → 일수 경과 부화 → 인벤토리 → 그리드 배치 → 매일 슬라임 급여 → 주변 생산 버프</b>까지 전 파이프라인이 이어집니다.</p>
+      <div class="kv">
+        <div><b>먹이</b> 속성별 슬라임 소모 — 같은 속성/전체 보유 수에 따라 요구량 증가</div>
+        <div><b>미급여 시</b> 타워 가동 정지 (<code>CanOperate = _isFed</code>)</div>
+        <div><b>버프</b> 타원 반경 판정, 여러 마리는 곱연산 누적, 밤 종료 시 재계산</div>
+      </div>
+      <div class="gap">실제 생산 버프를 내는 건 생명(초원) 1종뿐 — 나머지 4속성은 버프 반경 0. 슬라임 획득 경로가 막혀 급여 시스템이 실질 미검증</div>
+    </div>
+
+    <div class="card" data-c="battle">
+      <div class="hd"><div><h4>어미용 액티브 스킬 (플레이어 공격)</h4><div class="own">SkillManager · SkillTargetingController</div></div><div class="pct" style="color:var(--bad)">40%</div></div>
+      <div class="bar"><i style="width:40%;background:linear-gradient(90deg,#d9534f,#e2726e)"></i></div>
+      <p>타게팅 시스템은 완성도가 높습니다 — <b>즉시형 / 지점 지정형 / 적 지정형</b> 3종 타게팅, 아이소메트릭 타원 범위 미리보기, 쿨타임·일일 사용횟수 관리까지 구현.</p>
+      <div class="kv">
+        <div><b>스킬 3종</b> 단일 대상 현재체력 비례 피해 · 범위 피해 · 디버그</div>
+        <div><b>연출</b> 지점 타원 인디케이터 · 적 위 화살표 표시</div>
+      </div>
+      <div class="gap"><b>스킬 HUD가 메인 씬에 배선되지 않아 발동 경로가 없음.</b> 스킬 에셋도 디버그용 3종뿐이고 5속성별 실제 스킬(빙결/메테오/바리케이드 등)은 미제작</div>
+    </div>
+
+    <div class="card" data-c="ui">
+      <div class="hd"><div><h4>UI 창 · 배타 제어</h4><div class="own">UIManager · IExclusiveMode · 8개 창</div></div><div class="pct" style="color:var(--good)">78%</div></div>
+      <div class="bar"><i style="width:78%;background:linear-gradient(90deg,#4caf7d,#67c99a)"></i></div>
+      <p>상시 HUD + 8개 창이 동작. 한 번에 하나만 열리도록 <code>IExclusiveMode</code> 인터페이스로 배타 제어하고, DOTween 슬라이드 연출이 붙어 있습니다.</p>
+      <div class="kv">
+        <div><b>HUD</b> 낮/밤 심볼 · DAY 카운터 · 자원 7종 · 인구 · 웨이브 진행바 · 성 체력바</div>
+        <div><b>창</b> 건설 · 점령 · 점령목록 · 건물(인구) · 새끼용 · 연구 · 용스킬 · 경고 · 게임오버/승리</div>
+        <div><b>편의</b> 미니맵(드래그 이동·뷰포트 표시) · 카메라 북마크 5개 · ESC 모드 종료</div>
+      </div>
+      <div class="gap">메인 성 창이 껍데기 상태(미배선) → 용 스킬트리 진입이 한때 디버그 GUI 의존. 경고 메시지 종류가 1개뿐</div>
+    </div>
+
+    <div class="card" data-c="core">
+      <div class="hd"><div><h4>승리 · 패배 · 엔딩</h4><div class="own">GameManager · Castle</div></div><div class="pct" style="color:var(--mid)">55%</div></div>
+      <div class="bar"><i style="width:55%;background:linear-gradient(90deg,#c9a227,#dcb63f)"></i></div>
+      <p>패배(성 파괴)와 승리 트랙 1(최종 보스 웨이브 클리어) 양쪽 판정이 구현되어 <b>게임을 끝까지 진행 가능</b>합니다. 결과는 <code>GameResult</code> enum으로 1회만 확정됩니다.</p>
+      <div class="kv">
+        <div><b>패배</b> 성 체력 0 → 파괴 애니메이션 → 게임오버 창</div>
+        <div><b>승리</b> 4주기 최종 보스 웨이브 종료 → 승리 창</div>
+      </div>
+      <div class="gap"><b>승리 트랙 2 “4포탈 동시 봉인”은 미착수</b>(봉인석 관련 코드 0건). 메인 씬의 승리 창 참조가 비어 있어 실제로는 창이 뜨지 않음</div>
+    </div>
+
+    <div class="card" data-c="ui">
+      <div class="hd"><div><h4>연출 · 사운드 · 튜토리얼 · 밸런싱</h4><div class="own">베타 단계 목표</div></div><div class="pct" style="color:var(--bad)">10%</div></div>
+      <div class="bar"><i style="width:10%;background:linear-gradient(90deg,#d9534f,#e2726e)"></i></div>
+      <p>낮/밤 조명 전환(3초 보간, 노을 색 포함)과 일부 애니메이션·DOTween UI 연출만 존재합니다.</p>
+      <div class="kv">
+        <div><b>있음</b> 낮밤 조명 보간 · 타워/성 파괴 애니메이션 · UI 슬라이드/페이드 · 피격 셰이크</div>
+        <div><b>없음</b> BGM · SFX · 파티클 이펙트 · 튜토리얼 · 수치 밸런싱</div>
+      </div>
+      <div class="gap">계획상 베타(8/17~8/28) 단계 항목 — 현 시점 지연 아님</div>
+    </div>
+
+  </div>
+</div></section>
+
+<!-- ══════════ 4. 구현 방식 ══════════ -->
+<section id="how"><div class="wrap">
+  <div class="sec-h"><span class="sec-n">04</span><h2>어떻게 구현되어 있는가 — 아키텍처</h2></div>
+  <p class="lead">미션 필수 요건인 <b>데이터 기반 설계</b>를 축으로, 5개 계층이 이벤트로만 연결됩니다.
+  “로직은 코드, 수치는 에셋”을 일관되게 지켰고 그 결과 기획 수치 변경이 코드 수정 없이 가능합니다.</p>
+
+  <div class="arch">
+    <div class="layer">
+      <b>① 데이터 계층 — ScriptableObject 187개</b>
+      <span>웨이브 스케줄·몬스터·타워·공격·효과·연구노드·용스킬노드·자원·생산시설·점령 비용/기간 테이블·산출량 테이블이 전부 에셋. 연구 27노드와 용 30노드는 <b>에디터 생성기 스크립트</b>가 GUID를 유지하며 멱등 생성하고, 로컬라이즈 CSV 행까지 자동으로 추가합니다.</span>
+    </div>
+    <div class="layer">
+      <b>② 사이클 계층 — 이벤트 허브</b>
+      <span><code>CycleManager</code>가 낮/밤 2상태와 5개 <code>UnityEvent</code>만 발행. 각 시스템이 필요한 이벤트를 스스로 구독하므로 시스템 간 직접 참조가 거의 없습니다. 이벤트 발행은 <code>try/catch</code>로 격리해 한 구독자의 예외가 루프를 멈추지 않습니다.</span>
+    </div>
+    <div class="layer">
+      <b>③ 도메인 계층 — 조립형 컴포넌트</b>
+      <span>몬스터는 상속이 아니라 <b>체력 + 공격 + 이동 + 특수행동</b> 컴포넌트 조립. 타워/새끼용은 <code>ITowerStaffing</code>, 인구 UI는 <code>IPopulationAllocationTarget</code>, 창 배타는 <code>IExclusiveMode</code>, 연구·용 공용 판정은 <code>ProgressionRules</code> — 인터페이스로 변형을 흡수합니다.</span>
+    </div>
+    <div class="layer">
+      <b>④ 중재 계층 — Coordinator 패턴</b>
+      <span>인구 4갈래·자원·연구소·새끼용 배치는 각각 전용 Coordinator가 <code>GridMap.OnBuildingAdded/Removing</code>을 구독해 자동 연결·해제. 건물 프리팹은 매니저 참조를 들고 있지 않아도(<code>null</code>) 씬에 놓이면 코디네이터가 주입합니다.</span>
+    </div>
+    <div class="layer">
+      <b>⑤ 비동기 — UniTask 전면 적용</b>
+      <span>웨이브 스폰·타워 부활·조명 전환·초기화 순서 보정 전부 <code>UniTask</code>. 코루틴 사용 0건, <code>async void</code> 금지, 파괴 시 자동 취소 토큰 사용 — 팀 규칙(CLAUDE.md)이 실제 코드에 지켜지고 있습니다.</span>
+    </div>
+  </div>
+
+  <h3>기술 스택</h3>
+  <div class="tw"><table>
+    <tr><th style="width:150px">항목</th><th>내용</th></tr>
+    <tr><td>엔진</td><td>Unity <b>6000.3.15f1</b> (Unity 6.3) · URP 2D · Isometric Tilemap</td></tr>
+    <tr><td>입력</td><td><b>Input System (New) 1.19.0</b> 전용 — 구형 <code>Input.GetKey</code> 사용 0건. 2개 액션맵 22액션, 5개 컨트롤 스킴</td></tr>
+    <tr><td>비동기</td><td>UniTask (Cysharp) — 코루틴 미사용</td></tr>
+    <tr><td>주요 패키지</td><td>Cinemachine 3.1.6 · Splines 2.8.4 (적 경로) · 2D 스택 9종 · AI Navigation · DOTween Pro · NavMeshPlus · CsvHelper</td></tr>
+    <tr><td>협업 도구</td><td>GitHub (이슈 템플릿 2종) · Coplay MCP (Unity 에디터 자동화) · Google Sheets → 번역 CSV 자동 다운로드 툴</td></tr>
+    <tr><td>에디터 툴 6종</td><td>자원 생산량 편집기 · 연구트리 생성기 · 용스킬트리 생성기 · 번역 CSV 다운로더 · 풋프린트 그리드 편집기 · 지형 타일맵 에디터</td></tr>
+  </table></div>
+</div></section>
+
+<!-- ══════════ 5. 데이터 현황 ══════════ -->
+<section id="data"><div class="wrap">
+  <div class="sec-h"><span class="sec-n">05</span><h2>제작된 데이터 현황</h2></div>
+  <p class="lead">“구현했다”와 “데이터가 채워졌다”는 다릅니다. 시스템별로 실제 콘텐츠가 얼마나 들어갔는지 정리했습니다.</p>
+
+  <div class="tw"><table>
+    <tr><th>영역</th><th class="num">제작량</th><th>내용</th><th style="width:110px">상태</th></tr>
+    <tr><td>웨이브 정의</td><td class="num">28</td><td>4주기 × 7일 전량. 스폰 규모 5 → 130마리, 7·14·21·28일차 보스</td><td><span class="st ok">완료</span></td></tr>
+    <tr><td>몬스터</td><td class="num">8</td><td>기본/타워공격/원거리/공중/힐러/자폭/감전/보스 — 데이터·프리팹·공격 SO 모두 존재</td><td><span class="st ok">완료</span></td></tr>
+    <tr><td>자원</td><td class="num">12</td><td>기본 3(식량·목재·석재) + 특화 4 + 슬라임 5 — enum·SO·카탈로그 완비</td><td><span class="st ok">완료</span></td></tr>
+    <tr><td>점령 비용/기간</td><td class="num">61</td><td>전 청크 비용·인구보상·해금자원 입력. 기간 초원 1일 ~ 사막 4일</td><td><span class="st ok">완료</span></td></tr>
+    <tr><td>산출량 테이블</td><td class="num">75 + 395</td><td>청크 배율 75건 + 셀 개별 오버라이드 395건 — 기본 3종·특화 4종만</td><td><span class="st part">슬라임 0건</span></td></tr>
+    <tr><td>연구 노드</td><td class="num">27</td><td>3갈래 × 5티어, RP 코스트 10~150 입력 완료</td><td><span class="st part">효과 2/27</span></td></tr>
+    <tr><td>용 스킬 노드</td><td class="num">30</td><td>5속성 × 6종, 슬라임·특화자원 코스트 입력 완료</td><td><span class="st no">효과 0/30</span></td></tr>
+    <tr><td>생산 시설</td><td class="num">8</td><td>기본 3 + 슬라임 + 특화 4 — SO·프리팹·스프라이트 완비, 메인 씬 건설 목록에는 4개만 등록</td><td><span class="st part">특화 4종 미등록</span></td></tr>
+    <tr><td>타워</td><td class="num">1 (+5)</td><td>일반 타워 1종 + 새끼용 5속성</td><td><span class="st part">티어 미착수</span></td></tr>
+    <tr><td>어미용 스킬</td><td class="num">3</td><td>전부 디버그용 — 속성별 실제 스킬 미제작</td><td><span class="st no">미착수</span></td></tr>
+    <tr><td>적 강화 프로필</td><td class="num">2</td><td>내용 동일(스폰 +1). 61청크 중 4개만 연결</td><td><span class="st no">거의 공백</span></td></tr>
+    <tr><td>번역(스트링테이블)</td><td class="num">192 / 195</td><td>ko / en. Google Sheets 연동 다운로더로 관리</td><td><span class="st part">[미정] 75%</span></td></tr>
+    <tr><td>자동 테스트</td><td class="num">2</td><td>웨이브 주기 규칙 · 포탈 순차 개방 (EditMode)</td><td><span class="st part">범위 협소</span></td></tr>
+  </table></div>
+
+  <h3>팀 기여 (커밋 수 기준)</h3>
+  <div class="tw"><table>
+    <tr><th>담당</th><th class="num">커밋</th><th>주요 작업 영역</th></tr>
+    <tr><td>나상욱</td><td class="num">244</td><td>웨이브·주기·포탈 시스템, 인구 코어/유지비, 점령·자원 통합 설계, 연구·용 스킬트리 설계, 특수형 몬스터</td></tr>
+    <tr><td>조강현</td><td class="num">134</td><td>그리드·안개·카메라, 타워·전투, 연구/용 스킬트리 UI, 입력 시스템, 조명·애니메이션</td></tr>
+    <tr><td>이하늘</td><td class="num">121</td><td>건물 배치·회전·철거 환불, 새끼용 전 시스템, 자원 노드, 건물 아트 에셋</td></tr>
+    <tr><td>김지해</td><td class="num">92</td><td>점령·청크정보·점령목록 UI, 미니맵, HUD 자원/일차 연결, 성 체력바 연출</td></tr>
+  </table></div>
+  <p style="font-size:12.5px;color:var(--tx3);margin-top:8px">※ 한 사람이 여러 Git 계정을 사용해 이메일 기준으로 합산했습니다(master 브랜치 591커밋). 커밋 수는 기여의 한 지표일 뿐, 작업 난이도·분량과 비례하지 않습니다.</p>
+</div></section>
+
+<!-- ══════════ 6. 요건 충족 ══════════ -->
+<section id="req"><div class="wrap">
+  <div class="sec-h"><span class="sec-n">06</span><h2>미션 요건 · 기획 대비 충족도</h2></div>
+  <p class="lead">미션 가이드 필수 7항목 · 선택 5항목과, 기획종합 v2의 핵심 시스템 대비 현황입니다.</p>
+
+  <h3>필수 기능 7항목 — 전부 구현 도달</h3>
+  <div class="tw"><table>
+    <tr><th style="width:150px">필수 요건</th><th>본 프로젝트 구현</th><th style="width:120px">상태</th></tr>
+    <tr><td>낮 / 밤 시스템</td><td>낮(시간 무제한 운영) → 밤(전멸 시 종료) → 정산 순환, 조명 전환 연동</td><td><span class="st ok">동작</span></td></tr>
+    <tr><td>자동전투 시스템</td><td>타워 자동 탐색·발사, 투사체, 인구 배치율에 비례한 공격속도</td><td><span class="st ok">동작</span></td></tr>
+    <tr><td>적 AI 시스템</td><td>포탈 스플라인 고정 경로 + 타워 공격형/직행형/공중/자폭/힐러 8종</td><td><span class="st ok">동작</span></td></tr>
+    <tr><td>배치 시스템</td><td>격자 배치·회전·철거·환불·이동, 풋프린트/자원노드 검증</td><td><span class="st ok">동작</span></td></tr>
+    <tr><td>주민(인구) 시스템</td><td>생산/방어/점령/연구 4갈래 배분 + 식량 유지비·기아</td><td><span class="st part">정산 미배선</span></td></tr>
+    <tr><td>점령 시스템</td><td>출격 → 밤 방어 성공 → 영토·인구 획득, 주둔지 자동 건설, 난이도 상승</td><td><span class="st ok">동작</span></td></tr>
+    <tr><td>공격 시스템 (플레이어)</td><td>어미용 액티브 스킬 — 타게팅·쿨타임·범위 판정 구현</td><td><span class="st no">HUD 미배선</span></td></tr>
+  </table></div>
+
+  <h3>선택 기능</h3>
+  <div class="tw"><table>
+    <tr><th style="width:150px">선택 요건</th><th>현황</th><th style="width:120px">상태</th></tr>
+    <tr><td>자원 시스템</td><td>12종 정의, 거리·청크·셀 3단 산출 공식, 생산시설 8종</td><td><span class="st part">특화 획득 불가</span></td></tr>
+    <tr><td>건물 시스템</td><td>강화는 미착수, On/Off(인구 배치)는 구현</td><td><span class="st part">부분</span></td></tr>
+    <tr><td>보스 시스템</td><td>주기별 보스 웨이브 4회 데이터 제작, 보스 몬스터 1종</td><td><span class="st part">보스 1종</span></td></tr>
+    <tr><td>연구 시스템</td><td>연구소 1채·RP 전역 풀·즉시 적용, 27노드 UI</td><td><span class="st part">효과 2/27</span></td></tr>
+    <tr><td>카드 시스템</td><td>기획 단계에서 미채택</td><td><span class="st ok">해당 없음</span></td></tr>
+  </table></div>
+
+  <h3>기획서 대비 주요 차이</h3>
+  <div class="cols2">
+    <div class="note">
+      <b>기획을 그대로 지킨 부분</b>
+      <ul class="tight">
+        <li>타워는 파괴가 아닌 <b>비활성화 후 재활성화</b></li>
+        <li>철거 환불 <b>당일 100% / 이후 70%</b></li>
+        <li>연구는 <b>연구소 1채 · RP 전역 풀 · 즉시 완료</b></li>
+        <li>점령 판정은 <b>그날 밤 방어 성공 여부</b>로 결정</li>
+        <li>정산은 <b>밤이 끝난 뒤</b> 결과 수령</li>
+        <li>용 스킬트리는 <b>연구와 완전히 분리된 별도 창</b></li>
+      </ul>
+    </div>
+    <div class="note">
+      <b>기획서 [미정]이 남아 코드가 대기 중인 부분</b>
+      <ul class="tight">
+        <li>특화 자원 4종의 <b>최종 명칭</b> — 임시명으로 진행 중</li>
+        <li>시간·암석·생명 <b>새끼용 타워 효과</b> — 버프 반경 0으로 대기</li>
+        <li>새끼용 <b>전투형/버프형 선택 규칙</b></li>
+        <li><b>봉인석 비용</b> 등 포탈 봉인 승리 트랙 전반</li>
+        <li>타워 <b>티어·분기</b>, 속성 타워 상세</li>
+        <li>노드 27+30개의 <b>이름·설명 문구</b> (전부 [미정] 표기 중)</li>
+      </ul>
+    </div>
+  </div>
+  <p style="font-size:12.7px;color:var(--tx3);margin-top:12px">※ 팀 규칙에 따라 기획서 <code>[미정]</code> 항목은 임의로 확정 구현하지 않고, 구조만 만들어 두고 수치를 비워 대기시키는 방식으로 처리했습니다.</p>
+</div></section>
+
+<!-- ══════════ 7. 리스크 ══════════ -->
+<section id="risk"><div class="wrap">
+  <div class="sec-h"><span class="sec-n">07</span><h2>리스크와 즉시 조치 항목</h2></div>
+  <p class="lead">중요한 특징이 있습니다 — 남은 문제 대부분이 <b>“못 만든 것”이 아니라 “만들었는데 연결이 안 된 것”</b>입니다.
+  즉 해결 비용이 상대적으로 낮습니다.</p>
+
+  <div class="risk p1">
+    <div class="sev">P1</div>
+    <div>
+      <b>일일 정산 매니저가 메인 씬에 배치되지 않음</b>
+      <p>식량 유지비 소모와 기아 처리를 담당하는 <code>DailySettlementManager</code>가 어떤 실사용 씬에도 없습니다. 로직 자체는 완성되어 있고 테스터로는 동작이 확인됩니다. 현재 플레이하면 인구가 식량을 먹지 않아 <b>경제 압박이라는 핵심 재미 요소가 작동하지 않습니다.</b></p>
+      <div class="fix">→ 조치: 메인 씬에 정산 매니저 + 인구 유지비 시스템 배치 및 참조 연결 (수십 분 규모)</div>
+    </div>
+  </div>
+
+  <div class="risk p1">
+    <div class="sev">P1</div>
+    <div>
+      <b>특화자원 생산시설 4종이 메인 씬 건설 목록에 미등록</b>
+      <p>SO·프리팹·스프라이트가 모두 완성됐고 이하늘 작업 씬에서는 확인되지만, 메인 씬이 쓰는 건설 창에는 기본 3종 + 슬라임 농장 4개만 등록되어 있어 <b>특화자원 4종을 게임 내에서 얻을 수 없습니다.</b> 여기에 슬라임 산출 배율 데이터가 0건이라 슬라임도 기본값만 나옵니다. 결과적으로 용 성장 · 새끼용 급여 · 연구 상위 노드 · 봉인석까지 연쇄적으로 막힙니다.</p>
+      <div class="fix">→ 조치: 건설 창 Factory 탭에 특화 4종 등록 + 청크/셀 산출 테이블에 슬라임 5종 배율 입력</div>
+    </div>
+  </div>
+
+  <div class="risk p1">
+    <div class="sev">P1</div>
+    <div>
+      <b>성장 시스템의 효과 계층이 비어 있음</b>
+      <p>연구 27노드 중 실효 노드 2개, 용 스킬 30노드는 전부 stub입니다. 트리를 클릭해 해금하는 경험은 완성됐지만 <b>해금해도 게임이 변하지 않아 성장 재미가 검증되지 않은 상태</b>입니다.</p>
+      <div class="fix">→ 조치: 우선 체감 큰 6~8개 노드(타워 사거리·공격속도·필요인구 감소, 외곽 기초자원 채집, 시야 확장, 성 회복)에 효과 SO 우선 구현</div>
+    </div>
+  </div>
+
+  <div class="risk p2">
+    <div class="sev">P2</div>
+    <div>
+      <b>플레이어 공격 수단(어미용 스킬)에 접근할 수 없음</b>
+      <p>스킬 HUD 바인더가 메인 씬에 없어 스킬 발동을 시작하는 코드 경로가 런타임에 존재하지 않습니다. 미션 필수 요건 중 하나이므로 프로토타입 시연 전 반드시 연결이 필요합니다.</p>
+      <div class="fix">→ 조치: HUD에 스킬 슬롯 배치 + 속성별 스킬 에셋 최소 2종 제작(빙결, 메테오)</div>
+    </div>
+  </div>
+
+  <div class="risk p2">
+    <div class="sev">P2</div>
+    <div>
+      <b>점령 페널티(적 난이도 상승)가 실효 없음</b>
+      <p>강화 프로필이 2개뿐이고 61청크 중 4개만 연결, 포탈의 지형 타입도 미설정이라 대부분 적용되지 않습니다. <b>“확장할수록 위험해진다”는 핵심 긴장 구조가 현재 체감되지 않습니다.</b></p>
+      <div class="fix">→ 조치: 포탈 지형 타입 설정 + 지형별 강화 프로필 5종 작성 후 청크 일괄 연결</div>
+    </div>
+  </div>
+
+  <div class="risk p2">
+    <div class="sev">P2</div>
+    <div>
+      <b>3·4주기 웨이브가 복제 데이터</b>
+      <p>15~20일차 6개가 서로 동일, 22~27일차 6개도 동일합니다. 후반 난이도 곡선이 사실상 평평해 <b>28일 완주 플레이의 체험 검증이 불완전합니다.</b></p>
+      <div class="fix">→ 조치: 특수형 몬스터(자폭·감전) 편성을 포함한 후반 웨이브 재설계</div>
+    </div>
+  </div>
+
+  <div class="risk p3">
+    <div class="sev">P3</div>
+    <div>
+      <b>제출 전 정리 항목</b>
+      <p>메인 씬에 디버그 컴포넌트 4종(웨이브 스킵 F키, 인구 테스터, 연구소 GUI 등)이 활성 상태이고, <code>Debug.Log</code>가 상시 출력되는 지점이 여러 곳 있습니다. 번역은 <code>[미정]</code> 비율이 약 75%이고 한국어 CSV를 로드하는 코드가 아직 없어 실행 시 영문 테이블만 사용됩니다.</p>
+      <div class="fix">→ 조치: 베타 단계에 디버그 UI 비노출 · 로그 정리 · 언어 로드 호출 추가를 일괄 처리</div>
+    </div>
+  </div>
+
+  <div class="risk p3">
+    <div class="sev">P3</div>
+    <div>
+      <b>자동 테스트·CI 부재</b>
+      <p>EditMode 테스트 2개(웨이브 주기 규칙, 포탈 개방)만 존재하고 GitHub Actions 등 CI 파이프라인이 없습니다. 4명이 씬·프리팹을 동시 수정하는 구조에서 <b>배선 누락형 회귀를 잡아낼 안전망이 없습니다.</b> 실제로 위 P1 항목들이 이 유형입니다.</p>
+      <div class="fix">→ 조치: 씬 필수 컴포넌트 존재 여부를 검사하는 PlayMode 스모크 테스트 1개 추가만으로도 큰 효과</div>
+    </div>
+  </div>
+</div></section>
+
+<!-- ══════════ 8. 계획 ══════════ -->
+<section id="plan"><div class="wrap">
+  <div class="sec-h"><span class="sec-n">08</span><h2>마일스톤과 다음 단계</h2></div>
+  <p class="lead">프로토타입 마감(7/31)까지 2일. 기능 제작은 계획을 상회했고, 남은 시간은 <b>연결과 검증</b>에 쓰는 것이 합리적입니다.</p>
+
+  <div class="ms">
+    <div class="msc now">
+      <span class="badge">현재</span>
+      <div class="d">7/8 – 7/31</div>
+      <b>프로토타입</b>
+      <p>코어 루프 재미 검증. 격자·낮밤·타워·적·승패·인구·점령·자원 <b>전 항목 구현 도달</b>. 알파 목표였던 연구/용 트리·웨이브·보스·4지역 맵까지 선행 완료.</p>
+    </div>
+    <div class="msc">
+      <div class="d">8/3 – 8/14</div>
+      <b>알파</b>
+      <p>전 기능 연결. 효과 계층 채우기, 5속성 스킬 실제 제작, 타워 티어, 포탈 봉인 엔딩, 특화 자원 순환 완성.</p>
+    </div>
+    <div class="msc">
+      <div class="d">8/17 – 8/28</div>
+      <b>베타</b>
+      <p>릴리즈 수준. UI 디자인, 밸런싱, 연출·사운드, 튜토리얼, 번역 확정, 디버그 제거.</p>
+    </div>
+    <div class="msc">
+      <div class="d">8/31 – 9/3</div>
+      <b>폴리싱</b>
+      <p>버그 수정·QA·최종 빌드 제출.</p>
+    </div>
+  </div>
+
+  <h3>프로토타입 마감까지 우선순위 (7/29 – 7/31)</h3>
+  <div class="tw"><table>
+    <tr><th style="width:44px">순</th><th>작업</th><th style="width:230px">기대 효과</th><th style="width:80px">규모</th></tr>
+    <tr><td class="num">1</td><td>메인 씬에 정산 매니저 · 인구 유지비 시스템 배치</td><td>식량 압박 = 코어 재미 복구</td><td>S</td></tr>
+    <tr><td class="num">2</td><td>건설 창에 특화 생산시설 4종 등록 + 슬라임 산출 배율 데이터 입력</td><td>자원 순환 전 구간 개통</td><td>S</td></tr>
+    <tr><td class="num">3</td><td>승리 창 참조 연결 · 승리 이벤트 해제 누락 수정</td><td>엔딩까지 시연 가능</td><td>S</td></tr>
+    <tr><td class="num">4</td><td>스킬 HUD 배선 + 속성 스킬 2종 제작</td><td>필수 요건 “플레이어 공격” 충족</td><td>M</td></tr>
+    <tr><td class="num">5</td><td>연구 노드 효과 6~8개 우선 구현</td><td>성장 재미 검증</td><td>M</td></tr>
+    <tr><td class="num">6</td><td>포탈 지형 타입 설정 + 강화 프로필 5종</td><td>확장 리스크 체감</td><td>M</td></tr>
+    <tr><td class="num">7</td><td>1주기 7일 완주 플레이테스트 · 밸런스 로그 수집</td><td>“낮의 선택이 밤을 결정”하는지 확인</td><td>M</td></tr>
+  </table></div>
+
+  <div class="note" style="margin-top:20px">
+    <b>결론</b> — 4주 만에 232개 스크립트 · 21,580줄 · 187개 데이터 에셋으로 <b>타워디펜스와 도시건설이 결합된 코어 루프를 28일 완주 가능한 형태로 구현</b>했습니다.
+    기획서의 핵심 차별점(용 운용 · 인구 배분 · 전략적 확장) 세 축 모두 코드로 존재하며, 데이터 기반 설계라는 미션 필수 요건도 SO 187개와 에디터 생성기 6종으로 충족합니다.
+    현재 병목은 제작 역량이 아니라 <b>씬 배선과 수치 입력</b>이며, 위 7개 항목을 처리하면 프로토타입 목표인 “재미 검증”을 실제 플레이로 판정할 수 있는 상태가 됩니다.
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  Tower and Dragons · 개발 진행현황 보고 · 2026-07-29 기준 · master <code>512267e</code><br>
+  근거: 저장소 전체 코드·데이터 에셋·씬 배선 정적 분석 및 Git 이력 (591 커밋).
+  상세 기획은 <code>Docs/기획종합_v2.md</code>, 시스템별 상세 현황은 <code>Docs/Sangwook/</code> 참조.
+</div></footer>
+
+<script>
+document.querySelectorAll('.filters button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.filters button').forEach(function(x){x.classList.remove('on')});
+    b.classList.add('on');
+    var f = b.dataset.f;
+    document.querySelectorAll('.sys .card').forEach(function(c){
+      c.style.display = (f==='all' || c.dataset.c===f) ? 'flex' : 'none';
+    });
+  });
+});
+</script>
+</body>
+</html>

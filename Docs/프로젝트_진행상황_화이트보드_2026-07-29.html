@@ -1,0 +1,1066 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Tower and Dragons 2026-07-29 프로젝트 진행상황 발표용 화이트보드" />
+  <title>Tower and Dragons — 프로젝트 진행상황 화이트보드</title>
+  <style>
+    :root {
+      --paper: #f6f2e8;
+      --paper-deep: #ebe4d5;
+      --ink: #202a33;
+      --muted: #65717b;
+      --line: #b9b3a7;
+      --blue: #2775b6;
+      --blue-soft: #dcecf8;
+      --green: #2f855a;
+      --green-soft: #dff2e5;
+      --yellow: #efb92f;
+      --yellow-soft: #fff1b8;
+      --red: #c65353;
+      --red-soft: #f8dddd;
+      --purple: #7653a6;
+      --purple-soft: #eadff6;
+      --shadow: 5px 6px 0 rgba(32, 42, 51, 0.12);
+      --radius: 16px 12px 18px 13px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Pretendard", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
+      line-height: 1.55;
+      background-color: var(--paper);
+      background-image:
+        linear-gradient(rgba(74, 94, 110, 0.075) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74, 94, 110, 0.075) 1px, transparent 1px),
+        linear-gradient(rgba(74, 94, 110, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(74, 94, 110, 0.035) 1px, transparent 1px);
+      background-size: 32px 32px, 32px 32px, 8px 8px, 8px 8px;
+    }
+
+    button, a { font: inherit; }
+    a { color: inherit; }
+    button:focus-visible, a:focus-visible, summary:focus-visible {
+      outline: 3px solid rgba(39, 117, 182, 0.45);
+      outline-offset: 3px;
+    }
+
+    .toolbar {
+      position: sticky;
+      z-index: 50;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 10px max(18px, calc((100vw - 1540px) / 2));
+      border-bottom: 2px solid rgba(32, 42, 51, 0.18);
+      background: rgba(246, 242, 232, 0.92);
+      backdrop-filter: blur(12px);
+    }
+
+    .toolbar__title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: max-content;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+
+    .toolbar__mark {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--ink);
+      border-radius: 50% 45% 52% 40%;
+      background: var(--yellow);
+      box-shadow: 2px 2px 0 rgba(32, 42, 51, 0.2);
+    }
+
+    .toolbar__actions, .filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tool-button, .filter-button {
+      cursor: pointer;
+      border: 1.5px solid var(--ink);
+      border-radius: 999px;
+      padding: 7px 12px;
+      color: var(--ink);
+      background: #fffdf7;
+      font-weight: 800;
+      box-shadow: 2px 2px 0 rgba(32, 42, 51, 0.12);
+      transition: transform 140ms ease, background 140ms ease, opacity 140ms ease;
+    }
+
+    .tool-button:hover, .filter-button:hover { transform: translateY(-2px); }
+    .filter-button[aria-pressed="true"] { background: var(--ink); color: white; }
+
+    .board {
+      width: min(1540px, calc(100% - 36px));
+      margin: 28px auto 72px;
+    }
+
+    .hero {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(330px, 0.75fr);
+      gap: 22px;
+      padding: 34px;
+      border: 2.5px solid var(--ink);
+      border-radius: 22px 15px 26px 18px;
+      background: rgba(255, 253, 247, 0.92);
+      box-shadow: 8px 9px 0 rgba(32, 42, 51, 0.13);
+    }
+
+    .hero::before, .tape::before {
+      content: "";
+      position: absolute;
+      width: 122px;
+      height: 27px;
+      top: -14px;
+      left: 52px;
+      transform: rotate(-2deg);
+      background: rgba(239, 185, 47, 0.48);
+      border-left: 1px dashed rgba(70, 58, 30, 0.3);
+      border-right: 1px dashed rgba(70, 58, 30, 0.3);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: var(--blue);
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, h4, p { margin-top: 0; }
+    h1 {
+      max-width: 850px;
+      margin-bottom: 14px;
+      font-size: clamp(2.35rem, 4.4vw, 5.25rem);
+      line-height: 0.98;
+      letter-spacing: -0.065em;
+    }
+
+    .hero__statement {
+      max-width: 880px;
+      margin-bottom: 22px;
+      font-size: clamp(1.05rem, 1.4vw, 1.28rem);
+      color: #45525d;
+    }
+
+    .marker {
+      position: relative;
+      z-index: 0;
+      white-space: nowrap;
+    }
+
+    .marker::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      left: -2%;
+      right: -2%;
+      bottom: 0.05em;
+      height: 0.42em;
+      transform: rotate(-1deg);
+      background: rgba(239, 185, 47, 0.58);
+      border-radius: 35% 25% 40% 30%;
+    }
+
+    .verdict {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border: 2px solid var(--green);
+      border-radius: 12px 18px 11px 16px;
+      color: #245f43;
+      background: var(--green-soft);
+      font-weight: 900;
+      transform: rotate(-0.4deg);
+    }
+
+    .verdict__dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(47, 133, 90, 0.16);
+    }
+
+    .hero__aside {
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      padding: 4px 0 0 10px;
+    }
+
+    .hero-note {
+      padding: 17px 18px;
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      background: var(--yellow-soft);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-note:nth-child(2) { background: var(--blue-soft); transform: rotate(0.8deg); }
+    .hero-note:nth-child(3) { background: var(--red-soft); transform: rotate(-0.5deg); }
+    .hero-note strong { display: block; margin-bottom: 3px; font-size: 1.08rem; }
+    .hero-note p { margin: 0; color: #4c5963; font-size: 0.94rem; }
+
+    .section {
+      position: relative;
+      scroll-margin-top: 90px;
+      margin-top: 42px;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      font-size: clamp(1.7rem, 2.4vw, 2.65rem);
+      line-height: 1.05;
+      letter-spacing: -0.045em;
+    }
+
+    .section-heading p {
+      max-width: 720px;
+      margin: 0;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      min-height: 148px;
+      padding: 18px 16px 15px;
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      background: #fffdf7;
+      box-shadow: var(--shadow);
+      transition: transform 140ms ease;
+    }
+
+    .stat:hover { transform: translateY(-4px) rotate(-0.3deg); }
+    .stat:nth-child(3n + 1) { background: var(--blue-soft); }
+    .stat:nth-child(3n + 2) { background: var(--green-soft); }
+    .stat:nth-child(3n) { background: var(--yellow-soft); }
+    .stat__value { display: block; font-size: clamp(1.85rem, 2.5vw, 2.7rem); line-height: 1; font-weight: 950; letter-spacing: -0.055em; }
+    .stat__label { display: block; margin-top: 8px; font-weight: 900; }
+    .stat__note { display: block; margin-top: 5px; color: var(--muted); font-size: 0.82rem; }
+
+    .loop-board {
+      display: grid;
+      grid-template-columns: 1fr 54px 1fr 54px 1fr 54px 0.78fr;
+      align-items: stretch;
+      gap: 10px;
+      padding: 24px;
+      border: 2px solid var(--ink);
+      border-radius: 20px 13px 22px 16px;
+      background: rgba(255, 253, 247, 0.88);
+      box-shadow: var(--shadow);
+    }
+
+    .loop-card {
+      position: relative;
+      min-height: 260px;
+      padding: 20px;
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      background: white;
+    }
+
+    .loop-card.day { background: var(--yellow-soft); transform: rotate(-0.45deg); }
+    .loop-card.night { background: #dfe5f5; transform: rotate(0.35deg); }
+    .loop-card.settle { background: var(--green-soft); transform: rotate(-0.25deg); }
+    .loop-card.next { background: var(--purple-soft); }
+    .loop-card__number { color: rgba(32, 42, 51, 0.32); font-size: 0.76rem; font-weight: 950; letter-spacing: 0.12em; }
+    .loop-card h3 { margin: 5px 0 8px; font-size: 1.55rem; }
+    .loop-card p { margin-bottom: 10px; color: #53606b; font-size: 0.93rem; }
+    .loop-card ul { margin: 0; padding-left: 20px; }
+    .loop-card li + li { margin-top: 6px; }
+
+    .arrow {
+      position: relative;
+      align-self: center;
+      height: 3px;
+      background: var(--ink);
+      border-radius: 99px;
+    }
+
+    .arrow::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -2px;
+      width: 14px;
+      height: 14px;
+      border-top: 3px solid var(--ink);
+      border-right: 3px solid var(--ink);
+      transform: translateY(-50%) rotate(45deg);
+    }
+
+    .spine {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      padding: 14px 18px;
+      border: 2px dashed var(--purple);
+      border-radius: 14px;
+      color: #553a7a;
+      background: rgba(234, 223, 246, 0.78);
+      font-weight: 850;
+      text-align: center;
+    }
+    .spine b { color: var(--purple); }
+    .spine i { font-style: normal; font-size: 1.3rem; }
+
+    .system-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .system-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 390px;
+      padding: 20px;
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      background: rgba(255, 253, 247, 0.95);
+      box-shadow: var(--shadow);
+      transition: opacity 180ms ease, filter 180ms ease, transform 180ms ease;
+    }
+
+    .system-card:nth-child(4n + 1) { transform: rotate(-0.25deg); }
+    .system-card:nth-child(4n + 2) { transform: rotate(0.3deg); }
+    .system-card:nth-child(4n + 3) { transform: rotate(-0.12deg); }
+    .system-card:nth-child(4n) { transform: rotate(0.18deg); }
+    .system-card:hover { transform: translateY(-5px) rotate(0deg); }
+    .system-card.is-dimmed { opacity: 0.18; filter: grayscale(1); pointer-events: none; }
+
+    .system-card__top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .system-card__index { display: block; color: var(--blue); font-size: 0.75rem; font-weight: 950; letter-spacing: 0.13em; }
+    .system-card h3 { margin: 3px 0 0; font-size: 1.38rem; line-height: 1.12; }
+
+    .status {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      border: 1.5px solid currentColor;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .status--done { color: var(--green); background: var(--green-soft); }
+    .status--doing { color: #9a6800; background: var(--yellow-soft); }
+    .status--risk { color: var(--red); background: var(--red-soft); }
+
+    .system-card__summary { min-height: 70px; margin-bottom: 12px; color: #4f5b65; }
+    .system-card h4 { margin: 12px 0 6px; font-size: 0.82rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+    .system-card ul { margin: 0; padding-left: 19px; font-size: 0.91rem; }
+    .system-card li + li { margin-top: 5px; }
+
+    .code-strip {
+      margin-top: auto;
+      padding-top: 14px;
+    }
+
+    .code-strip code {
+      display: block;
+      padding: 9px 10px;
+      border-left: 4px solid var(--blue);
+      border-radius: 5px;
+      color: #34424d;
+      background: #edf3f6;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.76rem;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    details {
+      margin-top: 10px;
+      border-top: 1px dashed rgba(32, 42, 51, 0.35);
+      padding-top: 8px;
+      font-size: 0.83rem;
+      color: #52606b;
+    }
+
+    summary { cursor: pointer; color: var(--blue); font-weight: 900; }
+
+    .architecture {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      padding: 22px;
+      border: 2px solid var(--ink);
+      border-radius: 20px;
+      background: rgba(255, 253, 247, 0.9);
+      box-shadow: var(--shadow);
+    }
+
+    .arch-card {
+      position: relative;
+      min-height: 190px;
+      padding: 18px;
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      background: var(--blue-soft);
+    }
+
+    .arch-card:nth-child(2) { background: var(--purple-soft); }
+    .arch-card:nth-child(3) { background: var(--green-soft); }
+    .arch-card:nth-child(4) { background: var(--yellow-soft); }
+    .arch-card:nth-child(5) { background: #f1e1d5; }
+    .arch-card:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      z-index: 2;
+      top: 50%;
+      right: -23px;
+      transform: translateY(-50%);
+      color: var(--ink);
+      font-size: 1.55rem;
+      font-weight: 950;
+    }
+    .arch-card__kicker { font-size: 0.72rem; font-weight: 950; letter-spacing: 0.12em; color: var(--muted); }
+    .arch-card h3 { margin: 6px 0 8px; font-size: 1.16rem; }
+    .arch-card p { margin: 0; color: #52606a; font-size: 0.87rem; }
+
+    .plan-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.65fr);
+      gap: 18px;
+    }
+
+    .plan-card, .diagnosis-card, .risk-board, .talk-track {
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      background: rgba(255, 253, 247, 0.94);
+      box-shadow: var(--shadow);
+    }
+
+    .plan-card { padding: 18px; overflow: hidden; }
+    .plan-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .plan-table th, .plan-table td { padding: 12px 10px; border-bottom: 1px dashed rgba(32, 42, 51, 0.28); text-align: left; vertical-align: top; }
+    .plan-table th { color: var(--muted); font-size: 0.78rem; letter-spacing: 0.06em; }
+    .plan-table tr:last-child td { border-bottom: 0; }
+    .plan-table td:first-child { font-weight: 900; }
+    .check { color: var(--green); font-weight: 950; }
+    .partial { color: #9a6800; font-weight: 950; }
+    .gap { color: var(--red); font-weight: 950; }
+
+    .diagnosis-card {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 22px;
+      background: var(--green-soft);
+    }
+
+    .diagnosis-card h3 { margin: 0; font-size: 1.55rem; }
+    .diagnosis-card__score {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 3.4rem;
+      line-height: 1;
+      font-weight: 950;
+      letter-spacing: -0.06em;
+    }
+    .diagnosis-card__score small { color: var(--muted); font-size: 0.9rem; letter-spacing: 0; }
+    .progress {
+      height: 16px;
+      overflow: hidden;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      background: #fffdf7;
+    }
+    .progress > span { display: block; width: 66.666%; height: 100%; background: repeating-linear-gradient(135deg, var(--green), var(--green) 12px, #4da676 12px, #4da676 24px); }
+    .diagnosis-card ul { margin: 0; padding-left: 20px; }
+    .diagnosis-card li + li { margin-top: 8px; }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      margin-top: 18px;
+      padding: 18px;
+      border: 2px solid var(--ink);
+      border-radius: 18px;
+      background: rgba(255, 253, 247, 0.9);
+      box-shadow: var(--shadow);
+    }
+
+    .milestone {
+      position: relative;
+      min-height: 150px;
+      padding: 16px 18px 10px;
+      border-top: 5px solid var(--line);
+    }
+    .milestone::before { content: ""; position: absolute; top: -11px; left: 17px; width: 16px; height: 16px; border: 3px solid var(--ink); border-radius: 50%; background: #fffdf7; }
+    .milestone.current { border-color: var(--green); background: linear-gradient(180deg, rgba(223, 242, 229, 0.75), transparent); }
+    .milestone.current::before { background: var(--green); }
+    .milestone.started { border-color: var(--yellow); }
+    .milestone h3 { margin: 6px 0 5px; }
+    .milestone p { margin: 0; color: var(--muted); font-size: 0.86rem; }
+    .milestone__date { font-size: 0.75rem; font-weight: 900; letter-spacing: 0.06em; }
+
+    .risk-board { padding: 22px; }
+    .risk-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .risk-note {
+      min-height: 185px;
+      padding: 18px;
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      background: var(--red-soft);
+    }
+    .risk-note:nth-child(2) { background: var(--yellow-soft); transform: rotate(0.35deg); }
+    .risk-note:nth-child(3) { background: var(--blue-soft); transform: rotate(-0.25deg); }
+    .risk-note h3 { margin-bottom: 8px; }
+    .risk-note ul { margin: 0; padding-left: 19px; font-size: 0.9rem; }
+    .risk-note li + li { margin-top: 6px; }
+
+    .priority-list { display: grid; gap: 10px; margin-top: 16px; }
+    .priority {
+      display: grid;
+      grid-template-columns: 68px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      padding: 13px 14px;
+      border: 1.5px solid var(--ink);
+      border-radius: 12px;
+      background: #fffdf7;
+    }
+    .priority__level { font-weight: 950; color: var(--red); }
+    .priority strong { display: block; }
+    .priority small { color: var(--muted); }
+    .priority a { color: var(--blue); font-weight: 900; text-decoration-thickness: 2px; text-underline-offset: 3px; white-space: nowrap; }
+
+    .talk-track { padding: 24px; background: var(--purple-soft); }
+    .talk-track__steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 11px; }
+    .talk-step { min-height: 140px; padding: 15px; border: 2px solid var(--ink); border-radius: var(--radius); background: #fffdf7; }
+    .talk-step b { display: block; margin-bottom: 7px; color: var(--purple); font-size: 0.78rem; letter-spacing: 0.08em; }
+    .talk-step strong { display: block; margin-bottom: 5px; }
+    .talk-step p { margin: 0; color: var(--muted); font-size: 0.84rem; }
+
+    .sources {
+      margin-top: 24px;
+      padding: 18px 20px;
+      border: 1.5px dashed rgba(32, 42, 51, 0.55);
+      border-radius: 12px;
+      color: var(--muted);
+      background: rgba(255, 253, 247, 0.7);
+      font-size: 0.82rem;
+    }
+    .sources strong { color: var(--ink); }
+    .sources p { margin: 5px 0 0; }
+
+    .presentation-mode .system-card__summary,
+    .presentation-mode .system-card h4,
+    .presentation-mode .system-card ul,
+    .presentation-mode .code-strip,
+    .presentation-mode .system-card details,
+    .presentation-mode .sources { display: none; }
+    .presentation-mode .system-card { min-height: 180px; justify-content: center; }
+    .presentation-mode .system-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .presentation-mode .loop-card { min-height: 210px; }
+
+    @media (max-width: 1180px) {
+      .stats-grid { grid-template-columns: repeat(4, 1fr); }
+      .system-grid { grid-template-columns: repeat(2, 1fr); }
+      .presentation-mode .system-grid { grid-template-columns: repeat(2, 1fr); }
+      .architecture { grid-template-columns: repeat(3, 1fr); }
+      .arch-card::after { display: none; }
+      .talk-track__steps { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 820px) {
+      .toolbar { align-items: flex-start; }
+      .toolbar__actions { justify-content: flex-end; }
+      .hero { grid-template-columns: 1fr; padding: 26px 22px; }
+      .hero__aside { grid-template-columns: 1fr; padding-left: 0; }
+      .section-heading { align-items: flex-start; flex-direction: column; }
+      .section-heading p { text-align: left; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .system-grid, .architecture, .risk-grid, .plan-layout { grid-template-columns: 1fr; }
+      .loop-board { display: flex; flex-direction: column; }
+      .arrow { width: 3px; height: 36px; align-self: center; }
+      .arrow::after { right: auto; left: 50%; top: auto; bottom: -2px; transform: translateX(-50%) rotate(135deg); }
+      .loop-board .arrow:nth-of-type(2), .loop-board .arrow:nth-of-type(3) { display: block; }
+      .spine { grid-template-columns: 1fr; }
+      .spine i { transform: rotate(90deg); }
+      .timeline { grid-template-columns: 1fr; }
+      .milestone { border-top: 0; border-left: 5px solid var(--line); }
+      .milestone::before { top: 16px; left: -11px; }
+      .talk-track__steps { grid-template-columns: 1fr 1fr; }
+      .priority { grid-template-columns: 56px 1fr; }
+      .priority a { grid-column: 2; }
+    }
+
+    @media (max-width: 560px) {
+      .toolbar__title span:last-child { display: none; }
+      .tool-button { padding: 7px 9px; font-size: 0.82rem; }
+      .board { width: min(100% - 20px, 1540px); margin-top: 18px; }
+      h1 { font-size: 2.45rem; }
+      .stats-grid, .system-grid, .talk-track__steps { grid-template-columns: 1fr; }
+      .presentation-mode .system-grid { grid-template-columns: 1fr; }
+      .stat { min-height: 120px; }
+      .plan-table thead { display: none; }
+      .plan-table tr { display: block; padding: 10px 0; border-bottom: 1px dashed rgba(32, 42, 51, 0.3); }
+      .plan-table td { display: block; padding: 4px; border: 0; }
+    }
+
+    @page { size: A3 landscape; margin: 10mm; }
+    @media print {
+      body { background: white; font-size: 10pt; }
+      .toolbar { display: none; }
+      .board { width: 100%; margin: 0; }
+      .hero, .stat, .loop-board, .system-card, .architecture, .plan-card, .diagnosis-card, .timeline, .risk-board, .talk-track { box-shadow: none; break-inside: avoid; }
+      .section { break-inside: avoid; margin-top: 8mm; }
+      .hero { grid-template-columns: 1.45fr 0.75fr; }
+      .stats-grid { grid-template-columns: repeat(7, 1fr); }
+      .system-grid { grid-template-columns: repeat(4, 1fr); }
+      .architecture { grid-template-columns: repeat(5, 1fr); }
+      .loop-board { grid-template-columns: 1fr 36px 1fr 36px 1fr 36px 0.78fr; }
+      .system-card { min-height: 0; }
+      details { display: none; }
+      a { text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="toolbar" aria-label="화이트보드 도구">
+    <div class="toolbar__title">
+      <span class="toolbar__mark" aria-hidden="true"></span>
+      <span>진행상황 화이트보드</span>
+    </div>
+    <div class="toolbar__actions">
+      <div class="filters" aria-label="시스템 상태 필터">
+        <button class="filter-button" type="button" data-filter="all" aria-pressed="true">전체</button>
+        <button class="filter-button" type="button" data-filter="done" aria-pressed="false">구현</button>
+        <button class="filter-button" type="button" data-filter="doing" aria-pressed="false">진행</button>
+        <button class="filter-button" type="button" data-filter="risk" aria-pressed="false">리스크</button>
+      </div>
+      <button class="tool-button" id="presentationToggle" type="button" aria-pressed="false">발표 모드</button>
+      <button class="tool-button" type="button" onclick="window.print()">인쇄 / PDF</button>
+    </div>
+  </header>
+
+  <main class="board">
+    <section class="hero" id="top">
+      <div>
+        <div class="eyebrow">2026. 07. 29 · Prototype D-2</div>
+        <h1>Tower and Dragons<br><span class="marker">현재 어디까지 왔나?</span></h1>
+        <p class="hero__statement">
+          낮에 건설·연구·인구·점령을 결정하고, 밤에 포탈 웨이브를 방어한 뒤 정산으로 다음 날을 만드는
+          <strong>코어 루프가 실제 플레이 흐름으로 연결</strong>되었습니다. 현재는 기능의 존재보다
+          콘텐츠 연결과 두 번째 엔딩, 용 성장의 런타임 연결을 닫는 단계입니다.
+        </p>
+        <div class="verdict"><span class="verdict__dot" aria-hidden="true"></span>판정: 프로토타입 목표는 대체로 계획대로 — 핵심 루프 작동, 마감 리스크는 명확</div>
+      </div>
+      <aside class="hero__aside" aria-label="핵심 요약">
+        <article class="hero-note">
+          <strong>CORE LOOP · 연결됨</strong>
+          <p>낮 → 밤 → 웨이브 종료 → 정산 → 다음 날</p>
+        </article>
+        <article class="hero-note">
+          <strong>UNITY · 건강함</strong>
+          <p>컴파일 오류 0 · 에디터 플레이 모드 진입/종료 확인</p>
+        </article>
+        <article class="hero-note">
+          <strong>주의 · 완주 검증 전</strong>
+          <p>28일 전체 런, 밸런스, 4포탈 봉인 엔딩은 아직 최종 검증 대상</p>
+        </article>
+      </aside>
+    </section>
+
+    <section class="section" id="evidence">
+      <div class="section-heading">
+        <h2>한눈에 보는 구현 증거</h2>
+        <p>저장소와 Unity 에디터에서 2026-07-29 기준으로 직접 확인한 수치입니다. 수치는 완성도 점수가 아니라 구현 표면의 크기를 보여줍니다.</p>
+      </div>
+      <div class="stats-grid">
+        <article class="stat"><span class="stat__value">232</span><span class="stat__label">C# 스크립트  </span><span class="stat__note">19개 주요 시스템 폴더</span></article>
+        <article class="stat"><span class="stat__value">74</span><span class="stat__label">프리팹  </span><span class="stat__note">건물·UI·포탈·적 조립</span></article>
+        <article class="stat"><span class="stat__value">187</span><span class="stat__label">데이터 에셋  </span><span class="stat__note">ScriptableObject 중심</span></article>
+        <article class="stat"><span class="stat__value">28일</span><span class="stat__label">메인 웨이브  </span><span class="stat__note">4주기 × 7일, 주기 말 보스</span></article>
+        <article class="stat"><span class="stat__value">8종</span><span class="stat__label">적 데이터  </span><span class="stat__note">지상·공중·보스·특수형</span></article>
+        <article class="stat"><span class="stat__value">27</span><span class="stat__label">연구 노드 (일부) </span><span class="stat__note">타워·생산·편의 3갈래</span></article>
+        <article class="stat"><span class="stat__value">30</span><span class="stat__label">용 성장 노드 (일부) </span><span class="stat__note">5속성 × 6노드</span></article>
+      </div>
+    </section>
+
+    <section class="section" id="loop">
+      <div class="section-heading">
+        <h2>게임 전체가 도는 방식</h2>
+        <p>“낮의 선택이 밤의 생존을 결정한다”를 하나의 이벤트 흐름으로 구현했습니다.</p>
+      </div>
+      <div class="loop-board">
+        <article class="loop-card day">
+          <span class="loop-card__number">01 · PREPARE</span>
+          <h3>낮 · 선택</h3>
+          <p>시간 제한 없이 도시와 전투 준비를 조정합니다.</p>
+          <ul>
+            <li>격자 위 건설·철거·회전·이동</li>
+            <li>생산 / 방어 / 점령 / 연구 인구 배분</li>
+            <li>원정 출격, 연구 즉시 해금</li>
+            <li>용 스킬·새끼용 운용 준비</li>
+          </ul>
+        </article>
+        <div class="arrow" aria-hidden="true"></div>
+        <article class="loop-card night">
+          <span class="loop-card__number">02 · DEFEND</span>
+          <h3>밤 · 생존</h3>
+          <p>활성 포탈의 웨이브를 자동 전투로 방어합니다.</p>
+          <ul>
+            <li>포탈별 병렬 스폰, 그룹별 순차 등장</li>
+            <li>지상 경로 이동 / 공중 직행 이동</li>
+            <li>타워 자동 타기팅·투사체·특수 적</li>
+            <li>성 파괴 시 패배, 전멸 시 밤 종료</li>
+          </ul>
+        </article>
+        <div class="arrow" aria-hidden="true"></div>
+        <article class="loop-card settle">
+          <span class="loop-card__number">03 · SETTLE</span>
+          <h3>정산 · 결과</h3>
+          <p>밤을 넘긴 결과가 경제와 확장에 반영됩니다.</p>
+          <ul>
+            <li>생산시설 자원 획득</li>
+            <li>연구 인구만큼 RP 획득</li>
+            <li>인구 식량 유지비와 기아 처리</li>
+            <li>원정 일수 진행·점령·적 강화</li>
+          </ul>
+        </article>
+        <div class="arrow" aria-hidden="true"></div>
+        <article class="loop-card next">
+          <span class="loop-card__number">04 · GROW</span>
+          <h3>다음 날</h3>
+          <p>더 강해진 도시와 더 어려워진 적이 다시 만납니다.</p>
+          <ul>
+            <li>7일마다 보스</li>
+            <li>주기마다 포탈 추가</li>
+            <li>4주기 종료 시 승리</li>
+          </ul>
+        </article>
+      </div>
+      <div class="spine" aria-label="기술 구현 연결 구조">
+        <span><b>CycleManager</b><br>단계 이벤트 발행</span><i>→</i>
+        <span><b>Coordinator</b><br>시스템 간 참조 중재</span><i>→</i>
+        <span><b>Domain Component</b><br>전투·생산·점령 실행</span><i>→</i>
+        <span><b>ScriptableObject</b><br>수치·웨이브·트리 데이터</span>
+      </div>
+    </section>
+
+    <section class="section" id="systems">
+      <div class="section-heading">
+        <h2>시스템별 구현 현황</h2>
+        <p>상단 필터로 발표에서 강조할 상태만 남길 수 있습니다. “진행”은 핵심 동작은 있으나 콘텐츠 연결이나 종료 조건이 남은 영역입니다.</p>
+      </div>
+      <div class="system-grid">
+        <article class="system-card" data-status="done">
+          <div class="system-card__top"><div><span class="system-card__index">SYSTEM 01</span><h3>격자 맵 · 건설</h3></div><span class="status status--done">통합됨</span></div>
+          <p class="system-card__summary">아이소메트릭 타일맵을 셀과 9×9 청크로 변환하고, 점령된 땅에서만 다양한 크기의 건물을 배치합니다.</p>
+          <h4>구현 기능</h4>
+          <ul>
+            <li>마우스 선택, 배치 미리보기, 회전, 철거, 이동</li>
+            <li>건물 footprint 충돌·지형·자원 노드 조건 검사</li>
+            <li>당일 철거 100%, 이후 70% 비용 환급</li>
+            <li>전장의 안개·청크 경계·점령 표시·미니맵</li>
+          </ul>
+          <div class="code-strip"><code>GridMap → BuildingPlacementController → Building / Factory / Tower</code></div>
+          <details><summary>근거 보기</summary>GridMap은 셀·청크·건물 footprint를 관리하고, BuildingPlacementController가 Input System 입력과 비용·선택·이동을 연결합니다.</details>
+        </article>
+
+        <article class="system-card" data-status="done">
+          <div class="system-card__top"><div><span class="system-card__index">SYSTEM 02</span><h3>낮/밤 · 웨이브 · 포탈</h3></div><span class="status status--done">통합됨</span></div>
+          <p class="system-card__summary">하루 이벤트와 4주기 일정을 분리해, 데이터만 교체해도 일차별 웨이브와 포탈 개방 순서를 바꿀 수 있습니다.</p>
+          <h4>구현 기능</h4>
+          <ul>
+            <li>낮 시작/종료·밤 시작/종료 이벤트</li>
+            <li>4주기×7일, 7·14·21·28일 보스 데이터</li>
+            <li>북→남→동→서 포탈 순차 활성화</li>
+            <li>모든 스폰·모든 적 전멸 판정, 취소·디버그 완료</li>
+          </ul>
+          <div class="code-strip"><code>CycleManager → WaveCycleProgression → DailyWaveController → WaveManager</code></div>
+          <details><summary>근거 보기</summary>WaveManager는 UniTask로 포탈별 스폰을 병렬 처리하고, 포탈 내부 그룹은 지연·간격 데이터에 따라 순차 처리합니다.</details>
+        </article>
+
+        <article class="system-card" data-status="doing">
+          <div class="system-card__top"><div><span class="system-card__index">SYSTEM 03</span><h3>타워 · 적 · 전투</h3></div><span class="status status--doing">콘텐츠 마감</span></div>
+          <p class="system-card__summary">타워 자동전투와 적 이동·공격의 뼈대는 연결됐고, 현재는 타워/적 변형을 추가하며 콘텐츠 폭을 넓히는 단계입니다.</p>
+          <h4>구현 기능</h4>
+          <ul>
+            <li>타원형 사거리, 최근접 타기팅, 투사체 동기화</li>
+            <li>배치 인구 비율에 따른 공격 간격 변화</li>
+            <li>타워 체력 0 → 비활성 → 지연 또는 아침 복구</li>
+            <li>지상·공중·원거리·보스·자폭·치유·감전형 데이터</li>
+          </ul>
+          <div class="code-strip"><code>TowerAttack + AttackSO/EffectSO ↔ BaseMonster + Movement/Attack/Behavior</code></div>
+          <details><summary>남은 연결</summary>이슈 #113 적 종류 추가와 #114 석궁/저격 타워가 열려 있습니다. 공중 원거리형 등 세부 콘텐츠 완료 여부는 발표 직전 재확인이 필요합니다.</details>
+        </article>
+
+        <article class="system-card" data-status="done">
+          <div class="system-card__top"><div><span class="system-card__index">SYSTEM 04</span><h3>인구 · 자원 · 생산</h3></div><span class="status status--done">핵심 작동</span></div>
+          <p class="system-card__summary">하나의 인구 풀을 네 사용처가 공유하고, 실제 투입 비율이 타워 성능·생산량·연구·원정에 영향을 줍니다.</p>
+          <h4>구현 기능</h4>
+          <ul>
+            <li>생산 / 방어 / 점령 / 연구 인구 할당</li>
+            <li>건물별 정원, 일괄 배치·해제 UI</li>
+            <li>셀 수율×인구 충원율×지역/용 버프로 생산</li>
+            <li>식량 유지비 부족 시 미배치→방어→생산→점령 순 감소</li>
+          </ul>
+          <div class="code-strip"><code>PopulationManager ↔ *PopulationCoordinator / ResourceManager ↔ Factory</code></div>
+          <details><summary>데이터 주의</summary>현재 코드는 기본 자원 3종(식량·목재·석재), 특화 4종, 속성 슬라임 5종입니다. 기획서의 기본 자원 4종과 차이가 있어 확정이 필요합니다.</details>
+        </article>
+
+        <article class="system-card" data-status="done">
+          <div class="system-card__top"><div><span class="system-card__index">SYSTEM 05</span><h3>점령 · 안개 · 난이도</h3></div><span class="status status--done">핵심 작동</span></div>
+          <p class="system-card__summary">인접한 가시 청크에 자원과 인구를 보내고 여러 밤을 버티면 땅·인구·자원 접근권을 얻는 확장 루프입니다.</p>
+          <h4>구현 기능</h4>
+          <ul>
+            <li>상하좌우 인접 조건, 여러 원정 동시 진행</li>
+            <li>지형별 소요일·비용·인구 보상 데이터</li>
+            <li>완료 시 주둔지, 주변 시야, 자원 해금</li>
+            <li>점령 가치가 해당 지형 적 강화 프로필로 누적</li>
+          </ul>
+          <div class="code-strip"><code>ConquestManager → ChunkState/Fog → EnemyEnhancementManager</code></div>
+          <details><summary>근거 보기</summary>정산 시 원정 일수를 진행하고, 완료 청크의 지형에 맞는 적 체력·공격·이동·방어막 배율을 이후 웨이브 생성에 주입합니다.</details>
+        </article>
+
+        <article class="system-card" data-status="done">
+          <div class="system-card__top"><div><span class="system-card__index">SYSTEM 06</span><h3>연구 트리</h3></div><span class="status status--done">기능 작동</span></div>
+          <p class="system-card__summary">연구소 인구가 밤마다 RP를 만들고, 낮에 RP와 자원을 소비해 3갈래 노드를 즉시 해금합니다.</p>
+          <h4>구현 기능</h4>
+          <ul>
+            <li>타워 / 생산 / 편의 3갈래, 27개 노드</li>
+            <li>선행 노드·주기별 티어·비용·낮 단계 검증</li>
+            <li>타워 피해 배율·청크 수율·자원 해금 효과</li>
+            <li>확대/축소 가능한 트리와 상세 패널 UI</li>
+          </ul>
+          <div class="code-strip"><code>ResearchLab → RP settlement → ResearchManager → ResearchEffectSO</code></div>
+          <details><summary>구현 방식</summary>공용 진행 규칙과 별도로 ResearchManager가 RP 비용과 연구 전용 효과를 책임집니다. 수치와 트리 연결은 ScriptableObject에 분리되어 있습니다.</details>
+        </article>
+
+        <article class="system-card" data-status="doing">
+          <div class="system-card__top"><div><span class="system-card__index">SYSTEM 07</span><h3>어미용 · 새끼용</h3></div><span class="status status--doing">연결 진행</span></div>
+          <p class="system-card__summary">5속성 성장 데이터와 UI, 액티브 스킬 기반, 새끼용 설치·급식·버프는 존재하지만 획득과 트리→전투 연결이 남았습니다.</p>
+          <h4>구현 기능</h4>
+          <ul>
+            <li>5속성×6노드 = 30개 용 성장 노드</li>
+            <li>즉시/지점/적 대상 액티브 스킬 타기팅</li>
+            <li>새끼용 5속성 데이터·인벤토리·설치</li>
+            <li>매일 슬라임 급식, 범위 내 생산시설 버프</li>
+          </ul>
+          <div class="code-strip"><code>DragonTreeManager · SkillManager · DragonEggInventory · BabyDragonBuff</code></div>
+          <details><summary>남은 연결</summary>이슈 #75 어미용 스킬트리와 #102 새끼용 획득·데이터 연동이 열려 있습니다. 코드에도 해금 스킬과 SkillManager 연결을 후속 범위로 명시합니다.</details>
+        </article>
+
+        <article class="system-card" data-status="risk">
+          <div class="system-card__top"><div><span class="system-card__index">SYSTEM 08</span><h3>UI · 승패 · 엔딩</h3></div><span class="status status--risk">한 갈래 미완</span></div>
+          <p class="system-card__summary">인게임 HUD와 주요 창, 성 파괴 패배, 최종 웨이브 승리는 연결됐습니다. 전략적 확장 엔딩은 아직 열린 작업입니다.</p>
+          <h4>구현 기능</h4>
+          <ul>
+            <li>자원·인구·일차·보스 진행·성 HP HUD</li>
+            <li>건설·점령·새끼용·연구·용 스킬 창</li>
+            <li>메인 성 파괴 → Game Over</li>
+            <li>4주기 완료 → Victory Window</li>
+          </ul>
+          <div class="code-strip"><code>UIManager / UI_*Window ↔ GameManager.GameOver() / Victory()</code></div>
+          <details><summary>남은 연결</summary>이슈 #106 “4포탈 봉인석 트랙”이 열려 있어, 현재 승리 조건은 최종 보스 트랙 중심입니다. 하루 자원량 UI와 스트링테이블 연결도 남았습니다.</details>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="architecture">
+      <div class="section-heading">
+        <h2>구현 방식</h2>
+        <p>데이터와 실행 로직을 분리하고, 매니저끼리 직접 얽히는 대신 이벤트와 Coordinator로 연결했습니다.</p>
+      </div>
+      <div class="architecture">
+        <article class="arch-card"><span class="arch-card__kicker">INPUT / VIEW</span><h3>플레이어 조작과 UI</h3><p>Input System과 UI 창이 “무엇을 할지” 요청하고, 실제 규칙 판정은 도메인 시스템에 맡깁니다.</p></article>
+        <article class="arch-card"><span class="arch-card__kicker">FLOW</span><h3>사이클과 진행 매니저</h3><p>낮/밤, 웨이브, 연구, 점령의 현재 상태와 전환 시점을 책임집니다.</p></article>
+        <article class="arch-card"><span class="arch-card__kicker">DOMAIN</span><h3>조립형 컴포넌트</h3><p>적은 Health·Shield·Movement·Attack·Behavior를, 건물은 역할 컴포넌트를 조합합니다.</p></article>
+        <article class="arch-card"><span class="arch-card__kicker">DATA</span><h3>ScriptableObject</h3><p>적·공격·웨이브·타워·생산·연구·용 성장의 수치와 연결을 에셋으로 관리합니다.</p></article>
+        <article class="arch-card"><span class="arch-card__kicker">COORDINATION</span><h3>이벤트와 중재자</h3><p>UnityEvent와 Coordinator가 시스템 변경을 전달해 Grid·Population·Resource 간 결합을 줄입니다.</p></article>
+      </div>
+    </section>
+
+    <section class="section" id="plan">
+      <div class="section-heading">
+        <h2>계획 대비 진행 진단</h2>
+        <p>기획종합 v2의 프로토타입 목표와 현재 구현을 직접 매핑했습니다.</p>
+      </div>
+      <div class="plan-layout">
+        <div class="plan-card">
+          <table class="plan-table">
+            <thead><tr><th>프로토타입 목표 (7/8–7/31)</th><th>현재 상태</th><th>판정 근거</th></tr></thead>
+            <tbody>
+              <tr><td>격자 맵 · 카메라</td><td class="check">완료</td><td>청크/안개/미니맵과 배치 입력까지 연결</td></tr>
+              <tr><td>낮 / 밤 전환</td><td class="check">완료</td><td>단계 이벤트와 조명·웨이브·정산 구독 구조</td></tr>
+              <tr><td>타워 배치 · 자동전투</td><td class="check">완료</td><td>비용·회전·철거·타기팅·투사체·복구</td></tr>
+              <tr><td>적 스폰 · 이동</td><td class="check">완료</td><td>4포탈, 지상 spline, 공중 직행, 28일 데이터</td></tr>
+              <tr><td>성 체력 · 승패 판정</td><td class="partial">주요 트랙 완료</td><td>성 파괴 패배와 최종 주기 승리 구현; 봉인 엔딩 미완</td></tr>
+              <tr><td>인구 배분</td><td class="check">완료</td><td>생산·방어·점령·연구 네 사용처와 UI</td></tr>
+              <tr><td>점령</td><td class="check">완료</td><td>비용·소요일·보상·안개·주둔지·적 강화</td></tr>
+              <tr><td>자원 생산 · 저장</td><td class="partial">작동 / 기준 확인</td><td>생산과 저장은 작동, 기본 자원 4종 기획 vs 코드 3종 불일치</td></tr>
+              <tr><td>어미용 스킬</td><td class="partial">부분 완료</td><td>액티브 스킬 기반·UI 존재, 성장 트리 런타임 연결 진행</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <aside class="diagnosis-card">
+          <span class="status status--doing">GitHub “알파 빌드” 이슈</span>
+          <h3>14 / 21 완료</h3>
+          <div class="diagnosis-card__score">67% <small>이슈 종료율</small></div>
+          <div class="progress" aria-label="알파 빌드 이슈 67퍼센트 완료"><span></span></div>
+          <ul>
+            <li><strong>Build 1:</strong> 26/26 완료</li>
+            <li><strong>Build 2:</strong> 25/25 완료</li>
+            <li><strong>현재:</strong> 7개 열린 작업</li>
+            <li><strong>주의:</strong> 기획서는 7/31까지 “프로토타입”, GitHub는 같은 날짜를 “알파 빌드”로 표기 — 명칭과 일정 기준 통일 필요</li>
+          </ul>
+        </aside>
+      </div>
+
+      <div class="timeline" aria-label="프로젝트 마일스톤">
+        <article class="milestone current"><span class="milestone__date">7/8 — 7/31</span><h3>프로토타입 · 현재</h3><p>코어 루프 재미 검증. 핵심 시스템은 연결됐고 콘텐츠·엔딩 마감을 진행 중.</p></article>
+        <article class="milestone started"><span class="milestone__date">8/3 — 8/14</span><h3>알파 · 일부 선행</h3><p>연구 27노드, 용 30노드, 28일 웨이브 등 알파 범위 상당 부분이 이미 착수됨.</p></article>
+        <article class="milestone"><span class="milestone__date">8/17 — 8/28</span><h3>베타</h3><p>UI 완성도, 밸런스, 연출·사운드, 튜토리얼과 편의 기능.</p></article>
+        <article class="milestone"><span class="milestone__date">8/31 — 9/3</span><h3>폴리싱</h3><p>버그 수정·QA·최종 Windows 빌드와 제출.</p></article>
+      </div>
+    </section>
+
+    <section class="section" id="risks">
+      <div class="section-heading">
+        <h2>지금 남은 리스크와 다음 순서</h2>
+        <p>발표에서는 “무엇이 안 됐나”보다 “무엇을 닫으면 다음 단계로 넘어가는가”로 설명하면 좋습니다.</p>
+      </div>
+      <div class="risk-board">
+        <div class="risk-grid">
+          <article class="risk-note">
+            <h3>① 기능 연결</h3>
+            <ul>
+              <li>어미용 성장 노드 → 실제 스킬 해금 연결</li>
+              <li>새끼용 획득 경로와 데이터 연동</li>
+              <li>4포탈 봉인석 승리 트랙</li>
+            </ul>
+          </article>
+          <article class="risk-note">
+            <h3>② 기획 기준 동기화</h3>
+            <ul>
+              <li>기본 자원: 기획 4종 vs 코드 3종</li>
+              <li>주기 일수: 기획 [미정] vs 데이터 7일</li>
+              <li>특화 자원 이름: 기획 [미정] vs 임시 에셋명</li>
+              <li>프로토타입/알파 마일스톤 명칭 불일치</li>
+            </ul>
+          </article>
+          <article class="risk-note">
+            <h3>③ 검증 범위</h3>
+            <ul>
+              <li>컴파일·플레이 진입은 정상</li>
+              <li>28일 전체 완주 회귀 테스트는 미실시</li>
+              <li>경제·웨이브 밸런스와 재미 검증 필요</li>
+              <li>사운드·튜토리얼·최종 연출은 후속 단계</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="priority-list" aria-label="다음 작업 우선순위">
+          <div class="priority"><span class="priority__level">P0</span><div><strong>프로토타입 완주 경로 닫기</strong><small>어미용 스킬 연결 · 새끼용 획득 · 4포탈 봉인 중 발표 범위 확정</small></div><a href="https://github.com/JoKangHyeon/TowerAndDragon/issues/75">#75</a></div>
+          <div class="priority"><span class="priority__level">P0</span><div><strong>SSOT 결정 3건</strong><small>기본 자원 수 · 주기당 일수 · 특화 자원명은 임의 확정하지 않고 팀 확인</small></div><span class="status status--risk">결정 필요</span></div>
+          <div class="priority"><span class="priority__level">P1</span><div><strong>발표용 통합 시연 체크리스트</strong><small>건설→인구→점령→밤→정산→연구→보스→승패 순서로 짧은 런 검증</small></div><span class="status status--doing">다음</span></div>
+          <div class="priority"><span class="priority__level">P1</span><div><strong>UI 정보 완결</strong><small>하루 자원량 표시와 스트링테이블 연결</small></div><a href="https://github.com/JoKangHyeon/TowerAndDragon/issues/97">#97</a></div>
+          <div class="priority"><span class="priority__level">P2</span><div><strong>콘텐츠 폭 확장</strong><small>적·타워 종류 추가는 코어 루프 안정화 뒤 병렬 진행</small></div><a href="https://github.com/JoKangHyeon/TowerAndDragon/issues/113">#113</a></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="talk-track">
+      <div class="section-heading">
+        <h2>7분 발표 흐름</h2>
+        <p>이 보드를 위에서 아래로 따라가면 설명이 자연스럽게 이어집니다.</p>
+      </div>
+      <div class="talk-track">
+        <div class="talk-track__steps">
+          <article class="talk-step"><b>00:00 — 00:40</b><strong>결론 먼저</strong><p>코어 루프는 연결됐고, 지금은 마감 연결 단계라고 선언.</p></article>
+          <article class="talk-step"><b>00:40 — 01:30</b><strong>게임 한 바퀴</strong><p>낮 선택 → 밤 방어 → 정산 → 성장의 인과관계 설명.</p></article>
+          <article class="talk-step"><b>01:30 — 04:10</b><strong>구현 기능</strong><p>8개 시스템 카드를 훑고 용·인구·점령의 차별점 강조.</p></article>
+          <article class="talk-step"><b>04:10 — 05:00</b><strong>구현 방식</strong><p>SO 데이터와 조립형 컴포넌트, 이벤트 연결 구조 설명.</p></article>
+          <article class="talk-step"><b>05:00 — 06:10</b><strong>일정 진단</strong><p>Build 1/2 완료와 현재 14/21, 알파 범위 선행을 근거로 제시.</p></article>
+          <article class="talk-step"><b>06:10 — 07:00</b><strong>다음 액션</strong><p>열린 7개 작업과 SSOT 결정·완주 테스트 순서를 제시.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <footer class="sources">
+      <strong>확인 기준</strong>
+      <p>기획: Docs/기획종합_v2.md · 구현: Assets/Scripts, Assets/Data, Assets/Prefabs, Assets/Scenes · 일정: GitHub Issues/Milestones · 건강 상태: Unity 6000.3.15f1 Coplay 컴파일 오류 0 및 플레이 모드 진입/종료 확인 · 점검 시각: 2026-07-29 (Asia/Seoul)</p>
+      <p>표기 원칙: 기획서의 [미정] 항목은 코드에 임시 데이터가 있어도 확정으로 보지 않았습니다. 28일 전체 플레이 완주와 밸런스는 별도 QA가 필요합니다.</p>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const filterButtons = [...document.querySelectorAll("[data-filter]")];
+      const cards = [...document.querySelectorAll(".system-card[data-status]")];
+      const presentationToggle = document.getElementById("presentationToggle");
+
+      filterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const filter = button.dataset.filter;
+          filterButtons.forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+          cards.forEach((card) => {
+            card.classList.toggle("is-dimmed", filter !== "all" && card.dataset.status !== filter);
+          });
+        });
+      });
+
+      presentationToggle.addEventListener("click", () => {
+        const enabled = document.body.classList.toggle("presentation-mode");
+        presentationToggle.setAttribute("aria-pressed", String(enabled));
+        presentationToggle.textContent = enabled ? "상세 모드" : "발표 모드";
+      });
+    })();
+  </script>
+</body>
+</html>
