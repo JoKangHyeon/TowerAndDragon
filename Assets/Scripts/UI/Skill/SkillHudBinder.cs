@@ -60,7 +60,6 @@ public class SkillHudBinder : MonoBehaviour
 
     public void HideAll()
     {
-        Debug.Log("HIDE");
         foreach(UI_SkillIndicator indicator in _indicators)
         {
             indicator.gameObject.SetActive(false);
@@ -69,7 +68,6 @@ public class SkillHudBinder : MonoBehaviour
 
     public void ShowAll()
     {
-        Debug.Log("SHOW");
         foreach (UI_SkillIndicator indicator in _indicators)
         {
             indicator.ShowIfBinded();
