@@ -20,12 +20,24 @@ public class TowerAttack : MonoBehaviour
     private AttackSO Attack => _towerData.Attack;
 
     // 판정(브로드페이즈·정밀 타원)과 표시(사거리 원)가 반드시 같은 값을 봐야 하므로
-    // Attack.Range를 직접 읽는 모든 지점을 이 프로퍼티 하나로 통일한다.
-    public float EffectiveRange => Attack.Range * RangeMultiplier;
+    // 런타임 공격과 아직 Awake가 실행되지 않은 설치 프리팹이 아래 계산식을 공유한다.
+    public float EffectiveRange => CalculateEffectiveRange(_towerData, _statMultiplierQuery);
 
-    private float RangeMultiplier => _statMultiplierQuery != null
-        ? _statMultiplierQuery.GetRangeMultiplier(_towerData)
-        : 1f;
+    public static float CalculateEffectiveRange(
+        TowerData towerData,
+        ITowerStatMultiplierQuery statMultiplierQuery)
+    {
+        if (towerData == null || !towerData.CanAttack)
+        {
+            return 0f;
+        }
+
+        float rangeMultiplier = statMultiplierQuery != null
+            ? statMultiplierQuery.GetRangeMultiplier(towerData)
+            : 1f;
+
+        return towerData.Attack.Range * rangeMultiplier;
+    }
 
     private float AttackSpeedMultiplier => _statMultiplierQuery != null
         ? _statMultiplierQuery.GetAttackSpeedMultiplier(_towerData)

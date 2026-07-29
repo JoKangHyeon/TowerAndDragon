@@ -43,11 +43,16 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private RangeIndicator _rangeIndicator;
 
+    [Tooltip("설치 미리보기 사거리에 현재 연구 등의 배율을 반영할 합성기. 비어 있으면 씬에서 자동으로 찾는다.")]
+    [SerializeField]
+    private TowerStatMultiplierComposite _towerStatMultiplierComposite;
+
     [Tooltip("새끼용 배치/이동 미리보기 중 버프 반경을 타원으로 표시할 인디케이터. 공격 사거리와 별개 원이라 서로 다른 색으로 구분해둘 것.")]
     [SerializeField]
     private RangeIndicator _buffRangeIndicator;
 
     private Camera _cam;
+    private bool _hasResolvedTowerStatMultiplierComposite;
     private ComponentPool<SpriteRenderer> _selectionHighlightPool;
     private ComponentPool<SpriteRenderer> _occupiedHighlightPool;
     private ComponentPool<SpriteRenderer> _conquestHighlightPool;
@@ -105,6 +110,14 @@ public class MouseSelectController : MonoBehaviour
     {
         if (_cam == null)
             _cam = Camera.main;
+
+        if (!_hasResolvedTowerStatMultiplierComposite)
+        {
+            if (_towerStatMultiplierComposite == null)
+                _towerStatMultiplierComposite = FindFirstObjectByType<TowerStatMultiplierComposite>();
+
+            _hasResolvedTowerStatMultiplierComposite = true;
+        }
 
         if (_selectionHighlightPool != null &&
             _occupiedHighlightPool != null &&
@@ -427,15 +440,17 @@ public class MouseSelectController : MonoBehaviour
             return;
 
         if (!(_selectedBuildingRef is Tower tower) ||
+            tower is BabyDragonTower ||
             tower.Data == null ||
-            !tower.Data.CanAttack ||
-            tower.Attack == null)
+            !tower.Data.CanAttack)
         {
             _rangeIndicator.Hide();
             return;
         }
 
-        float radiusX = tower.Attack.EffectiveRange;
+        float radiusX = TowerAttack.CalculateEffectiveRange(
+            tower.Data,
+            _towerStatMultiplierComposite);
         float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
 
         _rangeIndicator.SetCenter(center);
