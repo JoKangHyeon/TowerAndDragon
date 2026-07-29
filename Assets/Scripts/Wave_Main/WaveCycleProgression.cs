@@ -11,6 +11,7 @@ public class WaveCycleProgression : MonoBehaviour
     [SerializeField] private UnityEvent<int> _cycleStarted = new UnityEvent<int>();
     [SerializeField] private UnityEvent<int> _cycleCompleted = new UnityEvent<int>();
     [SerializeField] private UnityEvent _allCyclesCompleted = new UnityEvent();
+    [SerializeField] private UnityEvent<int> _dayWaveResolved = new UnityEvent<int>();
 
     public bool HasCurrentSnapshot { get; private set; }
     public WaveCycleSnapshot CurrentSnapshot { get; private set; }
@@ -26,6 +27,12 @@ public class WaveCycleProgression : MonoBehaviour
     public UnityEvent<int> CycleStarted => _cycleStarted;
     public UnityEvent<int> CycleCompleted => _cycleCompleted;
     public UnityEvent AllCyclesCompleted => _allCyclesCompleted;
+
+    /// <summary>
+    /// 오늘 일차의 스냅샷(웨이브 편성·주기)이 확정된 뒤 발행된다.
+    /// CycleStarted보다 뒤에 발행되므로 구독자는 Portal.IsActive가 갱신된 상태를 본다.
+    /// </summary>
+    public UnityEvent<int> DayWaveResolved => _dayWaveResolved;
 
     private void OnEnable()
     {
@@ -97,6 +104,8 @@ public class WaveCycleProgression : MonoBehaviour
         {
             _cycleStarted?.Invoke(nextSnapshot.CycleNumber);
         }
+
+        _dayWaveResolved?.Invoke(currentDay);
     }
 
     private void HandleNightEnd(int currentDay)
