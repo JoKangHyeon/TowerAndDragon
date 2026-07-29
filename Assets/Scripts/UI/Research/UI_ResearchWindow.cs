@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // 연구 창 - ResearchTree.asset의 노드 전체(3갈래 × 5티어)를 한 화면에 격자로 배치한다.
@@ -62,6 +63,9 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private Color _edgeLockedColor = new Color(0.169f, 0.184f, 0.220f, 0.8f);
     [SerializeField] private Color _tierLabelUnlockedColor = new Color(0.788f, 0.800f, 0.827f);
     [SerializeField] private Color _tierLabelLockedColor = new Color(0.482f, 0.506f, 0.557f, 0.6f);
+
+    [Header("Keys")]
+    [SerializeField] private InputActionReference _closeAction;
 
     private static readonly ResearchBranch[] BRANCHES_IN_ORDER =
         (ResearchBranch[])Enum.GetValues(typeof(ResearchBranch));
@@ -129,6 +133,11 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         {
             _cycleProgression.CycleStarted.AddListener(HandleCycleProgressed);
         }
+
+        if (_closeAction != null)
+        {
+            _closeAction.action.performed += OnCloseActionPerformed;
+        }
     }
 
     private void OnDisable()
@@ -154,6 +163,16 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         {
             _cycleProgression.CycleStarted.RemoveListener(HandleCycleProgressed);
         }
+
+        if (_closeAction != null)
+        {
+            _closeAction.action.performed -= OnCloseActionPerformed;
+        }
+    }
+
+    public void OnCloseActionPerformed(InputAction.CallbackContext context)
+    {
+        Close();
     }
 
     public void Open()

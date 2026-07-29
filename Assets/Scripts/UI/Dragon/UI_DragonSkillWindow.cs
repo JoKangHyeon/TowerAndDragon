@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // 용 스킬트리 창 - DragonSkillTree.asset을 순회해 30노드+30엣지를 방사형으로 런타임 배치하고,
@@ -38,6 +39,9 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
     [Header("Colors")]
     // 속성 색은 DragonAttributePalette가 단일 출처다(창마다 따로 지정하면 값이 어긋난다).
     [SerializeField] private Color _edgeLockedColor = new Color(0.2f, 0.18f, 0.16f, 0.6f);
+
+    [Header("Keys")]
+    [SerializeField] private InputActionReference _closeAction;
 
     private static readonly DragonType[] ATTRIBUTES_IN_ORDER =
         (DragonType[])Enum.GetValues(typeof(DragonType));
@@ -82,24 +86,35 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
 
     private void OnEnable()
     {
-        if (_dragonTreeManager == null)
+        if (_dragonTreeManager != null)
         {
-            return;
+            _dragonTreeManager.NodeUnlocked.AddListener(HandleNodeUnlocked);
+            _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleActiveAttributeChanged);
         }
 
-        _dragonTreeManager.NodeUnlocked.AddListener(HandleNodeUnlocked);
-        _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleActiveAttributeChanged);
+        if(_closeAction != null)
+        {
+            _closeAction.action.performed += OnCloseActionPerformed;
+        }
     }
 
     private void OnDisable()
     {
-        if (_dragonTreeManager == null)
+        if (_dragonTreeManager != null)
         {
-            return;
+            _dragonTreeManager.NodeUnlocked.RemoveListener(HandleNodeUnlocked);
+            _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleActiveAttributeChanged);
         }
 
-        _dragonTreeManager.NodeUnlocked.RemoveListener(HandleNodeUnlocked);
-        _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleActiveAttributeChanged);
+        if (_closeAction != null)
+        {
+            _closeAction.action.performed -= OnCloseActionPerformed;
+        }
+    }
+
+    public void OnCloseActionPerformed(InputAction.CallbackContext context)
+    {
+        Close();
     }
 
     public void Open()
