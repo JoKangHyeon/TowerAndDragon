@@ -20,7 +20,7 @@ public sealed class PortalSealManager : MonoBehaviour, ISealStonePlacementQuery
     private readonly HashSet<PortalDirection> _stonesBuiltAt = new();
 
     // ISealStonePlacementQuery.IsUnlocked 구현 - UnlockQuery가 비어있으면 해금된 것으로 취급.
-    public bool IsUnlocked(int order) => UnlockQuery == null || UnlockQuery.IsUnlocked(order);
+    public bool IsUnlocked => UnlockQuery == null || UnlockQuery.IsSealStoneUnlocked;
 
     public int BuiltCount => _stonesBuiltAt.Count;
 

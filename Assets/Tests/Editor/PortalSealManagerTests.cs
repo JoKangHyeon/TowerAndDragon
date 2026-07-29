@@ -143,22 +143,17 @@ public class PortalSealManagerTests
     }
 
     [Test]
-    public void IsUnlocked_NoUnlockQueryAssigned_ReturnsTrueForAnyOrder()
+    public void IsUnlocked_NoUnlockQueryAssigned_ReturnsTrue()
     {
-        Assert.That(_manager.IsUnlocked(1), Is.True);
-        Assert.That(_manager.IsUnlocked(4), Is.True);
+        Assert.That(_manager.IsUnlocked, Is.True);
     }
 
-    // 봉인석은 1~4차 순서로만 해금되므로, 낮은 차수만 풀리고 높은 차수는 아직 안 풀린 상태를 검증한다.
     [Test]
-    public void IsUnlocked_UnlockQueryStubUnlocksUpToOrderTwo_ReturnsTrueOnlyUpToThatOrder()
+    public void IsUnlocked_UnlockQueryStubReturnsFalse_ReturnsFalse()
     {
-        _manager.UnlockQuery = new StubUnlockQuery(unlockedUpToOrder: 2);
+        _manager.UnlockQuery = new StubUnlockQuery(false);
 
-        Assert.That(_manager.IsUnlocked(1), Is.True);
-        Assert.That(_manager.IsUnlocked(2), Is.True);
-        Assert.That(_manager.IsUnlocked(3), Is.False);
-        Assert.That(_manager.IsUnlocked(4), Is.False);
+        Assert.That(_manager.IsUnlocked, Is.False);
     }
 
     private Portal CreatePortal(string name)
@@ -177,8 +172,8 @@ public class PortalSealManagerTests
 
     private sealed class StubUnlockQuery : ISealStoneUnlockQuery
     {
-        private readonly int _unlockedUpToOrder;
-        public StubUnlockQuery(int unlockedUpToOrder) => _unlockedUpToOrder = unlockedUpToOrder;
-        public bool IsUnlocked(int order) => order <= _unlockedUpToOrder;
+        private readonly bool _isUnlocked;
+        public StubUnlockQuery(bool isUnlocked) => _isUnlocked = isUnlocked;
+        public bool IsSealStoneUnlocked => _isUnlocked;
     }
 }

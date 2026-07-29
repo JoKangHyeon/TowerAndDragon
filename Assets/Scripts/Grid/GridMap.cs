@@ -752,14 +752,13 @@ public class GridMap : MonoBehaviour
     public bool CanConstructBuildingFootprint(List<Vector3Int> footprint, Building building, Building ignoreBuilding) =>
         building is Factory factory
             ? CanConstructResourceFootprint(footprint, factory.RequiredResourceNode, ignoreBuilding)
-            : building is SealStone sealStone
-                ? CanConstructSealStoneFootprint(footprint, sealStone, ignoreBuilding)
+            : building is SealStone
+                ? CanConstructSealStoneFootprint(footprint, ignoreBuilding)
                 : CanConstructFootPrint(footprint, ignoreBuilding);
 
     // 봉인석 전용 배치 판정 - CanConstructResourceFootprint와 동일한 구조(기본 풋프린트 게이트 위에
     // 건물별 추가 조건을 얹는다). 포탈 봉인 영역 소속 + 아직 그 포탈에 봉인석이 없음 + 연구 해금을 모두 요구한다.
-    // 해금 여부는 봉인석마다 차수(sealStone.Data.Order)가 달라 이 인스턴스를 직접 받아야 한다.
-    private bool CanConstructSealStoneFootprint(List<Vector3Int> footprint, SealStone sealStone, Building ignoreBuilding)
+    private bool CanConstructSealStoneFootprint(List<Vector3Int> footprint, Building ignoreBuilding)
     {
         if (!CanConstructFootPrint(footprint, ignoreBuilding)) // 지형 · 점유 · 청크 점령
             return false;
@@ -772,7 +771,7 @@ public class GridMap : MonoBehaviour
         if (!SealStonePlacementQuery.TryResolveOpenSite(footprint, out _))
             return false;
 
-        return sealStone.Data != null && SealStonePlacementQuery.IsUnlocked(sealStone.Data.Order);
+        return SealStonePlacementQuery.IsUnlocked;
     }
 
     // 단일 셀이 봉인석 영역에 속하는지 외부에서 조회할 수 있도록 공개한 버전

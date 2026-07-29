@@ -15,7 +15,6 @@ public interface ISealStonePlacementQuery
     // 반환값 true + direction: footprint 전체가 같은 포탈 영역 안에 있고 아직 그 포탈에 봉인석이 없음.
     bool TryResolveOpenSite(List<Vector3Int> footprint, out PortalDirection direction);
 
-    // 연구 해금 상태 - 봉인석은 차수(SealStoneData.Order)별로 해금되므로 차수를 받는다.
-    // ISealStoneUnlockQuery가 null이면 여기서도 true(해금됨)로 접힌다.
-    bool IsUnlocked(int order);
+    // 연구 해금 상태 - ISealStoneUnlockQuery가 null이면 여기서도 true(해금됨)로 접힌다.
+    bool IsUnlocked { get; }
 }
