@@ -49,7 +49,7 @@ public class UI_ConquestWindow : MonoBehaviour
     [SerializeField]
     private Transform _rewardSlotContainer;
 
-    [Tooltip("인구 보상 슬롯 아이콘. 인구는 자원이 아니라 ResourceData가 없어 별도 지정한다.")]
+    [Tooltip("인구 아이콘(비용/보상 슬롯 공용). 인구는 자원이 아니라 ResourceData가 없어 별도 지정한다.")]
     [SerializeField]
     private Sprite _populationIcon;
 
@@ -341,7 +341,11 @@ public class UI_ConquestWindow : MonoBehaviour
         if (_resourceCostSlotPrefab == null || _resourceSlotContainer == null)
             return;
 
-        // 인구 비용은 인구 시스템 도입 전까지 표시하지 않는다(자원 비용만 표시).
+        if (cost.Population > 0)
+        {
+            SpawnResourceCostSlot(_populationIcon, Color.white, held.Population, cost.Population);
+        }
+
         (ResourceType Type, int Held, int Required)[] entries =
         {
             (ResourceType.Food, held.Food, cost.Food),
@@ -354,13 +358,18 @@ public class UI_ConquestWindow : MonoBehaviour
             if (requiredAmount <= 0)
                 continue;
 
-            Color textColor = heldAmount < requiredAmount ? _insufficientColor : _sufficientColor;
-            string countText = string.Format(HELD_OVER_REQUIRED_FORMAT, heldAmount, requiredAmount);
-
-            UI_ResourceCostSlot slot = Instantiate(_resourceCostSlotPrefab, _resourceSlotContainer);
-            slot.Setup(ResolveResourceIcon(type), DragonAttributePalette.TintFor(type), countText, textColor);
-            _spawnedResourceSlots.Add(slot);
+            SpawnResourceCostSlot(ResolveResourceIcon(type), DragonAttributePalette.TintFor(type), heldAmount, requiredAmount);
         }
+    }
+
+    private void SpawnResourceCostSlot(Sprite icon, Color iconColor, int heldAmount, int requiredAmount)
+    {
+        Color textColor = heldAmount < requiredAmount ? _insufficientColor : _sufficientColor;
+        string countText = string.Format(HELD_OVER_REQUIRED_FORMAT, heldAmount, requiredAmount);
+
+        UI_ResourceCostSlot slot = Instantiate(_resourceCostSlotPrefab, _resourceSlotContainer);
+        slot.Setup(icon, iconColor, countText, textColor);
+        _spawnedResourceSlots.Add(slot);
     }
 
     // 이전에 생성된 보상 슬롯을 지우고 다시 생성한다.
