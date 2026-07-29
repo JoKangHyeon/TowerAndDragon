@@ -29,6 +29,11 @@ public class GridMap : MonoBehaviour
     // 청크 단위 생산량 배율 조회 - 연구 시스템이 없는 씬에서는 null로 두면 기본 배율 1을 적용한다.
     public IChunkYieldMultiplierQuery YieldMultiplierQuery { get; set; }
 
+    // 봉인석 배치 판정 조회 - PortalSealManager가 Awake에 자신을 등록한다.
+    // null이면 봉인석을 어디에도 지을 수 없다(fail-closed) - 영역을 모르는 채 아무데나 짓게 두면 안 되기 때문
+    // (해금 여부의 null 기본값이 fail-open인 것과 방향이 반대이며, 의도된 것이다).
+    public ISealStonePlacementQuery SealStonePlacementQuery { get; set; }
+
     // 전체 맵
     private Dictionary<Vector3Int, GridCell> _cells = new();
 
@@ -473,6 +478,34 @@ public class GridMap : MonoBehaviour
             OnChunkStateChanged?.Invoke();
     }
 
+    // [테스트/일괄 처리 전용] 여러 청크의 상태를 한 번에 바꾼다.
+    // SetChunkState를 청크마다 호출하면 OnChunkStateChanged 구독자(청크 테두리 렌더러 등)가
+    // 매번 맵 전체를 다시 훑어 재계산하므로 청크 수가 많을 때 사실상 O(N^2)이 되어 프레임이 멈춘다.
+    // 여기서는 상태만 먼저 전부 바꾸고, 점령 집합에 영향을 준 경우에 한해 이벤트를 마지막에 한 번만 쏜다.
+    public void SetChunkStatesBulk(IReadOnlyList<Vector2Int> chunkCoords, ChunkState newState)
+    {
+        bool affectsConqueredSet = false;
+
+        foreach (Vector2Int chunkCoord in chunkCoords)
+        {
+            if (!_chunks.TryGetValue(chunkCoord, out Chunk chunk))
+                continue;
+
+            ChunkState previousState = chunk.CurrentState;
+            chunk.SetState(newState);
+
+            foreach (GridCell cell in chunk.Cells)
+            {
+                OnCellChanged?.Invoke(cell);
+            }
+
+            affectsConqueredSet |= previousState == ChunkState.Conquered || newState == ChunkState.Conquered;
+        }
+
+        if (affectsConqueredSet)
+            OnChunkStateChanged?.Invoke();
+    }
+
     public void SetChunkState(Vector3Int cellCoord, ChunkState newState)
     {
         Chunk chunk = GetChunkAt(cellCoord);
@@ -747,7 +780,33 @@ public class GridMap : MonoBehaviour
     public bool CanConstructBuildingFootprint(List<Vector3Int> footprint, Building building, Building ignoreBuilding) =>
         building is Factory factory
             ? CanConstructResourceFootprint(footprint, factory.RequiredResourceNode, ignoreBuilding)
-            : CanConstructFootPrint(footprint, ignoreBuilding);
+            : building is SealStone sealStone
+                ? CanConstructSealStoneFootprint(footprint, sealStone, ignoreBuilding)
+                : CanConstructFootPrint(footprint, ignoreBuilding);
+
+    // 봉인석 전용 배치 판정 - CanConstructResourceFootprint와 동일한 구조(기본 풋프린트 게이트 위에
+    // 건물별 추가 조건을 얹는다). 포탈 봉인 영역 소속 + 아직 그 포탈에 봉인석이 없음 + 연구 해금을 모두 요구한다.
+    // 해금 여부는 봉인석마다 차수(sealStone.Data.Order)가 달라 이 인스턴스를 직접 받아야 한다.
+    private bool CanConstructSealStoneFootprint(List<Vector3Int> footprint, SealStone sealStone, Building ignoreBuilding)
+    {
+        if (!CanConstructFootPrint(footprint, ignoreBuilding)) // 지형 · 점유 · 청크 점령
+            return false;
+
+        if (SealStonePlacementQuery == null) // fail-closed - 영역을 모르는 채 배치를 허용하지 않는다
+            return false;
+
+        // "같은 포탈 영역 안" + "그 포탈에 아직 봉인석 없음"을 한 번에 판정 - 두 조건을 따로 조회하면
+        // 서로 다른 좌표를 볼 수 있어(anchor 한 점만 보는 등) 판정이 어긋날 여지가 생긴다.
+        if (!SealStonePlacementQuery.TryResolveOpenSite(footprint, out _))
+            return false;
+
+        return sealStone.Data != null && SealStonePlacementQuery.IsUnlocked(sealStone.Data.Order);
+    }
+
+    // 단일 셀이 봉인석 영역에 속하는지 외부에서 조회할 수 있도록 공개한 버전
+    // (CellSatisfiesResourceRequirement와 같은 목적 - MouseSelectController 미리보기 셀별 색상 구분에 사용).
+    public bool CellIsSealSite(Vector3Int coord) =>
+        SealStonePlacementQuery != null && SealStonePlacementQuery.CellIsSealSite(coord);
 
     public List<Vector3Int> GetOccupiedCoords(Vector3Int coord)
     {
@@ -759,6 +818,20 @@ public class GridMap : MonoBehaviour
         foreach (GridCell footprintCell in footprint)
             result.Add(footprintCell.Coord);
         return result;
+    }
+
+    // Building 인스턴스로 footprint 좌표를 조회한다 - GetFootprintYield(:762)와 동일한 인덱싱을
+    // 좌표만 필요한 호출자를 위해 얇게 뽑아낸 버전. OnBuildingAdded(UnityEvent<Building>)는 좌표를
+    // 넘기지 않으므로, 건설 직후 좌표가 필요한 구독자(PortalSealManager 등)가 이걸로 되짚어 조회한다.
+    public IReadOnlyList<Vector3Int> GetFootprintCoords(Building building)
+    {
+        if (!_buildingFootprintCells.TryGetValue(building, out List<GridCell> footprint))
+            return Array.Empty<Vector3Int>();
+
+        var coords = new List<Vector3Int>(footprint.Count);
+        foreach (GridCell cell in footprint)
+            coords.Add(cell.Coord);
+        return coords;
     }
 
     // 생산시설의 실제 생산량 - 청크별 셀 생산량 소계에 연구 배율을 적용한 뒤 합산한다.

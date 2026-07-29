@@ -317,6 +317,10 @@ public class MouseSelectController : MonoBehaviour
     //   초록  — 지형 건설 가능 + 요구 자원 노드 보유 → 배치 가능
     //   주황  — 지형 건설 가능이지만 요구 자원 노드 없음 → 이 Factory 종류만 배치 불가
     //   빨강  — 점유되거나 지형이 건설 불가 → 어떤 건물도 배치 불가
+    // SealStone일 때 셀별 색상 의미도 동일한 3색 체계를 따른다:
+    //   초록  — 지형 건설 가능 + 포탈 봉인 영역 소속 → 배치 가능
+    //   주황  — 지형 건설 가능이지만 포탈 봉인 영역이 아님(또는 이미 그 포탈에 봉인석이 있음) → 배치 불가
+    //   빨강  — 점유되거나 지형이 건설 불가 → 어떤 건물도 배치 불가
     private void DrawFootprint(List<Vector3Int> footprint, bool canConstruct)
     {
         EnsureRuntimeState();
@@ -338,6 +342,27 @@ public class MouseSelectController : MonoBehaviour
                     highlight.color = _missingResourceTint;
                 else
                     highlight.color = Color.green;
+            }
+
+            _selectionHighlightPool.DeactivateFrom(footprint.Count);
+            return;
+        }
+
+        if (_selectedBuildingRef is SealStone)
+        {
+            for (int i = 0; i < footprint.Count; i++)
+            {
+                SpriteRenderer highlight = _selectionHighlightPool.Get(i);
+                Vector3 cellPos = _gridMap.ConvertGridToWorld(footprint[i]);
+                cellPos.y += _yOffset;
+                highlight.transform.position = cellPos;
+
+                if (!_gridMap.CanConstructBuilding(footprint[i], _selectedBuildingRef))
+                    highlight.color = Color.red;
+                else if (!_gridMap.CellIsSealSite(footprint[i]))
+                    highlight.color = _missingResourceTint;
+                else
+                    highlight.color = canConstruct ? Color.green : _missingResourceTint;
             }
 
             _selectionHighlightPool.DeactivateFrom(footprint.Count);

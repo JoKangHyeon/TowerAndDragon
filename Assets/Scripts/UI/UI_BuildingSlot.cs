@@ -137,6 +137,9 @@ public class UI_BuildingSlot : MonoBehaviour
         if (prefab is ResearchLab researchLab && researchLab.Data != null)
             return StringTable.GetString(researchLab.Data.NameLocKey);
 
+        if (prefab is SealStone sealStone && sealStone.Data != null)
+            return StringTable.GetString(sealStone.Data.NameLocKey);
+
         return string.Empty;
     }
 }
