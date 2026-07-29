@@ -224,20 +224,20 @@ public class ConquestManager : MonoBehaviour
             if (!expedition.IsComplete)
                 continue;
 
-            CompleteConquest(expedition);
+            CompleteConquest(expedition.TargetChunkCoord);
             _activeExpeditions.RemoveAt(i);
         }
 
         OnExpeditionsChanged?.Invoke();
     }
 
-    private void CompleteConquest(ConquestExpedition expedition)
+    private void CompleteConquest(Vector2Int targetChunkCoord)
     {
-        _gridMap.SetChunkState(expedition.TargetChunkCoord, ChunkState.Conquered);
-        ExpandVisibility(expedition.TargetChunkCoord);
-        PlaceGarrison(expedition.TargetChunkCoord);
-        ApplyEnemyEnhancement(expedition.TargetChunkCoord);
-        OnConquestCompleted?.Invoke(expedition.TargetChunkCoord);
+        _gridMap.SetChunkState(targetChunkCoord, ChunkState.Conquered);
+        ExpandVisibility(targetChunkCoord);
+        PlaceGarrison(targetChunkCoord);
+        ApplyEnemyEnhancement(targetChunkCoord);
+        OnConquestCompleted?.Invoke(targetChunkCoord);
     }
 
     // [테스트 전용] 며칠 대기 없이 진행 중인 모든 원정을 즉시 완료 처리한다.
@@ -245,8 +245,38 @@ public class ConquestManager : MonoBehaviour
     {
         for (int i = _activeExpeditions.Count - 1; i >= 0; i--)
         {
-            CompleteConquest(_activeExpeditions[i]);
+            CompleteConquest(_activeExpeditions[i].TargetChunkCoord);
             _activeExpeditions.RemoveAt(i);
+        }
+
+        OnExpeditionsChanged?.Invoke();
+    }
+
+    // [테스트 전용] 원정 진행 여부와 무관하게 맵의 모든 청크를 즉시 점령 완료 상태로 만든다.
+    // 청크마다 SetChunkState를 따로 호출하면 청크 테두리 렌더러 등 OnChunkStateChanged 구독자가
+    // 매번 맵 전체를 다시 계산해 청크 수가 많을 때 프레임이 멈추므로, 상태 전환은 한 번에 몰아서 처리한다.
+    public void DebugForceConquerAllChunks()
+    {
+        _activeExpeditions.Clear();
+
+        var chunksToConquer = new List<Vector2Int>();
+        foreach (Chunk chunk in _gridMap.GetAllChunks())
+        {
+            if (chunk.CurrentState != ChunkState.Conquered)
+                chunksToConquer.Add(chunk.ChunkCoord);
+        }
+
+        if (chunksToConquer.Count == 0)
+            return;
+
+        _gridMap.SetChunkStatesBulk(chunksToConquer, ChunkState.Conquered);
+
+        foreach (Vector2Int chunkCoord in chunksToConquer)
+        {
+            ExpandVisibility(chunkCoord);
+            PlaceGarrison(chunkCoord);
+            ApplyEnemyEnhancement(chunkCoord);
+            OnConquestCompleted?.Invoke(chunkCoord);
         }
 
         OnExpeditionsChanged?.Invoke();
