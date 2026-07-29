@@ -512,35 +512,7 @@ public class GridMap : MonoBehaviour
         if (chunk != null)
             SetChunkState(chunk.ChunkCoord, newState);
     }
-
-    // [테스트/일괄 처리 전용] 여러 청크의 상태를 한 번에 바꾼다.
-    // SetChunkState를 청크마다 호출하면 OnChunkStateChanged 구독자(청크 테두리 렌더러 등)가
-    // 매번 맵 전체를 다시 훑어 재계산하므로 청크 수가 많을 때 사실상 O(N^2)이 되어 프레임이 멈춘다.
-    // 여기서는 상태만 먼저 전부 바꾸고, 점령 집합에 영향을 준 경우에 한해 이벤트를 마지막에 한 번만 쏜다.
-    public void SetChunkStatesBulk(IReadOnlyList<Vector2Int> chunkCoords, ChunkState newState)
-    {
-        bool affectsConqueredSet = false;
-
-        foreach (Vector2Int chunkCoord in chunkCoords)
-        {
-            if (!_chunks.TryGetValue(chunkCoord, out Chunk chunk))
-                continue;
-
-            ChunkState previousState = chunk.CurrentState;
-            chunk.SetState(newState);
-
-            foreach (GridCell cell in chunk.Cells)
-            {
-                OnCellChanged?.Invoke(cell);
-            }
-
-            affectsConqueredSet |= previousState == ChunkState.Conquered || newState == ChunkState.Conquered;
-        }
-
-        if (affectsConqueredSet)
-            OnChunkStateChanged?.Invoke();
-    }
-
+    
     public Chunk GetChunk(Vector2Int chunkCoord) =>
         _chunks.TryGetValue(chunkCoord, out Chunk chunk) ? chunk : null;
 

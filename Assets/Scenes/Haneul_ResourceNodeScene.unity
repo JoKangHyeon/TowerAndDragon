@@ -410,6 +410,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BabyDragonBuffSystem
   _gridMap: {fileID: 1136365028}
   _cycleManager: {fileID: 838319717}
+  _dragonTreeManager: {fileID: 0}
 --- !u!114 &74056948
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1170,6 +1171,7 @@ Transform:
   - {fileID: 1858314752}
   - {fileID: 126225003}
   - {fileID: 74056946}
+  - {fileID: 1612651266}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &513924459
@@ -1519,6 +1521,7 @@ GameObject:
   - component: {fileID: 838319718}
   - component: {fileID: 838319721}
   - component: {fileID: 838319723}
+  - component: {fileID: 838319726}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1647,6 +1650,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResearchManager
   _tree: {fileID: 11400000, guid: 1bede9b5e5bcb6a4f94c373c83e397f7, type: 2}
   _balance: {fileID: 11400000, guid: c3dcd05343aa2e241b228a947598d99f, type: 2}
+  _yieldComposite: {fileID: 0}
+  _statComposite: {fileID: 0}
   _researchPointsChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -1672,6 +1677,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 2663818155515da44ade95a166c32923, type: 2}
   - {fileID: 11400000, guid: bc1176667a5f5f64fb7443305457f5c6, type: 2}
   - {fileID: 11400000, guid: 77aef7011a2323b468116d69a42c5e63, type: 2}
+  _dragonTreeManager: {fileID: 0}
 --- !u!114 &838319723
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1702,6 +1708,9 @@ MonoBehaviour:
   _caster: {fileID: 0}
   _rangeIndicator: {fileID: 1255270369}
   _targetIndicator: {fileID: 325046197}
+  _waveManager: {fileID: 0}
+  _gridMap: {fileID: 0}
+  _castle: {fileID: 0}
 --- !u!4 &838319725
 Transform:
   m_ObjectHideFlags: 0
@@ -1717,6 +1726,25 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &838319726
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 838319716}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c29f15af5fa54d344ac44a99f8756d59, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DragonTreeManager
+  _nodeUnlocked:
+    m_PersistentCalls:
+      m_Calls: []
+  _tree: {fileID: 0}
+  _activeAttributeChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &891483395
 GameObject:
   m_ObjectHideFlags: 0
@@ -4926,6 +4954,233 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bad66e0cd0a2b5d4d9c3d31964c86d86, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CastleHealth
+--- !u!1 &1612651265
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1612651266}
+  - component: {fileID: 1612651279}
+  - component: {fileID: 1612651278}
+  - component: {fileID: 1612651277}
+  - component: {fileID: 1612651276}
+  - component: {fileID: 1612651275}
+  - component: {fileID: 1612651274}
+  - component: {fileID: 1612651273}
+  - component: {fileID: 1612651272}
+  - component: {fileID: 1612651271}
+  - component: {fileID: 1612651270}
+  - component: {fileID: 1612651269}
+  - component: {fileID: 1612651268}
+  - component: {fileID: 1612651267}
+  m_Layer: 0
+  m_Name: Composites
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1612651266
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 498634221}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1612651267
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4712ce7ad6463e04a834e007e067f66d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingMoveGrantSystem
+  _researchManager: {fileID: 0}
+  _cycleManager: {fileID: 0}
+  _gridMap: {fileID: 0}
+--- !u!114 &1612651268
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42dd1d4b0b3bfaa4aa4590d7a7ed1816, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CastleRegenSystem
+  _cycleManager: {fileID: 0}
+  _castle: {fileID: 0}
+  _researchManager: {fileID: 0}
+--- !u!114 &1612651269
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38932416d5a1c5340ba732a3b7867ae2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChunkYieldCoordinator
+  _gridMap: {fileID: 0}
+  _yieldComposite: {fileID: 1612651279}
+--- !u!114 &1612651270
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86a6f7a7f3e1e0c44b6579447b0f3cf5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PopulationResearchCoordinator
+  _researchManager: {fileID: 0}
+  _populationManager: {fileID: 0}
+--- !u!114 &1612651271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1df0a631c64739c439b7f9aac2d000ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConquestResearchCoordinator
+  _researchManager: {fileID: 0}
+  _conquestManager: {fileID: 0}
+  _conquestComposite: {fileID: 1612651278}
+--- !u!114 &1612651272
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 246cdb5c51b31c34196d0929a01864d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CastleVisionCoordinator
+  _researchManager: {fileID: 0}
+  _dragonTreeManager: {fileID: 0}
+  _visionComposite: {fileID: 1612651276}
+  _castle: {fileID: 0}
+--- !u!114 &1612651273
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc5493b8a8fe9b84bbe91b0a4da9acaf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerStatMultiplierCoordinator
+  _gridMap: {fileID: 0}
+  _statComposite: {fileID: 1612651277}
+  _dragonTreeManager: {fileID: 0}
+--- !u!114 &1612651274
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6e463c1e7b477c448c5cdca39d3eb25, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DragonPassiveCoordinator
+  _dragonTreeManager: {fileID: 0}
+  _waveManager: {fileID: 0}
+--- !u!114 &1612651275
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9d9b569e577c2447892b6149c623a3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DragonModifierCoordinator
+  _dragonTreeManager: {fileID: 0}
+  _statComposite: {fileID: 1612651277}
+  _yieldComposite: {fileID: 1612651279}
+  _visionComposite: {fileID: 1612651276}
+  _conquestComposite: {fileID: 1612651278}
+--- !u!114 &1612651276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 771ccb99101eaab4291403388ee2132b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VisionRadiusComposite
+--- !u!114 &1612651277
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 299192236ad49da46a749eaf34c9fca0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerStatMultiplierComposite
+--- !u!114 &1612651278
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c13d8af057bf1b4288f36ff1c9d5b66, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConquestModifierComposite
+--- !u!114 &1612651279
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1612651265}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80a42836ddfa1764b952fb36229e47d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ChunkYieldMultiplierComposite
 --- !u!1 &1633461638
 GameObject:
   m_ObjectHideFlags: 0
@@ -15784,6 +16039,9 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  _monsterSpawned:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!4 &2114371941
 Transform:
   m_ObjectHideFlags: 0
