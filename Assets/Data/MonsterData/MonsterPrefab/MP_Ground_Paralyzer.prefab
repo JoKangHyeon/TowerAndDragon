@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: -6360304390758115834}
   - component: {fileID: -687291307508128235}
   - component: {fileID: 6409980068893795165}
+  - component: {fileID: 9089343570755398480}
   m_Layer: 7
   m_Name: MP_Ground_Paralyzer
   m_TagString: Untagged
@@ -86,8 +87,8 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 2
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 1612648724, guid: 669de3fd3e2db754bb7d7547191f38c2, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Sprite: {fileID: 1274973170, guid: ac94f0e875f48cc4cac64608e87520c7, type: 3}
+  m_Color: {r: 0.9125824, g: 1, b: 0, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -196,3 +197,15 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   _firePoint: {fileID: 0}
+--- !u!114 &9089343570755398480
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8845832112575990564}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fa7656bd8812454abe7ddcdbf8906b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterStatusReceiver

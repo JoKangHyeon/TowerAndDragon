@@ -2121,7 +2121,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaveCycleProgression
   _cycleManager: {fileID: 914589611}
-  _schedule: {fileID: 11400000, guid: 039b1d76d4a6a493789ac74841753166, type: 2}
+  _schedule: {fileID: 11400000, guid: b9f3b61aed52be24ca1cae3140d37f4d, type: 2}
   _cycleStarted:
     m_PersistentCalls:
       m_Calls: []
@@ -2449,6 +2449,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkillManager
   _skillDataList: []
+  _dragonTreeManager: {fileID: 914589622}
 --- !u!114 &914589615
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2466,6 +2467,9 @@ MonoBehaviour:
   _caster: {fileID: 0}
   _rangeIndicator: {fileID: 528649118}
   _targetIndicator: {fileID: 265556686}
+  _waveManager: {fileID: 1122431369}
+  _gridMap: {fileID: 313449541}
+  _castle: {fileID: 1161439827}
 --- !u!114 &914589617
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2496,6 +2500,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResearchManager
   _tree: {fileID: 11400000, guid: 1bede9b5e5bcb6a4f94c373c83e397f7, type: 2}
   _balance: {fileID: 11400000, guid: c3dcd05343aa2e241b228a947598d99f, type: 2}
+  _yieldComposite: {fileID: 0}
+  _statComposite: {fileID: 0}
   _researchPointsChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -2586,6 +2592,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BabyDragonBuffSystem
   _gridMap: {fileID: 313449541}
   _cycleManager: {fileID: 914589611}
+  _dragonTreeManager: {fileID: 0}
 --- !u!114 &936144407
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4936,6 +4943,9 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  _monsterSpawned:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &1122431370
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5960,6 +5970,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkillHudBinder
   _skillManager: {fileID: 914589614}
   _targetingController: {fileID: 914589615}
+  _dragonTreeManager: {fileID: 0}
   _indicators:
   - {fileID: 648288558}
   - {fileID: 1200473029}

@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 7360577425565140015}
   - component: {fileID: 228593955741719960}
   - component: {fileID: 1083133114288308902}
+  - component: {fileID: 2401628264537699739}
   m_Layer: 7
   m_Name: MP_Boss_1
   m_TagString: Untagged
@@ -86,7 +87,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 2
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: ee6c8f37bd0f143a89513cadc662c0b0, type: 3}
+  m_Sprite: {fileID: 1355768077, guid: 13d69afd136f2994db7fd40588af5d9b, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -166,6 +167,7 @@ MonoBehaviour:
   Arrived:
     m_PersistentCalls:
       m_Calls: []
+  _heightFollowSpeed: 12
 --- !u!114 &228593955741719960
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -195,3 +197,15 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   _firePoint: {fileID: 0}
+--- !u!114 &2401628264537699739
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3080886748541471282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fa7656bd8812454abe7ddcdbf8906b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterStatusReceiver
