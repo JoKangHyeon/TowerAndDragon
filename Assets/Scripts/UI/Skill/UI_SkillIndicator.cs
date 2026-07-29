@@ -46,6 +46,14 @@ public class UI_SkillIndicator : MonoBehaviour
         Render();
     }
 
+    public void ShowIfBinded()
+    {
+        if (_skill != null)
+        {
+            gameObject.SetActive(true);
+        }
+    }
+
     private void Update()
     {
         Render();

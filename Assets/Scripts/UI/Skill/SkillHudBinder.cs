@@ -12,6 +12,7 @@ public class SkillHudBinder : MonoBehaviour
     [SerializeField] private SkillManager _skillManager;
     [SerializeField] private SkillTargetingController _targetingController;
     [SerializeField] private DragonTreeManager _dragonTreeManager;
+    [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private List<UI_SkillIndicator> _indicators;
 
     // SkillManager.Awake가 스킬 목록을 이미 구성한 뒤여야 하므로 Awake가 아닌 Start에서 첫 바인딩한다.
@@ -22,29 +23,58 @@ public class SkillHudBinder : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_dragonTreeManager == null)
+        if (_dragonTreeManager != null)
         {
-            return;
+            _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleActiveAttributeChanged);
+            _dragonTreeManager.NodeUnlocked.AddListener(HandleNodeUnlocked);
         }
 
-        _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleActiveAttributeChanged);
-        _dragonTreeManager.NodeUnlocked.AddListener(HandleNodeUnlocked);
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnDayStart.AddListener(HandleOnDayStart);
+            _cycleManager.OnNightStart.AddListener(HandleOnNightStart);
+        }
     }
 
     private void OnDisable()
     {
-        if (_dragonTreeManager == null)
+        if (_cycleManager != null)
         {
-            return;
+            _cycleManager.OnDayStart.RemoveListener(HandleOnDayStart);
+            _cycleManager.OnNightStart.RemoveListener(HandleOnNightStart);
         }
 
-        _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleActiveAttributeChanged);
-        _dragonTreeManager.NodeUnlocked.RemoveListener(HandleNodeUnlocked);
+        if (_dragonTreeManager != null)
+        {
+            _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleActiveAttributeChanged);
+            _dragonTreeManager.NodeUnlocked.RemoveListener(HandleNodeUnlocked);
+        }
     }
 
     private void HandleActiveAttributeChanged(DragonType attribute) => Rebind();
 
     private void HandleNodeUnlocked(ProgressionNodeData node) => Rebind();
+
+    private void HandleOnDayStart(int day) => HideAll();
+    private void HandleOnNightStart(int day) => ShowAll();
+
+    public void HideAll()
+    {
+        Debug.Log("HIDE");
+        foreach(UI_SkillIndicator indicator in _indicators)
+        {
+            indicator.gameObject.SetActive(false);
+        }
+    }
+
+    public void ShowAll()
+    {
+        Debug.Log("SHOW");
+        foreach (UI_SkillIndicator indicator in _indicators)
+        {
+            indicator.ShowIfBinded();
+        }
+    }
 
     private void Rebind()
     {
@@ -74,6 +104,18 @@ public class SkillHudBinder : MonoBehaviour
         for (; slotIndex < _indicators.Count; slotIndex++)
         {
             _indicators[slotIndex]?.Bind(null, null);
+        }
+
+        if (_cycleManager != null)
+        {
+            if(_cycleManager.CurrentCycle  == CycleManager.CycleState.Day)
+            {
+                HideAll();
+            }
+            else
+            {
+                ShowAll();
+            }
         }
     }
 }

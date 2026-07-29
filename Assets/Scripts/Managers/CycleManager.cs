@@ -34,8 +34,8 @@ public class CycleManager : MonoBehaviour
     public void StartDay()
     {
         _gameManager.CurrentRun.CurrentCycle += 1;
-        SafeInvoke(OnDayStart, _gameManager.CurrentRun.CurrentCycle);
         CurrentCycle = CycleState.Day;
+        SafeInvoke(OnDayStart, _gameManager.CurrentRun.CurrentCycle);
         SafeInvoke(OnCycleChanged, CycleState.Day);
     }
 
