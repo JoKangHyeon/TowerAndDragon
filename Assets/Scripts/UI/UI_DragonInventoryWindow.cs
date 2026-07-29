@@ -31,9 +31,6 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
 
     private const string TITLE_LOC_KEY = "baby_dragon_inventory_title";
 
-    private static readonly DragonType[] DRAGON_TYPES_IN_ORDER =
-        (DragonType[])Enum.GetValues(typeof(DragonType));
-
     [Header("Dependencies")]
     [SerializeField] private GameManager _gameManager;
     [SerializeField] private BabyDragonDataCatalog _dataCatalog;
@@ -61,17 +58,6 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private UI_DragonInventorySlot _slotPrefab;
     [Tooltip("공용 알 스프라이트 (속성 색으로 틴트됨).")]
     [SerializeField] private Sprite _eggSprite;
-
-    [Header("속성 색상 (DragonType 선언 순: Ice, Fire, Time, Stone, Life)")]
-    [SerializeField]
-    private Color[] _attributeColors =
-    {
-        new Color(0.357f, 0.753f, 0.878f), // Ice
-        new Color(0.878f, 0.376f, 0.235f), // Fire
-        new Color(0.690f, 0.490f, 0.878f), // Time
-        new Color(0.788f, 0.635f, 0.290f), // Stone
-        new Color(0.498f, 0.820f, 0.310f), // Life
-    };
 
     [Header("패널 슬라이드 연출")]
     [SerializeField] private float _slideDuration = 0.5f;
@@ -378,9 +364,6 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
-    private Color ColorForType(DragonType type)
-    {
-        int index = Array.IndexOf(DRAGON_TYPES_IN_ORDER, type);
-        return index >= 0 && index < _attributeColors.Length ? _attributeColors[index] : Color.white;
-    }
+    // 속성 색은 DragonAttributePalette가 단일 출처다.
+    private Color ColorForType(DragonType type) => DragonAttributePalette.ColorOf(type);
 }

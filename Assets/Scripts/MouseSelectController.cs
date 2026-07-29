@@ -426,13 +426,16 @@ public class MouseSelectController : MonoBehaviour
         if (_rangeIndicator == null)
             return;
 
-        if (!(_selectedBuildingRef is Tower tower) || tower.Data == null || !tower.Data.CanAttack)
+        if (!(_selectedBuildingRef is Tower tower) ||
+            tower.Data == null ||
+            !tower.Data.CanAttack ||
+            tower.Attack == null)
         {
             _rangeIndicator.Hide();
             return;
         }
 
-        float radiusX = tower.Data.Attack.Range;
+        float radiusX = tower.Attack.EffectiveRange;
         float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
 
         _rangeIndicator.SetCenter(center);

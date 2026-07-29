@@ -476,8 +476,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3230440856895639378}
-  - component: {fileID: 4959391972584434436}
   - component: {fileID: 8759778302931675697}
+  - component: {fileID: 4145686034016995223}
   m_Layer: 5
   m_Name: SkillIcon
   m_TagString: Untagged
@@ -510,7 +510,23 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 120, y: 120}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &4959391972584434436
+--- !u!114 &8759778302931675697
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6900888702391389269}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b53c80a975922ea42b5e43b42756a8a4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_SkillIndicator
+  _skillIconImage: {fileID: 525433124197754345}
+  _skillCooltimeFillImage: {fileID: 8479942682148014682}
+  _skillRemainText: {fileID: 1853702815990142841}
+  _button: {fileID: 4145686034016995223}
+--- !u!114 &4145686034016995223
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -550,26 +566,10 @@ MonoBehaviour:
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
   m_Interactable: 1
-  m_TargetGraphic: {fileID: 6689167682921395021}
+  m_TargetGraphic: {fileID: 0}
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &8759778302931675697
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6900888702391389269}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b53c80a975922ea42b5e43b42756a8a4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UI_SkillIndicator
-  _skillIconImage: {fileID: 525433124197754345}
-  _skillCooltimeFillImage: {fileID: 8479942682148014682}
-  _skillRemainText: {fileID: 1853702815990142841}
-  _button: {fileID: 4959391972584434436}
 --- !u!1 &8957397801485010466
 GameObject:
   m_ObjectHideFlags: 0

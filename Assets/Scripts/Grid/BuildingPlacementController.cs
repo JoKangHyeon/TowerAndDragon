@@ -413,6 +413,7 @@ public class BuildingPlacementController : MonoBehaviour
         if (!_gridMap.MoveBuilding(prevCoord, anchor, _mouseSelectController.PreviewRotationSteps))
             return false;
 
+        building.NotifyMoved();
         building.SetHighlighted(false, default);
         _moveSourceCoord = null;
         _mouseSelectController.SetPlacementActive(false);
@@ -446,14 +447,18 @@ public class BuildingPlacementController : MonoBehaviour
     // 선택한 건물이 공격 가능한 타워면 실제 판정(TowerAttack.IsWithinAttackRange)과 같은 타원으로 사거리를 표시한다.
     private void ShowAttackRangeIndicatorFor(Building building)
     {
-        if (_rangeIndicator == null || !(building is Tower tower) || !tower.Data.CanAttack)
+        if (_rangeIndicator == null ||
+            !(building is Tower tower) ||
+            tower.Data == null ||
+            !tower.Data.CanAttack ||
+            tower.Attack == null)
         {
             _rangeIndicator?.Hide();
             return;
         }
 
         _rangeIndicator.SetCenter(tower.transform.position);
-        _rangeIndicator.Show(tower.Data.Attack.Range, tower.Data.Attack.Range * IsometricMath.RADIUS_Y_RATIO);
+        _rangeIndicator.Show(tower.Attack.EffectiveRange, tower.Attack.EffectiveRange * IsometricMath.RADIUS_Y_RATIO);
     }
 
     // 선택한 건물이 버프 반경을 가진 새끼용이면(BabyDragonBuffSystem과 동일한 조건) 타원으로 표시한다.

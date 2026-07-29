@@ -8,7 +8,8 @@ public class TowerAttack : MonoBehaviour
     private TowerData _towerData;
     private BaseMonster _target;
     private ITowerStaffing _staffing;
-    private ITowerDamageMultiplierQuery _damageMultiplierQuery;
+    private ITowerStatMultiplierQuery _statMultiplierQuery;
+    private ITowerHitStatusQuery _hitStatusQuery;
     private float _nextAttackTime;
     private bool _isAttackEnabled;
 
@@ -17,6 +18,18 @@ public class TowerAttack : MonoBehaviour
     [SerializeField] private bool _showDebugLogs;
 
     private AttackSO Attack => _towerData.Attack;
+
+    // 판정(브로드페이즈·정밀 타원)과 표시(사거리 원)가 반드시 같은 값을 봐야 하므로
+    // Attack.Range를 직접 읽는 모든 지점을 이 프로퍼티 하나로 통일한다.
+    public float EffectiveRange => Attack.Range * RangeMultiplier;
+
+    private float RangeMultiplier => _statMultiplierQuery != null
+        ? _statMultiplierQuery.GetRangeMultiplier(_towerData)
+        : 1f;
+
+    private float AttackSpeedMultiplier => _statMultiplierQuery != null
+        ? _statMultiplierQuery.GetAttackSpeedMultiplier(_towerData)
+        : 1f;
 
     public BaseMonster CurrentTarget => _target;
     private static readonly int ATTACK_ANIM_KEY = Animator.StringToHash("Attack");
@@ -45,10 +58,15 @@ public class TowerAttack : MonoBehaviour
         }
     }
 
-    public void SetDamageMultiplierQuery(
-        ITowerDamageMultiplierQuery damageMultiplierQuery)
+    public void SetStatMultiplierQuery(
+        ITowerStatMultiplierQuery statMultiplierQuery)
     {
-        _damageMultiplierQuery = damageMultiplierQuery;
+        _statMultiplierQuery = statMultiplierQuery;
+    }
+
+    public void SetHitStatusQuery(ITowerHitStatusQuery hitStatusQuery)
+    {
+        _hitStatusQuery = hitStatusQuery;
     }
 
     private void Update()
@@ -88,7 +106,7 @@ public class TowerAttack : MonoBehaviour
             return float.PositiveInfinity;
         }
 
-        return Attack.Interval / staffingRatio;
+        return Attack.Interval / staffingRatio / AttackSpeedMultiplier;
     }
 
     private bool IsCurrentTargetValid()
@@ -105,8 +123,8 @@ public class TowerAttack : MonoBehaviour
     // 월드 좌표 기준 진짜 원으로 판정하면 세로 방향으로 타일 두 배만큼 더 멀리 닿는 비대칭이 생긴다.
     private bool IsWithinAttackRange(Vector3 targetPosition)
     {
-        float radiusY = Attack.Range * IsometricMath.RADIUS_Y_RATIO;
-        return IsometricMath.IsWithinEllipse(targetPosition, transform.position, Attack.Range, radiusY);
+        float radiusY = EffectiveRange * IsometricMath.RADIUS_Y_RATIO;
+        return IsometricMath.IsWithinEllipse(targetPosition, transform.position, EffectiveRange, radiusY);
     }
 
     // 구현체가 없으면 공격하지 않는다 - 인구 할당 생성에 실패한 타워가 지금처럼
@@ -123,12 +141,12 @@ public class TowerAttack : MonoBehaviour
         // 타원 방정식으로 정확히 걸러낸다 (IsWithinAttackRange와 동일한 판정).
         Collider2D[] candidates = Physics2D.OverlapCircleAll(
             transform.position,
-            Attack.Range,
+            EffectiveRange,
             _targetLayers);
 
         BaseMonster closestTarget = null;
         float closestNormalizedDistanceSqr = float.PositiveInfinity;
-        float radiusY = Attack.Range * IsometricMath.RADIUS_Y_RATIO;
+        float radiusY = EffectiveRange * IsometricMath.RADIUS_Y_RATIO;
 
         foreach (Collider2D candidate in candidates)
         {
@@ -139,7 +157,7 @@ public class TowerAttack : MonoBehaviour
             }
 
             float normalizedDistanceSqr = IsometricMath.EllipseNormalizedDistanceSqr(
-                monster.transform.position, transform.position, Attack.Range, radiusY);
+                monster.transform.position, transform.position, EffectiveRange, radiusY);
 
             if (normalizedDistanceSqr > 1f || normalizedDistanceSqr >= closestNormalizedDistanceSqr)
             {
@@ -165,11 +183,17 @@ public class TowerAttack : MonoBehaviour
             Debug.Log($"[TowerAttack] {name} → {_target.name} 공격 발사!", this);
         }
 
-        float damageMultiplier = _damageMultiplierQuery != null
-            ? _damageMultiplierQuery.GetDamageMultiplier(_towerData)
+        float damageMultiplier = _statMultiplierQuery != null
+            ? _statMultiplierQuery.GetDamageMultiplier(_towerData)
             : 1f;
         var damageModifier = new ResolvedEnemyStatModifier(0f, damageMultiplier);
-        AttackContext context = new AttackContext(gameObject, damageModifier);
+
+        StatusEffectSO hitStatus = _hitStatusQuery?.GetTowerHitStatus(_towerData);
+        StatusEffectSO[] extraStatuses = hitStatus != null
+            ? new[] { hitStatus }
+            : null;
+
+        AttackContext context = new AttackContext(gameObject, damageModifier, extraStatuses);
 
         if(_animator != null)
         {
@@ -222,7 +246,7 @@ public class TowerAttack : MonoBehaviour
         // Y축만 압축한 행렬로 원을 그려 근사한다.
         Matrix4x4 previousMatrix = Gizmos.matrix;
         Gizmos.matrix = Matrix4x4.TRS(transform.position, Quaternion.identity, new Vector3(1f, IsometricMath.RADIUS_Y_RATIO, 1f));
-        Gizmos.DrawWireSphere(Vector3.zero, Attack.Range);
+        Gizmos.DrawWireSphere(Vector3.zero, EffectiveRange);
         Gizmos.matrix = previousMatrix;
     }
 #endif

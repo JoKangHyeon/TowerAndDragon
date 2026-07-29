@@ -15,6 +15,9 @@ public class BabyDragonBuffSystem : MonoBehaviour
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private CycleManager _cycleManager;
 
+    // 새끼용 지역형(B 슬롯) 노드 해금 시 추가되는 보너스 - 미해금이면 0을 반환해 기존 동작과 같다.
+    [SerializeField] private DragonTreeManager _dragonTreeManager;
+
     private readonly List<BabyDragonTower> _babyDragons = new();
     private readonly List<Factory> _factories = new();
 
@@ -125,9 +128,14 @@ public class BabyDragonBuffSystem : MonoBehaviour
                 continue;
             }
 
+            float kinBonus = _dragonTreeManager != null
+                ? _dragonTreeManager.GetKinAreaYieldBonusRatio(babyDragon.DragonData.DragonType)
+                : 0f;
+            float babyDragonMultiplier = babyDragon.DragonData.BuffYieldMultiplier * (1f + kinBonus);
+
             float before = multiplierByFactory[factory];
-            multiplierByFactory[factory] *= babyDragon.DragonData.BuffYieldMultiplier;
-            Debug.Log($"[BabyDragonBuffSystem] {factory.name}: 범위 안 → ×{before} → ×{multiplierByFactory[factory]} (새끼용 배율 ×{babyDragon.DragonData.BuffYieldMultiplier})");
+            multiplierByFactory[factory] *= babyDragonMultiplier;
+            Debug.Log($"[BabyDragonBuffSystem] {factory.name}: 범위 안 → ×{before} → ×{multiplierByFactory[factory]} (새끼용 배율 ×{babyDragonMultiplier})");
         }
     }
 }

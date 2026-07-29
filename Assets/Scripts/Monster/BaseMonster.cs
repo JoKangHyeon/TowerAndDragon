@@ -12,7 +12,8 @@ using UnityEngine.Splines;
 /// </summary>
 [RequireComponent(typeof(Health))]
 [RequireComponent(typeof(MonsterAttack))]
-public class BaseMonster : MonoBehaviour, IAttackTarget
+[RequireComponent(typeof(MonsterStatusReceiver))]
+public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget
 {
     [SerializeField] private MonsterData _data;
 
@@ -20,9 +21,11 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
     private MonsterShield _shield;
     private MonsterMovement _movement;
     private MonsterAttack _attack;
+    private MonsterStatusReceiver _statusReceiver;
     private Castle _mainCastle;
     private Animator _animator;
     private EnemyEnhancementSnapshot _enhancement;
+    private float _baseMoveSpeed;
     private readonly SpecialBehaviorRunner _specialBehaviorRunner = new();
 
     public MonsterData Data => _data;
@@ -47,7 +50,27 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
         _shield = GetComponent<MonsterShield>();
         _movement = GetComponent<MonsterMovement>();
         _attack = GetComponent<MonsterAttack>();
+        _statusReceiver = GetComponent<MonsterStatusReceiver>();
         _animator = GetComponent<Animator>();
+    }
+
+    public void ApplyStatus(StatusEffectSO status)
+    {
+        _statusReceiver?.Apply(status);
+    }
+
+    // MonsterStatusReceiver가 슬로우 상태 변화 시 호출한다 - 상태이상 배율은 기준 속도에만 곱한다.
+    public void RefreshMoveSpeed()
+    {
+        if (_movement == null)
+        {
+            return;
+        }
+
+        float multiplier = _statusReceiver != null ? _statusReceiver.MoveSpeedMultiplier : 1f;
+        float moveSpeed = _baseMoveSpeed * multiplier;
+        _movement.SetSpeed(moveSpeed);
+        _animator.SetBool(_animKeyMove, moveSpeed > 0);
     }
 
     /// <summary>
@@ -168,10 +191,10 @@ public class BaseMonster : MonoBehaviour, IAttackTarget
             return;
         }
 
-        float moveSpeed = Mathf.Max(
+        _baseMoveSpeed = Mathf.Max(
             0f,
             _enhancement.MoveSpeed.Apply(_data.MoveSpeed));
-        _movement.SetSpeed(moveSpeed);
+        RefreshMoveSpeed();
 
         if (_animator != null)
             _animator.SetBool(_animKeyMove, _movement.GetSpeed() > 0);

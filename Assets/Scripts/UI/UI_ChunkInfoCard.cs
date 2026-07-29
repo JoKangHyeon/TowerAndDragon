@@ -33,7 +33,7 @@ public class UI_ChunkInfoCard : MonoBehaviour
 
     // 지형 스프라이트와 보상 항목(아이콘 + 라벨) 목록을 받아 카드를 채운다.
     // 보상 슬롯은 풀로 재사용하고, 이번에 쓰지 않은 슬롯은 비활성화한다.
-    public void Setup(Sprite terrainSprite, IReadOnlyList<(Sprite Icon, string Label)> rewards)
+    public void Setup(Sprite terrainSprite, IReadOnlyList<(Sprite Icon, Color IconColor, string Label)> rewards)
     {
         if (_terrainImage != null && terrainSprite != null)
         {
@@ -48,7 +48,7 @@ public class UI_ChunkInfoCard : MonoBehaviour
         for (int i = 0; i < rewards.Count; i++)
         {
             UI_ConquestRewardSlot slot = _rewardSlotPool.Get(i);
-            slot.Setup(rewards[i].Icon, rewards[i].Label);
+            slot.Setup(rewards[i].Icon, rewards[i].IconColor, rewards[i].Label);
         }
 
         _rewardSlotPool.DeactivateFrom(rewards.Count);

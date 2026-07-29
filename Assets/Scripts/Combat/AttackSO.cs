@@ -27,5 +27,25 @@ public class AttackSO : ScriptableObject
         {
             effect.Apply(target, in context);
         }
+
+        ApplyExtraStatuses(target, in context);
+    }
+
+    // 발사 시점(TowerAttack.Fire)이 아니라 명중 시점(여기)에 적용해야 투사체 타이밍과 맞는다 -
+    // AttackContext.ExtraStatuses 주석 참고.
+    private static void ApplyExtraStatuses(IDamageable target, in AttackContext context)
+    {
+        if (context.ExtraStatuses == null || !(target is IStatusEffectTarget statusTarget))
+        {
+            return;
+        }
+
+        foreach (StatusEffectSO status in context.ExtraStatuses)
+        {
+            if (status != null)
+            {
+                statusTarget.ApplyStatus(status);
+            }
+        }
     }
 }

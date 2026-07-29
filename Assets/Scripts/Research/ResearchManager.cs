@@ -4,13 +4,26 @@ using UnityEngine.Events;
 
 public sealed class ResearchManager : MonoBehaviour,
     IChunkYieldMultiplierQuery,
-    ITowerDamageMultiplierQuery
+    ITowerStatMultiplierQuery,
+    IConquestModifierQuery,
+    IPopulationCapacityModifierQuery,
+    IVisionRadiusBonusQuery
 {
     private const float BASE_YIELD_MULTIPLIER = 1f;
     private const float BASE_DAMAGE_MULTIPLIER = 1f;
+    private const float BASE_RANGE_MULTIPLIER = 1f;
+    private const float BASE_ATTACK_SPEED_MULTIPLIER = 1f;
+    private const int MINIMUM_POPULATION_CAPACITY = 1;
 
     [SerializeField] private ResearchTreeData _tree;
     [SerializeField] private ResearchBalanceData _balance;
+
+    // 소비 지점(GridMap/TowerAttack)에 이 매니저를 직접 대입하지 않고 Composite에 등록한다 -
+    // 용 스킬트리 등 다른 시스템도 같은 지점에 기여할 수 있어야 하기 때문이다
+    // (단일 슬롯이면 서로 덮어쓴다). 시야·점령 쪽 등록은 각각 CastleVisionCoordinator·
+    // ConquestResearchCoordinator가 담당한다(이 매니저를 이미 참조하고 있어 중복 배선이 없다).
+    [SerializeField] private ChunkYieldMultiplierComposite _yieldComposite;
+    [SerializeField] private TowerStatMultiplierComposite _statComposite;
 
     [SerializeField] private UnityEvent<int> _researchPointsChanged = new();
     [SerializeField] private UnityEvent<ResearchNodeData> _nodeCompleted = new();
@@ -73,12 +86,22 @@ public sealed class ResearchManager : MonoBehaviour,
             _cycleManager.OnNightEnd.AddListener(GrantResearchPoints);
         }
 
-        if (_gridMap != null)
+        if (_yieldComposite == null)
         {
-            _gridMap.YieldMultiplierQuery = this;
-            _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
-            _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoving);
+            Debug.LogError(
+                "[ResearchManager] ChunkYieldMultiplierComposite 참조가 없어 연구 생산 배율이 전혀 적용되지 않습니다.",
+                this);
         }
+
+        if (_statComposite == null)
+        {
+            Debug.LogError(
+                "[ResearchManager] TowerStatMultiplierComposite 참조가 없어 연구 타워 배율이 전혀 적용되지 않습니다.",
+                this);
+        }
+
+        _yieldComposite?.Register(this);
+        _statComposite?.Register(this);
 
         _isConstructed = true;
     }
@@ -90,16 +113,8 @@ public sealed class ResearchManager : MonoBehaviour,
             _cycleManager.OnNightEnd.RemoveListener(GrantResearchPoints);
         }
 
-        if (_gridMap != null && ReferenceEquals(_gridMap.YieldMultiplierQuery, this))
-        {
-            _gridMap.YieldMultiplierQuery = null;
-        }
-
-        if (_gridMap != null)
-        {
-            _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingAdded);
-            _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingRemoving);
-        }
+        _yieldComposite?.Unregister(this);
+        _statComposite?.Unregister(this);
     }
 
     public bool RegisterLab(ResearchLab lab)
@@ -251,20 +266,188 @@ public sealed class ResearchManager : MonoBehaviour,
         return BASE_DAMAGE_MULTIPLIER + bonusRatio;
     }
 
-    private void HandleBuildingAdded(Building building)
+    public float GetRangeMultiplier(TowerData towerData)
     {
-        if (building is Tower tower && tower.Attack != null)
+        float bonusRatio = 0f;
+
+        foreach (string nodeId in _completedNodeIds)
         {
-            tower.Attack.SetDamageMultiplierQuery(this);
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    bonusRatio += effect.GetTowerRangeMultiplierBonus(towerData);
+                }
+            }
         }
+
+        return BASE_RANGE_MULTIPLIER + bonusRatio;
     }
 
-    private void HandleBuildingRemoving(Building building)
+    public float GetAttackSpeedMultiplier(TowerData towerData)
     {
-        if (building is Tower tower && tower.Attack != null)
+        float bonusRatio = 0f;
+
+        foreach (string nodeId in _completedNodeIds)
         {
-            tower.Attack.SetDamageMultiplierQuery(null);
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    bonusRatio += effect.GetTowerAttackSpeedMultiplierBonus(towerData);
+                }
+            }
         }
+
+        return BASE_ATTACK_SPEED_MULTIPLIER + bonusRatio;
+    }
+
+    public float GetConquestCostReductionRatio()
+    {
+        float reductionRatio = 0f;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    reductionRatio += effect.GetConquestCostReductionRatio();
+                }
+            }
+        }
+
+        return reductionRatio;
+    }
+
+    public int GetConquestDaysReduction()
+    {
+        int daysReduction = 0;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    daysReduction += effect.GetConquestDaysReduction();
+                }
+            }
+        }
+
+        return daysReduction;
+    }
+
+    public float GetCastleDailyRegenAmount()
+    {
+        float regenAmount = 0f;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    regenAmount += effect.GetCastleDailyRegenAmount();
+                }
+            }
+        }
+
+        return regenAmount;
+    }
+
+    public int ResolveCapacity(PopulationAssignmentType assignmentType, int baseCapacity)
+    {
+        int capacityDelta = 0;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    capacityDelta += effect.GetPopulationCapacityDelta(assignmentType);
+                }
+            }
+        }
+
+        return Mathf.Max(MINIMUM_POPULATION_CAPACITY, baseCapacity + capacityDelta);
+    }
+
+    public int GetVisionRadiusBonus()
+    {
+        int radiusBonus = 0;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    radiusBonus += effect.GetVisionRadiusBonus();
+                }
+            }
+        }
+
+        return radiusBonus;
+    }
+
+    public int GetMoveAllowance()
+    {
+        int moveAllowance = 0;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    moveAllowance += effect.GetMoveAllowanceBonus();
+                }
+            }
+        }
+
+        return moveAllowance;
     }
 
     private void CacheNodes()

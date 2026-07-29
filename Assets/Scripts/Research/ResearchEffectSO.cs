@@ -14,4 +14,44 @@ public abstract class ResearchEffectSO : ScriptableObject
     {
         return 0f;
     }
+
+    public virtual float GetTowerRangeMultiplierBonus(TowerData towerData)
+    {
+        return 0f;
+    }
+
+    public virtual float GetTowerAttackSpeedMultiplierBonus(TowerData towerData)
+    {
+        return 0f;
+    }
+
+    public virtual float GetConquestCostReductionRatio()
+    {
+        return 0f;
+    }
+
+    public virtual int GetConquestDaysReduction()
+    {
+        return 0;
+    }
+
+    public virtual float GetCastleDailyRegenAmount()
+    {
+        return 0f;
+    }
+
+    public virtual int GetPopulationCapacityDelta(PopulationAssignmentType assignmentType)
+    {
+        return 0;
+    }
+
+    public virtual int GetVisionRadiusBonus()
+    {
+        return 0;
+    }
+
+    public virtual int GetMoveAllowanceBonus()
+    {
+        return 0;
+    }
 }

@@ -16,11 +16,13 @@ public class UI_ConquestInfoSlot : MonoBehaviour
     [SerializeField]
     private TMP_Text _valueText;
 
-    public void Setup(Sprite icon, string label, string value)
+    // iconColor는 슬라임처럼 공용 스프라이트를 쓰는 자원을 구분하기 위한 틴트다.
+    public void Setup(Sprite icon, Color iconColor, string label, string value)
     {
         if (_iconImage != null && icon != null)
         {
             _iconImage.sprite = icon;
+            _iconImage.color = iconColor;
         }
 
         if (_nameText != null)

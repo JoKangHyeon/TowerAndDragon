@@ -23,6 +23,12 @@ public class SkillTargetingController : MonoBehaviour
     [SerializeField] private RangeIndicator _rangeIndicator;
     [Tooltip("Enemy 스킬 시전 중 커서 아래 유효한 적 위에 띄울 작은 삼각형 인디케이터.")]
     [SerializeField] private SkillTargetIndicator _targetIndicator;
+    [Tooltip("전역형 액티브(빙결·전역 대미지)가 대상 몬스터 목록을 얻는 데 쓴다.")]
+    [SerializeField] private WaveManager _waveManager;
+    [Tooltip("전역형 액티브(타워 즉시 수리)가 대상 건물 목록을 얻는 데 쓴다.")]
+    [SerializeField] private GridMap _gridMap;
+    [Tooltip("생명 액티브(성 즉시 회복)가 회복 대상으로 쓴다.")]
+    [SerializeField] private Castle _castle;
 
     private Camera _cam;
     private Skill _pendingSkill;
@@ -79,7 +85,13 @@ public class SkillTargetingController : MonoBehaviour
 
         if (skill.Targeting == SkillTargeting.Instant)
         {
-            skill.Activate(new SkillCastContext(Vector3.zero, null, CasterObject));
+            skill.Activate(new SkillCastContext(
+                Vector3.zero,
+                null,
+                CasterObject,
+                _waveManager != null ? _waveManager.SpawnedMonsters : null,
+                _gridMap != null ? _gridMap.Buildings : null,
+                _castle));
             return;
         }
 

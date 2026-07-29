@@ -11,11 +11,14 @@ public class UI_ResourceCostSlot : MonoBehaviour
     [SerializeField]
     private TMP_Text _countText;
 
-    public void Setup(Sprite icon, string countText, Color textColor)
+    // iconColor는 슬라임처럼 공용 스프라이트를 쓰는 자원을 구분하기 위한 틴트다.
+    // 고유 아이콘을 가진 자원은 Color.white(틴트 없음)를 넘긴다 - DragonAttributePalette.TintFor 참고.
+    public void Setup(Sprite icon, Color iconColor, string countText, Color textColor)
     {
         if (_iconImage != null && icon != null)
         {
             _iconImage.sprite = icon;
+            _iconImage.color = iconColor;
         }
 
         if (_countText != null)

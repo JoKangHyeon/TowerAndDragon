@@ -7,13 +7,28 @@ using CsvHelper;
 using UnityEditor;
 using UnityEngine;
 
-// 용 스킬트리 SO 에셋 30개(5속성×6노드) + 효과 12개 + 게이트 7개 + 트리 1개를 코드로 생성한다.
+// 용 스킬트리 SO 에셋(노드 30개, 효과, 상태이상, 게이트, 스킬, 트리)을 코드로 생성한다.
 // 손으로 .asset YAML을 작성하지 않기 위한 에디터 전용 도구 - CLAUDE.md 커밋규칙 §5(에디터 전용 코드)
 // 리터럴 제한 예외에 해당한다. 재실행 시 기존 에셋을 재사용(GUID 유지)해 멱등적으로 동작한다.
-// 코스트·수치는 전부 Docs/용_스킬트리_로드맵.md §4·§9의 예시(밸런싱 대상)를 그대로 옮긴 것이다.
+// 코스트·수치는 전부 Docs/Sangwook/용_스킬트리_로드맵.md §4·§9의 예시(밸런싱 대상)를 그대로 옮긴 것이다.
+//
+// 효과 구현 범위(용 스킬 효과 구현 계획 참고):
+// - 어미용 각성 = 속성별 실제 게임플레이 효과(패시브) 1종
+// - 어미용 액티브 I = SkillManager가 발동하는 액티브 스킬 해금(메테오는 기존 스킬 재사용,
+//   나머지 4종은 신규 SkillType)
+// - 어미용 강화/궁극 = 액티브 스킬 위력·쿨다운 강화(DragonSkillPowerEffectSO). 로드맵이 말하는
+//   "패시브 수치 강화"까지는 이번 범위에 넣지 않았다 - 속성마다 다른 패시브 타입을 강화 단계별로
+//   중복 배선하면 GetTowerHitStatus 같은 "첫 매치 반환" 계약과 충돌해 오히려 일관성이 깨진다.
+// - 새끼용 A(타워형)는 얼음·불만 구현(시간·암석·생명은 기획 [미정] - KinTowerStatusEffectSO를
+//   만들되 _status를 비워 no-op으로 둔다).
+// - 새끼용 B(지역형)는 얼음만 미구현(강 결빙 - 지형 기반 배치 제한 시스템 자체가 없음).
+// - 생명 액티브 I(바리케이드)는 몬스터를 막을 구조물 프리팹/스프라이트가 없어 성 즉시 회복으로
+//   임시 대체한다(기획 [미정], 팀 확인 대기) - 팀이 에셋을 제공하면 후속 작업으로 교체한다.
 public static class DragonSkillTreeAssetGenerator
 {
     private const string DATA_FOLDER = "Assets/Data/Dragon";
+    private const string SKILL_SUBFOLDER = "Skills";
+    private const string STATUS_SUBFOLDER = "Status";
     private const string SHEET_EXPORT_FOLDER = "Docs";
 
     private const int AWAKEN_SLIME_COST = 5;
@@ -26,10 +41,40 @@ public static class DragonSkillTreeAssetGenerator
     private const int KIN_SLIME_COST = 8;
     private const int KIN_SPECIAL_COST = 3;
 
-    // 새끼용(#102·#103) 미구현 상태의 임시 게이트값 - 로드맵 §5·§10, 일정계획 A-1.
-    // 최종 목표치는 강화=2 / 궁극=4 (팀이 새끼용을 구현하면 두 KinCountGateSO 에셋의
-    // _requiredKinCount만 각각 갱신하면 된다).
-    private const int TEMP_REQUIRED_KIN_COUNT = 0;
+    // 어미용 강화/궁극 게이트 - 새끼용(KinTower/KinArea) 해금 수가 전역 합산으로 이 값 이상.
+    private const int ENHANCE_REQUIRED_KIN_COUNT = 2;
+    private const int ULTIMATE_REQUIRED_KIN_COUNT = 4;
+
+    // 강화/궁극 노드가 액티브 스킬에 주는 위력 배율 보너스·쿨다운 감소 비율(예시, 밸런싱 대상).
+    private const float ENHANCE_SKILL_POWER_BONUS = 0.2f;
+    private const float ENHANCE_SKILL_COOLDOWN_REDUCTION = 0.1f;
+    private const float ULTIMATE_SKILL_POWER_BONUS = 0.5f;
+    private const float ULTIMATE_SKILL_COOLDOWN_REDUCTION = 0.25f;
+
+    // 상태이상 예시 수치(밸런싱 대상) - 스트링테이블과 마찬가지로 팀 확정 전 값.
+    private const float ICE_SLOW_MULTIPLIER = 0.5f;
+    private const float ICE_SLOW_DURATION = 3f;
+    private const float FIRE_BURN_DAMAGE_PER_TICK = 2f;
+    private const float FIRE_BURN_TICK_INTERVAL = 1f;
+    private const float FIRE_BURN_DURATION_INFINITE = 0f; // 상시 화상 - 몬스터가 죽을 때까지 유지.
+
+    // 어미용 시간 각성(타워 공속↑)·암석/생명 각성(생산↑) 보너스(예시, 밸런싱 대상).
+    private const float TIME_ATTACK_SPEED_BONUS = 0.15f;
+    private const float YIELD_BONUS_RATIO = 0.2f;
+
+    // 새끼용 지역형(B 슬롯) 보너스(예시, 밸런싱 대상).
+    private const int FIRE_KIN_VISION_BONUS_RADIUS = 2;
+    private const int TIME_KIN_CONQUEST_DAYS_REDUCTION = 1;
+    private const float KIN_AREA_YIELD_BONUS_RATIO = 0.25f;
+
+    // 액티브 스킬 예시 수치(밸런싱 대상).
+    private const float SKILL_DEFAULT_COOLTIME = 60f;
+    private const int SKILL_UNLIMITED_USE_PER_DAY = -1;
+    private const float GLOBAL_DAMAGE_PERCENT_OF_CURRENT_HEALTH = 0.3f;
+    private const float METEOR_AREA_RADIUS = 2f;
+
+    // 생명 액티브 임시 대체(성 즉시 회복) 예시 수치 - 바리케이드 확정 전까지, 밸런싱 대상.
+    private const float CASTLE_HEAL_AMOUNT = 50f;
 
     private struct AttributeSpec
     {
@@ -80,7 +125,7 @@ public static class DragonSkillTreeAssetGenerator
             Type = DragonType.Fire, Key = "fire", KoreanName = "불",
             Slime = ResourceType.VolcanoSlime, Specialized = ResourceType.FlameHeart,
             PassiveDescKo = "모든 적에게 화상 부여", PassiveDescEn = "Apply burn to all enemies.",
-            ActiveDescKo = "화상 틱뎀 가속 / 전역 대미지", ActiveDescEn = "Accelerate burn tick damage / global damage.",
+            ActiveDescKo = "화상 재부여 + 전역 대미지", ActiveDescEn = "Reapply burn + deal global damage.",
             KinTowerDescKo = "화상 타워", KinTowerDescEn = "Burn tower.",
             KinAreaDescKo = "시야 범위 증가", KinAreaDescEn = "Increase vision range.",
         },
@@ -91,7 +136,7 @@ public static class DragonSkillTreeAssetGenerator
             PassiveDescKo = "타워 공격속도 증가", PassiveDescEn = "Increase tower attack speed.",
             ActiveDescKo = "파괴된 타워 즉시 수리", ActiveDescEn = "Instantly repair destroyed towers.",
             KinTowerDescKo = "효과 미정", KinTowerDescEn = "Effect not yet defined.",
-            KinAreaDescKo = "점령 공격대에 포함 가능", KinAreaDescEn = "Can join conquest expeditions.",
+            KinAreaDescKo = "점령 소요일 감소(원정 동행 근사)", KinAreaDescEn = "Reduces conquest duration (approximates joining expeditions).",
         },
         new AttributeSpec
         {
@@ -118,6 +163,8 @@ public static class DragonSkillTreeAssetGenerator
     {
         _locRows.Clear();
         EnsureFolder(DATA_FOLDER);
+        EnsureFolder($"{DATA_FOLDER}/{SKILL_SUBFOLDER}");
+        EnsureFolder($"{DATA_FOLDER}/{STATUS_SUBFOLDER}");
 
         AttributeSpec[] attributes = BuildAttributeSpecs();
 
@@ -145,7 +192,7 @@ public static class DragonSkillTreeAssetGenerator
             $"{DATA_FOLDER}/DG_KinCount_Enhance.asset",
             so =>
             {
-                so.FindProperty("_requiredKinCount").intValue = TEMP_REQUIRED_KIN_COUNT;
+                so.FindProperty("_requiredKinCount").intValue = ENHANCE_REQUIRED_KIN_COUNT;
                 so.FindProperty("_lockedLocKey").stringValue = "dragon_gate_kin_count_enhance";
             });
         AddLocRow("dragon_gate_kin_count_enhance",
@@ -156,35 +203,168 @@ public static class DragonSkillTreeAssetGenerator
             $"{DATA_FOLDER}/DG_KinCount_Ultimate.asset",
             so =>
             {
-                so.FindProperty("_requiredKinCount").intValue = TEMP_REQUIRED_KIN_COUNT;
+                so.FindProperty("_requiredKinCount").intValue = ULTIMATE_REQUIRED_KIN_COUNT;
                 so.FindProperty("_lockedLocKey").stringValue = "dragon_gate_kin_count_ultimate";
             });
         AddLocRow("dragon_gate_kin_count_ultimate",
             "[TBD] Locked: requires {0} unlocked baby dragon nodes",
             "[미정] 잠김: 새끼용 노드 {0}개 해금 필요");
 
-        // 2. 효과: 속성별 패시브/액티브 해금(각 5개) + 공유 새끼용 마커 2종
-        var passiveEffects = new Dictionary<DragonType, PassiveAttributeEffectSO>();
+        // 2. 상태이상 데이터(얼음 슬로우 · 불 화상) - 어미용 패시브와 새끼용 타워형이 공유한다.
+        MoveSpeedStatusSO iceSlowStatus = CreateOrReplace<MoveSpeedStatusSO>(
+            $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/DS_IceSlow.asset",
+            so =>
+            {
+                so.FindProperty("_statusId").stringValue = "dragon_ice_slow";
+                so.FindProperty("_durationSeconds").floatValue = ICE_SLOW_DURATION;
+                so.FindProperty("_speedMultiplier").floatValue = ICE_SLOW_MULTIPLIER;
+            });
+
+        DamageOverTimeStatusSO fireBurnStatus = CreateOrReplace<DamageOverTimeStatusSO>(
+            $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/DS_FireBurn.asset",
+            so =>
+            {
+                so.FindProperty("_statusId").stringValue = "dragon_fire_burn";
+                so.FindProperty("_durationSeconds").floatValue = FIRE_BURN_DURATION_INFINITE;
+                so.FindProperty("_damagePerTick").floatValue = FIRE_BURN_DAMAGE_PER_TICK;
+                so.FindProperty("_tickIntervalSeconds").floatValue = FIRE_BURN_TICK_INTERVAL;
+            });
+
+        // 3. 액티브 스킬 - 메테오는 기존 SkillType 재사용, 나머지는 신규. 생명(바리케이드)은
+        //    대상 프리팹이 없어 성 즉시 회복(HEAL_CASTLE)으로 임시 대체한다(팀 확인 대기).
+        var skillByAttribute = new Dictionary<DragonType, SkillSO>();
+
+        skillByAttribute[DragonType.Ice] = CreateOrReplace<SkillSO>(
+            $"{DATA_FOLDER}/{SKILL_SUBFOLDER}/SK_Dragon_FreezeAll.asset",
+            so =>
+            {
+                so.FindProperty("Type").enumValueIndex = (int)SkillType.FREEZE_ALL;
+                so.FindProperty("NameStringKey").stringValue = "dragon_skill_freeze_all_name";
+                so.FindProperty("DescriptionStringKey").stringValue = "dragon_skill_freeze_all_desc";
+                so.FindProperty("DefaultCooltime").floatValue = SKILL_DEFAULT_COOLTIME;
+                so.FindProperty("DefaultUsePerDay").intValue = SKILL_UNLIMITED_USE_PER_DAY;
+                so.FindProperty("AppliedStatus").objectReferenceValue = iceSlowStatus;
+            });
+
+        skillByAttribute[DragonType.Fire] = CreateOrReplace<SkillSO>(
+            $"{DATA_FOLDER}/{SKILL_SUBFOLDER}/SK_Dragon_GlobalDamage.asset",
+            so =>
+            {
+                so.FindProperty("Type").enumValueIndex = (int)SkillType.GLOBAL_CURRENT_HEALTH_DAMAGE;
+                so.FindProperty("NameStringKey").stringValue = "dragon_skill_global_damage_name";
+                so.FindProperty("DescriptionStringKey").stringValue = "dragon_skill_global_damage_desc";
+                so.FindProperty("DefaultCooltime").floatValue = SKILL_DEFAULT_COOLTIME;
+                so.FindProperty("DefaultUsePerDay").intValue = SKILL_UNLIMITED_USE_PER_DAY;
+                so.FindProperty("DamagePercentOfCurrentHealth").floatValue = GLOBAL_DAMAGE_PERCENT_OF_CURRENT_HEALTH;
+                so.FindProperty("AppliedStatus").objectReferenceValue = fireBurnStatus;
+            });
+
+        skillByAttribute[DragonType.Time] = CreateOrReplace<SkillSO>(
+            $"{DATA_FOLDER}/{SKILL_SUBFOLDER}/SK_Dragon_RepairTowers.asset",
+            so =>
+            {
+                so.FindProperty("Type").enumValueIndex = (int)SkillType.REPAIR_TOWERS;
+                so.FindProperty("NameStringKey").stringValue = "dragon_skill_repair_towers_name";
+                so.FindProperty("DescriptionStringKey").stringValue = "dragon_skill_repair_towers_desc";
+                so.FindProperty("DefaultCooltime").floatValue = SKILL_DEFAULT_COOLTIME;
+                so.FindProperty("DefaultUsePerDay").intValue = SKILL_UNLIMITED_USE_PER_DAY;
+            });
+
+        skillByAttribute[DragonType.Stone] = CreateOrReplace<SkillSO>(
+            $"{DATA_FOLDER}/{SKILL_SUBFOLDER}/SK_Dragon_Meteor.asset",
+            so =>
+            {
+                so.FindProperty("Type").enumValueIndex = (int)SkillType.AREA_CURRENT_HEALTH_DAMAGE;
+                so.FindProperty("NameStringKey").stringValue = "dragon_skill_meteor_name";
+                so.FindProperty("DescriptionStringKey").stringValue = "dragon_skill_meteor_desc";
+                so.FindProperty("DefaultCooltime").floatValue = SKILL_DEFAULT_COOLTIME;
+                so.FindProperty("DefaultUsePerDay").intValue = SKILL_UNLIMITED_USE_PER_DAY;
+                so.FindProperty("DamagePercentOfCurrentHealth").floatValue = GLOBAL_DAMAGE_PERCENT_OF_CURRENT_HEALTH;
+                so.FindProperty("AreaRadius").floatValue = METEOR_AREA_RADIUS;
+                // AreaCurrentHealthDamageSkill이 Physics2D.OverlapCircleAll에 이 마스크를 그대로 쓴다 -
+                // DebugSkill1~3(AREA/SINGLE 타입)과 동일하게 Enemy 레이어를 지정해야 실제로 맞는다.
+                so.FindProperty("TargetLayers").intValue = LayerMask.GetMask("Enemy");
+            });
+
+        skillByAttribute[DragonType.Life] = CreateOrReplace<SkillSO>(
+            $"{DATA_FOLDER}/{SKILL_SUBFOLDER}/SK_Dragon_CastleHeal.asset",
+            so =>
+            {
+                so.FindProperty("Type").enumValueIndex = (int)SkillType.HEAL_CASTLE;
+                so.FindProperty("NameStringKey").stringValue = "dragon_skill_castle_heal_name";
+                so.FindProperty("DescriptionStringKey").stringValue = "dragon_skill_castle_heal_desc";
+                so.FindProperty("DefaultCooltime").floatValue = SKILL_DEFAULT_COOLTIME;
+                so.FindProperty("DefaultUsePerDay").intValue = SKILL_UNLIMITED_USE_PER_DAY;
+                so.FindProperty("HealAmount").floatValue = CASTLE_HEAL_AMOUNT;
+            });
+
+        AddLocRow("dragon_skill_freeze_all_name", "[TBD] Freeze All", "[미정] 모든 적 빙결");
+        AddLocRow("dragon_skill_freeze_all_desc", "[TBD] Freezes all enemies currently on the field.", "[미정] 현재 필드의 모든 적을 빙결시킵니다.");
+        AddLocRow("dragon_skill_global_damage_name", "[TBD] Burn Surge", "[미정] 화상 폭발");
+        AddLocRow("dragon_skill_global_damage_desc", "[TBD] Deals damage to all enemies and reapplies burn.", "[미정] 모든 적에게 피해를 주고 화상을 다시 겁니다.");
+        AddLocRow("dragon_skill_repair_towers_name", "[TBD] Instant Repair", "[미정] 즉시 수리");
+        AddLocRow("dragon_skill_repair_towers_desc", "[TBD] Instantly revives all disabled towers.", "[미정] 비활성화된 모든 타워를 즉시 복구합니다.");
+        AddLocRow("dragon_skill_meteor_name", "[TBD] Meteor", "[미정] 메테오");
+        AddLocRow("dragon_skill_meteor_desc", "[TBD] Calls down a meteor on a target area.", "[미정] 지정 지역에 운석을 떨어뜨립니다.");
+        AddLocRow("dragon_skill_castle_heal_name", "[TBD] Castle Mend", "[미정] 성벽 재생");
+        AddLocRow("dragon_skill_castle_heal_desc", "[TBD] Instantly restores health to the castle. Temporary substitute for Barricade.", "[미정] 성 체력을 즉시 회복합니다. 바리케이드의 임시 대체입니다.");
+
+        // 4. 효과: 속성별 각성 패시브 + 액티브 해금 + 강화/궁극 스킬 강화 + 새끼용 A/B
+        var awakenEffects = new Dictionary<DragonType, DragonSkillEffectSO>();
         var activeEffects = new Dictionary<DragonType, ActiveSkillUnlockEffectSO>();
+        var enhanceEffects = new Dictionary<DragonType, DragonSkillPowerEffectSO>();
+        var ultimateEffects = new Dictionary<DragonType, DragonSkillPowerEffectSO>();
+        var kinTowerEffects = new Dictionary<DragonType, KinTowerStatusEffectSO>();
+        var kinAreaEffects = new Dictionary<DragonType, DragonSkillEffectSO>();
+
         foreach (AttributeSpec attr in attributes)
         {
-            passiveEffects[attr.Type] = CreateOrReplace<PassiveAttributeEffectSO>(
-                $"{DATA_FOLDER}/DE_Passive_{Capitalize(attr.Key)}.asset",
-                so =>
-                {
-                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
-                    so.FindProperty("_value").floatValue = 0f; // 소비처 없음 - stub, 로드맵 §8
-                });
+            awakenEffects[attr.Type] = CreateAwakenEffect(attr, iceSlowStatus, fireBurnStatus);
 
             activeEffects[attr.Type] = CreateOrReplace<ActiveSkillUnlockEffectSO>(
                 $"{DATA_FOLDER}/DE_ActiveSkillUnlock_{Capitalize(attr.Key)}.asset",
-                _ => { }); // _skill은 대상 SkillSO가 없어 비워둔다 - stub
+                so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+                    skillByAttribute.TryGetValue(attr.Type, out SkillSO skill);
+                    so.FindProperty("_skill").objectReferenceValue = skill;
+                });
+
+            enhanceEffects[attr.Type] = CreateOrReplace<DragonSkillPowerEffectSO>(
+                $"{DATA_FOLDER}/DE_SkillPower_Enhance_{Capitalize(attr.Key)}.asset",
+                so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+                    so.FindProperty("_powerBonusRatio").floatValue = ENHANCE_SKILL_POWER_BONUS;
+                    so.FindProperty("_cooldownReductionRatio").floatValue = ENHANCE_SKILL_COOLDOWN_REDUCTION;
+                });
+
+            ultimateEffects[attr.Type] = CreateOrReplace<DragonSkillPowerEffectSO>(
+                $"{DATA_FOLDER}/DE_SkillPower_Ultimate_{Capitalize(attr.Key)}.asset",
+                so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+                    so.FindProperty("_powerBonusRatio").floatValue = ULTIMATE_SKILL_POWER_BONUS;
+                    so.FindProperty("_cooldownReductionRatio").floatValue = ULTIMATE_SKILL_COOLDOWN_REDUCTION;
+                });
+
+            kinTowerEffects[attr.Type] = CreateOrReplace<KinTowerStatusEffectSO>(
+                $"{DATA_FOLDER}/DE_KinTower_{Capitalize(attr.Key)}.asset",
+                so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+
+                    // 얼음·불만 상태 배정 - 시간·암석·생명은 기획 [미정]이라 null로 둔다(no-op).
+                    StatusEffectSO status = attr.Type == DragonType.Ice ? iceSlowStatus
+                        : attr.Type == DragonType.Fire ? fireBurnStatus
+                        : null;
+                    so.FindProperty("_status").objectReferenceValue = status;
+                });
+
+            kinAreaEffects[attr.Type] = CreateKinAreaEffect(attr);
         }
 
-        KinTowerEffectSO kinTowerEffect = CreateOrReplace<KinTowerEffectSO>($"{DATA_FOLDER}/DE_KinTower.asset", _ => { });
-        KinAreaEffectSO kinAreaEffect = CreateOrReplace<KinAreaEffectSO>($"{DATA_FOLDER}/DE_KinArea.asset", _ => { });
-
-        // 3. 노드 30개(5속성 × 6종)
+        // 5. 노드 30개(5속성 × 6종)
         var orderedNodes = new List<DragonSkillNodeData>();
 
         foreach (AttributeSpec attr in attributes)
@@ -196,7 +376,7 @@ public static class DragonSkillTreeAssetGenerator
             List<ResourceAmount> kinCost = BuildCost(attr, KIN_SLIME_COST, KIN_SPECIAL_COST);
 
             DragonSkillNodeData awaken = CreateNode(attr, "awaken", DragonNodeKind.MotherAwaken,
-                null, null, awakenCost, new DragonSkillEffectSO[] { passiveEffects[attr.Type] },
+                null, null, awakenCost, new[] { awakenEffects[attr.Type] },
                 $"[TBD] {Capitalize(attr.Key)} Awaken", $"[TBD] Passive (while active): {attr.PassiveDescEn}",
                 $"[미정] {attr.KoreanName} 각성", $"[미정] 패시브(활성 시): {attr.PassiveDescKo}");
 
@@ -206,24 +386,30 @@ public static class DragonSkillTreeAssetGenerator
                 $"[미정] {attr.KoreanName} 액티브 I", $"[미정] 액티브 스킬: {attr.ActiveDescKo}");
 
             DragonSkillNodeData enhance = CreateNode(attr, "enhance", DragonNodeKind.MotherEnhance,
-                new[] { active }, new ProgressionGateSO[] { enhanceGate }, enhanceCost, Array.Empty<DragonSkillEffectSO>(),
-                $"[TBD] {Capitalize(attr.Key)} Enhance", "[TBD] Enhances the passive and active values above.",
-                $"[미정] {attr.KoreanName} 강화", "[미정] 위 패시브·액티브 수치를 강화합니다.");
+                new[] { active }, new ProgressionGateSO[] { enhanceGate }, enhanceCost,
+                new DragonSkillEffectSO[] { enhanceEffects[attr.Type] },
+                $"[TBD] {Capitalize(attr.Key)} Enhance", "[TBD] Enhances the active skill above.",
+                $"[미정] {attr.KoreanName} 강화", "[미정] 위 액티브 스킬을 강화합니다.");
 
             DragonSkillNodeData ultimate = CreateNode(attr, "ultimate", DragonNodeKind.MotherUltimate,
-                new[] { enhance }, new ProgressionGateSO[] { ultimateGate }, ultimateCost, Array.Empty<DragonSkillEffectSO>(),
+                new[] { enhance }, new ProgressionGateSO[] { ultimateGate }, ultimateCost,
+                new DragonSkillEffectSO[] { ultimateEffects[attr.Type] },
                 $"[TBD] {Capitalize(attr.Key)} Ultimate", "[TBD] Final upgrade of this attribute.",
                 $"[미정] {attr.KoreanName} 궁극", "[미정] 이 속성의 최종 강화입니다.");
 
             DragonSkillNodeData kinTower = CreateNode(attr, "kin_tower", DragonNodeKind.KinTower,
                 new[] { awaken }, new ProgressionGateSO[] { kinOwnedGates[attr.Type] }, kinCost,
-                new DragonSkillEffectSO[] { kinTowerEffect },
+                new DragonSkillEffectSO[] { kinTowerEffects[attr.Type] },
                 $"[TBD] {Capitalize(attr.Key)} Kin Tower", $"[TBD] {attr.KinTowerDescEn}",
                 $"[미정] {attr.KoreanName} 새끼용 타워", $"[미정] {attr.KinTowerDescKo}");
 
+            DragonSkillEffectSO[] kinAreaArray = kinAreaEffects[attr.Type] != null
+                ? new[] { kinAreaEffects[attr.Type] }
+                : Array.Empty<DragonSkillEffectSO>();
+
             DragonSkillNodeData kinArea = CreateNode(attr, "kin_area", DragonNodeKind.KinArea,
                 new[] { awaken }, new ProgressionGateSO[] { kinOwnedGates[attr.Type] }, kinCost,
-                new DragonSkillEffectSO[] { kinAreaEffect },
+                kinAreaArray,
                 $"[TBD] {Capitalize(attr.Key)} Kin Area", $"[TBD] {attr.KinAreaDescEn}",
                 $"[미정] {attr.KoreanName} 새끼용 지역", $"[미정] {attr.KinAreaDescKo}");
 
@@ -235,7 +421,7 @@ public static class DragonSkillTreeAssetGenerator
             orderedNodes.Add(kinArea);
         }
 
-        // 4. 트리
+        // 6. 트리
         CreateOrReplace<DragonSkillTreeData>(
             $"{DATA_FOLDER}/DragonSkillTree.asset",
             so =>
@@ -248,7 +434,7 @@ public static class DragonSkillTreeAssetGenerator
                 }
             });
 
-        // 5. 공통 UI 로컬 키(헤더/상태/실패사유/코스트 포맷)
+        // 7. 공통 UI 로컬 키(헤더/상태/실패사유/코스트 포맷)
         AddCommonLocRows();
 
         AssetDatabase.SaveAssets();
@@ -259,7 +445,98 @@ public static class DragonSkillTreeAssetGenerator
 
         Debug.Log(
             $"[DragonSkillTreeAssetGenerator] 노드 {orderedNodes.Count}개, 로컬 키 {_locRows.Count}개 생성 완료. " +
-            $"'{SHEET_EXPORT_FOLDER}/' 아래 시트 반영용 CSV 조각을 확인하세요.");
+            $"'{SHEET_EXPORT_FOLDER}/' 아래 시트 반영용 CSV 조각을 확인하세요. " +
+            "생명 액티브(바리케이드)는 성 즉시 회복으로 임시 대체했습니다 - 팀 에셋 제공 후 후속 작업.");
+    }
+
+    // 속성별 각성 패시브 효과 - 타입이 서로 달라 switch로 분기한다(각 효과 SO의 필드 스키마가 다름).
+    private static DragonSkillEffectSO CreateAwakenEffect(
+        AttributeSpec attr,
+        MoveSpeedStatusSO iceSlowStatus,
+        DamageOverTimeStatusSO fireBurnStatus)
+    {
+        string assetPath = $"{DATA_FOLDER}/DE_Awaken_{Capitalize(attr.Key)}.asset";
+
+        switch (attr.Type)
+        {
+            case DragonType.Ice:
+                return CreateOrReplace<DragonTowerHitStatusEffectSO>(assetPath, so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+                    so.FindProperty("_status").objectReferenceValue = iceSlowStatus;
+                });
+
+            case DragonType.Fire:
+                return CreateOrReplace<DragonSpawnStatusEffectSO>(assetPath, so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+                    so.FindProperty("_status").objectReferenceValue = fireBurnStatus;
+                });
+
+            case DragonType.Time:
+                return CreateOrReplace<DragonTowerStatEffectSO>(assetPath, so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+                    so.FindProperty("_attackSpeedBonusRatio").floatValue = TIME_ATTACK_SPEED_BONUS;
+                    so.FindProperty("_damageBonusRatio").floatValue = 0f;
+                });
+
+            // "광산 생산량 증가"의 광산은 실제 채석장(RPD_Quarry, Stone 생산) - attr.Slime/Specialized만
+            // 넣으면 RockSlime·PhilosopherStone만 오르고 정작 채석장의 기본 Stone 생산은 그대로다.
+            case DragonType.Stone:
+                return CreateOrReplace<DragonYieldEffectSO>(assetPath, so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+                    so.FindProperty("_targetResources").intValue = (int)(ResourceType.Stone | attr.Slime | attr.Specialized);
+                    so.FindProperty("_bonusRatio").floatValue = YIELD_BONUS_RATIO;
+                });
+
+            // "농장 생산량 증가"의 농장은 실제 농장(RPD_FarmField, Food 생산) - GrassSlime만 넣으면
+            // 정작 농장의 기본 Food 생산은 안 오른다.
+            case DragonType.Life:
+            default:
+                return CreateOrReplace<DragonYieldEffectSO>(assetPath, so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+                    so.FindProperty("_targetResources").intValue = (int)(ResourceType.Food | attr.Slime);
+                    so.FindProperty("_bonusRatio").floatValue = YIELD_BONUS_RATIO;
+                });
+        }
+    }
+
+    // 새끼용 지역형(B 슬롯) 효과 - 얼음은 대상 시스템이 없어 null(노드에 효과 미배정)로 남긴다.
+    private static DragonSkillEffectSO CreateKinAreaEffect(AttributeSpec attr)
+    {
+        string assetPath = $"{DATA_FOLDER}/DE_KinArea_{Capitalize(attr.Key)}.asset";
+
+        switch (attr.Type)
+        {
+            case DragonType.Ice:
+                return null; // 강 결빙 - 지형 기반 배치 제한 시스템 자체가 없어 stub.
+
+            case DragonType.Fire:
+                return CreateOrReplace<DragonVisionEffectSO>(assetPath, so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+                    so.FindProperty("_bonusRadius").intValue = FIRE_KIN_VISION_BONUS_RADIUS;
+                });
+
+            case DragonType.Time:
+                return CreateOrReplace<KinConquestEffectSO>(assetPath, so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+                    so.FindProperty("_daysReduction").intValue = TIME_KIN_CONQUEST_DAYS_REDUCTION;
+                });
+
+            case DragonType.Stone:
+            case DragonType.Life:
+            default:
+                return CreateOrReplace<KinAreaYieldEffectSO>(assetPath, so =>
+                {
+                    so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
+                    so.FindProperty("_bonusRatio").floatValue = KIN_AREA_YIELD_BONUS_RATIO;
+                });
+        }
     }
 
     private static List<ResourceAmount> BuildCost(AttributeSpec attr, int slimeAmount, int specializedAmount)

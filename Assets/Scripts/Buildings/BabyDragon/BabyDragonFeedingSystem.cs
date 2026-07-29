@@ -46,18 +46,14 @@ public class BabyDragonFeedingSystem : MonoBehaviour
         }
     }
 
+    // GridMap.OnBuildingAdded는 BabyDragonPlacementCoordinator도 같이 구독하며 Setup()으로
+    // DragonData를 채운다. 두 리스너의 구독 순서(컴포넌트 순서)는 보장되지 않으므로, 여기서
+    // DragonData 유무로 등록을 거부하면 Setup()이 아직 실행되지 않은 타이밍에 false negative가
+    // 난다. 등록은 무조건 하고, 실제로 값이 필요한 FeedAll(아침 정산) 시점에만 null을 검사한다.
     private void HandleBuildingAdded(Building building)
     {
         if (!(building is BabyDragonTower babyDragon))
         {
-            return;
-        }
-
-        if (babyDragon.DragonData == null)
-        {
-            Debug.LogError(
-                "[BabyDragonFeedingSystem] 새끼용에 BabyDragonData가 할당되지 않았습니다.",
-                babyDragon);
             return;
         }
 
@@ -99,6 +95,11 @@ public class BabyDragonFeedingSystem : MonoBehaviour
 
         foreach (BabyDragonTower babyDragon in _babyDragons)
         {
+            if (babyDragon.DragonData == null)
+            {
+                continue;
+            }
+
             DragonType dragonType = babyDragon.DragonData.DragonType;
             _installedCountByDragonType.TryGetValue(dragonType, out int count);
             _installedCountByDragonType[dragonType] = count + 1;
@@ -108,6 +109,15 @@ public class BabyDragonFeedingSystem : MonoBehaviour
     private void Feed(BabyDragonTower babyDragon)
     {
         BabyDragonData data = babyDragon.DragonData;
+        if (data == null)
+        {
+            Debug.LogError(
+                "[BabyDragonFeedingSystem] 새끼용에 BabyDragonData가 할당되지 않았습니다.",
+                babyDragon);
+            babyDragon.SetFed(false);
+            return;
+        }
+
         _installedCountByDragonType.TryGetValue(data.DragonType, out int sameTypeCount);
         int requiredFeed = BabyDragonFeedFormula.ResolveDailyFeed(data, sameTypeCount, _babyDragons.Count);
 
@@ -117,7 +127,7 @@ public class BabyDragonFeedingSystem : MonoBehaviour
             return;
         }
 
-        if (!BabyDragonSlimeTable.TryGetFeedSlime(data.DragonType, out ResourceType slimeType))
+        if (!DragonSlimeTable.TryGetFeedSlime(data.DragonType, out ResourceType slimeType))
         {
             Debug.LogError(
                 $"[BabyDragonFeedingSystem] 속성 {data.DragonType}에 대응하는 먹이 슬라임이 없습니다.",

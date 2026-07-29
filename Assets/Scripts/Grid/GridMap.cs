@@ -422,6 +422,8 @@ public class GridMap : MonoBehaviour
 
     public IEnumerable<Chunk> GetAllChunks() => _chunks.Values;
 
+    public IEnumerable<Building> Buildings => _buildingFootprintCells.Keys;
+
     public bool HasBuilding<T>() where T : Building
     {
         foreach (Building building in _buildingFootprintCells.Keys)
