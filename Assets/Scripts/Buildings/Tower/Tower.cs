@@ -6,7 +6,7 @@ using UnityEngine;
 
 [RequireComponent(typeof(Health))]
 [RequireComponent(typeof(TowerAttack))]
-public class Tower : Building, IMonsterTarget, IParalyzable
+public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
 {
     [SerializeField] private TowerData _towerData;
     private Health _health;
@@ -36,6 +36,13 @@ public class Tower : Building, IMonsterTarget, IParalyzable
     public GameObject TargetObject => gameObject;
 
     public bool IsParalyzed => _isParalyzed;
+
+    // 체력바 UI가 부활 게이지를 그리는 데 쓴다 - _isDisabled로 판정하므로 별도 상태 추가가 필요 없다.
+    public bool IsReviving => _isDisabled;
+    public float ReviveProgress =>
+        _isDisabled && _towerData != null && _towerData.ReviveDelay > 0f
+            ? Mathf.Clamp01((Time.time - _disabledAtTime) / _towerData.ReviveDelay)
+            : 0f;
 
     private static readonly int HIT_ANIM_KEY = Animator.StringToHash("Hit");
     private static readonly int BROKEN_ANIM_KEY = Animator.StringToHash("Broken");
