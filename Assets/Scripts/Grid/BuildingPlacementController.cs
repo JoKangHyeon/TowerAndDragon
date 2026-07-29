@@ -122,7 +122,6 @@ public class BuildingPlacementController : MonoBehaviour
 
         HandlePlacementInput();
         HandleBuildCancelInput();
-        HandleMoveCancelInput();
         HandleCancelInput();
         HandleLongPressMove();
         HandleRotateInput();
