@@ -683,7 +683,6 @@
         <button class="filter-button" type="button" data-filter="risk" aria-pressed="false">리스크</button>
       </div>
       <button class="tool-button" id="presentationToggle" type="button" aria-pressed="false">발표 모드</button>
-      <button class="tool-button" type="button" onclick="window.print()">인쇄 / PDF</button>
     </div>
   </header>
 
@@ -718,7 +717,7 @@
     <section class="section" id="evidence">
       <div class="section-heading">
         <h2>한눈에 보는 구현 증거</h2>
-        <p>저장소와 Unity 에디터에서 2026-07-29 기준으로 직접 확인한 수치입니다. 수치는 완성도 점수가 아니라 구현 표면의 크기를 보여줍니다.</p>
+        <p>저장소와 Unity 에디터에서 2026-07-29 기준으로 직접 확인한 수치입니다. <br> 수치는 완성도 점수가 아니라 구현 표면의 크기를 보여줍니다.</p>
       </div>
       <div class="stats-grid">
         <article class="stat"><span class="stat__value">232</span><span class="stat__label">C# 스크립트  </span><span class="stat__note">19개 주요 시스템 폴더</span></article>
@@ -795,7 +794,7 @@
     <section class="section" id="systems">
       <div class="section-heading">
         <h2>시스템별 구현 현황</h2>
-        <p>상단 필터로 발표에서 강조할 상태만 남길 수 있습니다. “진행”은 핵심 동작은 있으나 콘텐츠 연결이나 종료 조건이 남은 영역입니다.</p>
+        <p>상단 필터로 발표에서 강조할 상태만 남길 수 있습니다. <br> “진행”은 핵심 동작은 있으나 콘텐츠 연결이나 종료 조건이 남은 영역입니다.</p>
       </div>
       <div class="system-grid">
         <article class="system-card" data-status="done">
@@ -1011,23 +1010,6 @@
           <div class="priority"><span class="priority__level">P1</span><div><strong>발표용 통합 시연 체크리스트</strong><small>건설→인구→점령→밤→정산→연구→보스→승패 순서로 짧은 런 검증</small></div><span class="status status--doing">다음</span></div>
           <div class="priority"><span class="priority__level">P1</span><div><strong>UI 정보 완결</strong><small>하루 자원량 표시와 스트링테이블 연결</small></div><a href="https://github.com/JoKangHyeon/TowerAndDragon/issues/97">#97</a></div>
           <div class="priority"><span class="priority__level">P2</span><div><strong>콘텐츠 폭 확장</strong><small>적·타워 종류 추가는 코어 루프 안정화 뒤 병렬 진행</small></div><a href="https://github.com/JoKangHyeon/TowerAndDragon/issues/113">#113</a></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="talk-track">
-      <div class="section-heading">
-        <h2>7분 발표 흐름</h2>
-        <p>이 보드를 위에서 아래로 따라가면 설명이 자연스럽게 이어집니다.</p>
-      </div>
-      <div class="talk-track">
-        <div class="talk-track__steps">
-          <article class="talk-step"><b>00:00 — 00:40</b><strong>결론 먼저</strong><p>코어 루프는 연결됐고, 지금은 마감 연결 단계라고 선언.</p></article>
-          <article class="talk-step"><b>00:40 — 01:30</b><strong>게임 한 바퀴</strong><p>낮 선택 → 밤 방어 → 정산 → 성장의 인과관계 설명.</p></article>
-          <article class="talk-step"><b>01:30 — 04:10</b><strong>구현 기능</strong><p>8개 시스템 카드를 훑고 용·인구·점령의 차별점 강조.</p></article>
-          <article class="talk-step"><b>04:10 — 05:00</b><strong>구현 방식</strong><p>SO 데이터와 조립형 컴포넌트, 이벤트 연결 구조 설명.</p></article>
-          <article class="talk-step"><b>05:00 — 06:10</b><strong>일정 진단</strong><p>Build 1/2 완료와 현재 14/21, 알파 범위 선행을 근거로 제시.</p></article>
-          <article class="talk-step"><b>06:10 — 07:00</b><strong>다음 액션</strong><p>열린 7개 작업과 SSOT 결정·완주 테스트 순서를 제시.</p></article>
         </div>
       </div>
     </section>

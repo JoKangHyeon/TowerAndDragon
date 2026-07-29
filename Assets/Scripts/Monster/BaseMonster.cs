@@ -70,7 +70,10 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget
         float multiplier = _statusReceiver != null ? _statusReceiver.MoveSpeedMultiplier : 1f;
         float moveSpeed = _baseMoveSpeed * multiplier;
         _movement.SetSpeed(moveSpeed);
-        _animator.SetBool(_animKeyMove, moveSpeed > 0);
+        if (_animator != null)
+        {
+            _animator.SetBool(_animKeyMove, moveSpeed > 0);
+        }
     }
 
     /// <summary>
