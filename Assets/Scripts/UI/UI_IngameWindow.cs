@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -197,6 +198,39 @@ public class UI_IngameWindow : MonoBehaviour
             ResetWaveBar();
 
             _cycleManager.OnDayStart.AddListener(RenderDay);
+        }
+
+        // 자원 패널(ContentSizeFitter) 폭이 확정된 뒤 인구 패널이 겹치지 않도록,
+        // 다음 프레임에 '자식 자원 패널 → 부모 층' 순서로 레이아웃을 한 번만 갱신한다.
+        RefreshResourceLayoutNextFrame().Forget();
+    }
+
+    // 활성화 다음 프레임(자원 패널·텍스트 크기 확정 시점)에 딱 한 번 실행.
+    // 순서 보장: (1) 각 자원 패널을 먼저 갱신해 폭을 확정 → (2) 그 부모 층을 갱신해 확정된 폭으로 재배치.
+    private async UniTaskVoid RefreshResourceLayoutNextFrame()
+    {
+        await UniTask.NextFrame(this.GetCancellationTokenOnDestroy());
+
+        foreach (ResourceSlot slot in _resourceSlots)
+        {
+            if (slot.AmountText == null)
+            {
+                continue;
+            }
+
+            ContentSizeFitter panelFitter = slot.AmountText.GetComponentInParent<ContentSizeFitter>();
+            if (panelFitter == null)
+            {
+                continue;
+            }
+
+            RectTransform panelRect = (RectTransform)panelFitter.transform;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+
+            if (panelRect.parent is RectTransform floorRect)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(floorRect);
+            }
         }
     }
 
