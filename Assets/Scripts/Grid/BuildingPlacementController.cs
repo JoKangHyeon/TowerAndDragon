@@ -36,7 +36,7 @@ public class BuildingPlacementController : MonoBehaviour
 
     [Tooltip("타워를 이만큼(초) 꾹 누르고 있으면 이동 모드로 진입한다.")]
     [SerializeField]
-    private float _moveHoldDuration = 2f;
+    private float _moveHoldDuration = 1f;
 
     // 건물 철거 시 건설 비용 중 돌려주는 비율 - 낮밤 사이클이 한 번도 돌지 않은 당일 철거는 전액, 그 외엔 일부만 환급.
     private const float DEMOLISH_REFUND_RATIO_SAME_DAY = 1f;
@@ -121,9 +121,20 @@ public class BuildingPlacementController : MonoBehaviour
             return;
 
         HandlePlacementInput();
+        HandleBuildCancelInput();
         HandleCancelInput();
         HandleLongPressMove();
         HandleRotateInput();
+    }
+
+    // 슬롯을 골라 배치 미리보기 중일 때 우클릭하면 배치를 취소한다(선택 해제 + 미리보기 종료).
+    private void HandleBuildCancelInput()
+    {
+        if (_selectedBuilding == null)
+            return;
+
+        if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+            CancelBuildMode();
     }
 
     // 배치/이동 미리보기 중일 때만 회전을 적용한다 - 이동 버튼을 누르지 않고 건물만 선택한 상태에서는

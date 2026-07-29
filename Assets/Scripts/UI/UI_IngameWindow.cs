@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -18,6 +19,12 @@ public class UI_IngameWindow : MonoBehaviour
 
     // 날짜 표기 형식: DAY 01, DAY 02, ...
     private const string DAY_FORMAT = "DAY {0:00}";
+
+    // 자원 표기: 보유량 + 하루 예상 생산량. 생산량은 연두색으로 "보유량(+생산량)" 형태(TMP 리치텍스트 컬러 태그).
+    private const string RESOURCE_WITH_PRODUCTION_FORMAT = "{0}<color=#{1}>(+{2})</color>";
+
+    // 하루 생산량 글씨 기본 색(연두색).
+    private static readonly Color PRODUCTION_COLOR_DEFAULT = new Color(0.62f, 1f, 0.42f);
 
     // 웨이브 진행 바가 가득 찰 때까지의 일수. 이 값째 클리어에 슬라이더가 가득 찬다.
     private const int WAVE_FILL_LENGTH = 6;
@@ -54,6 +61,10 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private ResourceManager _resourceManager;
     [Tooltip("자원 종류별 수량 텍스트. 기본 3종 + 특화 4종 + 슬라임 5종.")]
     [SerializeField] private ResourceSlot[] _resourceSlots;
+    [Tooltip("하루 예상 생산량 표기용. 각 자원 보유량 옆에 (+생산량)으로 노출한다.")]
+    [SerializeField] private ProductionForecast _productionForecast;
+    [Tooltip("하루 생산량 글씨 색(연두색).")]
+    [SerializeField] private Color _productionColor = PRODUCTION_COLOR_DEFAULT;
 
     [Header("인구 표시 (Panel_peopleAmount)")]
     [SerializeField] private PopulationManager _populationManager;
@@ -165,6 +176,13 @@ public class UI_IngameWindow : MonoBehaviour
         {
             _resourceManager.ResourceChanged.AddListener(RenderResource);
             ApplyResourceIcons();
+
+            // 생산량 예측이 바뀌면(건물/인구 변경) 보유량 옆 (+생산량) 표기를 다시 그린다.
+            if (_productionForecast != null)
+            {
+                _productionForecast.ForecastChanged.AddListener(RenderAllResources);
+            }
+
             RenderAllResources();
         }
 
@@ -180,6 +198,39 @@ public class UI_IngameWindow : MonoBehaviour
             ResetWaveBar();
 
             _cycleManager.OnDayStart.AddListener(RenderDay);
+        }
+
+        // 자원 패널(ContentSizeFitter) 폭이 확정된 뒤 인구 패널이 겹치지 않도록,
+        // 다음 프레임에 '자식 자원 패널 → 부모 층' 순서로 레이아웃을 한 번만 갱신한다.
+        RefreshResourceLayoutNextFrame().Forget();
+    }
+
+    // 활성화 다음 프레임(자원 패널·텍스트 크기 확정 시점)에 딱 한 번 실행.
+    // 순서 보장: (1) 각 자원 패널을 먼저 갱신해 폭을 확정 → (2) 그 부모 층을 갱신해 확정된 폭으로 재배치.
+    private async UniTaskVoid RefreshResourceLayoutNextFrame()
+    {
+        await UniTask.NextFrame(this.GetCancellationTokenOnDestroy());
+
+        foreach (ResourceSlot slot in _resourceSlots)
+        {
+            if (slot.AmountText == null)
+            {
+                continue;
+            }
+
+            ContentSizeFitter panelFitter = slot.AmountText.GetComponentInParent<ContentSizeFitter>();
+            if (panelFitter == null)
+            {
+                continue;
+            }
+
+            RectTransform panelRect = (RectTransform)panelFitter.transform;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+
+            if (panelRect.parent is RectTransform floorRect)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(floorRect);
+            }
         }
     }
 
@@ -201,6 +252,11 @@ public class UI_IngameWindow : MonoBehaviour
         if (_resourceManager != null)
         {
             _resourceManager.ResourceChanged.RemoveListener(RenderResource);
+
+            if (_productionForecast != null)
+            {
+                _productionForecast.ForecastChanged.RemoveListener(RenderAllResources);
+            }
         }
 
         if (_populationManager != null)
@@ -280,9 +336,25 @@ public class UI_IngameWindow : MonoBehaviour
         {
             if (slot.Type == type && slot.AmountText != null)
             {
-                slot.AmountText.text = amount.ToString();
+                slot.AmountText.text = FormatResourceAmount(type, amount);
             }
         }
+    }
+
+    // "보유량" 또는 하루 예상 생산량이 있으면 "보유량(+생산량)"(생산량은 연두색)으로 만든다.
+    private string FormatResourceAmount(ResourceType type, int amount)
+    {
+        int production = _productionForecast != null ? _productionForecast.GetDailyProduction(type) : 0;
+        if (production <= 0)
+        {
+            return amount.ToString();
+        }
+
+        return string.Format(
+            RESOURCE_WITH_PRODUCTION_FORMAT,
+            amount,
+            ColorUtility.ToHtmlStringRGB(_productionColor),
+            production);
     }
 
     // 웨이브 바를 빈 상태(0칸, Point 시작 위치)로 되돌린다. 진행 중이던 트윈이 있다면 먼저 멈춘다.
