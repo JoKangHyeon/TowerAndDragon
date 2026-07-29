@@ -286,7 +286,7 @@ public class UI_ConquestWindow : MonoBehaviour
         if (_durationInfoSlot != null)
         {
             int daysRequired = _conquestManager.GetDaysRequired(coord);
-            _durationInfoSlot.Setup(_durationIcon, DURATION_LABEL, FormatDuration(daysRequired));
+            _durationInfoSlot.Setup(_durationIcon, Color.white, DURATION_LABEL, FormatDuration(daysRequired));
         }
 
         if (_terrainImage != null)
@@ -358,7 +358,7 @@ public class UI_ConquestWindow : MonoBehaviour
             string countText = string.Format(HELD_OVER_REQUIRED_FORMAT, heldAmount, requiredAmount);
 
             UI_ResourceCostSlot slot = Instantiate(_resourceCostSlotPrefab, _resourceSlotContainer);
-            slot.Setup(ResolveResourceIcon(type), countText, textColor);
+            slot.Setup(ResolveResourceIcon(type), DragonAttributePalette.TintFor(type), countText, textColor);
             _spawnedResourceSlots.Add(slot);
         }
     }
@@ -379,7 +379,7 @@ public class UI_ConquestWindow : MonoBehaviour
 
         if (populationReward > 0)
         {
-            SpawnRewardSlot(_populationIcon, string.Format(PLUS_VALUE_FORMAT, populationReward));
+            SpawnRewardSlot(_populationIcon, Color.white, string.Format(PLUS_VALUE_FORMAT, populationReward));
         }
 
         foreach (ResourceType type in REWARD_RESOURCE_TYPES)
@@ -387,14 +387,14 @@ public class UI_ConquestWindow : MonoBehaviour
             if ((unlockedResources & type) == 0)
                 continue;
 
-            SpawnRewardSlot(ResolveResourceIcon(type), type.ToString());
+            SpawnRewardSlot(ResolveResourceIcon(type), DragonAttributePalette.TintFor(type), type.ToString());
         }
     }
 
-    private void SpawnRewardSlot(Sprite icon, string label)
+    private void SpawnRewardSlot(Sprite icon, Color iconColor, string label)
     {
         UI_ConquestRewardSlot slot = Instantiate(_rewardSlotPrefab, _rewardSlotContainer);
-        slot.Setup(icon, label);
+        slot.Setup(icon, iconColor, label);
         _spawnedRewardSlots.Add(slot);
     }
 
@@ -477,8 +477,9 @@ public class UI_ConquestWindow : MonoBehaviour
 
     private void SpawnEnemyScalingSlot(Sprite icon, string label, string valueText)
     {
+        // 몬스터 강화 아이콘은 전용 스프라이트라 틴트가 필요 없다.
         UI_ConquestInfoSlot slot = Instantiate(_enemyScalingSlotPrefab, _enemyScalingSlotContainer);
-        slot.Setup(icon, label, valueText);
+        slot.Setup(icon, Color.white, label, valueText);
         _spawnedEnemyScalingSlots.Add(slot);
     }
 

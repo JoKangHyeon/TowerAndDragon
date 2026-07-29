@@ -27,6 +27,8 @@ public class SkillTargetingController : MonoBehaviour
     [SerializeField] private WaveManager _waveManager;
     [Tooltip("전역형 액티브(타워 즉시 수리)가 대상 건물 목록을 얻는 데 쓴다.")]
     [SerializeField] private GridMap _gridMap;
+    [Tooltip("생명 액티브(성 즉시 회복)가 회복 대상으로 쓴다.")]
+    [SerializeField] private Castle _castle;
 
     private Camera _cam;
     private Skill _pendingSkill;
@@ -88,7 +90,8 @@ public class SkillTargetingController : MonoBehaviour
                 null,
                 CasterObject,
                 _waveManager != null ? _waveManager.SpawnedMonsters : null,
-                _gridMap != null ? _gridMap.Buildings : null));
+                _gridMap != null ? _gridMap.Buildings : null,
+                _castle));
             return;
         }
 

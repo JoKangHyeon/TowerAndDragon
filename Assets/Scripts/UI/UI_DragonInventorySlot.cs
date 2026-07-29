@@ -58,7 +58,7 @@ public class UI_DragonInventorySlot : MonoBehaviour
         ApplyAttributeText(dragon.DragonType, isDragonMode: true);
         SetModeVisibility(isDragonMode: true);
 
-        if (BabyDragonSlimeTable.TryGetFeedSlime(dragon.DragonType, out ResourceType slimeType) &&
+        if (DragonSlimeTable.TryGetFeedSlime(dragon.DragonType, out ResourceType slimeType) &&
             _resourceCatalog != null &&
             _resourceCatalog.TryGet(slimeType, out ResourceData resourceData))
         {

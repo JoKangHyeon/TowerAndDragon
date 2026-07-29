@@ -212,6 +212,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
         {
             _populationRow.Setup(
                 _populationIcon,
+                Color.white,
                 StringTable.GetString(POPULATION_LABEL_LOC_KEY),
                 string.Format(
                     VALUE_FORMAT,
@@ -223,6 +224,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
         {
             _availablePopulationRow.Setup(
                 _populationIcon,
+                Color.white,
                 StringTable.GetString(AVAILABLE_POPULATION_LABEL_LOC_KEY),
                 string.Format(
                     VALUE_FORMAT,
@@ -256,6 +258,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
                 SetOutputRow(
                     usedCount++,
                     ResolveResourceIcon(resourceType),
+                    DragonAttributePalette.TintFor(resourceType),
                     ResolveResourceName(resourceType),
                     string.Format(
                         VALUE_FORMAT,
@@ -268,6 +271,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
             SetOutputRow(
                 usedCount++,
                 _researchPointIcon,
+                Color.white,
                 StringTable.GetString(RESEARCH_LABEL_LOC_KEY),
                 string.Format(
                     VALUE_FORMAT,
@@ -281,6 +285,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
             SetOutputRow(
                 usedCount++,
                 _operationIcon,
+                Color.white,
                 StringTable.GetString(OPERATION_LABEL_LOC_KEY),
                 ResolveTowerOperationText());
         }
@@ -288,9 +293,9 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
         _outputRowPool.DeactivateFrom(usedCount);
     }
 
-    private void SetOutputRow(int index, Sprite icon, string label, string value)
+    private void SetOutputRow(int index, Sprite icon, Color iconColor, string label, string value)
     {
-        _outputRowPool.Get(index).Setup(icon, label, value);
+        _outputRowPool.Get(index).Setup(icon, iconColor, label, value);
     }
 
     private int ResolveResearchPointsPerDay(
@@ -335,8 +340,8 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
             : null;
     }
 
-    // 슬라임 5종은 아직 ResourceData 에셋이 없어 카탈로그 조회가 실패한다. 그때는 종류 이름을
-    // 그대로 쓴다(점령 보상 슬롯 UI_ConquestWindow.SpawnRewardSlot과 동일한 대체 방식).
+    // 카탈로그에 없는 종류는 종류 이름을 그대로 쓴다
+    // (점령 보상 슬롯 UI_ConquestWindow.SpawnRewardSlot과 동일한 대체 방식).
     private string ResolveResourceName(ResourceType type)
     {
         return TryGetResourceData(type, out ResourceData data)

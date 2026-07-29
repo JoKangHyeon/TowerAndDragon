@@ -127,7 +127,7 @@ public class BabyDragonFeedingSystem : MonoBehaviour
             return;
         }
 
-        if (!BabyDragonSlimeTable.TryGetFeedSlime(data.DragonType, out ResourceType slimeType))
+        if (!DragonSlimeTable.TryGetFeedSlime(data.DragonType, out ResourceType slimeType))
         {
             Debug.LogError(
                 $"[BabyDragonFeedingSystem] 속성 {data.DragonType}에 대응하는 먹이 슬라임이 없습니다.",

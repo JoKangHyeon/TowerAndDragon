@@ -22,12 +22,14 @@ public class UI_IngameWindow : MonoBehaviour
     // 웨이브 진행 바가 가득 찰 때까지의 일수. 이 값째 클리어에 슬라이더가 가득 찬다.
     private const int WAVE_FILL_LENGTH = 6;
 
-    // 자원 표시 1칸: 자원 종류 ↔ 수량 텍스트.
+    // 자원 표시 1칸: 자원 종류 ↔ 수량 텍스트(+ 선택적으로 아이콘).
     [System.Serializable]
     private struct ResourceSlot
     {
         public ResourceType Type;
         public TMP_Text AmountText;
+        [Tooltip("비워두면 프리팹에 배치된 아이콘을 그대로 쓴다. 지정하면 ResourceData의 아이콘으로 덮어쓴다.")]
+        public Image IconImage;
     }
 
     [SerializeField] private CycleManager _cycleManager;
@@ -50,7 +52,7 @@ public class UI_IngameWindow : MonoBehaviour
 
     [Header("자원 표시 (Panel_TopLeft)")]
     [SerializeField] private ResourceManager _resourceManager;
-    [Tooltip("자원 종류별 수량 텍스트. 기본 3종 + 특화 4종.")]
+    [Tooltip("자원 종류별 수량 텍스트. 기본 3종 + 특화 4종 + 슬라임 5종.")]
     [SerializeField] private ResourceSlot[] _resourceSlots;
 
     [Header("인구 표시 (Panel_peopleAmount)")]
@@ -162,6 +164,7 @@ public class UI_IngameWindow : MonoBehaviour
         if (_resourceManager != null)
         {
             _resourceManager.ResourceChanged.AddListener(RenderResource);
+            ApplyResourceIcons();
             RenderAllResources();
         }
 
@@ -237,6 +240,28 @@ public class UI_IngameWindow : MonoBehaviour
         if (_populationText != null)
         {
             _populationText.text = string.Format(POPULATION_FORMAT, state.AvailablePopulation, state.MaxPopulation);
+        }
+    }
+
+    // 아이콘은 자원 종류마다 고정이라 보유량과 달리 활성화 시 1회만 채우면 된다.
+    // 자원 아이콘은 데이터 에셋(ResourceData)이 단일 출처 - 카탈로그에서 종류로 조회한다.
+    // 슬라임 5종은 공용 흰 스프라이트 하나를 쓰므로 속성 색으로 틴트해 구분한다.
+    private void ApplyResourceIcons()
+    {
+        if (_resourceManager.Catalog == null)
+        {
+            return;
+        }
+
+        foreach (ResourceSlot slot in _resourceSlots)
+        {
+            if (slot.IconImage == null || !_resourceManager.Catalog.TryGet(slot.Type, out ResourceData data))
+            {
+                continue;
+            }
+
+            slot.IconImage.sprite = data.Icon;
+            slot.IconImage.color = DragonAttributePalette.TintFor(slot.Type);
         }
     }
 

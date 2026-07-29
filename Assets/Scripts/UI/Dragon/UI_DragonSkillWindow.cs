@@ -35,17 +35,8 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private float _radiusEnhance = 316f;
     [SerializeField] private float _radiusUltimate = 396f;
 
-    [Header("Colors (DragonType 선언 순: Ice, Fire, Time, Stone, Life)")]
-    [SerializeField]
-    private Color[] _attributeColors =
-    {
-        new Color(0.357f, 0.753f, 0.878f), // Ice
-        new Color(0.878f, 0.376f, 0.235f), // Fire
-        new Color(0.690f, 0.490f, 0.878f), // Time
-        new Color(0.788f, 0.635f, 0.290f), // Stone
-        new Color(0.498f, 0.820f, 0.310f), // Life
-    };
-
+    [Header("Colors")]
+    // 속성 색은 DragonAttributePalette가 단일 출처다(창마다 따로 지정하면 값이 어긋난다).
     [SerializeField] private Color _edgeLockedColor = new Color(0.2f, 0.18f, 0.16f, 0.6f);
 
     private static readonly DragonType[] ATTRIBUTES_IN_ORDER =
@@ -407,9 +398,5 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
         _detailsPanel?.Show(node);
     }
 
-    private Color ColorForAttribute(DragonType attribute)
-    {
-        int index = Array.IndexOf(ATTRIBUTES_IN_ORDER, attribute);
-        return index >= 0 && index < _attributeColors.Length ? _attributeColors[index] : Color.white;
-    }
+    private Color ColorForAttribute(DragonType attribute) => DragonAttributePalette.ColorOf(attribute);
 }

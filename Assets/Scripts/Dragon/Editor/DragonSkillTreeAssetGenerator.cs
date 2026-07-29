@@ -22,8 +22,8 @@ using UnityEngine;
 // - 새끼용 A(타워형)는 얼음·불만 구현(시간·암석·생명은 기획 [미정] - KinTowerStatusEffectSO를
 //   만들되 _status를 비워 no-op으로 둔다).
 // - 새끼용 B(지역형)는 얼음만 미구현(강 결빙 - 지형 기반 배치 제한 시스템 자체가 없음).
-// - 생명 액티브 I(바리케이드)는 몬스터를 막을 구조물 프리팹/스프라이트가 없어 SkillSO를
-//   생성하지 않는다 - 팀이 에셋을 제공하면 후속 작업으로 연결한다.
+// - 생명 액티브 I(바리케이드)는 몬스터를 막을 구조물 프리팹/스프라이트가 없어 성 즉시 회복으로
+//   임시 대체한다(기획 [미정], 팀 확인 대기) - 팀이 에셋을 제공하면 후속 작업으로 교체한다.
 public static class DragonSkillTreeAssetGenerator
 {
     private const string DATA_FOLDER = "Assets/Data/Dragon";
@@ -71,6 +71,10 @@ public static class DragonSkillTreeAssetGenerator
     private const float SKILL_DEFAULT_COOLTIME = 60f;
     private const int SKILL_UNLIMITED_USE_PER_DAY = -1;
     private const float GLOBAL_DAMAGE_PERCENT_OF_CURRENT_HEALTH = 0.3f;
+    private const float METEOR_AREA_RADIUS = 2f;
+
+    // 생명 액티브 임시 대체(성 즉시 회복) 예시 수치 - 바리케이드 확정 전까지, 밸런싱 대상.
+    private const float CASTLE_HEAL_AMOUNT = 50f;
 
     private struct AttributeSpec
     {
@@ -227,7 +231,7 @@ public static class DragonSkillTreeAssetGenerator
             });
 
         // 3. 액티브 스킬 - 메테오는 기존 SkillType 재사용, 나머지는 신규. 생명(바리케이드)은
-        //    대상 프리팹이 없어 만들지 않는다(팀 에셋 제공 후 후속 작업).
+        //    대상 프리팹이 없어 성 즉시 회복(HEAL_CASTLE)으로 임시 대체한다(팀 확인 대기).
         var skillByAttribute = new Dictionary<DragonType, SkillSO>();
 
         skillByAttribute[DragonType.Ice] = CreateOrReplace<SkillSO>(
@@ -276,6 +280,22 @@ public static class DragonSkillTreeAssetGenerator
                 so.FindProperty("DefaultCooltime").floatValue = SKILL_DEFAULT_COOLTIME;
                 so.FindProperty("DefaultUsePerDay").intValue = SKILL_UNLIMITED_USE_PER_DAY;
                 so.FindProperty("DamagePercentOfCurrentHealth").floatValue = GLOBAL_DAMAGE_PERCENT_OF_CURRENT_HEALTH;
+                so.FindProperty("AreaRadius").floatValue = METEOR_AREA_RADIUS;
+                // AreaCurrentHealthDamageSkill이 Physics2D.OverlapCircleAll에 이 마스크를 그대로 쓴다 -
+                // DebugSkill1~3(AREA/SINGLE 타입)과 동일하게 Enemy 레이어를 지정해야 실제로 맞는다.
+                so.FindProperty("TargetLayers").intValue = LayerMask.GetMask("Enemy");
+            });
+
+        skillByAttribute[DragonType.Life] = CreateOrReplace<SkillSO>(
+            $"{DATA_FOLDER}/{SKILL_SUBFOLDER}/SK_Dragon_CastleHeal.asset",
+            so =>
+            {
+                so.FindProperty("Type").enumValueIndex = (int)SkillType.HEAL_CASTLE;
+                so.FindProperty("NameStringKey").stringValue = "dragon_skill_castle_heal_name";
+                so.FindProperty("DescriptionStringKey").stringValue = "dragon_skill_castle_heal_desc";
+                so.FindProperty("DefaultCooltime").floatValue = SKILL_DEFAULT_COOLTIME;
+                so.FindProperty("DefaultUsePerDay").intValue = SKILL_UNLIMITED_USE_PER_DAY;
+                so.FindProperty("HealAmount").floatValue = CASTLE_HEAL_AMOUNT;
             });
 
         AddLocRow("dragon_skill_freeze_all_name", "[TBD] Freeze All", "[미정] 모든 적 빙결");
@@ -286,6 +306,8 @@ public static class DragonSkillTreeAssetGenerator
         AddLocRow("dragon_skill_repair_towers_desc", "[TBD] Instantly revives all disabled towers.", "[미정] 비활성화된 모든 타워를 즉시 복구합니다.");
         AddLocRow("dragon_skill_meteor_name", "[TBD] Meteor", "[미정] 메테오");
         AddLocRow("dragon_skill_meteor_desc", "[TBD] Calls down a meteor on a target area.", "[미정] 지정 지역에 운석을 떨어뜨립니다.");
+        AddLocRow("dragon_skill_castle_heal_name", "[TBD] Castle Mend", "[미정] 성벽 재생");
+        AddLocRow("dragon_skill_castle_heal_desc", "[TBD] Instantly restores health to the castle. Temporary substitute for Barricade.", "[미정] 성 체력을 즉시 회복합니다. 바리케이드의 임시 대체입니다.");
 
         // 4. 효과: 속성별 각성 패시브 + 액티브 해금 + 강화/궁극 스킬 강화 + 새끼용 A/B
         var awakenEffects = new Dictionary<DragonType, DragonSkillEffectSO>();
@@ -305,7 +327,7 @@ public static class DragonSkillTreeAssetGenerator
                 {
                     so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
                     skillByAttribute.TryGetValue(attr.Type, out SkillSO skill);
-                    so.FindProperty("_skill").objectReferenceValue = skill; // 생명은 skill이 없어 null 그대로 - stub.
+                    so.FindProperty("_skill").objectReferenceValue = skill;
                 });
 
             enhanceEffects[attr.Type] = CreateOrReplace<DragonSkillPowerEffectSO>(
@@ -424,7 +446,7 @@ public static class DragonSkillTreeAssetGenerator
         Debug.Log(
             $"[DragonSkillTreeAssetGenerator] 노드 {orderedNodes.Count}개, 로컬 키 {_locRows.Count}개 생성 완료. " +
             $"'{SHEET_EXPORT_FOLDER}/' 아래 시트 반영용 CSV 조각을 확인하세요. " +
-            "생명 액티브(바리케이드)는 SkillSO를 만들지 않았습니다 - 팀 에셋 제공 후 후속 작업.");
+            "생명 액티브(바리케이드)는 성 즉시 회복으로 임시 대체했습니다 - 팀 에셋 제공 후 후속 작업.");
     }
 
     // 속성별 각성 패시브 효과 - 타입이 서로 달라 switch로 분기한다(각 효과 SO의 필드 스키마가 다름).

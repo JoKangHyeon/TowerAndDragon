@@ -13,6 +13,10 @@ public enum SkillType
     FREEZE_ALL,
     GLOBAL_CURRENT_HEALTH_DAMAGE,
     REPAIR_TOWERS,
+
+    // 생명 액티브(로드맵 §6-1) 임시 대체 - 바리케이드는 설치 대상 프리팹이 없어
+    // 기획 확정 전까지 성 즉시 회복으로 대신한다(팀 확인 대기, DragonSkillTreeAssetGenerator 참고).
+    HEAL_CASTLE,
 }
 
 /// <summary>스킬 발동 시 무엇을 지정해야 하는지 - UI/입력 쪽에서 이 값에 따라 지정 방식을 분기한다.</summary>
@@ -35,8 +39,11 @@ public readonly struct SkillCastContext
     public IReadOnlyList<BaseMonster> AllMonsters { get; }
     public IEnumerable<Building> AllBuildings { get; }
 
+    // 생명 액티브(성 즉시 회복) 전용 - Instant 스킬만 채워서 넘긴다.
+    public Castle TargetCastle { get; }
+
     public SkillCastContext(Vector3 targetPoint, BaseMonster targetEnemy, GameObject caster)
-        : this(targetPoint, targetEnemy, caster, null, null)
+        : this(targetPoint, targetEnemy, caster, null, null, null)
     {
     }
 
@@ -46,12 +53,24 @@ public readonly struct SkillCastContext
         GameObject caster,
         IReadOnlyList<BaseMonster> allMonsters,
         IEnumerable<Building> allBuildings)
+        : this(targetPoint, targetEnemy, caster, allMonsters, allBuildings, null)
+    {
+    }
+
+    public SkillCastContext(
+        Vector3 targetPoint,
+        BaseMonster targetEnemy,
+        GameObject caster,
+        IReadOnlyList<BaseMonster> allMonsters,
+        IEnumerable<Building> allBuildings,
+        Castle targetCastle)
     {
         TargetPoint = targetPoint;
         TargetEnemy = targetEnemy;
         Caster = caster;
         AllMonsters = allMonsters;
         AllBuildings = allBuildings;
+        TargetCastle = targetCastle;
     }
 }
 
@@ -146,6 +165,9 @@ public abstract class Skill
     }
 
     protected StatusEffectSO AppliedStatus => _skillData.AppliedStatus;
+
+    // 생명 액티브(성 즉시 회복) 전용 회복량.
+    protected float HealAmount => _skillData.HealAmount;
 
     // 타겟팅 컨트롤러가 시전 범위 미리보기(원형 인디케이터) 크기를 결정하는 데도 필요하므로 public으로 노출한다.
     public float AreaRadius => _skillData.AreaRadius;
@@ -334,5 +356,21 @@ public class RepairTowersSkill : Skill
                 tower.RestoreAtMorning();
             }
         }
+    }
+}
+
+/// <summary>용 스킬트리 생명 액티브 임시 대체(성 즉시 회복) - 바리케이드는 설치 대상 프리팹이 없어
+/// 기획 확정 전까지 성 즉시 회복으로 대신한다(팀 확인 대기). Castle.Repair를 재사용한다
+/// (convenience_castle_regen_1이 매일 낮 자동 회복에 쓰는 것과 동일 경로) - 사망 상태 가드는
+/// Castle.Repair가 호출하는 Health.Heal이 담당하므로 여기서 다시 검사하지 않는다.</summary>
+public class HealCastleSkill : Skill
+{
+    public HealCastleSkill(SkillSO skillData) : base(skillData) { }
+
+    public override SkillTargeting Targeting => SkillTargeting.Instant;
+
+    protected override void ApplyEffect(in SkillCastContext context)
+    {
+        context.TargetCastle?.Repair(HealAmount);
     }
 }

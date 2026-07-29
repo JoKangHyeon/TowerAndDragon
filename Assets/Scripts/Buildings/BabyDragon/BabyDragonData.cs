@@ -4,7 +4,7 @@ using UnityEngine;
 public class BabyDragonData : TowerData
 {
     [Header("Baby Dragon")]
-    [Tooltip("먹이가 되는 슬라임 종류를 결정한다 - BabyDragonSlimeTable 참고.")]
+    [Tooltip("먹이가 되는 슬라임 종류를 결정한다 - DragonSlimeTable 참고.")]
     [SerializeField] private DragonType _dragonType;
 
     [Tooltip("배치 시 BabyDragonPlacementCoordinator가 SpriteRenderer에 적용한다 - 5속성이 프리팹 1개를 공유하므로 이 필드로 색상을 구분한다.")]

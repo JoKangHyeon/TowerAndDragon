@@ -49,7 +49,7 @@ public class ChunkInfoOverlayRenderer : MonoBehaviour
     private Sprite _populationIcon;
 
     private ComponentPool<UI_ChunkInfoCard> _cardPool;
-    private readonly List<(Sprite Icon, string Label)> _rewardBuffer = new();
+    private readonly List<(Sprite Icon, Color IconColor, string Label)> _rewardBuffer = new();
 
     private void Awake()
     {
@@ -89,7 +89,7 @@ public class ChunkInfoOverlayRenderer : MonoBehaviour
         int populationReward = _conquestManager.GetPopulationReward(coord);
         if (populationReward > 0)
         {
-            _rewardBuffer.Add((_populationIcon, string.Format(PLUS_VALUE_FORMAT, populationReward)));
+            _rewardBuffer.Add((_populationIcon, Color.white, string.Format(PLUS_VALUE_FORMAT, populationReward)));
         }
 
         ResourceType unlocked = _conquestManager.GetUnlockedResources(coord);
@@ -98,7 +98,7 @@ public class ChunkInfoOverlayRenderer : MonoBehaviour
             if ((unlocked & type) == 0)
                 continue;
 
-            _rewardBuffer.Add((ResolveResourceIcon(type), type.ToString()));
+            _rewardBuffer.Add((ResolveResourceIcon(type), DragonAttributePalette.TintFor(type), type.ToString()));
         }
     }
 
