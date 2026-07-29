@@ -9,6 +9,7 @@ public class ChunkInfoOverlayRenderer : MonoBehaviour
 {
     // TODO: 스트링테이블 도입 시 _LOC_KEY로 교체(UI_ConquestWindow와 동일 포맷).
     private const string PLUS_VALUE_FORMAT = "+{0}";
+    private const string UNLOCKED_RESOURCE_REWARD_LABEL = "++";
 
     // 보상 표시 순서 - UI_ConquestWindow.REWARD_RESOURCE_TYPES와 동일 순서를 유지한다.
     private static readonly ResourceType[] REWARD_RESOURCE_TYPES =
@@ -98,7 +99,7 @@ public class ChunkInfoOverlayRenderer : MonoBehaviour
             if ((unlocked & type) == 0)
                 continue;
 
-            _rewardBuffer.Add((ResolveResourceIcon(type), DragonAttributePalette.TintFor(type), type.ToString()));
+            _rewardBuffer.Add((ResolveResourceIcon(type), DragonAttributePalette.TintFor(type), UNLOCKED_RESOURCE_REWARD_LABEL));
         }
     }
 
