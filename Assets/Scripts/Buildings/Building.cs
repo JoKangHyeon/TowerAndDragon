@@ -138,7 +138,9 @@ public class Building : MonoBehaviour
         transform.localScale = Vector3.Scale(BaseLocalScale, ResolveRotationScale(_rotationSteps));
     }
 
-    private void Awake()
+    // Castle/Tower가 각자 Awake에서 자기 컴포넌트를 캐싱해야 해서 override로 재정의한다 -
+    // virtual이 아니면 파생 클래스의 private Awake가 이 메서드를 가려 전혀 호출되지 않는다.
+    protected virtual void Awake()
     {
         // 자식에서도 찾는다 - 스프라이트만 별도 자식으로 분리해 시각적 위치를 콜라이더/판정
         // 기준점(이 오브젝트의 transform)과 독립적으로 조정하는 건물(예: BabyDragonTower)을 지원하기 위함.
@@ -156,5 +158,13 @@ public class Building : MonoBehaviour
             return;
 
         _spriteRenderer.color = isHighlighted ? highlightColor : _originalColor;
+    }
+
+    public void SetDepthSortOrder(int sortingOrder)
+    {
+        if (_spriteRenderer == null)
+            return;
+
+        _spriteRenderer.sortingOrder = sortingOrder;
     }
 }

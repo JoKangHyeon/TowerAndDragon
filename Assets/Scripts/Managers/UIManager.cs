@@ -146,8 +146,11 @@ public class UIManager : MonoBehaviour
 
     private async UniTaskVoid ShowGameOverAfterDelay()
     {
+        // GameSpeedManager가 게임오버 직후 Time.timeScale을 0으로 못박으므로,
+        // 기본 DelayType.DeltaTime을 쓰면 이 대기가 영원히 끝나지 않는다.
         await UniTask.Delay(
             TimeSpan.FromSeconds(GAME_OVER_SHOW_DELAY),
+            DelayType.UnscaledDeltaTime,
             cancellationToken: this.GetCancellationTokenOnDestroy());
 
         Show(_gameOverWindow);
@@ -155,8 +158,10 @@ public class UIManager : MonoBehaviour
 
     private async UniTaskVoid ShowVictoryAfterDelay()
     {
+        // 위와 동일한 이유로 unscaled 대기를 쓴다.
         await UniTask.Delay(
             TimeSpan.FromSeconds(GAME_OVER_SHOW_DELAY),
+            DelayType.UnscaledDeltaTime,
             cancellationToken: this.GetCancellationTokenOnDestroy()
         );
 

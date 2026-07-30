@@ -138,7 +138,8 @@ public class CameraController : MonoBehaviour
         if (moveInput == Vector2.zero) return;
 
         Vector3 dir = new Vector3(moveInput.x, moveInput.y, 0f).normalized;
-        _targetPos += dir * _wasdSpeed * Time.deltaTime;
+        // 일시정지/배속(Time.timeScale) 중에도 카메라는 항상 동일한 속도로 조작할 수 있어야 한다.
+        _targetPos += dir * _wasdSpeed * Time.unscaledDeltaTime;
     }
 
     /// 마우스를 화면 가장자리로 가져가면 카메라 이동 (스타크래프트 방식)
@@ -169,8 +170,9 @@ public class CameraController : MonoBehaviour
             }
         }
         if (dir == Vector3.zero) return;
-        
-        _targetPos += dir.normalized * _edgeScrollSpeed * Time.deltaTime;
+
+        // 일시정지/배속 중에도 카메라는 항상 동일한 속도로 조작할 수 있어야 한다.
+        _targetPos += dir.normalized * _edgeScrollSpeed * Time.unscaledDeltaTime;
     }
 
     /// 마우스 좌클릭 드래그로 카메라 이동
@@ -282,15 +284,17 @@ public class CameraController : MonoBehaviour
     }
 
     /// SmoothDamp으로 부드럽게 이동 + 줌 Lerp
+    /// 일시정지/배속 중에도 카메라 이동·줌 체감 속도가 바뀌지 않도록 unscaledDeltaTime을 쓴다.
     private void ApplyMovement()
     {
         // Z축은 카메라 고유 깊이 유지
         Vector3 goal = new Vector3(_targetPos.x, _targetPos.y, transform.position.z);
         transform.position = Vector3.SmoothDamp(
-            transform.position, goal, ref _smoothVelocity, _moveSmoothTime);
+            transform.position, goal, ref _smoothVelocity, _moveSmoothTime,
+            Mathf.Infinity, Time.unscaledDeltaTime);
 
         _cam.orthographicSize = Mathf.Lerp(
-            _cam.orthographicSize, _targetZoom, _zoomSmoothing * Time.deltaTime);
+            _cam.orthographicSize, _targetZoom, _zoomSmoothing * Time.unscaledDeltaTime);
     }
 
     // ─────────────────────────────────────────────

@@ -24,6 +24,22 @@ public class GroundSplineMovement : MonsterMovement
 
     public override Vector3 GroundPlanePosition => transform.position - new Vector3(0f, _currentHeightOffset, 0f);
 
+    // 스플라인의 접선 방향이 곧 진행 방향이다. 위치 변화량으로 되짚지 않는 이유:
+    // 느려진/멈춘 몬스터(공격 중 Stop, 슬로우)도 방향이 0으로 무너지지 않고,
+    // 스폰 첫 프레임부터 올바른 방향이 나온다.
+    public override float MovementDirectionX
+    {
+        get
+        {
+            if (!_isMoving || _path == null || _splineLength <= 0)
+            {
+                return 0f;
+            }
+
+            return _path.EvaluateTangent(Mathf.Clamp01(_distanceTraveled / _splineLength)).x;
+        }
+    }
+
     private void Awake()
     {
         // GridMap이 없는 씬(팀원 테스트 씬 등)에서는 조용히 기존대로 평면 이동한다.

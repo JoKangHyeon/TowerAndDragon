@@ -52,6 +52,8 @@ public class UI_WarningWindow : MonoBehaviour
 
         _claimSequence = DOTween.Sequence()
             .SetLink(_messageClaim)
+            // 일시정지(Time.timeScale == 0) 중에도 경고 토스트는 정상적으로 페이드 인/아웃되어야 한다.
+            .SetUpdate(true)
             .Append(_messageClaimGroup.DOFade(1f, _fadeDuration))
             .AppendInterval(_showDuration)
             .Append(_messageClaimGroup.DOFade(0f, _fadeDuration))

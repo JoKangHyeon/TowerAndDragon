@@ -30,6 +30,31 @@ public class MonsterAttack : MonoBehaviour
     public float Range => _attack.Range;
     public float Interval => _attack.Interval;
 
+    // 정지해서 공격 중일 때 스프라이트가 바라볼 대상. 공격 중이 아니면 null.
+    public Transform FacingTargetTransform
+    {
+        get
+        {
+            if (!_isInitialized)
+            {
+                return null;
+            }
+
+            if (_currentTarget != null && IsCurrentTargetValid())
+            {
+                return _currentTarget.TargetTransform;
+            }
+
+            if (_movement != null && _movement.HasArrived &&
+                _finalTarget != null && !_finalTarget.IsDead)
+            {
+                return _finalTarget.TargetTransform;
+            }
+
+            return null;
+        }
+    }
+
     public void Initialize(MonsterData data, MonsterMovement movement, Animator animator)
     {
         Initialize(data, movement,animator, ResolvedEnemyStatModifier.Neutral);

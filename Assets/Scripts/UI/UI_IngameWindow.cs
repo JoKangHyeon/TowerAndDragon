@@ -390,7 +390,8 @@ public class UI_IngameWindow : MonoBehaviour
         if (_waveSlider != null)
         {
             _waveSlider.DOKill();
-            _waveSlider.DOValue(progress, _waveTweenDuration);
+            // 순수 UI 연출이라 일시정지(Time.timeScale == 0) 중에도 정상 재생되어야 한다.
+            _waveSlider.DOValue(progress, _waveTweenDuration).SetUpdate(true);
         }
 
         // 배열은 일수별 위치([0]=Day1 … [6]=Day7). cleared만큼 진행했으니 그 인덱스로 이동한다.
@@ -402,6 +403,7 @@ public class UI_IngameWindow : MonoBehaviour
             _wavePoint.DOKill();
             _wavePoint.DOAnchorPos(stop.anchoredPosition, _waveTweenDuration)
                 .SetEase(Ease.OutCubic)
+                .SetUpdate(true)
                 .SetLink(_wavePoint.gameObject);
         }
     }

@@ -16,6 +16,8 @@ GameObject:
   - component: {fileID: 7228251216951454133}
   - component: {fileID: 8780071701826626489}
   - component: {fileID: 7726058995466557488}
+  - component: {fileID: 3537244527304665564}
+  - component: {fileID: 6134282670238042591}
   m_Layer: 7
   m_Name: MP_Ground_Healer
   m_TagString: Untagged
@@ -83,8 +85,8 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: -1328854079
+  m_SortingLayer: 1
   m_SortingOrder: 2
   m_MaskInteraction: 0
   m_Sprite: {fileID: 1887205710, guid: 0f81459e1d988ef45a7d599e73130533, type: 3}
@@ -209,3 +211,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9fa7656bd8812454abe7ddcdbf8906b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterStatusReceiver
+--- !u!114 &3537244527304665564
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 345408234635242302}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee7eb967c4ecd71488883d90cc1e3daf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IsometricDepthSorter
+--- !u!114 &6134282670238042591
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 345408234635242302}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa898d7f17f76bf45b9b1745290cefa7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterSpriteFlipper
+  _isSourceSpriteFacingRight: 1

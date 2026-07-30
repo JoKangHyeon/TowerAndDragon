@@ -16,6 +16,9 @@ GameObject:
   - component: {fileID: -687291307508128235}
   - component: {fileID: 6409980068893795165}
   - component: {fileID: -3763708611229358839}
+  - component: {fileID: 9089343570755398480}
+  - component: {fileID: 2112847561719677857}
+  - component: {fileID: 3711555873522755562}
   m_Layer: 7
   m_Name: MP_Ground_Basic
   m_TagString: Untagged
@@ -83,8 +86,8 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: -1328854079
+  m_SortingLayer: 1
   m_SortingOrder: 2
   m_MaskInteraction: 0
   m_Sprite: {fileID: 872304144, guid: 3cf682f1a7842b04980eeb2a15371e4c, type: 3}
@@ -167,6 +170,7 @@ MonoBehaviour:
   Arrived:
     m_PersistentCalls:
       m_Calls: []
+  _heightFollowSpeed: 12
 --- !u!114 &-687291307508128235
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -218,3 +222,40 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &9089343570755398480
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8845832112575990564}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fa7656bd8812454abe7ddcdbf8906b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterStatusReceiver
+--- !u!114 &2112847561719677857
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8845832112575990564}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee7eb967c4ecd71488883d90cc1e3daf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IsometricDepthSorter
+--- !u!114 &3711555873522755562
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8845832112575990564}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa898d7f17f76bf45b9b1745290cefa7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterSpriteFlipper
+  _isSourceSpriteFacingRight: 1

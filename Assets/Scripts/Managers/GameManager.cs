@@ -43,6 +43,9 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private DragonTreeManager _dragonTreeManager;
 
+    [SerializeField]
+    private GameSpeedManager _gameSpeedManager;
+
     [SerializeField] private UnityEvent _victoryOccurred = new();
 
     public RunData CurrentRun => _currentRun;
@@ -52,6 +55,7 @@ public class GameManager : MonoBehaviour
     public SkillManager SkillManager => _skillManager;
     public ResearchManager ResearchManager => _researchManager;
     public DragonTreeManager DragonTreeManager => _dragonTreeManager;
+    public GameSpeedManager GameSpeedManager => _gameSpeedManager;
 
     /// <summary>성이 파괴되어 게임오버가 되면 발생. 게임오버 UI 등이 구독한다.</summary>
     public UnityEvent GameOverOccurred;

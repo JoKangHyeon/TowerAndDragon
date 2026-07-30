@@ -30,7 +30,8 @@ public class SpriteHoverFade : MonoBehaviour
     private void Update()
     {
         float targetAlpha = IsMouseOverSprite() ? _hoveredAlpha : _originalAlpha;
-        _currentAlpha = Mathf.MoveTowards(_currentAlpha, targetAlpha, _fadeSpeed * Time.deltaTime);
+        // 호버 페이드는 게임 속도(일시정지/배속)와 무관한 UI 피드백이라 unscaled로 처리한다.
+        _currentAlpha = Mathf.MoveTowards(_currentAlpha, targetAlpha, _fadeSpeed * Time.unscaledDeltaTime);
 
         // 하이라이트 등 다른 연출이 RGB를 바꿔도 충돌하지 않도록 알파만 덮어쓴다.
         Color color = _spriteRenderer.color;

@@ -23,6 +23,10 @@ public abstract class MonsterMovement : MonoBehaviour
     // 가려진 경우 엉뚱한 셀이 나온다. 들어올리지 않는 이동 방식은 현재 위치가 그대로 평면 좌표다.
     public virtual Vector3 GroundPlanePosition => transform.position;
 
+    // 스프라이트 좌우 반전에 쓰는 진행 방향의 X 성분(부호만 의미 있음).
+    // 정지 상태이거나 방향이 정해지지 않은 시점에는 0을 돌려주고, 보는 쪽이 마지막 방향을 유지한다.
+    public virtual float MovementDirectionX => 0f;
+
     public virtual void SetSpeed(float speed)
     {
         _speed = speed;

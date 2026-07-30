@@ -345,7 +345,8 @@ public class BuildingPlacementController : MonoBehaviour
             return;
         }
 
-        _holdTimer += Time.deltaTime;
+        // 입력 홀드 타이머는 게임 속도(일시정지/배속)와 무관하게 항상 같은 체감으로 동작해야 한다.
+        _holdTimer += Time.unscaledDeltaTime;
         if (_holdTimer >= _moveHoldDuration)
         {
             // 홀드 완료 → 해당 건물을 선택하고 이동 모드로 진입한다.

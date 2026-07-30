@@ -13,7 +13,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     private TowerAttack _attack;
     private CancellationTokenSource _reviveCts;
     private CancellationTokenSource _paralysisCts;
-    private Animator _animator;
+    protected Animator _animator;
 
     private bool _isInitialized;
     private bool _isDisabled;
@@ -47,12 +47,13 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
             ? Mathf.Clamp01((Time.time - _disabledAtTime) / _towerData.ReviveDelay)
             : 0f;
 
-    private static readonly int HIT_ANIM_KEY = Animator.StringToHash("Hit");
-    private static readonly int BROKEN_ANIM_KEY = Animator.StringToHash("Broken");
+    protected static readonly int HIT_ANIM_KEY = Animator.StringToHash("Hit");
+    protected static readonly int BROKEN_ANIM_KEY = Animator.StringToHash("Broken");
 
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         _health = GetComponent<Health>();
         _attack = GetComponent<TowerAttack>();
         _animator = GetComponent<Animator>();

@@ -34,8 +34,9 @@ public class Castle : Building, IAttackTarget
     /// <summary>성 파괴 = 게임 패배.</summary>
     public UnityEvent Destroyed;
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         _health = GetComponent<Health>();
         _health.HealthChanged.AddListener(HandleHealthChanged);
         _health.Died.AddListener(HandleDestroyed);

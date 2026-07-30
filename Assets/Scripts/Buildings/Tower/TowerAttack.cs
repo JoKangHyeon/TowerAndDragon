@@ -4,6 +4,7 @@ public class TowerAttack : MonoBehaviour
 {
     [SerializeField] private LayerMask _targetLayers;
     [SerializeField] private Transform _firePoint;
+    [SerializeField] private SpriteRenderer _aimingSprite;    
 
     private TowerData _towerData;
     private BaseMonster _target;
@@ -98,6 +99,13 @@ public class TowerAttack : MonoBehaviour
                 Debug.Log($"[TowerAttack] {name}이(가) 타겟 {_target.name} 선정했습니다.", this);
             }
             //까지
+        }
+
+
+        if (_aimingSprite != null & _target != null)
+        {
+            float directionX = transform.position.x - _target.TargetTransform.position.x;
+            _aimingSprite.flipX = directionX >= 0f;
         }
 
         if (_target == null || Time.time < _nextAttackTime)
@@ -212,11 +220,13 @@ public class TowerAttack : MonoBehaviour
             _animator.SetTrigger(ATTACK_ANIM_KEY);
         }
 
+
         if (!_towerData.HasProjectile)
         {
             Attack.Execute(_target, in context);
             return;
         }
+
 
         LaunchProjectile(_target, in context);
     }

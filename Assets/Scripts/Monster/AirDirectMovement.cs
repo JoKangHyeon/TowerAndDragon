@@ -8,6 +8,10 @@ public class AirDirectMovement : MonsterMovement
 {
     private Transform _target;
 
+    // 목표(메인 성)를 향해 직진하므로 목표까지의 방향이 곧 진행 방향이다.
+    public override float MovementDirectionX =>
+        _isMoving && _target != null ? _target.position.x - transform.position.x : 0f;
+
     public void SetTarget(Transform target)
     {
         _target = target;

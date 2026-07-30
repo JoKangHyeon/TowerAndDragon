@@ -6,7 +6,7 @@ using UnityEngine.Events;
 /// 가동 조건만 인구 대신 슬라임 먹이로 바꾼다(BabyDragonFeedingSystem이 매일 아침 지불).
 /// 버프/공격 모드(기획 §10 "전투형 or 버프형 중 선택")는 RunData의 BabyDragon 레코드에
 /// 저장해 철거 후 재설치해도 유지되게 한다 - BabyDragonPlacementCoordinator.BindRecord가 배치 시 연결한다.
-/// Tower.Awake/Start가 private이므로 여기서 Awake/Start를 선언하면 안 된다.
+/// Tower.Start가 private이므로 여기서 Start를 선언하면 안 된다(Awake는 이제 protected override라 안전).
 /// </summary>
 public class BabyDragonTower : Tower, ITowerStaffing
 {
@@ -17,6 +17,8 @@ public class BabyDragonTower : Tower, ITowerStaffing
     // 이 인스턴스가 어느 인벤토리 레코드에서 왔는지 - 모드 저장/복원과 철거 시 반환 대상 판정에 쓴다.
     // 속성만으로 레코드를 되찾으면 같은 속성 두 마리가 서로 다른 모드일 때 뒤바뀔 수 있어 인스턴스 단위로 결속한다.
     public BabyDragon Record { get; private set; }
+
+    protected CycleManager _cycleManager;
 
     // 새끼용은 건물이 아니라 인구로 가동하지 않는 설치물이라 이동 예산(연구 기반 일일 횟수)과 무관하다.
     protected override bool UsesMoveGrant => false;
@@ -47,6 +49,19 @@ public class BabyDragonTower : Tower, ITowerStaffing
 
     // 밤 이동 제한은 BuildingPlacementController.CanMoveNow(모든 건물 공통)가 담당한다.
 
+
+    private void OnDisable()
+    {
+        _cycleManager.OnDayStart.RemoveListener(OnDayOrNightStart);
+        _cycleManager.OnNightStart.RemoveListener(OnDayOrNightStart);
+    }
+
+    public void OnDayOrNightStart(int _)
+    {
+        Debug.Log(_isFed);
+        _animator.SetBool(BROKEN_ANIM_KEY, !_isFed);
+    }
+
     protected void Start()
     {
         var anim = GetComponent<Animator>();
@@ -57,6 +72,13 @@ public class BabyDragonTower : Tower, ITowerStaffing
     public void SetFed(bool isFed)
     {
         _isFed = isFed;
+    }
+
+    public void SetCycleManager(CycleManager cycleManager)
+    {
+        _cycleManager = cycleManager;
+        _cycleManager.OnDayStart.AddListener(OnDayOrNightStart);
+        _cycleManager.OnNightStart.AddListener(OnDayOrNightStart);
     }
 
     // BabyDragonPlacementCoordinator.HandleBuildingAdded가 배치 시 호출한다.

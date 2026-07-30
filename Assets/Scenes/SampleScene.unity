@@ -2034,6 +2034,7 @@ GameObject:
   - component: {fileID: 914589620}
   - component: {fileID: 914589621}
   - component: {fileID: 914589622}
+  - component: {fileID: 914589623}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -2131,6 +2132,7 @@ MonoBehaviour:
   _researchManager: {fileID: 914589620}
   _waveCycleProgression: {fileID: 697701537}
   _dragonTreeManager: {fileID: 914589622}
+  _gameSpeedManager: {fileID: 914589623}
   _victoryOccurred:
     m_PersistentCalls:
       m_Calls: []
@@ -2270,6 +2272,28 @@ MonoBehaviour:
       m_Calls: []
   _tree: {fileID: 11400000, guid: 1a4132b210003fd4eab8cdb285292035, type: 2}
   _activeAttributeChanged:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &914589623
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914589609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 562661822b99f4e45ae803d90fa05479, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameSpeedManager
+  _fastScales:
+  - 2
+  - 3
+  _gameEndFreezeDelay: 0.5
+  _gameManager: {fileID: 914589612}
+  _cycleManager: {fileID: 914589611}
+  _togglePauseAction: {fileID: 7074720873254365864, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  SpeedChanged:
     m_PersistentCalls:
       m_Calls: []
 --- !u!1 &936144404
@@ -3678,7 +3702,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.00061547355
+      value: -627.6485
       objectReference: {fileID: 0}
     - target: {fileID: 3537551942454893375, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
@@ -3854,7 +3878,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3850757389291668338, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.0005620909
+      value: -4202.65
       objectReference: {fileID: 0}
     - target: {fileID: 3911539302189408037, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -5241,6 +5265,22 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7145632439560709168, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7148442977301984324, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7148442977301984324, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7148442977301984324, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7148442977301984324, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}

@@ -573,6 +573,7 @@ public class GridMap : MonoBehaviour
         building.SetPlacementOffset(baseOffset);
         building.SetBaseScale(baseScale);
         building.SetRotation(rotationSteps);
+        building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor));
 
         foreach (GridCell cell in footprint)
             cell.PlaceBuilding(building);
@@ -637,6 +638,7 @@ public class GridMap : MonoBehaviour
         }
 
         _buildingFootprintCells[building] = footprint;
+        building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor));
         OnBuildingAdded?.Invoke(building);
         return true;
     }
@@ -855,6 +857,7 @@ public class GridMap : MonoBehaviour
             + building.ComputePlacementOffset(rotationSteps)
             + ComputeRotationCompensation(building.BaseFootprintShape, rotationSteps);
         building.SetRotation(rotationSteps);
+        building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(nextCoord));
 
         foreach (GridCell footprintCell in newFootprint)
             footprintCell.PlaceBuilding(building);
