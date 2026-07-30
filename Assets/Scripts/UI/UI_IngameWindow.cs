@@ -17,8 +17,10 @@ public class UI_IngameWindow : MonoBehaviour
     // 인구 표기 형식: 가용 인구 / 총(최대) 인구.
     private const string POPULATION_FORMAT = "{0}/{1}";
 
-    // 날짜 표기 형식: DAY 01, DAY 02, ...
-    private const string DAY_FORMAT = "DAY {0:00}";
+    // 날짜 표기 형식은 스트링테이블에서 가져온다(언어별 문구·{0} 위치가 다름).
+    // 값 예) en_us: "DAY {0}" / ko_kr: "{0} 일"
+    private const string DAY_LOC_KEY = "main_day";
+    private static string DayFormat => StringTable.GetString(DAY_LOC_KEY);
 
     // 자원 표기: 보유량 + 하루 예상 생산량. 생산량은 연두색으로 "보유량(+생산량)" 형태(TMP 리치텍스트 컬러 태그).
     private const string RESOURCE_WITH_PRODUCTION_FORMAT = "{0}<color=#{1}>(+{2})</color>";
@@ -97,6 +99,10 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("새끼용 인벤토리 창. 버튼 클릭 시 토글한다.")]
     [SerializeField] private UI_DragonInventoryWindow _babyDragonInventoryWindow;
 
+    [Header("설정 (Button_Setting)")]
+    [Tooltip("누르면 사용 가능한 언어를 순환 전환한다(en_us ↔ ko_kr).")]
+    [SerializeField] private Button _buttonSetting;
+
     [Header("웨이브 진행 바 (Panel_TopCenter/BossWave)")]
     [Tooltip("웨이브 진행 슬라이더(Slider_wave).")]
     [SerializeField] private Slider _waveSlider;
@@ -162,6 +168,12 @@ public class UI_IngameWindow : MonoBehaviour
         {
             _buttonBabyDragonInventory.onClick.AddListener(_babyDragonInventoryWindow.ToggleFromEntryPoint);
         }
+
+        // 설정 버튼: 누를 때마다 다음 언어로 순환 전환한다(테스트용 언어 토글).
+        if (_buttonSetting != null)
+        {
+            _buttonSetting.onClick.AddListener(StringTable.CycleLanguage);
+        }
     }
 
     private void OnEnable()
@@ -199,6 +211,9 @@ public class UI_IngameWindow : MonoBehaviour
 
             _cycleManager.OnDayStart.AddListener(RenderDay);
         }
+
+        // 언어가 바뀌면 이 창의 로컬라이즈된 텍스트를 다시 그린다.
+        StringTable.OnLanguageChanged += RefreshLocalizedTexts;
 
         // 자원 패널(ContentSizeFitter) 폭이 확정된 뒤 인구 패널이 겹치지 않도록,
         // 다음 프레임에 '자식 자원 패널 → 부모 층' 순서로 레이아웃을 한 번만 갱신한다.
@@ -270,6 +285,8 @@ public class UI_IngameWindow : MonoBehaviour
             _cycleManager.OnDayStart.RemoveListener(RenderDay);
         }
 
+        StringTable.OnLanguageChanged -= RefreshLocalizedTexts;
+
         if (_waveSlider != null)
         {
             _waveSlider.DOKill();
@@ -281,12 +298,27 @@ public class UI_IngameWindow : MonoBehaviour
         }
     }
 
+    // 언어 변경 시 현재 일수로 다시 그릴 수 있도록 마지막 표시 일수를 저장한다.
+    private int _currentDay;
+
     // CycleManager.OnDayStart(day)로 갱신된다.
     private void RenderDay(int day)
     {
+        _currentDay = day;
         if (_dayText != null)
         {
-            _dayText.text = string.Format(DAY_FORMAT, day);
+            _dayText.text = string.Format(DayFormat, day);
+        }
+    }
+
+    // 언어가 바뀌면(StringTable.OnLanguageChanged) 이 창의 로컬라이즈된 텍스트를 현재 값으로 다시 그린다.
+    private void RefreshLocalizedTexts()
+    {
+        RenderDay(_currentDay);
+
+        if (_buttonResearchLabel != null)
+        {
+            _buttonResearchLabel.text = StringTable.GetString(ResearchLocKeys.WINDOW_HEADER);
         }
     }
 

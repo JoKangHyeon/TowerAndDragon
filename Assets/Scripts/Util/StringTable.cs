@@ -9,6 +9,12 @@ public static class StringTable
 {
     static Dictionary<string, string> table;
 
+    // 현재 로드된 언어 코드(예: en_us). LoadLanguage 성공 시 갱신된다.
+    public static string CurrentLanguage { get; private set; }
+
+    // 언어가 바뀌면 발화. UI는 이 이벤트를 구독해 표시 중인 텍스트를 다시 그린다.
+    public static event System.Action OnLanguageChanged;
+
     static string _localizationTextLocation;
     static List<string> _localizationList;
     static string LocalizationTextLocation
@@ -108,6 +114,23 @@ public static class StringTable
             }
         }
 
+        CurrentLanguage = lang;
+        OnLanguageChanged?.Invoke();
+    }
+
+    // 사용 가능한 언어(LocalizationList)를 순서대로 순환하며 다음 언어로 전환한다.
+    // 예: en_us → ko_kr → en_us ... (Localization 폴더의 csv 파일들이 곧 언어 목록)
+    public static void CycleLanguage()
+    {
+        List<string> languages = LocalizationList;
+        if (languages == null || languages.Count == 0)
+        {
+            return;
+        }
+
+        int currentIndex = languages.IndexOf(CurrentLanguage);
+        int nextIndex = (currentIndex + 1) % languages.Count;
+        LoadLanguage(languages[nextIndex]);
     }
 
     public static List<T> LoadCsv<T>(string csv)
