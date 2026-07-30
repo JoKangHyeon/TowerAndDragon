@@ -19,7 +19,7 @@ public class UI_IngameWindow : MonoBehaviour
 
     // 날짜 표기 형식은 스트링테이블에서 가져온다(언어별 문구·{0} 위치가 다름).
     // 값 예) en_us: "DAY {0}" / ko_kr: "{0} 일"
-    private const string DAY_LOC_KEY = "ui_main_day";
+    private const string DAY_LOC_KEY = "main_day";
     private static string DayFormat => StringTable.GetString(DAY_LOC_KEY);
 
     // 자원 표기: 보유량 + 하루 예상 생산량. 생산량은 연두색으로 "보유량(+생산량)" 형태(TMP 리치텍스트 컬러 태그).
