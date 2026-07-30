@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 // 봉인석 건설 진행을 추적하고, 포탈 4개 전부에 봉인석이 지어지는 순간 4포탈을 동시에 봉인 + 승리로 전환한다.
 // 봉인석 하나를 짓는다고 그 포탈이 즉시 봉인되지는 않는다 - 개별 포탈은 전부 모일 때까지 미봉인 상태를 유지한다.
@@ -9,6 +10,12 @@ public sealed class PortalSealManager : MonoBehaviour, ISealStonePlacementQuery
     [SerializeField] private GameManager _gameManager;
     [SerializeField] private PortalSealTable _table;
     [SerializeField] private List<Portal> _portals;
+
+    // 4개 사이트가 전부 모이는 순간(Seal()/Victory() 호출 직전)에 발화 - 나중에 연출(애니메이션 등)을
+    // 붙일 자리를 미리 열어둔 확장 지점. 지금은 구독자가 없어도 안전(UnityEvent 기본값).
+    [SerializeField] private UnityEvent _onAllSealStonesBuilt = new();
+
+    public UnityEvent OnAllSealStonesBuilt => _onAllSealStonesBuilt;
 
     // 연구 시스템 연동 자리 - null이면 해금된 것으로 취급(GridMap의 다른 쿼리 프로퍼티와 동일한 관례).
     public ISealStoneUnlockQuery UnlockQuery { get; set; }
@@ -84,6 +91,8 @@ public sealed class PortalSealManager : MonoBehaviour, ISealStonePlacementQuery
 
         if (_stonesBuiltAt.Count < _table.SiteCount)
             return; // 아직 전부 안 모임 - 개별 포탈은 여전히 미봉인 상태
+
+        _onAllSealStonesBuilt?.Invoke(); // 봉인/승리 처리 직전 - 연출 컨트롤러가 이 시점을 그대로 구독하면 됨
 
         if (_portals != null)
         {

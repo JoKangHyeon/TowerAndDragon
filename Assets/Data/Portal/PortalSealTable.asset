@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ea5b05ebaeb0a147afd2c27da97a352, type: 3}
+  m_Name: PortalSealTable
+  m_EditorClassIdentifier: Assembly-CSharp::PortalSealTable
+  _sites:
+  - PortalDirection: 1
+    AnchorCoord: {x: 0, y: 37, z: 0}
+    Shape:
+      _width: 2
+      _height: 1
+      _cells: 0101
+  - PortalDirection: 2
+    AnchorCoord: {x: 36, y: -1, z: 0}
+    Shape:
+      _width: 2
+      _height: 2
+      _cells: 01000001
+  - PortalDirection: 3
+    AnchorCoord: {x: 1, y: -34, z: 0}
+    Shape:
+      _width: 4
+      _height: 2
+      _cells: 0000000101000000
+  - PortalDirection: 4
+    AnchorCoord: {x: -37, y: -1, z: 0}
+    Shape:
+      _width: 3
+      _height: 3
+      _cells: 000001000000010000
