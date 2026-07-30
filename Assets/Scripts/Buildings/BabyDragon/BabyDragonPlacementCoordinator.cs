@@ -14,9 +14,6 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
     [SerializeField] private BabyDragonDataCatalog _dataCatalog;
     [SerializeField] private BabyDragonTower _babyDragonPrefab;
 
-    [Tooltip("배치된 새끼용에 낮 제한(밤에는 재배치 불가)을 주입하기 위해 필요하다 - BabyDragonTower.SetCycleManager.")]
-    [SerializeField] private CycleManager _cycleManager;
-
     private BabyDragon _pendingRecord;
 
     private void OnEnable()
@@ -87,7 +84,6 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
         // Start()의 `if (!_isInitialized && _towerData != null)` 가드가 중복 호출을 막는다.
         babyDragonTower.Setup(data);
         ApplySprite(babyDragonTower, data);
-        babyDragonTower.SetCycleManager(_cycleManager);
 
         // 인스턴스 ↔ 레코드 결속. 모드가 아직 정해지지 않았다면(첫 배치) 데이터 기반 기본값을 채운다 -
         // 철거 후 재설치라면 이전에 고른 모드가 여기서 그대로 유지된다.

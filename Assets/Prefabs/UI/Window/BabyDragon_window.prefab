@@ -249,17 +249,9 @@ MonoBehaviour:
     Button: {fileID: 6750107281591785852}
     MenuFocus: {fileID: 860761540334034966}
     MenuDefault: {fileID: 6330863509835307247}
-  _moveButton: {fileID: 8487001550980548534}
-  _removeButton: {fileID: 5094473836353024870}
   _slotContainer: {fileID: 3668891204714107812}
   _slotPrefab: {fileID: 2647629034709517647, guid: 6b3a00d38d6900e48a71c96656f7a2bf, type: 3}
   _eggSprite: {fileID: 21300000, guid: b08d8ca1cb8179447b47b536057470c6, type: 3}
-  _attributeColors:
-  - {r: 0.357, g: 0.753, b: 0.878, a: 1}
-  - {r: 0.878, g: 0.376, b: 0.235, a: 1}
-  - {r: 0.69, g: 0.49, b: 0.878, a: 1}
-  - {r: 0.788, g: 0.635, b: 0.29, a: 1}
-  - {r: 0.498, g: 0.82, b: 0.31, a: 1}
   _slideDuration: 0.5
   _openFromOffset: {x: -50, y: 0}
   _closeToOffset: {x: -500, y: 0}
@@ -1619,7 +1611,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.00025939257}
+  m_AnchoredPosition: {x: 0, y: 0.00002088235}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &7446069982034968654
@@ -1758,10 +1750,10 @@ RectTransform:
   - {fileID: 142106694709108307}
   m_Father: {fileID: 5455313956817820434}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.5}
-  m_AnchorMax: {x: 0, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 500, y: 650}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &9140084448164171578
 CanvasRenderer:
@@ -2932,7 +2924,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 4050900636477750615}
   m_HandleRect: {fileID: 6995129481439892503}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -3141,7 +3133,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 420, y: 380}
+  m_SizeDelta: {x: 420, y: 300}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2038504822682091075
 CanvasRenderer:

@@ -13,6 +13,11 @@ public class CycleManager : MonoBehaviour
     private GameManager _gameManager;
 
     public UnityEvent<int> OnDayStart;
+
+    // OnDayStart(생산 정산·상태 갱신) 이후, 반드시 그 뒤에 소비(인구 식량 유지비, 새끼용 슬라임 먹이 등)가
+    // 일어나도록 분리한 단계. 기존 씬에 직렬화된 인스턴스에는 이 필드의 YAML 항목이 없으므로,
+    // 구독 시점(OnEnable/Awake)에 null이 되지 않도록 직접 초기화한다.
+    public UnityEvent<int> OnDayStartUpkeep = new();
     public UnityEvent<int> OnDayEnd;
     public UnityEvent<int> OnNightStart;
     public UnityEvent<int> OnNightEnd;
@@ -36,6 +41,7 @@ public class CycleManager : MonoBehaviour
         _gameManager.CurrentRun.CurrentCycle += 1;
         CurrentCycle = CycleState.Day;
         SafeInvoke(OnDayStart, _gameManager.CurrentRun.CurrentCycle);
+        SafeInvoke(OnDayStartUpkeep, _gameManager.CurrentRun.CurrentCycle);
         SafeInvoke(OnCycleChanged, CycleState.Day);
     }
 

@@ -51,6 +51,7 @@ public class UI_DragonInventorySlot : MonoBehaviour
         BabyDragonData data,
         Color attributeColor,
         int previewDailyFeed,
+        bool isPlaceable,
         Action<BabyDragon> onClickPlace)
     {
         _icon.sprite = data.Sprite;
@@ -71,7 +72,8 @@ public class UI_DragonInventorySlot : MonoBehaviour
         _feedAmountText.text = string.Format(StringTable.GetString(FEED_INFO_LOC_KEY), previewDailyFeed);
 
         Button button = GetComponent<Button>();
-        button.interactable = true;
+        // 밤에는 배치를 시작할 수 없다(BuildingPlacementController.IsDayForBuildActions와 같은 판정).
+        button.interactable = isPlaceable;
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(() => onClickPlace(dragon));
     }

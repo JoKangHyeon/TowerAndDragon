@@ -52,6 +52,19 @@ public class BuildingPlacementController : MonoBehaviour
 
     public bool IsMoving => _moveSourceCoord.HasValue;
 
+    // 건설/철거 공통 낮 판정 - CycleManager가 배선되지 않은 씬은 무제한 허용한다
+    // (BabyDragonTower.IsMoveable과 같은 fail-open 관례).
+    public bool IsDayForBuildActions =>
+        _cycleManager == null || _cycleManager.CurrentCycle == CycleManager.CycleState.Day;
+
+    // 철거 버튼 interactable 판정에 쓴다 - IsRemoveable(건물 종류) AND 낮(시점) 둘 다 만족해야 한다.
+    public bool CanRemoveNow(Building building) =>
+        building != null && building.IsRemoveable && IsDayForBuildActions;
+
+    // 이동 버튼 interactable 판정 및 실제 이동 진입 판정에 쓴다 - IsMoveable(건물 종류 + 이동 예산) AND 낮(시점).
+    public bool CanMoveNow(Building building) =>
+        building != null && building.IsMoveable && IsDayForBuildActions;
+
     // 점령 모드 등 다른 모드가 켜져 있을 때 이 컨트롤러의 클릭 처리를 막는다.
     // (컴포넌트를 비활성화하면 공유 입력 액션까지 Disable되므로, 입력만 선택적으로 억제한다.)
     public bool InputSuppressed { get; set; }
@@ -177,6 +190,9 @@ public class BuildingPlacementController : MonoBehaviour
         if (!_selectedExistingBuildingCoord.HasValue)
             return;
 
+        if (!IsDayForBuildActions)
+            return;
+
         Building building = _gridMap.GetBuildingAt(_selectedExistingBuildingCoord.Value);
         bool removed = _gridMap.RemoveBuilding(_selectedExistingBuildingCoord.Value);
 
@@ -226,7 +242,7 @@ public class BuildingPlacementController : MonoBehaviour
         if (building == null)
             return;
 
-        if (!building.IsMoveable)
+        if (!CanMoveNow(building))
             return;
 
         CancelBuildMode();
@@ -304,7 +320,7 @@ public class BuildingPlacementController : MonoBehaviour
             Vector3Int cell = _mouseSelectController.GetHoveredCell();
             Building building = _gridMap.GetBuildingAt(cell);
 
-            if (!overUI && building != null && building.IsMoveable)
+            if (!overUI && building != null && CanMoveNow(building))
             {
                 _holdCoord = cell;
                 _holdTimer = 0f;
@@ -376,6 +392,10 @@ public class BuildingPlacementController : MonoBehaviour
             return false;
 
         if (_selectedBuilding is ResearchLab && _gridMap.HasBuilding<ResearchLab>())
+            return false;
+
+        // 건설은 낮에만 가능하다(기획 변경 - 새끼용 밤 배치 금지 요청을 계기로 전체 건물로 확장).
+        if (!IsDayForBuildActions)
             return false;
 
         if (!_gridMap.CanConstructBuildingFootprint(anchor, _mouseSelectController.CurrentFootprintShape, _selectedBuilding, null))

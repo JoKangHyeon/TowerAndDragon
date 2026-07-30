@@ -43,9 +43,10 @@ public class BabyDragonBuffSystem : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            // Factory.OnSettlement가 OnDayStart에서 실행되므로(Factory.cs:36), 그 전에
-            // 버프를 확정해야 한다. OnNightEnd -> StartDay -> OnDayStart 순서가 같은 호출
-            // 스택 안에서 보장되므로(CycleManager.cs:52-56) OnNightEnd에서 재계산한다.
+            // 생산 정산(Factory.OnSettlement)은 OnDayStart, 먹이 지불은 그 뒤 단계인
+            // OnDayStartUpkeep에서 실행되므로(Factory.cs:84), 버프는 둘보다 앞서 확정해야
+            // 한다. OnNightEnd -> StartDay -> OnDayStart 순서가 같은 호출 스택 안에서
+            // 보장되므로(CycleManager.cs:52-56) OnNightEnd에서 재계산한다.
             _cycleManager.OnNightEnd.AddListener(RecomputeAllOnNightEnd);
         }
     }
@@ -105,7 +106,7 @@ public class BabyDragonBuffSystem : MonoBehaviour
         }
     }
 
-    // CanOperate(먹이 상태)는 그날 아침 BabyDragonFeedingSystem.OnDayStart가 갱신한 값이다.
+    // CanOperate(먹이 상태)는 그날 아침 BabyDragonFeedingSystem.OnDayStartUpkeep이 갱신한 값이다.
     // 즉 밤 시점(OnNightEnd)의 재계산은 "그날 아침 먹었는지"를 반영하고, 다음 날 아침 정산에
     // 쓰인다 - 하루 지연이지만 순환 의존은 아니다(먹이 계산에는 버프가 관여하지 않음).
     // 배치/철거/이동에 의한 재계산은 CanOperate가 낮 동안 바뀌지 않으므로 같은 값을 그대로 쓴다.

@@ -49,10 +49,6 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private FilterTab _eggTab;
     [SerializeField] private FilterTab _dragonTab;
 
-    [Header("이동/철거 버튼 - 그리드에서 선택된 새끼용 대상")]
-    [SerializeField] private Button _moveButton;
-    [SerializeField] private Button _removeButton;
-
     [Header("슬롯")]
     [SerializeField] private Transform _slotContainer;
     [SerializeField] private UI_DragonInventorySlot _slotPrefab;
@@ -96,19 +92,6 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
 
         SelectTab(_currentTab);
 
-        if (_moveButton != null && _buildingPlacementController != null)
-        {
-            _moveButton.onClick.AddListener(() => _buildingPlacementController.EnterMoveMode());
-        }
-
-        if (_removeButton != null && _buildingPlacementController != null)
-        {
-            // 새끼용도 Building을 상속하므로 별도 로직 없이 그리드 제거 흐름을 그대로 탄다 -
-            // BabyDragonPlacementCoordinator.HandleBuildingRemoving이 OnBuildingRemoving을 구독해
-            // 제거된 용을 자동으로 인벤토리(IsInTower=false)로 되돌린다.
-            _removeButton.onClick.AddListener(() => _buildingPlacementController.RemoveSelectedBuilding());
-        }
-
         if (_cycleManager != null)
         {
             _cycleManager.OnNightStart.AddListener(HandleNightStart);
@@ -143,8 +126,6 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
     // IExclusiveMode.Open()을 직접 호출해서 이뤄진다. ESC로 닫는 것만 여기서 스스로 처리하면 된다.
     private void Update()
     {
-        SyncActiveButtons();
-
         if (!_isOpen)
         {
             return;
@@ -153,28 +134,6 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
         if (_closeAction != null && _closeAction.action.WasPerformedThisFrame())
         {
             ClosePanel();
-        }
-    }
-
-    // 그리드에서 선택된 건물 기준으로 이동/철거 버튼 상태를 매 프레임 동기화한다(UI_BuildModeWindow.Update와 동일).
-    private void SyncActiveButtons()
-    {
-        if (_buildingPlacementController == null)
-        {
-            return;
-        }
-
-        Building selected = _buildingPlacementController.SelectedBuilding;
-
-        if (_moveButton != null)
-        {
-            _moveButton.gameObject.SetActive(!_buildingPlacementController.IsMoving);
-            _moveButton.interactable = selected != null && selected.IsMoveable;
-        }
-
-        if (_removeButton != null)
-        {
-            _removeButton.interactable = selected != null && selected.IsRemoveable;
         }
     }
 
@@ -322,8 +281,10 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
             installedCountByType.TryGetValue(dragon.DragonType, out int sameTypeCount);
             int previewDailyFeed = BabyDragonFeedFormula.ResolveDailyFeed(data, sameTypeCount + 1, installedTotal + 1);
 
+            bool isPlaceable = _buildingPlacementController == null || _buildingPlacementController.IsDayForBuildActions;
+
             UI_DragonInventorySlot slot = Instantiate(_slotPrefab, _slotContainer);
-            slot.SetupDragon(dragon, data, ColorForType(dragon.DragonType), previewDailyFeed, OnSlotPlaceClicked);
+            slot.SetupDragon(dragon, data, ColorForType(dragon.DragonType), previewDailyFeed, isPlaceable, OnSlotPlaceClicked);
             _spawnedSlots.Add(slot);
         }
     }

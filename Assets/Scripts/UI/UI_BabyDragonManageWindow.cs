@@ -102,7 +102,7 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
         if (_cycleManager != null)
         {
             _cycleManager.OnNightStart.AddListener(HandleNightStart);
-            _cycleManager.OnDayStart.AddListener(HandleDayStart);
+            _cycleManager.OnDayStartUpkeep.AddListener(HandleDayStart);
         }
     }
 
@@ -113,7 +113,7 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
         if (_cycleManager != null)
         {
             _cycleManager.OnNightStart.RemoveListener(HandleNightStart);
-            _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
+            _cycleManager.OnDayStartUpkeep.RemoveListener(HandleDayStart);
         }
 
         if (_boundTower != null)
@@ -212,7 +212,7 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
         }
     }
 
-    // 먹이 지급은 아침(OnDayStart)에 갱신되므로, 열려 있는 동안 새 급여 결과를 반영한다.
+    // 먹이 지급은 아침(OnDayStartUpkeep)에 갱신되므로, 열려 있는 동안 새 급여 결과를 반영한다.
     private void HandleDayStart(int _)
     {
         if (_isOpen)
@@ -360,12 +360,14 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
         {
             _relocateButton.gameObject.SetActive(
                 _buildingPlacementController == null || !_buildingPlacementController.IsMoving);
-            _relocateButton.interactable = _boundTower.IsMoveable;
+            _relocateButton.interactable = _buildingPlacementController != null &&
+                _buildingPlacementController.CanMoveNow(_boundTower);
         }
 
         if (_removeButton != null)
         {
-            _removeButton.interactable = _boundTower.IsRemoveable;
+            _removeButton.interactable = _buildingPlacementController != null &&
+                _buildingPlacementController.CanRemoveNow(_boundTower);
         }
 
         SetModeButtonState(_attackModeButton, _boundTower.Mode == BabyDragonMode.Attack, _boundTower.CanUseAttackMode);

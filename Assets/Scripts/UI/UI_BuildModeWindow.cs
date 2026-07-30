@@ -72,6 +72,7 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     private Vector2 _homePos;
     private bool _isOpen;
     private Tween _panelTween;
+    private int _currentFilterIndex;
 
     private readonly List<UI_BuildingSlot> _spawnedSlots = new();
 
@@ -129,14 +130,17 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
 
     private void Update()
     {
+        // 새끼용은 전용 창(UI_BabyDragonManageWindow/UI_DragonInventoryWindow)에서만 이동/철거한다 -
+        // 여기서도 같이 반응하면 같은 대상에 버튼이 두 벌 뜬다.
         Building selected = _buildingPlacementController.SelectedBuilding;
+        Building target = selected is BabyDragonTower ? null : selected;
 
         // 이동 모드 진입/종료(클릭 이동, 취소, 우클릭 취소 등)에 맞춰 Move 버튼 표시를 매 프레임 동기화
         _activeButtons.Move.gameObject.SetActive(!_buildingPlacementController.IsMoving);
 
         // 이동/철거 불가 건물(성, 주둔지 등) 선택 시 버튼을 비활성화해 클릭해도 아무 반응 없는 상황을 방지
-        _activeButtons.Move.interactable = selected != null && selected.IsMoveable;
-        _activeButtons.Remove.interactable = selected != null && selected.IsRemoveable;
+        _activeButtons.Move.interactable = _buildingPlacementController.CanMoveNow(target);
+        _activeButtons.Remove.interactable = _buildingPlacementController.CanRemoveNow(target);
 
         HandleCloseInput();
     }
@@ -173,6 +177,13 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
             .SetLink(_buildModePanel);
 
         _buildingPlacementController.ShowOccupiedTiles();
+
+        // 낮/밤이 바뀐 채로 재오픈될 수 있으므로 슬롯을 다시 그려 interactable을 최신 상태로 맞춘다
+        // (UI_DragonInventoryWindow.OpenPanel과 동일한 관례).
+        if (_filterTabs.Length > 0)
+        {
+            SelectFilter(_currentFilterIndex);
+        }
     }
 
     private void CloseBuildPanel()
@@ -192,6 +203,8 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     // 선택된 탭만 Focus 상태로, 나머지는 Default 상태로 만들고, 그 탭의 건물 슬롯 목록을 다시 생성한다.
     private void SelectFilter(int index)
     {
+        _currentFilterIndex = index;
+
         for (int i = 0; i < _filterTabs.Length; i++)
         {
             bool isSelected = i == index;
@@ -215,10 +228,13 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         if (slotPrefab == null || _slotContainer == null || buildings == null)
             return;
 
+        bool isPlaceable = _buildingPlacementController == null || _buildingPlacementController.IsDayForBuildActions;
+
         foreach (Building building in buildings)
         {
             UI_BuildingSlot slot = Instantiate(slotPrefab, _slotContainer);
             slot.Setup(building, OnSlotSelected);
+            slot.SetInteractable(isPlaceable);
             _spawnedSlots.Add(slot);
         }
     }

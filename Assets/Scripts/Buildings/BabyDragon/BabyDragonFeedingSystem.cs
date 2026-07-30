@@ -6,6 +6,8 @@ using UnityEngine;
 /// 가동하지 않는다(부분 가동 없음).
 /// 프리팹은 씬 오브젝트를 참조할 수 없으므로, 다른 코디네이터들과 같은 방식으로
 /// GridMap.OnBuildingAdded/Removing을 구독해 새끼용을 등록한다.
+/// 지불은 CycleManager.OnDayStartUpkeep(생산 정산 다음 단계)에서 이루어지므로,
+/// Factory의 당일 생산분이 이미 반영된 재고를 기준으로 판정한다.
 /// </summary>
 public class BabyDragonFeedingSystem : MonoBehaviour
 {
@@ -28,7 +30,7 @@ public class BabyDragonFeedingSystem : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.AddListener(FeedAll);
+            _cycleManager.OnDayStartUpkeep.AddListener(FeedAll);
         }
     }
 
@@ -42,7 +44,7 @@ public class BabyDragonFeedingSystem : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.RemoveListener(FeedAll);
+            _cycleManager.OnDayStartUpkeep.RemoveListener(FeedAll);
         }
     }
 
@@ -73,7 +75,7 @@ public class BabyDragonFeedingSystem : MonoBehaviour
         }
     }
 
-    // OnDayStart의 일차 인자는 쓰지 않는다 - 먹이량은 날짜와 무관하다.
+    // OnDayStartUpkeep의 일차 인자는 쓰지 않는다 - 먹이량은 날짜와 무관하다.
     private void FeedAll(int _)
     {
         if (_resourceManager == null)

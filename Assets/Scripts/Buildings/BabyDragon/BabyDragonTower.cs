@@ -21,8 +21,6 @@ public class BabyDragonTower : Tower, ITowerStaffing
     // 새끼용은 건물이 아니라 인구로 가동하지 않는 설치물이라 이동 예산(연구 기반 일일 횟수)과 무관하다.
     protected override bool UsesMoveGrant => false;
 
-    private CycleManager _cycleManager;
-
     public override bool RequiresPopulation => false;
 
     public override int PopulationCapacity => 0;
@@ -47,11 +45,7 @@ public class BabyDragonTower : Tower, ITowerStaffing
 
     private static readonly int TYPE_ANIM_KEY = Animator.StringToHash("Type");
 
-    // 밤에는 재배치를 막는다 - 새끼용은 이동 예산이 없는 대신 이 낮 제한 하나만 적용받는다.
-    // CycleManager가 배선되지 않은 씬(_cycleManager == null)은 무제한 허용 - _moveGrantQuery가
-    // null일 때 예산 없이 통과시키는 Building의 기존 관례와 동일하다.
-    public override bool IsMoveable =>
-        base.IsMoveable && (_cycleManager == null || _cycleManager.CurrentCycle == CycleManager.CycleState.Day);
+    // 밤 이동 제한은 BuildingPlacementController.CanMoveNow(모든 건물 공통)가 담당한다.
 
     protected void Start()
     {
@@ -63,11 +57,6 @@ public class BabyDragonTower : Tower, ITowerStaffing
     public void SetFed(bool isFed)
     {
         _isFed = isFed;
-    }
-
-    public void SetCycleManager(CycleManager cycleManager)
-    {
-        _cycleManager = cycleManager;
     }
 
     // BabyDragonPlacementCoordinator.HandleBuildingAdded가 배치 시 호출한다.

@@ -40,6 +40,7 @@ public class UI_BuildingSlot : MonoBehaviour
 
     private Building _prefab;
     private Action<Building> _onSelected;
+    private Button _button;
 
     // 슬롯 생성 직후 스포너가 호출: 이 슬롯이 나타내는 건물과 클릭 콜백을 주입한다.
     public void Setup(Building prefab, Action<Building> onSelected)
@@ -47,9 +48,9 @@ public class UI_BuildingSlot : MonoBehaviour
         _prefab = prefab;
         _onSelected = onSelected;
 
-        Button button = GetComponent<Button>();
-        button.onClick.RemoveAllListeners();
-        button.onClick.AddListener(() => _onSelected?.Invoke(_prefab));
+        _button = GetComponent<Button>();
+        _button.onClick.RemoveAllListeners();
+        _button.onClick.AddListener(() => _onSelected?.Invoke(_prefab));
 
         string displayName = ResolveName(prefab);
         if (_nameText != null && !string.IsNullOrEmpty(displayName))
@@ -69,6 +70,15 @@ public class UI_BuildingSlot : MonoBehaviour
         if (_populationCapacityText != null)
         {
             _populationCapacityText.text = prefab.PopulationCapacity.ToString();
+        }
+    }
+
+    // 밤에는 건설을 시작할 수 없으므로 슬롯을 회색으로 비활성화한다(UI_BuildModeWindow가 매 재오픈마다 호출).
+    public void SetInteractable(bool interactable)
+    {
+        if (_button != null)
+        {
+            _button.interactable = interactable;
         }
     }
 

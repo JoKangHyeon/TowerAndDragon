@@ -2,7 +2,8 @@ using UnityEngine;
 using UnityEngine.Events;
 
 /// <summary>
-/// 아침 정산의 실행 시점과 단계별 호출 순서를 관리한다.
+/// 아침 정산 중 유지비(소비) 단계를 담당한다. CycleManager.OnDayStartUpkeep은
+/// OnDayStart(생산 정산) 다음에 발화하므로, 당일 생산분이 반영된 재고를 기준으로 소비한다.
 /// 각 단계의 세부 계산과 상태 변경은 전용 시스템에 위임한다.
 /// </summary>
 public class DailySettlementManager : MonoBehaviour
@@ -16,7 +17,7 @@ public class DailySettlementManager : MonoBehaviour
     {
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.AddListener(Settle);
+            _cycleManager.OnDayStartUpkeep.AddListener(Settle);
         }
     }
 
@@ -24,7 +25,7 @@ public class DailySettlementManager : MonoBehaviour
     {
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.RemoveListener(Settle);
+            _cycleManager.OnDayStartUpkeep.RemoveListener(Settle);
         }
     }
 
