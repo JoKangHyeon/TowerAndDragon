@@ -14,26 +14,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PortalSealTable
   _sites:
   - PortalDirection: 1
-    AnchorCoord: {x: -1, y: 33, z: 0}
+    AnchorCoord: {x: -3, y: 33, z: 0}
     Shape:
-      _width: 3
-      _height: 1
-      _cells: 010001
-  - PortalDirection: 2
-    AnchorCoord: {x: 33, y: -1, z: 0}
-    Shape:
-      _width: 1
-      _height: 3
-      _cells: 010001
-  - PortalDirection: 3
-    AnchorCoord: {x: -1, y: -33, z: 0}
-    Shape:
-      _width: 3
-      _height: 2
-      _cells: 010001000000
-  - PortalDirection: 4
-    AnchorCoord: {x: -36, y: -3, z: 0}
-    Shape:
-      _width: 1
+      _width: 6
       _height: 6
-      _cells: 010000000001
+      _cells: 010101010101010000000001010000000001010000000001010000000001010101010101
+  - PortalDirection: 2
+    AnchorCoord: {x: 34, y: -2, z: 0}
+    Shape:
+      _width: 5
+      _height: 5
+      _cells: 01010101010100000000000000000001000000000000010101
+  - PortalDirection: 3
+    AnchorCoord: {x: -3, y: -39, z: 0}
+    Shape:
+      _width: 6
+      _height: 7
+      _cells: 010101010101010000000001010000000001010000000001010000000001010101010101010101010101
+  - PortalDirection: 4
+    AnchorCoord: {x: -38, y: -3, z: 0}
+    Shape:
+      _width: 5
+      _height: 6
+      _cells: 010101010100000000010000000001000000000100000000010101010101
