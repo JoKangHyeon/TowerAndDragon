@@ -9,9 +9,6 @@ public class UI_ConquestRewardSlot : MonoBehaviour
     [SerializeField]
     private Image _iconImage;
 
-    [SerializeField]
-    private TMP_Text _resourceNameText;
-
     // iconColor는 슬라임처럼 공용 스프라이트를 쓰는 자원을 구분하기 위한 틴트다.
     public void Setup(Sprite icon, Color iconColor, string label)
     {
@@ -19,11 +16,6 @@ public class UI_ConquestRewardSlot : MonoBehaviour
         {
             _iconImage.sprite = icon;
             _iconImage.color = iconColor;
-        }
-
-        if (_resourceNameText != null)
-        {
-            _resourceNameText.text = label;
         }
     }
 }
