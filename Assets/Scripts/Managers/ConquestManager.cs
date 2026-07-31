@@ -10,7 +10,6 @@ public class ConquestManager : MonoBehaviour
     // 할인·기간감소가 적용되지 않는다(기존 동작 유지).
     public IConquestModifierQuery ResearchModifierQuery { get; set; }
 
-    // terrainType이 디폴토인 경우 아예 점령이 안되게 -> 호버 하이라이트도 안되게 수정 필요
     [SerializeField]
     private GridMap _gridMap;
 
@@ -67,6 +66,11 @@ public class ConquestManager : MonoBehaviour
         cost = ApplyCostReduction(baseCost);
         return true;
     }
+
+    // 코스트 테이블에 등록된 청크인지 - UI(호버/하이라이트/선택 가능 여부) 판정의 단일 기준.
+    // 대표 지형(DominantTerrain)만으로는 물이 대부분이고 육지가 1칸 끼어 우연히 Default가 아니게 된
+    // 모서리 청크를 걸러내지 못하므로, 실제 등록 여부로 판정한다.
+    public bool HasExpeditionCost(Vector2Int chunkCoord) => _chunkCostTable.TryResolve(chunkCoord, out _);
 
     public int GetDaysRequired(Vector2Int chunkCoord)
     {

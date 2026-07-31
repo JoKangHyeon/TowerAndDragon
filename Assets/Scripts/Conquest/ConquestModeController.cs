@@ -99,7 +99,7 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
         Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
         Chunk chunk = _gridMap.GetChunkAt(hoveredCell);
 
-        Vector2Int? hoveredChunkCoord = chunk != null && chunk.CurrentState == ChunkState.Visible && chunk.DominantTerrain != TerrainType.Default
+        Vector2Int? hoveredChunkCoord = chunk != null && chunk.CurrentState == ChunkState.Visible && _conquestManager.HasExpeditionCost(chunk.ChunkCoord)
             ? chunk.ChunkCoord
             : (Vector2Int?)null;
 
@@ -171,7 +171,7 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
             if (chunk.CurrentState != ChunkState.Visible)
                 continue;
 
-            if (chunk.DominantTerrain == TerrainType.Default)
+            if (!_conquestManager.HasExpeditionCost(chunk.ChunkCoord))
                 continue;
 
             bool canConquer = _conquestManager.CanSendExpedition(chunk.ChunkCoord);
@@ -220,7 +220,7 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
 
         bool isSelectableChunk = chunk != null
             && chunk.CurrentState == ChunkState.Visible
-            && chunk.DominantTerrain != TerrainType.Default;
+            && _conquestManager.HasExpeditionCost(chunk.ChunkCoord);
 
         if (isSelectableChunk)
         {
