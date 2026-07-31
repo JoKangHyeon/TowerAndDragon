@@ -142,8 +142,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 1 Day
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 683a531be3197b94392556894e5c8e1e, type: 2}
+  m_sharedMaterial: {fileID: 7635146284486789962, guid: 683a531be3197b94392556894e5c8e1e, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -831,6 +831,7 @@ GameObject:
   - component: {fileID: 6868522588824084008}
   - component: {fileID: 7695601643066191847}
   - component: {fileID: 675671969361229209}
+  - component: {fileID: 6298623968408564724}
   m_Layer: 5
   m_Name: CostToConqeurText
   m_TagString: Untagged
@@ -957,6 +958,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6298623968408564724
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3224952515580370762}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73a1ebc4639051d48add1612dddd2737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  _locKey: claim_panel_cost
 --- !u!1 &3571014497305458869
 GameObject:
   m_ObjectHideFlags: 0
@@ -1529,6 +1543,7 @@ GameObject:
   - component: {fileID: 8096484208119337389}
   - component: {fileID: 5633066589130417953}
   - component: {fileID: 2306112778818846238}
+  - component: {fileID: 4634610649563518887}
   m_Layer: 5
   m_Name: DurationText
   m_TagString: Untagged
@@ -1585,15 +1600,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: Duration
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 683a531be3197b94392556894e5c8e1e, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: d615e75089fe9b54b9a984ce3fce9118, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4278190080
-  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -1655,6 +1670,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4634610649563518887
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6674997987546384228}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73a1ebc4639051d48add1612dddd2737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  _locKey: claim_panel_duration
 --- !u!1 &6917292280493711235
 GameObject:
   m_ObjectHideFlags: 0
@@ -2137,6 +2165,7 @@ GameObject:
   - component: {fileID: 841753493353729584}
   - component: {fileID: 6502582442194107124}
   - component: {fileID: 1184965228951919096}
+  - component: {fileID: 7517944334836156781}
   m_Layer: 5
   m_Name: Text_Header
   m_TagString: Untagged
@@ -2193,8 +2222,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Land Claim
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 27f54c9130c9748c9be53df11fa03382, type: 2}
-  m_sharedMaterial: {fileID: -4171563015097924827, guid: 27f54c9130c9748c9be53df11fa03382, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 683a531be3197b94392556894e5c8e1e, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: d615e75089fe9b54b9a984ce3fce9118, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2263,6 +2292,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7517944334836156781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7886449762148135919}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73a1ebc4639051d48add1612dddd2737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  _locKey: claim_panel_name
 --- !u!1 &8035661771532373573
 GameObject:
   m_ObjectHideFlags: 0
@@ -2620,6 +2662,7 @@ GameObject:
   - component: {fileID: 835968284984684381}
   - component: {fileID: 5400644658875396003}
   - component: {fileID: 8017160543258889643}
+  - component: {fileID: 2334148030816349029}
   m_Layer: 5
   m_Name: Text
   m_TagString: Untagged
@@ -2676,8 +2719,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Claim
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 27f54c9130c9748c9be53df11fa03382, type: 2}
-  m_sharedMaterial: {fileID: -4171563015097924827, guid: 27f54c9130c9748c9be53df11fa03382, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 683a531be3197b94392556894e5c8e1e, type: 2}
+  m_sharedMaterial: {fileID: 2100000, guid: d615e75089fe9b54b9a984ce3fce9118, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2711,7 +2754,7 @@ MonoBehaviour:
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
-  m_characterSpacing: 10
+  m_characterSpacing: 0
   m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
@@ -2746,3 +2789,16 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2334148030816349029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8920181478418686954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73a1ebc4639051d48add1612dddd2737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  _locKey: claim_panel_button_claim

@@ -61,8 +61,9 @@ public class UI_ChunkInfoCard : MonoBehaviour
 
         for (int i = 0; i < resourceIcons.Count; i++)
         {
+            // 이 카드의 자원 슬롯은 아이콘만 쓴다 - 이름 라벨은 Slot_ChunkIcon에 없으므로 빈 문자열을 넘긴다.
             UI_ConquestRewardSlot slot = _resourceIconSlotPool.Get(i);
-            slot.Setup(resourceIcons[i].Icon, resourceIcons[i].IconColor, null);
+            slot.Setup(resourceIcons[i].Icon, resourceIcons[i].IconColor, string.Empty);
         }
 
         _resourceIconSlotPool.DeactivateFrom(resourceIcons.Count);
