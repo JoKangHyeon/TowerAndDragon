@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// 하나의 공격 정의. 사거리·발동 간격과 함께 부여할 효과 목록을 보관한다.
@@ -29,7 +30,15 @@ public class AttackSO : ScriptableObject
 
     public void Execute(IDamageable target, in AttackContext context)
     {
-        ApplyExtraStatuses(target, in context);
+        if (!HasArea ||
+            target is not IAttackTarget impactTarget ||
+            impactTarget.TargetTransform == null)
+        {
+            ApplyEffectsToTarget(target, in context);
+            return;
+        }
+        ApplyEffectsInArea(impactTarget, in context);
+
     }
 
     private void ApplyEffectsToTarget(IDamageable target, in AttackContext context)
@@ -39,6 +48,59 @@ public class AttackSO : ScriptableObject
             effect.Apply(target, in context);
         }
         ApplyExtraStatuses(target, in context);
+    }
+
+    private void ApplyEffectsInArea(
+        IAttackTarget impactTarget,
+        in AttackContext context
+    )
+    {
+        Vector3 center = impactTarget.TargetTransform.position;
+        float radiusY = _areaRadius * IsometricMath.RADIUS_Y_RATIO;
+
+        Collider2D[] candidates = Physics2D.OverlapCircleAll(
+            center,
+            _areaRadius,
+            context.TargetLayers
+        );
+
+        var targets = new HashSet<IAttackTarget>
+        {
+            impactTarget
+        };
+
+        foreach (Collider2D candidate in candidates)
+        {
+            IAttackTarget areaTarget =
+                candidate.GetComponentInParent<IAttackTarget>();
+
+            if (areaTarget == null ||
+                areaTarget.IsDead ||
+                areaTarget.TargetTransform == null)
+            {
+                continue;
+            }
+
+            if (!IsometricMath.IsWithinEllipse(
+                    areaTarget.TargetTransform.position,
+                    center,
+                    _areaRadius,
+                    radiusY
+            ))
+            {
+                continue;
+            }
+
+            targets.Add(areaTarget);
+        }
+
+        foreach (IAttackTarget areaTarget in targets)
+        {
+            if (!areaTarget.IsDead)
+            {
+                ApplyEffectsToTarget(areaTarget, in context);
+            }
+        }
     }
 
     // 발사 시점(TowerAttack.Fire)이 아니라 명중 시점(여기)에 적용해야 투사체 타이밍과 맞는다 -
