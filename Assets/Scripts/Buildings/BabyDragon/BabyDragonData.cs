@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "TowerAndDragon/Baby Dragon Data", fileName = "BabyDragonData")]
-public class BabyDragonData : TowerData
+public class BabyDragonData : TowerData, ITowerAuraDataProvider
 {
     [Header("Baby Dragon")]
     [Tooltip("먹이가 되는 슬라임 종류를 결정한다 - DragonSlimeTable 참고.")]
@@ -31,6 +31,9 @@ public class BabyDragonData : TowerData
     [Tooltip("버프 반경 내 Factory 생산량에 곱해지는 배율. Factory.NEUTRAL_YIELD_MULTIPLIER(1)이면 버프 없음 - 0으로 두면 생산이 전멸하므로 기본값을 유지할 것.")]
     [SerializeField] [Min(0f)] private float _buffYieldMultiplier = Factory.NEUTRAL_YIELD_MULTIPLIER;
 
+    [Header("Tower Aura")]
+    [SerializeField] private TowerAuraDataSO _towerAura;
+
     public DragonType DragonType => _dragonType;
     public Sprite Sprite => _sprite;
     public int BaseFeed => _baseFeed;
@@ -39,4 +42,9 @@ public class BabyDragonData : TowerData
     public int DaysToHatch => _daysToHatch;
     public float BuffRadius => _buffRadius;
     public float BuffYieldMultiplier => _buffYieldMultiplier;
+
+    public TowerAuraDataSO TowerAura => _towerAura;
+
+    public bool HasTowerAura =>
+        _towerAura != null && _towerAura.HasArea;
 }

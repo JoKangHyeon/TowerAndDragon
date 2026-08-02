@@ -9,6 +9,7 @@ public sealed class TowerStatMultiplierCoordinator : MonoBehaviour
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private TowerStatMultiplierComposite _statComposite;
     [SerializeField] private DragonTreeManager _dragonTreeManager;
+    [SerializeField] private TowerAuraSystem _towerAuraSystem;
 
     private void OnEnable()
     {
@@ -48,17 +49,20 @@ public sealed class TowerStatMultiplierCoordinator : MonoBehaviour
         {
             tower.Attack.SetStatMultiplierQuery(null);
             tower.Attack.SetHitStatusQuery(null);
+            tower.Attack.SetAuraSystem(null);
         }
     }
 
     private void InjectQueries(Building building)
     {
-        if (!(building is Tower tower) || tower.Attack == null)
+        if (building is not Tower tower ||
+            tower.Attack == null)
         {
             return;
         }
 
         tower.Attack.SetStatMultiplierQuery(_statComposite);
         tower.Attack.SetHitStatusQuery(_dragonTreeManager);
+        tower.Attack.SetAuraSystem(_towerAuraSystem);
     }
 }
