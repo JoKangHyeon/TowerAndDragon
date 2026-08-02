@@ -10,6 +10,8 @@ public sealed class TowerAuraDataSO : ScriptableObject
     [Min(0f)]
     [SerializeField] private float _radius;
 
+    [SerializeField] private bool _scaleRadiusWithStaffing;
+
     [Header("Offense")]
     [Min(1f)]
     [SerializeField] private float _damageMultiplier = 1f;
@@ -29,6 +31,7 @@ public sealed class TowerAuraDataSO : ScriptableObject
     [SerializeField] private float _shieldAmount;
 
     public float Radius => _radius;
+    public bool ScaleRadiusWithStaffing => _scaleRadiusWithStaffing;
     public float DamageMultiplier => _damageMultiplier;
     public float AttackSpeedMultiplier => _attackSpeedMultiplier;
     public float ReviveSpeedMultiplier => _reviveSpeedMultiplier;

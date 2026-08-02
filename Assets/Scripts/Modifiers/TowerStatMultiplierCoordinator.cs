@@ -45,7 +45,14 @@ public sealed class TowerStatMultiplierCoordinator : MonoBehaviour
 
     private void HandleBuildingRemoving(Building building)
     {
-        if (building is Tower tower && tower.Attack != null)
+        if (building is not Tower tower)
+        {
+            return;
+        }
+
+        tower.SetAuraSystem(null);
+
+        if (tower.Attack != null)
         {
             tower.Attack.SetStatMultiplierQuery(null);
             tower.Attack.SetHitStatusQuery(null);
@@ -55,8 +62,14 @@ public sealed class TowerStatMultiplierCoordinator : MonoBehaviour
 
     private void InjectQueries(Building building)
     {
-        if (building is not Tower tower ||
-            tower.Attack == null)
+        if (building is not Tower tower)
+        {
+            return;
+        }
+
+        tower.SetAuraSystem(_towerAuraSystem);
+
+        if (tower.Attack == null)
         {
             return;
         }

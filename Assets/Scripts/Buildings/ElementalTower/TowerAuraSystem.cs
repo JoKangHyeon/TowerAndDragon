@@ -18,8 +18,14 @@ public sealed class TowerAuraSystem : MonoBehaviour
         {
             if (building is not Tower source ||
                 source == target ||
-                !TryGetActiveAura(source, out TowerAuraDataSO aura) ||
-                !IsWithinAura(source, target, aura.Radius))
+                !TryGetActiveAura(
+                    source,
+                    out TowerAuraDataSO aura,
+                    out float radiusMultiplier) ||
+                !IsWithinAura(
+                    source,
+                    target,
+                    aura.Radius * radiusMultiplier))
             {
                 continue;
             }
@@ -32,9 +38,11 @@ public sealed class TowerAuraSystem : MonoBehaviour
 
     private static bool TryGetActiveAura(
         Tower source,
-        out TowerAuraDataSO aura)
+        out TowerAuraDataSO aura,
+        out float radiusMultiplier)
     {
         aura = null;
+        radiusMultiplier = 1f;
 
         if (source.IsReviving ||
             source.IsParalyzed ||
@@ -43,6 +51,8 @@ public sealed class TowerAuraSystem : MonoBehaviour
         {
             return false;
         }
+
+        aura = provider.TowerAura;
 
         if (source is BabyDragonTower babyDragon)
         {
@@ -61,9 +71,14 @@ public sealed class TowerAuraSystem : MonoBehaviour
             {
                 return false;
             }
+
+            if (aura.ScaleRadiusWithStaffing)
+            {
+                radiusMultiplier =
+                    Mathf.Clamp01(staffing.StaffingRatio);
+            }
         }
 
-        aura = provider.TowerAura;
         return true;
     }
 

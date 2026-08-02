@@ -2393,6 +2393,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 25365362595350845, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0.39013672
+      objectReference: {fileID: 0}
     - target: {fileID: 65270399078675608, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_fontAsset
       value: 
@@ -3865,6 +3869,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4074255537605704612, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4152325902730552130, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -4487,7 +4495,7 @@ PrefabInstance:
       objectReference: {fileID: 1692054028}
     - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _filterTabs.Array.data[0].Buildings.Array.size
-      value: 6
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _filterTabs.Array.data[1].Buildings.Array.size
@@ -4509,6 +4517,10 @@ PrefabInstance:
       propertyPath: '_filterTabs.Array.data[0].Buildings.Array.data[5]'
       value: 
       objectReference: {fileID: -1179263789838454351, guid: 90ba856639b834c5d920112b0f6a4782, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[0].Buildings.Array.data[6]'
+      value: 
+      objectReference: {fileID: -1179263789838454351, guid: c11e5591fe2e14de4b5590efe36b5716, type: 3}
     - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_filterTabs.Array.data[1].Buildings.Array.data[1]'
       value: 
@@ -6613,6 +6625,7 @@ GameObject:
   - component: {fileID: 1652351648}
   - component: {fileID: 1652351649}
   - component: {fileID: 1652351658}
+  - component: {fileID: 1652351659}
   m_Layer: 0
   m_Name: Composites
   m_TagString: Untagged
@@ -6775,6 +6788,7 @@ MonoBehaviour:
   _gridMap: {fileID: 313449541}
   _statComposite: {fileID: 1652351645}
   _dragonTreeManager: {fileID: 914589622}
+  _towerAuraSystem: {fileID: 1652351659}
 --- !u!114 &1652351655
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6831,6 +6845,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerMorningRestoreSystem
   _cycleManager: {fileID: 914589611}
+  _gridMap: {fileID: 313449541}
+--- !u!114 &1652351659
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1652351643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09ce571eea50746f4a7a59f8f7b9acbf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerAuraSystem
   _gridMap: {fileID: 313449541}
 --- !u!1 &1692054027
 GameObject:
