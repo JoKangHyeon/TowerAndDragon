@@ -47,7 +47,7 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private TowerStatMultiplierComposite _towerStatMultiplierComposite;
 
-    [Tooltip("새끼용 배치/이동 미리보기 중 버프 반경을 타원으로 표시할 인디케이터. 공격 사거리와 별개 원이라 서로 다른 색으로 구분해둘 것.")]
+    [Tooltip("오라 타워 또는 새끼용 배치/이동 미리보기 중 버프 반경을 타원으로 표시할 인디케이터. 공격 사거리와 별개 원이라 서로 다른 색으로 구분해둘 것.")]
     [SerializeField]
     private RangeIndicator _buffRangeIndicator;
 
@@ -62,6 +62,7 @@ public class MouseSelectController : MonoBehaviour
     private Vector3 _ghostLocalOffset;
     private Sprite _ghostSpriteOverride;
     private bool _isPlacementActive;
+    private bool _isRepositionPreview;
     private Vector3Int? _lastDrawnAnchor;
     private Building _selectedBuildingRef; // 재배치 중이면 실제 인스턴스 - 자기 자신과 겹치는 위치도 유효하게 판정하기 위함
 
@@ -243,8 +244,17 @@ public class MouseSelectController : MonoBehaviour
         DrawRangeIndicator(anchor);
     }
 
-    public void BeginPlacementPreview(Building prefab) => SetPreviewTarget(prefab, 0);
-    public void BeginRepositionPreview(Building building) => SetPreviewTarget(building, building.RotationSteps);
+    public void BeginPlacementPreview(Building prefab)
+    {
+        _isRepositionPreview = false;
+        SetPreviewTarget(prefab, 0);
+    }
+
+    public void BeginRepositionPreview(Building building)
+    {
+        _isRepositionPreview = true;
+        SetPreviewTarget(building, building.RotationSteps);
+    }
 
     private void SetPreviewTarget(Building building, int initialRotationSteps)
     {
@@ -483,25 +493,49 @@ public class MouseSelectController : MonoBehaviour
         _rangeIndicator.Show(radiusX, radiusY);
     }
 
-    // 배치/이동 대상이 버프 반경을 가진 새끼용일 때만(BabyDragonBuffSystem과 동일한 조건) 표시한다.
+    // 오라 타워는 공용 오라 반경을, 기존 새끼용은 BabyDragonBuffSystem과 같은 BuffRadius를 표시한다.
     private void DrawBuffRangeIndicator(Vector3 center)
     {
         if (_buffRangeIndicator == null)
             return;
 
-        if (!(_selectedBuildingRef is BabyDragonTower babyDragon) ||
-            babyDragon.DragonData == null ||
-            babyDragon.DragonData.BuffRadius <= 0f)
+        if (_selectedBuildingRef is Tower tower &&
+            tower.Data is ITowerAuraDataProvider provider &&
+            provider.HasTowerAura)
         {
-            _buffRangeIndicator.Hide();
+            float auraRadius;
+            bool hasAuraRange = _isRepositionPreview
+                ? TowerAuraSystem.TryGetActiveAura(
+                    tower,
+                    out _,
+                    out auraRadius)
+                : TowerAuraSystem.TryGetPreviewRadius(
+                    tower.Data,
+                    out auraRadius);
+
+            if (hasAuraRange)
+            {
+                ShowBuffRange(center, auraRadius);
+            }
+            else
+            {
+                _buffRangeIndicator.Hide();
+            }
+
             return;
         }
 
-        float radiusX = babyDragon.DragonData.BuffRadius;
-        float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
+        if (_selectedBuildingRef is BabyDragonTower babyDragon &&
+            babyDragon.DragonData != null &&
+            babyDragon.DragonData.BuffRadius > 0f)
+        {
+            ShowBuffRange(
+                center,
+                babyDragon.DragonData.BuffRadius);
+            return;
+        }
 
-        _buffRangeIndicator.SetCenter(center);
-        _buffRangeIndicator.Show(radiusX, radiusY);
+        _buffRangeIndicator.Hide();
     }
 
     private void Deactivate()
@@ -512,6 +546,16 @@ public class MouseSelectController : MonoBehaviour
         ClearHighlights();
         _rangeIndicator?.Hide();
         _buffRangeIndicator?.Hide();
+        _isRepositionPreview = false;
         CanConstruct = false;
+    }
+
+    private void ShowBuffRange(Vector3 center, float radiusX)
+    {
+        float radiusY =
+            radiusX * IsometricMath.RADIUS_Y_RATIO;
+
+        _buffRangeIndicator.SetCenter(center);
+        _buffRangeIndicator.Show(radiusX, radiusY);
     }
 }

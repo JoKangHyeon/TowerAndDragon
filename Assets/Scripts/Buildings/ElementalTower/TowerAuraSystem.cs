@@ -21,11 +21,11 @@ public sealed class TowerAuraSystem : MonoBehaviour
                 !TryGetActiveAura(
                     source,
                     out TowerAuraDataSO aura,
-                    out float radiusMultiplier) ||
+                    out float effectiveRadius) ||
                 !IsWithinAura(
                     source,
                     target,
-                    aura.Radius * radiusMultiplier))
+                    effectiveRadius))
             {
                 continue;
             }
@@ -36,15 +36,16 @@ public sealed class TowerAuraSystem : MonoBehaviour
         return modifiers;
     }
 
-    private static bool TryGetActiveAura(
+    public static bool TryGetActiveAura(
         Tower source,
         out TowerAuraDataSO aura,
-        out float radiusMultiplier)
+        out float effectiveRadius)
     {
         aura = null;
-        radiusMultiplier = 1f;
+        effectiveRadius = 0f;
 
-        if (source.IsReviving ||
+        if (source == null ||
+            source.IsReviving ||
             source.IsParalyzed ||
             source.Data is not ITowerAuraDataProvider provider ||
             !provider.HasTowerAura)
@@ -53,6 +54,7 @@ public sealed class TowerAuraSystem : MonoBehaviour
         }
 
         aura = provider.TowerAura;
+        float radiusMultiplier = 1f;
 
         if (source is BabyDragonTower babyDragon)
         {
@@ -79,7 +81,8 @@ public sealed class TowerAuraSystem : MonoBehaviour
             }
         }
 
-        return true;
+        effectiveRadius = aura.Radius * radiusMultiplier;
+        return effectiveRadius > 0f;
     }
 
     private static bool IsWithinAura(
@@ -95,5 +98,21 @@ public sealed class TowerAuraSystem : MonoBehaviour
             source.transform.position,
             radius,
             radiusY);
+    }
+
+    public static bool TryGetPreviewRadius(
+        TowerData towerData,
+        out float radius)
+    {
+        radius = 0f;
+
+        if (towerData is not ITowerAuraDataProvider provider ||
+            !provider.HasTowerAura)
+        {
+            return false;
+        }
+
+        radius = provider.TowerAura.Radius;
+        return radius > 0f;
     }
 }
