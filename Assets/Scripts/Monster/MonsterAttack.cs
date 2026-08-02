@@ -210,7 +210,8 @@ public class MonsterAttack : MonoBehaviour
     {
         AttackContext context = new AttackContext(
             gameObject,
-            _attackPowerModifier);
+            _attackPowerModifier,
+            _targetLayers);
 
         if (!_data.HasProjectile)
         {
@@ -286,7 +287,7 @@ public class MonsterAttack : MonoBehaviour
             return;
         }
 
-        AttackContext context = new AttackContext(gameObject, _attackPowerModifier);
+        AttackContext context = new AttackContext(gameObject, _attackPowerModifier, _targetLayers);
 
         Collider2D[] candidates = Physics2D.OverlapCircleAll(
             transform.position,

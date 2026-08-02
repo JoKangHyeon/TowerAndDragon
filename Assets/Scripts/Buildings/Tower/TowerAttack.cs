@@ -213,7 +213,11 @@ public class TowerAttack : MonoBehaviour
             ? new[] { hitStatus }
             : null;
 
-        AttackContext context = new AttackContext(gameObject, damageModifier, extraStatuses);
+        AttackContext context = new AttackContext(
+            gameObject, 
+            damageModifier, 
+            extraStatuses,
+            _targetLayers);
 
         if(_animator != null)
         {

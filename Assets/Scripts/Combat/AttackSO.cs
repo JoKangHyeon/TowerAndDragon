@@ -18,16 +18,26 @@ public class AttackSO : ScriptableObject
     [Header("Effects")]
     [SerializeField] private AttackEffectSO[] _effects;
 
+    [Header("Area")]
+    [Min(0f)]   
+    [SerializeField] private float _areaRadius;
+
     public float Range => _range;
     public float Interval => _interval;
+    public float AreaRadius => _areaRadius;
+    public bool HasArea => _areaRadius > 0f;
 
     public void Execute(IDamageable target, in AttackContext context)
+    {
+        ApplyExtraStatuses(target, in context);
+    }
+
+    private void ApplyEffectsToTarget(IDamageable target, in AttackContext context)
     {
         foreach (AttackEffectSO effect in _effects)
         {
             effect.Apply(target, in context);
         }
-
         ApplyExtraStatuses(target, in context);
     }
 
