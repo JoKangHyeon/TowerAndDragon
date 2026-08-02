@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01fd6ce321b9b9f4a875d6886dd3a0dd, type: 3}
+  m_Name: TD_IceTower
+  m_EditorClassIdentifier: Assembly-CSharp::TowerData
+  _nameLocKey: Ice Tower
+  _populationCapacity: 7
+  _buildCost:
+  - Type: 16
+    Amount: 20
+  - Type: 4
+    Amount: 10
+  _maxHealth: 120
+  _reviveDelay: 20
+  _attack: {fileID: 11400000, guid: c36cb6ae4b5234534bbc333602efeb6e, type: 2}
+  _projectilePrefab: {fileID: 2874056009116883397, guid: 38af852f1edcb409b86dc0c03eddafad, type: 3}
+  _projectileSpeed: 5
