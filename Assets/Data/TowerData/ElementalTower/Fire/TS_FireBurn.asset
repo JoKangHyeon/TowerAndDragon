@@ -9,7 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 332c5b90e27cbf94f8d50602ad14f9d4, type: 3}
-  m_Name: TAE_IceDamage
-  m_EditorClassIdentifier: Assembly-CSharp::DamageEffectSO
-  _amount: 10
+  m_Script: {fileID: 11500000, guid: 4628793759d7ddd4787975577fd945f5, type: 3}
+  m_Name: TS_FireBurn
+  m_EditorClassIdentifier: Assembly-CSharp::DamageOverTimeStatusSO
+  _statusId: tower_fire_burn
+  _durationSeconds: 3
+  _damagePerTick: 1
+  _tickIntervalSeconds: 1
