@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 809865e60fe22fd489822f264ce13c71, type: 3}
-  m_Name: MD_Ground_Tank
+  m_Name: MD_Ground_DragonHunter
   m_EditorClassIdentifier: Assembly-CSharp::MonsterData
-  _nameLocKey: monster_ground_basic
-  _maxHealth: 150
-  _moveSpeed: 1
+  _nameLocKey: monster_ground_dragonhunter
+  _maxHealth: 30
+  _moveSpeed: 2
   _movementType: 0
   _hasShield: 0
   _shieldAmount: 0
-  _attack: {fileID: 11400000, guid: b19ac6cb35544fe4db5e83512a64c396, type: 2}
-  _enRouteTargetTypes: 0
+  _attack: {fileID: 11400000, guid: c8a37ed37db725b47acf375b4a98839b, type: 2}
+  _enRouteTargetTypes: 2
   _specialBehaviors: []
-  _projectilePrefab: {fileID: 0}
-  _projectileSpeed: 0
+  _projectilePrefab: {fileID: 2874056009116883397, guid: 1e2cadb560ee9e847b794395858e68e1, type: 3}
+  _projectileSpeed: 10
