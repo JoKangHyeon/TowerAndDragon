@@ -6,7 +6,8 @@ using UnityEngine.UI;
 // 점령 리스트 한 줄. 지형 아이콘 + 남은 일수를 표시한다(값은 UI_ClaimListWindow가 Setup으로 채운다).
 public class UI_ClaimListSlot : MonoBehaviour
 {
-    private const string DAYS_FORMAT = "{0}days";
+    private const string DAYS_LOC_KEY = "slot_claimList";
+    private static string DaysFormat => StringTable.GetString(DAYS_LOC_KEY);
 
     [Tooltip("지형 아이콘.")]
     [SerializeField] private Image _terrainIcon;
@@ -49,7 +50,7 @@ public class UI_ClaimListSlot : MonoBehaviour
 
         if (_daysText != null)
         {
-            _daysText.text = string.Format(DAYS_FORMAT, remainingDays);
+            _daysText.text = string.Format(DaysFormat, remainingDays);
         }
     }
 }

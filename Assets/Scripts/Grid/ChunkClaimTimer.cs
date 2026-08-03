@@ -5,7 +5,8 @@ using UnityEngine;
 public class ChunkClaimTimer : MonoBehaviour
 {
     // 남은 일수 표기 형식. 예: 3 → "3 DAY".
-    private const string DAYS_FORMAT = "{0} DAY";
+    private const string DAYS_LOC_KEY = "claim_chunk_timer";
+    private static string DaysFormat => StringTable.GetString(DAYS_LOC_KEY);
 
     [Tooltip("남은 일수를 표시할 텍스트.")]
     [SerializeField] private TMP_Text _daysText;
@@ -14,7 +15,7 @@ public class ChunkClaimTimer : MonoBehaviour
     {
         if (_daysText != null)
         {
-            _daysText.text = string.Format(DAYS_FORMAT, days);
+            _daysText.text = string.Format(DaysFormat, days);
         }
     }
 }

@@ -182,6 +182,13 @@ public class UI_ConquestWindow : MonoBehaviour
         {
             _conquestManager.OnConquestCompleted.AddListener(OnConquestCompleted);
         }
+
+        // 언어가 바뀌면 이미 생성된 비용/보상/강화 슬롯이 이전 언어로 남으므로 선택된 청크로 다시 그린다.
+        // 패널이 열려 있는 동안(= 이 오브젝트가 활성인 동안)만 유효하면 충분하다 - 닫힌 뒤 다시 열 때는
+        // OnChunkSelected가 Refresh를 호출하므로 항상 현재 언어로 만들어진다.
+        // 여기서 Refresh를 한 번 더 호출하지는 않는다 - OnChunkSelected가 OpenPanel 직후 이미 호출하므로
+        // 패널을 열 때마다 슬롯 리빌드(Destroy/Instantiate)가 두 번 돌게 된다.
+        StringTable.OnLanguageChanged += Refresh;
     }
 
     // 패널이 열려 있는 상태에서 점령 모드가 꺼지면 ConquestModeController.SetConquestModeActive(false)가
@@ -192,6 +199,8 @@ public class UI_ConquestWindow : MonoBehaviour
         {
             _conquestManager.OnConquestCompleted.RemoveListener(OnConquestCompleted);
         }
+
+        StringTable.OnLanguageChanged -= Refresh;
     }
 
     // 밤이 시작되면 점령 모드를 끈다(Claim 버튼을 토글해 끈 것과 동일 - 패널 닫힘 + 하이라이트 제거).
@@ -319,13 +328,32 @@ public class UI_ConquestWindow : MonoBehaviour
     // 자원 아이콘은 데이터 에셋(ResourceData)이 단일 출처 - 카탈로그에서 종류로 조회한다.
     private Sprite ResolveResourceIcon(ResourceType type)
     {
-        if (_resourceManager != null && _resourceManager.Catalog != null &&
-            _resourceManager.Catalog.TryGet(type, out ResourceData data))
+        if (TryGetResourceData(type, out ResourceData data))
         {
             return data.Icon;
         }
 
         return null;
+    }
+
+    // 자원 이름도 아이콘과 같은 출처(ResourceData.NameLocKey)에서 가져와 현재 언어로 표시한다.
+    // 카탈로그에 없는 종류는 종류 이름을 그대로 쓴다(UI_PopulationAllocationWindow와 동일한 대체 방식).
+    private string ResolveResourceName(ResourceType type)
+    {
+        return TryGetResourceData(type, out ResourceData data)
+            ? StringTable.GetString(data.NameLocKey)
+            : type.ToString();
+    }
+
+    private bool TryGetResourceData(ResourceType type, out ResourceData data)
+    {
+        if (_resourceManager != null && _resourceManager.Catalog != null)
+        {
+            return _resourceManager.Catalog.TryGet(type, out data);
+        }
+
+        data = null;
+        return false;
     }
 
     // 이전에 생성된 자원 슬롯을 지우고, 이번 청크가 실제로 요구하는 자원(요구량 > 0)만큼만 새로 생성한다.
@@ -396,7 +424,7 @@ public class UI_ConquestWindow : MonoBehaviour
             if ((unlockedResources & type) == 0)
                 continue;
 
-            SpawnRewardSlot(ResolveResourceIcon(type), DragonAttributePalette.TintFor(type), type.ToString());
+            SpawnRewardSlot(ResolveResourceIcon(type), DragonAttributePalette.TintFor(type), ResolveResourceName(type));
         }
     }
 

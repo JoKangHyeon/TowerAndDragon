@@ -28,9 +28,6 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     }
 
     [SerializeField]
-    private Button _buildButton;
-
-    [SerializeField]
     private ActiveButtons _activeButtons;
 
     [SerializeField]
@@ -73,42 +70,81 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     private bool _isOpen;
     private Tween _panelTween;
     private int _currentFilterIndex;
+    private bool _initialized;
 
     private readonly List<UI_BuildingSlot> _spawnedSlots = new();
 
     private void Awake()
     {
-        // BuildMode 버튼: 열려 있으면 닫고, 닫혀 있으면 연다(토글).
-        _buildButton.onClick.AddListener(ToggleBuildPanel);
+        bool wasInitialized = _initialized;
+        EnsureInitialized();
 
-        // 건물 먼저 선택 후 remove 버튼 클릭하면 건물 삭제되도록
-        _activeButtons.Remove.onClick.AddListener(() => _buildingPlacementController.RemoveSelectedBuilding());
+        if (!wasInitialized && _buildModePanel != null)
+        {
+            _buildModePanel.SetActive(false);
+        }
+    }
 
-        // 건물 먼저 선택 후 move 버튼 클릭 -> 새 위치 클릭하면 바로 이동
-        _activeButtons.Move.onClick.AddListener(() => _buildingPlacementController.EnterMoveMode());
+    private void EnsureInitialized()
+    {
+        if (_initialized)
+        {
+            return;
+        }
+
+        if (_activeButtons.Remove != null)
+        {
+            _activeButtons.Remove.onClick.AddListener(() =>
+            {
+                if (_buildingPlacementController != null)
+                {
+                    _buildingPlacementController.RemoveSelectedBuilding();
+                }
+            });
+        }
+
+        if (_activeButtons.Move != null)
+        {
+            _activeButtons.Move.onClick.AddListener(() =>
+            {
+                if (_buildingPlacementController != null)
+                {
+                    _buildingPlacementController.EnterMoveMode();
+                }
+            });
+        }
 
         for (int i = 0; i < _filterTabs.Length; i++)
         {
-            int index = i; // 클로저 캡처용 지역 복사
-            _filterTabs[i].Button.onClick.AddListener(() => SelectFilter(index));
+            int index = i;
+            if (_filterTabs[i].Button != null)
+            {
+                _filterTabs[i].Button.onClick.AddListener(() => SelectFilter(index));
+            }
         }
 
-        // 홈 위치(디자인된 최종 위치)를 숨기기 전에 기억해 둔다.
-        _panelRect = _buildModePanel.GetComponent<RectTransform>();
-        _homePos = _panelRect.anchoredPosition;
+        if (_buildModePanel == null)
+        {
+            _buildModePanel = gameObject;
+        }
 
-        // 시작 시 창은 닫힌 상태, 필터는 첫 탭이 선택된 상태로 초기화.
-        _buildModePanel.SetActive(false);
+        _panelRect = _buildModePanel.GetComponent<RectTransform>();
+        if (_panelRect != null)
+        {
+            _homePos = _panelRect.anchoredPosition;
+        }
+
         if (_filterTabs.Length > 0)
         {
             SelectFilter(0);
         }
 
-        // 밤이 시작되면 열려 있던 빌드모드 패널을 자동으로 닫는다.
         if (_cycleManager != null)
         {
             _cycleManager.OnNightStart.AddListener(HandleNightStart);
         }
+
+        _initialized = true;
     }
 
     private void OnDestroy()
@@ -130,17 +166,31 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
 
     private void Update()
     {
+        EnsureInitialized();
+
+        if (_buildingPlacementController == null)
+        {
+            HandleCloseInput();
+            return;
+        }
+
         // 새끼용은 전용 창(UI_BabyDragonManageWindow/UI_DragonInventoryWindow)에서만 이동/철거한다 -
         // 여기서도 같이 반응하면 같은 대상에 버튼이 두 벌 뜬다.
         Building selected = _buildingPlacementController.SelectedBuilding;
         Building target = selected is BabyDragonTower ? null : selected;
 
         // 이동 모드 진입/종료(클릭 이동, 취소, 우클릭 취소 등)에 맞춰 Move 버튼 표시를 매 프레임 동기화
-        _activeButtons.Move.gameObject.SetActive(!_buildingPlacementController.IsMoving);
+        if (_activeButtons.Move != null)
+        {
+            _activeButtons.Move.gameObject.SetActive(!_buildingPlacementController.IsMoving);
+            _activeButtons.Move.interactable = _buildingPlacementController.CanMoveNow(target);
+        }
 
         // 이동/철거 불가 건물(성, 주둔지 등) 선택 시 버튼을 비활성화해 클릭해도 아무 반응 없는 상황을 방지
-        _activeButtons.Move.interactable = _buildingPlacementController.CanMoveNow(target);
-        _activeButtons.Remove.interactable = _buildingPlacementController.CanRemoveNow(target);
+        if (_activeButtons.Remove != null)
+        {
+            _activeButtons.Remove.interactable = _buildingPlacementController.CanRemoveNow(target);
+        }
 
         HandleCloseInput();
     }
@@ -156,18 +206,40 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     }
 
     // BuildMode 버튼 토글. 열 때는 UIManager를 거쳐 다른 배타 모드(점령 등)를 정리한다.
-    private void ToggleBuildPanel()
+    public void ToggleFromEntryPoint()
     {
+        EnsureInitialized();
+
         if (_isOpen)
+        {
             CloseBuildPanel();
-        else
+        }
+        else if (_uiManager != null)
+        {
             _uiManager.OpenExclusive(this);
+        }
+        else
+        {
+            OpenBuildPanel();
+        }
     }
 
     private void OpenBuildPanel()
     {
+        EnsureInitialized();
+
         _isOpen = true;
         _panelTween?.Kill();
+
+        if (!gameObject.activeSelf)
+        {
+            gameObject.SetActive(true);
+        }
+
+        if (_buildModePanel == null || _panelRect == null)
+        {
+            return;
+        }
 
         _buildModePanel.SetActive(true);
         // 홈에서 왼쪽으로 벗어난 위치에서 시작해 홈으로 슬라이드 인.
@@ -176,7 +248,10 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
             .SetEase(Ease.OutBack)
             .SetLink(_buildModePanel);
 
-        _buildingPlacementController.ShowOccupiedTiles();
+        if (_buildingPlacementController != null)
+        {
+            _buildingPlacementController.ShowOccupiedTiles();
+        }
 
         // 낮/밤이 바뀐 채로 재오픈될 수 있으므로 슬롯을 다시 그려 interactable을 최신 상태로 맞춘다
         // (UI_DragonInventoryWindow.OpenPanel과 동일한 관례).
@@ -188,9 +263,19 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
 
     private void CloseBuildPanel()
     {
+        EnsureInitialized();
+
         _isOpen = false;
-        _buildingPlacementController.CancelAll();
-        _buildingPlacementController.HideOccupiedTiles();
+        if (_buildingPlacementController != null)
+        {
+            _buildingPlacementController.CancelAll();
+            _buildingPlacementController.HideOccupiedTiles();
+        }
+
+        if (_buildModePanel == null || _panelRect == null)
+        {
+            return;
+        }
 
         // 홈에서 왼쪽으로 슬라이드 아웃한 뒤 패널을 비활성화한다.
         _panelTween?.Kill();
@@ -203,13 +288,26 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     // 선택된 탭만 Focus 상태로, 나머지는 Default 상태로 만들고, 그 탭의 건물 슬롯 목록을 다시 생성한다.
     private void SelectFilter(int index)
     {
+        if (_filterTabs == null || _filterTabs.Length == 0)
+        {
+            return;
+        }
+
+        index = Mathf.Clamp(index, 0, _filterTabs.Length - 1);
         _currentFilterIndex = index;
 
         for (int i = 0; i < _filterTabs.Length; i++)
         {
             bool isSelected = i == index;
-            _filterTabs[i].MenuFocus.SetActive(isSelected);
-            _filterTabs[i].MenuDefault.SetActive(!isSelected);
+            if (_filterTabs[i].MenuFocus != null)
+            {
+                _filterTabs[i].MenuFocus.SetActive(isSelected);
+            }
+
+            if (_filterTabs[i].MenuDefault != null)
+            {
+                _filterTabs[i].MenuDefault.SetActive(!isSelected);
+            }
         }
 
         RebuildSlots(_filterTabs[index].SlotPrefab, _filterTabs[index].Buildings);
@@ -242,7 +340,10 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     // 슬롯 클릭 시 해당 건물을 배치 대상으로 선택 (기존 building buttons에서 옮겨온 기능).
     private void OnSlotSelected(Building prefab)
     {
-        _buildingPlacementController.SelectBuilding(prefab);
+        if (_buildingPlacementController != null)
+        {
+            _buildingPlacementController.SelectBuilding(prefab);
+        }
     }
 
     bool IExclusiveMode.IsOpen => _isOpen;
