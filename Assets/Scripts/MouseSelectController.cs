@@ -13,9 +13,6 @@ public class MouseSelectController : MonoBehaviour
     private SpriteRenderer _occupiedHighlightRenderer;
 
     [SerializeField]
-    private SpriteRenderer _conquestHighlightRenderer;
-
-    [SerializeField]
     private GridMap _gridMap;
 
     [SerializeField]
@@ -55,7 +52,6 @@ public class MouseSelectController : MonoBehaviour
     private bool _hasResolvedTowerStatMultiplierComposite;
     private ComponentPool<SpriteRenderer> _selectionHighlightPool;
     private ComponentPool<SpriteRenderer> _occupiedHighlightPool;
-    private ComponentPool<SpriteRenderer> _conquestHighlightPool;
     private FootprintShape _baseFootprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private FootprintShape _footprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private int _previewRotationSteps;
@@ -96,7 +92,6 @@ public class MouseSelectController : MonoBehaviour
     {
         _selectionHighlightPool?.DeactivateAll();
         _occupiedHighlightPool?.DeactivateAll();
-        _conquestHighlightPool?.DeactivateAll();
 
         if (_ghostRenderer != null)
             _ghostRenderer.gameObject.SetActive(false);
@@ -120,9 +115,7 @@ public class MouseSelectController : MonoBehaviour
             _hasResolvedTowerStatMultiplierComposite = true;
         }
 
-        if (_selectionHighlightPool != null &&
-            _occupiedHighlightPool != null &&
-            _conquestHighlightPool != null)
+        if (_selectionHighlightPool != null && _occupiedHighlightPool != null)
             return;
 
         RemoveOrphanedPoolObjects();
@@ -133,13 +126,8 @@ public class MouseSelectController : MonoBehaviour
             ? CreatePool(_occupiedHighlightRenderer, true)
             : CreatePool(_selectionHighlightRenderer, false);
 
-        _conquestHighlightPool = _conquestHighlightRenderer != null
-            ? CreatePool(_conquestHighlightRenderer, true)
-            : _selectionHighlightPool;
-
         _selectionHighlightPool?.DeactivateAll();
         _occupiedHighlightPool?.DeactivateAll();
-        _conquestHighlightPool?.DeactivateAll();
     }
 
     private ComponentPool<SpriteRenderer> CreatePool(SpriteRenderer renderer, bool useSeedInstance)
@@ -160,7 +148,6 @@ public class MouseSelectController : MonoBehaviour
         var poolParents = new HashSet<Transform>();
         AddPoolParent(poolParents, _selectionHighlightRenderer);
         AddPoolParent(poolParents, _occupiedHighlightRenderer);
-        AddPoolParent(poolParents, _conquestHighlightRenderer);
 
         foreach (Transform poolParent in poolParents)
         {
@@ -189,7 +176,6 @@ public class MouseSelectController : MonoBehaviour
     private bool IsRegisteredRenderer(SpriteRenderer renderer) =>
         renderer == _selectionHighlightRenderer ||
         renderer == _occupiedHighlightRenderer ||
-        renderer == _conquestHighlightRenderer ||
         renderer == _ghostRenderer;
 
     public void SetPlacementActive(bool isActive)
@@ -403,28 +389,6 @@ public class MouseSelectController : MonoBehaviour
         pool.DeactivateFrom(coords.Count);
     }
 
-    // 색상이 서로 다른 여러 좌표 묶음을 점령 전용 하이라이트 풀 위에 한 번에 칠한다.
-    public void HighlightCellGroups(IReadOnlyList<(List<Vector3Int> Coords, Color Color)> groups)
-    {
-        EnsureRuntimeState();
-        int index = 0;
-
-        foreach (var group in groups)
-        {
-            foreach (Vector3Int coord in group.Coords)
-            {
-                SpriteRenderer highlight = _conquestHighlightPool.Get(index);
-                Vector3 cellPos = _gridMap.ConvertGridToWorld(coord);
-                cellPos.y += _yOffset;
-                highlight.transform.position = cellPos;
-                highlight.color = group.Color;
-                index++;
-            }
-        }
-
-        _conquestHighlightPool.DeactivateFrom(index);
-    }
-
     public void HighlightSelection(List<Vector3Int> coords) => HighlightCells(coords, _selectionHighlightColor);
 
     // 건설 모드에서 이미 건물이 배치된 타일을 표시 - 어떤 땅이 비어있는지 한눈에 파악 가능
@@ -444,7 +408,6 @@ public class MouseSelectController : MonoBehaviour
     {
         EnsureRuntimeState();
         _selectionHighlightPool?.DeactivateAll();
-        _conquestHighlightPool?.DeactivateAll();
     }
 
     private void DrawGhost(Vector3Int anchor, bool canConstruct)

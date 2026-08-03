@@ -330,6 +330,22 @@ public class ConquestManager : MonoBehaviour
         }
     }
 
+    // 표시 전용 - 편입 대상 중 이미 드러난(Hidden이 아닌) 청크만 남긴다.
+    // 실제 편입은 ExpandVisibility가 먼저 돌아 이웃이 전부 Visible이 된 뒤에 일어나지만, 점령 전에
+    // 미리 그리는 선은 그 전이라 아직 Hidden인 청크가 섞일 수 있다 - 미탐색 지역을 앞당겨 드러내지
+    // 않도록 여기서 거른다. 편입 판정 자체(CollectAnnexableNeighbors)는 건드리지 않는다.
+    public void CollectRevealedAnnexableNeighbors(Vector2Int chunkCoord, List<Vector2Int> result)
+    {
+        CollectAnnexableNeighbors(chunkCoord, result);
+
+        for (int i = result.Count - 1; i >= 0; i--)
+        {
+            Chunk neighbor = _gridMap.GetChunk(result[i]);
+            if (neighbor == null || neighbor.CurrentState == ChunkState.Hidden)
+                result.RemoveAt(i);
+        }
+    }
+
     // scrapChunk 입장에서 conqueredChunk가 "가장 많이 맞닿아 있는" 이웃일 때만 true를 반환한다.
     // 청크 경계가 실제로는 대부분 물일 수 있으므로 셀 단위 접촉 수를 기준으로 삼고, scrapChunk의
     // 다른 이웃(아직 미점령)이 더 넓게 맞닿아 있다면 이번 점령으로는 편입하지 않고 보류한다 -
