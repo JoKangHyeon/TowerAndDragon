@@ -139,7 +139,7 @@ public class PopulationManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 기아 사망을 가용, 타워, 생산, 점령 인구 순서로 적용한다.
+    /// 기아 사망을 가용, 타워, 연구, 생산, 점령 인구 순서로 적용한다.
     /// 각 분류 안에서는 등록된 할당 순서대로 한 명씩 순환하여 감소시킨다.
     /// </summary>
     public bool TryApplyStarvation(
@@ -167,6 +167,12 @@ public class PopulationManager : MonoBehaviour
         );
         remainingDeaths -= towerPopulationLost;
 
+        int researchPopulationLost = ReduceAssignedPopulation(
+            PopulationAssignmentType.Research,
+            remainingDeaths
+        );
+        remainingDeaths -= researchPopulationLost;
+
         int productionPopulationLost = ReduceAssignedPopulation(
             PopulationAssignmentType.Production,
             remainingDeaths
@@ -182,6 +188,7 @@ public class PopulationManager : MonoBehaviour
             requestedDeaths,
             availablePopulationLost,
             towerPopulationLost,
+            researchPopulationLost,
             productionPopulationLost,
             conquestPopulationLost
         );

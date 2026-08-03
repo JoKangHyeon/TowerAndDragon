@@ -8,6 +8,8 @@ using UnityEngine.Events;
 /// </summary>
 public class DailySettlementManager : MonoBehaviour
 {
+    private const int FIRST_SETTLEMENT_DAY = 2;
+
     [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private PopulationUpkeepSystem _populationUpkeepSystem;
 
@@ -31,6 +33,12 @@ public class DailySettlementManager : MonoBehaviour
 
     private void Settle(int currentDay)
     {
+        // 1일차 시작에는 정산할 전날이 없으므로 유지비를 소비하지 않는다.
+        if (currentDay < FIRST_SETTLEMENT_DAY)
+        {
+            return;
+        }
+
         if (_populationUpkeepSystem == null ||
             !_populationUpkeepSystem.TrySettle(out PopulationUpkeepResult result))
         {

@@ -1865,6 +1865,14 @@ PrefabInstance:
       propertyPath: _cycleManager
       value: 
       objectReference: {fileID: 914589611}
+    - target: {fileID: 1524292489982518287, guid: 962c2eeb01b802d489e27603bb8e25db, type: 3}
+      propertyPath: _gridMap
+      value: 
+      objectReference: {fileID: 313449541}
+    - target: {fileID: 1524292489982518287, guid: 962c2eeb01b802d489e27603bb8e25db, type: 3}
+      propertyPath: _cycleManager
+      value: 
+      objectReference: {fileID: 914589611}
     - target: {fileID: 3082328905160274139, guid: 962c2eeb01b802d489e27603bb8e25db, type: 3}
       propertyPath: _pathRoot
       value: 
@@ -2090,6 +2098,8 @@ GameObject:
   - component: {fileID: 914589622}
   - component: {fileID: 914589623}
   - component: {fileID: 914589624}
+  - component: {fileID: 914589625}
+  - component: {fileID: 914589626}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -2373,6 +2383,37 @@ MonoBehaviour:
   - {fileID: 704850244}
   - {fileID: 704850243}
   _onAllSealStonesBuilt:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &914589625
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914589609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a1bd16229944dbaaac27589ba9fe73b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PopulationUpkeepSystem
+  _resourceManager: {fileID: 914589613}
+  _populationManager: {fileID: 914589617}
+--- !u!114 &914589626
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914589609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6be23e9eda0fae419e51a48e6705989, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DailySettlementManager
+  _cycleManager: {fileID: 914589611}
+  _populationUpkeepSystem: {fileID: 914589625}
+  SettlementCompleted:
     m_PersistentCalls:
       m_Calls: []
 --- !u!1 &936144404

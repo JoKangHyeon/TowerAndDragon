@@ -24,13 +24,9 @@ public class UI_IngameWindow : MonoBehaviour
     private const string DAY_LOC_KEY = "main_day";
     private static string DayFormat => StringTable.GetString(DAY_LOC_KEY);
 
-    // 자원 표기: 보유량과 다음 정산의 생산·유지비를 TMP 리치텍스트 색으로 구분한다.
+    // 자원 표기: 보유량과 다음 정산의 생산량을 TMP 리치텍스트 색으로 구분한다.
     private const string RESOURCE_WITH_PRODUCTION_FORMAT =
         "{0}<color=#{1}>(+{2})</color>";
-    private const string RESOURCE_WITH_UPKEEP_FORMAT =
-        "{0}<color=#{1}>(-{2})</color>";
-    private const string RESOURCE_WITH_PRODUCTION_AND_UPKEEP_FORMAT =
-        "{0}<color=#{1}>(+{2})</color><color=#{3}>(-{4})</color>";
 
     // 하루 생산량 글씨 기본 색(연두색).
     private static readonly Color PRODUCTION_COLOR_DEFAULT = new Color(0.62f, 1f, 0.42f);
@@ -376,13 +372,6 @@ public class UI_IngameWindow : MonoBehaviour
     private void HandlePopulationChanged(PopulationState state)
     {
         RenderPopulation(state);
-
-        if (_resourceManager != null)
-        {
-            RenderResource(
-                ResourceType.Food,
-                _resourceManager.GetAmount(ResourceType.Food));
-        }
     }
 
     private void HandleResourceChanged(ResourceType type, int amount)
@@ -466,28 +455,10 @@ public class UI_IngameWindow : MonoBehaviour
         }
     }
 
-    // 생산량은 연두색, 식량 유지비는 빨간색으로 다음 정산 예상치를 표시한다.
+    // 하루 예상 생산량이 있으면 "보유량(+생산량)"으로 표시한다.
     private string FormatResourceAmount(ResourceType type, int amount)
     {
         int production = _productionForecast != null ? _productionForecast.GetDailyProduction(type) : 0;
-        int consumedFood = 0;
-
-        if (type == ResourceType.Food && _populationManager != null)
-        {
-            consumedFood = GetPopulationUpkeepPreview(
-                _populationManager.CurrentState).ConsumedFood;
-        }
-
-        if (production > 0 && consumedFood > 0)
-        {
-            return string.Format(
-                RESOURCE_WITH_PRODUCTION_AND_UPKEEP_FORMAT,
-                amount,
-                ColorUtility.ToHtmlStringRGB(_productionColor),
-                production,
-                ColorUtility.ToHtmlStringRGB(LOSS_COLOR_DEFAULT),
-                consumedFood);
-        }
 
         if (production > 0)
         {
@@ -496,15 +467,6 @@ public class UI_IngameWindow : MonoBehaviour
                 amount,
                 ColorUtility.ToHtmlStringRGB(_productionColor),
                 production);
-        }
-
-        if (consumedFood > 0)
-        {
-            return string.Format(
-                RESOURCE_WITH_UPKEEP_FORMAT,
-                amount,
-                ColorUtility.ToHtmlStringRGB(LOSS_COLOR_DEFAULT),
-                consumedFood);
         }
 
         return amount.ToString();
