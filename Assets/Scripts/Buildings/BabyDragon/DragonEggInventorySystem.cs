@@ -134,6 +134,8 @@ public class DragonEggInventorySystem : MonoBehaviour
             DragonType = egg.DragonType,
             IsInTower = false,
         });
+        _gameManager.CurrentRun.OnInventoryChanged.Invoke();
+        OnEggHatched?.Invoke(egg.DragonType);
 
         Debug.Log($"[DragonEggInventorySystem] 알(속성 {egg.DragonType})이 부화했습니다.");
     }
