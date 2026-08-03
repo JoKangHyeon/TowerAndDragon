@@ -39,14 +39,16 @@ public class Chunk
         }
     }
 
-    // 물(Default)은 맵 경계 장식일 뿐 실제 지형이 아니므로 대표 지형 계산에서 제외한다.
+    // 물(Default)과 통행로(Road)는 실제 지형이 아니므로 대표 지형 계산에서 제외한다.
+    // Road가 섞이면 길이 많이 지나는 청크의 대표 지형이 Road가 되어 원정 기간·적 강화 프로필·
+    // 지형 아이콘이 모두 엉뚱한 값을 받는다.
     private static TerrainType ResolveDominantTerrain(List<GridCell> cells)
     {
         var counts = new Dictionary<TerrainType, int>();
 
         foreach (GridCell cell in cells)
         {
-            if (cell.TerrainType == TerrainType.Default)
+            if (cell.TerrainType == TerrainType.Default || cell.TerrainType == TerrainType.Road)
                 continue;
 
             counts.TryGetValue(cell.TerrainType, out int count);

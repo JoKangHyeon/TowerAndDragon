@@ -289,17 +289,16 @@ public class ConquestManager : MonoBehaviour
 
     // 코스트 테이블에 등록되지 않았지만(=독자 점령 불가) 땅이 남아있는 모서리 청크를,
     // 인접한 실제 점령 청크가 점령 완료되는 시점에 그 영토로 편입한다.
-    // 편입은 SetChunkState만 호출한다 - 코스트 테이블에 데이터가 없으므로 인구 보상/적강화가
-    // 애초에 없고, OnConquestCompleted도 발행하지 않아 원정 기반 리스너(인구 보상 코디네이터 등)에
-    // 부작용이 없다. 영토 테두리 렌더러는 ChunkState.Conquered 여부만 보므로 자동으로 반영된다.
+    // 편입은 상태 전환만 한다 - 코스트 테이블에 데이터가 없으므로 인구 보상/적강화가 애초에 없고,
+    // OnConquestCompleted도 발행하지 않아 원정 기반 리스너(인구 보상 코디네이터 등)에 부작용이 없다.
+    // 영토 테두리 렌더러는 ChunkState.Conquered 여부만 보므로 자동으로 반영된다.
+    //
+    // 청크마다 SetChunkState를 따로 부르면 OnChunkStateChanged가 그 횟수만큼 발행되고, 테두리
+    // 렌더러가 매번 맵 전체의 점령 영역을 다시 트레이싱한다 - 상태 전환은 한 번에 몰아서 처리한다.
     private void AnnexUnregisteredLandNeighbors(Vector2Int chunkCoord)
     {
         CollectAnnexableNeighbors(chunkCoord, _annexBuffer);
-
-        foreach (Vector2Int neighborCoord in _annexBuffer)
-        {
-            _gridMap.SetChunkState(neighborCoord, ChunkState.Conquered);
-        }
+        _gridMap.SetChunkStatesBulk(_annexBuffer, ChunkState.Conquered);
     }
 
     private readonly List<Vector2Int> _annexBuffer = new();

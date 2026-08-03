@@ -126,7 +126,6 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
     }
 
     // 점령 모드에서 "이 청크를 점령하면 얻게 될 땅"의 바깥 경계를 미리 그린다.
-    // 같은 범위를 칠하는 노란 하이라이트와 모양이 어긋나지 않도록 물 셀을 뺀 육지 셀만 대상으로 한다.
     public void ShowPreviewBorder(HashSet<Vector2Int> chunkCoords)
     {
         if (chunkCoords.SetEquals(_lastPreviewChunkCoords))
@@ -134,7 +133,7 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
 
         _lastPreviewChunkCoords = new HashSet<Vector2Int>(chunkCoords);
 
-        List<List<Vector2Int>> loops = BuildBorderLoops(CollectLandCellsForChunks(chunkCoords));
+        List<List<Vector2Int>> loops = BuildBorderLoops(CollectCellsForChunks(chunkCoords));
 
         for (int i = 0; i < loops.Count; i++)
         {
@@ -184,10 +183,7 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
             if (chunk.CurrentState != ChunkState.Conquered)
                 continue;
 
-            foreach (GridCell cell in chunk.Cells)
-            {
-                conqueredCells.Add(cell.Coord);
-            }
+            AddLandCells(chunk, conqueredCells);
         }
 
         return conqueredCells;
@@ -206,7 +202,7 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
         return chunkCoords;
     }
 
-    // 주어진 청크들에 속한 셀 전체를 수집한다.
+    // 주어진 청크들의 육지 셀을 수집한다.
     private HashSet<Vector3Int> CollectCellsForChunks(HashSet<Vector2Int> chunkCoords)
     {
         var cells = new HashSet<Vector3Int>();
@@ -217,33 +213,22 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
             if (chunk == null)
                 continue;
 
-            foreach (GridCell cell in chunk.Cells)
-            {
-                cells.Add(cell.Coord);
-            }
+            AddLandCells(chunk, cells);
         }
 
         return cells;
     }
 
-    // CollectCellsForChunks의 육지 전용 버전 - Chunk가 생성 시점에 캐싱해 둔 LandCellCoords를 그대로 쓴다.
-    private HashSet<Vector3Int> CollectLandCellsForChunks(HashSet<Vector2Int> chunkCoords)
+    // 경계선의 셀 기준은 네 종류(점령 완료·원정 중·미리보기) 모두 동일하게 Chunk가 캐싱해 둔
+    // LandCellCoords(물이 아닌 셀)다. 청크 전체 셀을 쓰면 해안에 걸친 청크도 사각형으로 그려지고,
+    // 물만 빼면 통행로(Road)가 구멍이 되어 몬스터 스폰 길 둘레에 선이 생긴다 - Road는 물이 아니므로
+    // LandCellCoords에 자동으로 포함된다.
+    private static void AddLandCells(Chunk chunk, HashSet<Vector3Int> target)
     {
-        var cells = new HashSet<Vector3Int>();
-
-        foreach (Vector2Int chunkCoord in chunkCoords)
+        foreach (Vector3Int coord in chunk.LandCellCoords)
         {
-            Chunk chunk = _gridMap.GetChunk(chunkCoord);
-            if (chunk == null)
-                continue;
-
-            foreach (Vector3Int coord in chunk.LandCellCoords)
-            {
-                cells.Add(coord);
-            }
+            target.Add(coord);
         }
-
-        return cells;
     }
 
     // 셀 하나의 네 변(동서남북) 중 이웃 셀이 점령 상태가 아닌 변만 바깥 경계 변으로 수집한다.
