@@ -18,24 +18,27 @@ public class PopulationUpkeepSystem : MonoBehaviour
             return false;
         }
 
-        int requiredFood = _populationManager.MaxPopulation;
+        PopulationUpkeepPreview preview = PopulationUpkeepRules.Calculate(
+            _populationManager.MaxPopulation,
+            _resourceManager.GetAmount(ResourceType.Food),
+            0
+        );
         int consumedFood = _resourceManager.ConsumeUpTo(
             ResourceType.Food,
-            requiredFood
+            preview.ConsumedFood
         );
-        int foodShortage = requiredFood - consumedFood;
         StarvationResult starvation = default;
 
-        if (foodShortage > 0)
+        if (preview.PopulationLost > 0)
         {
             _populationManager.TryApplyStarvation(
-                foodShortage,
+                preview.PopulationLost,
                 out starvation
             );
         }
 
         result = new PopulationUpkeepResult(
-            requiredFood,
+            preview.RequiredFood,
             consumedFood,
             starvation
         );

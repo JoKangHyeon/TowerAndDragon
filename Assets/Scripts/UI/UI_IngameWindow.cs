@@ -16,17 +16,25 @@ public class UI_IngameWindow : MonoBehaviour
 {
     // 인구 표기 형식: 가용 인구 / 총(최대) 인구.
     private const string POPULATION_FORMAT = "{0}/{1}";
+    private const string POPULATION_WITH_LOSS_FORMAT =
+        "{0}/{1}<color=#{2}>(-{3})</color>";
 
     // 날짜 표기 형식은 스트링테이블에서 가져온다(언어별 문구·{0} 위치가 다름).
     // 값 예) en_us: "DAY {0}" / ko_kr: "{0} 일"
     private const string DAY_LOC_KEY = "main_day";
     private static string DayFormat => StringTable.GetString(DAY_LOC_KEY);
 
-    // 자원 표기: 보유량 + 하루 예상 생산량. 생산량은 연두색으로 "보유량(+생산량)" 형태(TMP 리치텍스트 컬러 태그).
-    private const string RESOURCE_WITH_PRODUCTION_FORMAT = "{0}<color=#{1}>(+{2})</color>";
+    // 자원 표기: 보유량과 다음 정산의 생산·유지비를 TMP 리치텍스트 색으로 구분한다.
+    private const string RESOURCE_WITH_PRODUCTION_FORMAT =
+        "{0}<color=#{1}>(+{2})</color>";
+    private const string RESOURCE_WITH_UPKEEP_FORMAT =
+        "{0}<color=#{1}>(-{2})</color>";
+    private const string RESOURCE_WITH_PRODUCTION_AND_UPKEEP_FORMAT =
+        "{0}<color=#{1}>(+{2})</color><color=#{3}>(-{4})</color>";
 
     // 하루 생산량 글씨 기본 색(연두색).
     private static readonly Color PRODUCTION_COLOR_DEFAULT = new Color(0.62f, 1f, 0.42f);
+    private static readonly Color LOSS_COLOR_DEFAULT = new Color(1f, 0.35f, 0.35f);
 
     // 웨이브 진행 바가 가득 찰 때까지의 일수. 이 값째 클리어에 슬라이더가 가득 찬다.
     private const int WAVE_FILL_LENGTH = 6;
@@ -207,13 +215,13 @@ public class UI_IngameWindow : MonoBehaviour
 
         if (_resourceManager != null)
         {
-            _resourceManager.ResourceChanged.AddListener(RenderResource);
+            _resourceManager.ResourceChanged.AddListener(HandleResourceChanged);
             ApplyResourceIcons();
 
             // 생산량 예측이 바뀌면(건물/인구 변경) 보유량 옆 (+생산량) 표기를 다시 그린다.
             if (_productionForecast != null)
             {
-                _productionForecast.ForecastChanged.AddListener(RenderAllResources);
+                _productionForecast.ForecastChanged.AddListener(HandleForecastChanged);
             }
 
             RenderAllResources();
@@ -221,7 +229,7 @@ public class UI_IngameWindow : MonoBehaviour
 
         if (_populationManager != null)
         {
-            _populationManager.PopulationChanged.AddListener(RenderPopulation);
+            _populationManager.PopulationChanged.AddListener(HandlePopulationChanged);
             RenderPopulation(_populationManager.CurrentState);
         }
 
@@ -287,17 +295,17 @@ public class UI_IngameWindow : MonoBehaviour
 
         if (_resourceManager != null)
         {
-            _resourceManager.ResourceChanged.RemoveListener(RenderResource);
+            _resourceManager.ResourceChanged.RemoveListener(HandleResourceChanged);
 
             if (_productionForecast != null)
             {
-                _productionForecast.ForecastChanged.RemoveListener(RenderAllResources);
+                _productionForecast.ForecastChanged.RemoveListener(HandleForecastChanged);
             }
         }
 
         if (_populationManager != null)
         {
-            _populationManager.PopulationChanged.RemoveListener(RenderPopulation);
+            _populationManager.PopulationChanged.RemoveListener(HandlePopulationChanged);
         }
 
         if (_cycleManager != null)
@@ -346,10 +354,74 @@ public class UI_IngameWindow : MonoBehaviour
     // 가용 인구 / 총(최대) 인구로 표시한다.
     private void RenderPopulation(PopulationState state)
     {
-        if (_populationText != null)
+        if (_populationText == null)
         {
-            _populationText.text = string.Format(POPULATION_FORMAT, state.AvailablePopulation, state.MaxPopulation);
+            return;
         }
+
+        PopulationUpkeepPreview preview = GetPopulationUpkeepPreview(state);
+        _populationText.text = preview.PopulationLost > 0
+            ? string.Format(
+                POPULATION_WITH_LOSS_FORMAT,
+                state.AvailablePopulation,
+                state.MaxPopulation,
+                ColorUtility.ToHtmlStringRGB(LOSS_COLOR_DEFAULT),
+                preview.PopulationLost)
+            : string.Format(
+                POPULATION_FORMAT,
+                state.AvailablePopulation,
+                state.MaxPopulation);
+    }
+
+    private void HandlePopulationChanged(PopulationState state)
+    {
+        RenderPopulation(state);
+
+        if (_resourceManager != null)
+        {
+            RenderResource(
+                ResourceType.Food,
+                _resourceManager.GetAmount(ResourceType.Food));
+        }
+    }
+
+    private void HandleResourceChanged(ResourceType type, int amount)
+    {
+        RenderResource(type, amount);
+
+        if (type == ResourceType.Food && _populationManager != null)
+        {
+            RenderPopulation(_populationManager.CurrentState);
+        }
+    }
+
+    private void HandleForecastChanged()
+    {
+        RenderAllResources();
+
+        if (_populationManager != null)
+        {
+            RenderPopulation(_populationManager.CurrentState);
+        }
+    }
+
+    private PopulationUpkeepPreview GetPopulationUpkeepPreview(
+        PopulationState state)
+    {
+        if (_resourceManager == null)
+        {
+            return default;
+        }
+
+        int projectedFoodProduction = _productionForecast != null
+            ? _productionForecast.GetDailyProduction(ResourceType.Food)
+            : 0;
+
+        return PopulationUpkeepRules.Calculate(
+            state.MaxPopulation,
+            _resourceManager.GetAmount(ResourceType.Food),
+            projectedFoodProduction
+        );
     }
 
     // 아이콘은 자원 종류마다 고정이라 보유량과 달리 활성화 시 1회만 채우면 된다.
@@ -394,20 +466,48 @@ public class UI_IngameWindow : MonoBehaviour
         }
     }
 
-    // "보유량" 또는 하루 예상 생산량이 있으면 "보유량(+생산량)"(생산량은 연두색)으로 만든다.
+    // 생산량은 연두색, 식량 유지비는 빨간색으로 다음 정산 예상치를 표시한다.
     private string FormatResourceAmount(ResourceType type, int amount)
     {
         int production = _productionForecast != null ? _productionForecast.GetDailyProduction(type) : 0;
-        if (production <= 0)
+        int consumedFood = 0;
+
+        if (type == ResourceType.Food && _populationManager != null)
         {
-            return amount.ToString();
+            consumedFood = GetPopulationUpkeepPreview(
+                _populationManager.CurrentState).ConsumedFood;
         }
 
-        return string.Format(
-            RESOURCE_WITH_PRODUCTION_FORMAT,
-            amount,
-            ColorUtility.ToHtmlStringRGB(_productionColor),
-            production);
+        if (production > 0 && consumedFood > 0)
+        {
+            return string.Format(
+                RESOURCE_WITH_PRODUCTION_AND_UPKEEP_FORMAT,
+                amount,
+                ColorUtility.ToHtmlStringRGB(_productionColor),
+                production,
+                ColorUtility.ToHtmlStringRGB(LOSS_COLOR_DEFAULT),
+                consumedFood);
+        }
+
+        if (production > 0)
+        {
+            return string.Format(
+                RESOURCE_WITH_PRODUCTION_FORMAT,
+                amount,
+                ColorUtility.ToHtmlStringRGB(_productionColor),
+                production);
+        }
+
+        if (consumedFood > 0)
+        {
+            return string.Format(
+                RESOURCE_WITH_UPKEEP_FORMAT,
+                amount,
+                ColorUtility.ToHtmlStringRGB(LOSS_COLOR_DEFAULT),
+                consumedFood);
+        }
+
+        return amount.ToString();
     }
 
     // 웨이브 바를 빈 상태(0칸, Point 시작 위치)로 되돌린다. 진행 중이던 트윈이 있다면 먼저 멈춘다.
