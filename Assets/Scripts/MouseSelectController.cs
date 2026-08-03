@@ -389,6 +389,30 @@ public class MouseSelectController : MonoBehaviour
         pool.DeactivateFrom(coords.Count);
     }
 
+    // 색상이 서로 다른 여러 좌표 묶음을 한 번에 칠한다(인구 배치 모드의 상태별 색 등).
+    // 선택 하이라이트 풀을 함께 쓴다 - 이 API를 쓰는 모드는 IExclusiveMode라 건설 모드와 동시에
+    // 활성화되지 않고, 정리도 같은 ClearHighlights()를 거치므로 서로를 지울 일이 없다.
+    public void HighlightCellGroups(IReadOnlyList<(List<Vector3Int> Coords, Color Color)> groups)
+    {
+        EnsureRuntimeState();
+        int index = 0;
+
+        foreach (var group in groups)
+        {
+            foreach (Vector3Int coord in group.Coords)
+            {
+                SpriteRenderer highlight = _selectionHighlightPool.Get(index);
+                Vector3 cellPos = _gridMap.ConvertGridToWorld(coord);
+                cellPos.y += _yOffset;
+                highlight.transform.position = cellPos;
+                highlight.color = group.Color;
+                index++;
+            }
+        }
+
+        _selectionHighlightPool.DeactivateFrom(index);
+    }
+
     public void HighlightSelection(List<Vector3Int> coords) => HighlightCells(coords, _selectionHighlightColor);
 
     // 건설 모드에서 이미 건물이 배치된 타일을 표시 - 어떤 땅이 비어있는지 한눈에 파악 가능
