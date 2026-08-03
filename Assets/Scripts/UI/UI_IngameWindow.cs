@@ -73,6 +73,12 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("인구 수량 텍스트(People_amount). 가용/총으로 표시된다.")]
     [SerializeField] private TMP_Text _populationText;
 
+    [Header("인구 배치 (Panel_BottomCenter/Buttons)")]
+    [Tooltip("인구 배치 모드(Worker Mode) 토글 버튼.")]
+    [SerializeField] private Button _buttonWorkerMode;
+    [Tooltip("인구 배치 모드 컨트롤러. 버튼 클릭 시 모드를 토글한다.")]
+    [SerializeField] private WorkerModeController _workerModeController;
+
     [Header("점령 (Panel_BottomRight)")]
     [Tooltip("점령 모드 토글 버튼.")]
     [SerializeField] private Button _buttonConquest;
@@ -141,6 +147,12 @@ public class UI_IngameWindow : MonoBehaviour
             {
                 button.onClick.AddListener(GoToNight);
             }
+        }
+
+        // 인구 배치 버튼: 누를 때마다 인구 배치 모드를 켜고 끈다(토글). 실제 모드 처리는 컨트롤러가 담당.
+        if (_buttonWorkerMode != null && _workerModeController != null)
+        {
+            _buttonWorkerMode.onClick.AddListener(_workerModeController.ToggleWorkerMode);
         }
 
         // 점령 버튼: 누를 때마다 점령 모드를 켜고 끈다(토글). 실제 모드 처리는 점령 창이 담당.

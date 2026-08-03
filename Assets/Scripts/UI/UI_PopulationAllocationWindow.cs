@@ -378,11 +378,14 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
         }
     }
 
+    // 배치/회수 요청량 클램프는 PopulationAssignmentRules가 단일 출처다
+    // (인구 배치 모드 WorkerModeController의 클릭 처리와 같은 규칙을 쓴다).
     private void AssignOne()
     {
         if (CanEditTarget())
         {
-            _selectedTarget.TryAssign(POPULATION_STEP);
+            PopulationAssignmentRules.TryAssignClamped(
+                _selectedTarget, _populationManager, POPULATION_STEP);
         }
     }
 
@@ -390,39 +393,26 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
     {
         if (CanEditTarget())
         {
-            _selectedTarget.TryUnassign(POPULATION_STEP);
+            PopulationAssignmentRules.TryUnassignClamped(
+                _selectedTarget, POPULATION_STEP);
         }
     }
 
     private void AssignAll()
     {
-        if (!CanEditTarget() || _populationManager == null)
+        if (CanEditTarget())
         {
-            return;
-        }
-
-        // PopulationManager.TryAssign은 all-or-nothing이라 정원/가용 중 작은 쪽으로 먼저 클램프한다.
-        int amount = Mathf.Min(
-            _selectedTarget.AvailableCapacity,
-            _populationManager.AvailablePopulation);
-
-        if (amount > 0)
-        {
-            _selectedTarget.TryAssign(amount);
+            PopulationAssignmentRules.TryAssignClamped(
+                _selectedTarget, _populationManager, _selectedTarget.AvailableCapacity);
         }
     }
 
     private void UnassignAll()
     {
-        if (!CanEditTarget())
+        if (CanEditTarget())
         {
-            return;
-        }
-
-        int amount = _selectedTarget.AssignedPopulation;
-        if (amount > 0)
-        {
-            _selectedTarget.TryUnassign(amount);
+            PopulationAssignmentRules.TryUnassignClamped(
+                _selectedTarget, _selectedTarget.AssignedPopulation);
         }
     }
 
