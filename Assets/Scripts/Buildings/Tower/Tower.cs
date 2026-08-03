@@ -11,6 +11,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     [SerializeField] private TowerData _towerData;
     private Health _health;
     private TowerAttack _attack;
+    private ITowerStaffing _staffing;
     private TowerAuraSystem _auraSystem;
     private CancellationTokenSource _reviveCts;
     private CancellationTokenSource _paralysisCts;
@@ -58,6 +59,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         base.Awake();
         _health = GetComponent<Health>();
         _attack = GetComponent<TowerAttack>();
+        _staffing = GetComponent<ITowerStaffing>();
         _animator = GetComponent<Animator>();
     }
 
@@ -147,22 +149,30 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
 
     private async UniTaskVoid ReviveAfterDelayAsync(CancellationToken token)
     {
-        if (_towerData.ReviveDelay <= 0f)
-        {
-            RestoreAndReactivate();
-            return;
-        }
-
         while (_reviveProgress < 1f)
         {
             await UniTask.Yield(token);
+
+            float staffingRatio = _staffing != null
+                ? Mathf.Clamp01(_staffing.StaffingRatio)
+                : 0f;
+
+            if (staffingRatio <= 0f)
+            {
+                continue;
+            }
+
+            if (_towerData.ReviveDelay <= 0f)
+            {
+                break;
+            }
 
             float reviveSpeedMultiplier = _auraSystem != null
                 ? _auraSystem.ResolveModifiers(this).ReviveSpeedMultiplier
                 : 1f;
 
             _reviveProgress +=
-                Time.deltaTime * reviveSpeedMultiplier /
+                Time.deltaTime * staffingRatio * reviveSpeedMultiplier /
                 _towerData.ReviveDelay;
         }
 
