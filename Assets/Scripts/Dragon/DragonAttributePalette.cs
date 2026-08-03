@@ -12,8 +12,8 @@ public static class DragonAttributePalette
     {
         { DragonType.Ice, new Color(0.357f, 0.753f, 0.878f) },
         { DragonType.Fire, new Color(0.878f, 0.376f, 0.235f) },
-        { DragonType.Time, new Color(0.690f, 0.490f, 0.878f) },
-        { DragonType.Stone, new Color(0.788f, 0.635f, 0.290f) },
+        { DragonType.Time, new Color(0.788f, 0.635f, 0.290f) },
+        { DragonType.Stone, new Color(0.690f, 0.490f, 0.878f) },
         { DragonType.Life, new Color(0.498f, 0.820f, 0.310f) },
     };
 
