@@ -22,6 +22,10 @@ public class MonsterData : ScriptableObject
     [SerializeField] private bool _hasShield;
     [SerializeField] private float _shieldAmount;
 
+    [Header("Elemental Defense")]
+    [SerializeField] private MonsterElementRule _elementRule;
+    [SerializeField] private DragonType _element;
+
     [Header("Attack")]
     [SerializeField] private AttackSO _attack;
     [SerializeField] private MonsterTargetType _enRouteTargetTypes;
@@ -43,6 +47,9 @@ public class MonsterData : ScriptableObject
     public bool HasShield => _hasShield;
     public float ShieldAmount => _shieldAmount;
 
+    public MonsterElementRule ElementRule => _elementRule;
+    public DragonType Element => _element;
+
     public AttackSO Attack => _attack;
     public MonsterTargetType EnRouteTargetTypes => _enRouteTargetTypes;
 
@@ -51,4 +58,22 @@ public class MonsterData : ScriptableObject
     public GameObject ProjectilePrefab => _projectilePrefab;
     public float ProjectileSpeed => _projectileSpeed;
     public bool HasProjectile => _projectilePrefab != null && _projectileSpeed > 0;
+
+    public bool AcceptsElement(DragonType? attackElement)
+    {
+        return _elementRule switch
+        {
+            MonsterElementRule.Normal => true,
+
+            MonsterElementRule.OnlyMatchingElement =>
+                attackElement.HasValue &&
+                attackElement.Value == _element,
+
+            MonsterElementRule.ImmuneToMatchingElement =>
+                !attackElement.HasValue ||
+                attackElement.Value != _element,
+
+            _ => true,
+        };
+    }
 }

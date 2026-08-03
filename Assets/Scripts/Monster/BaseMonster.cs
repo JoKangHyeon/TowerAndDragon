@@ -59,6 +59,16 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget
         _statusReceiver?.Apply(status);
     }
 
+    public void ApplyStatus(StatusEffectSO status, DragonType? attackElement)
+    {
+        if (_data != null && !_data.AcceptsElement(attackElement))
+        {
+            return;
+        }
+
+        _statusReceiver?.Apply(status, attackElement);
+    }
+
     // MonsterStatusReceiver가 슬로우 상태 변화 시 호출한다 - 상태이상 배율은 기준 속도에만 곱한다.
     public void RefreshMoveSpeed()
     {
@@ -128,6 +138,11 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget
     public void TakeDamage(DamageInfo damage)
     {
         if (IsDead)
+        {
+            return;
+        }
+
+        if (_data != null && !_data.AcceptsElement(damage.Element))
         {
             return;
         }

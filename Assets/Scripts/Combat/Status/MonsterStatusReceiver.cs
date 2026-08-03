@@ -22,6 +22,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
     private struct DotEntry
     {
         public DamageOverTimeStatusSO Source;
+        public DragonType? Element;
         public bool IsInfinite;
         public float RemainingSeconds;
         public float TickTimer;
@@ -56,6 +57,11 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
 
     public void Apply(StatusEffectSO status)
     {
+        Apply(status, null);
+    }
+
+    public void Apply(StatusEffectSO status, DragonType? element)
+    {
         switch (status)
         {
             case null:
@@ -64,7 +70,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
                 ApplyMoveSpeed(moveSpeed);
                 break;
             case DamageOverTimeStatusSO dot:
-                ApplyDot(dot);
+                ApplyDot(dot, element);
                 break;
         }
     }
@@ -89,7 +95,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         _monster?.RefreshMoveSpeed();
     }
 
-    private void ApplyDot(DamageOverTimeStatusSO status)
+    private void ApplyDot(DamageOverTimeStatusSO status, DragonType? element)
     {
         string key = ResolveKey(status);
         float tickTimer = _dotStatuses.TryGetValue(key, out DotEntry existing) ? existing.TickTimer : 0f;
@@ -97,6 +103,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         _dotStatuses[key] = new DotEntry
         {
             Source = status,
+            Element = element,
             IsInfinite = status.IsInfinite,
             RemainingSeconds = status.DurationSeconds,
             TickTimer = tickTimer,
@@ -178,7 +185,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
                 while (entry.TickTimer >= entry.Source.TickIntervalSeconds)
                 {
                     entry.TickTimer -= entry.Source.TickIntervalSeconds;
-                    _monster?.TakeDamage(new DamageInfo(entry.Source.DamagePerTick));
+                    _monster?.TakeDamage(new DamageInfo(entry.Source.DamagePerTick, entry.Element));
                 }
             }
 

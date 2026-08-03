@@ -4,7 +4,7 @@ using UnityEngine;
     menuName = "TowerAndDragon/Elemental Tower Data",
     fileName = "ElementalTowerData"
 )]
-public sealed class ElementalTowerData : TowerData, ITowerAuraDataProvider
+public sealed class ElementalTowerData : TowerData, ITowerAuraDataProvider, IElementalAttackData
 {
     [Header("Element")]
     [SerializeField] private DragonType _dragonType;
