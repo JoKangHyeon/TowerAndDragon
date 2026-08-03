@@ -10,10 +10,45 @@ public class RunData
     public Dragon CurrentDragon;
     public List<BabyDragon> BabyDragons = new();
     public List<DragonEgg> DragonEggs = new();
+    public List<BossDragonEggReward> BossDragonEggRewards = new();
 
     public UnityEvent OnInventoryChanged = new();
 
     public GridMap Map;
+
+    public bool HasClaimedBossDragonEggReward(int cycleNumber)
+    {
+        if (BossDragonEggRewards == null)
+        {
+            return false;
+        }
+
+        foreach (BossDragonEggReward reward in BossDragonEggRewards)
+        {
+            if (reward != null && reward.CycleNumber == cycleNumber)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public bool TryRecordBossDragonEggReward(int cycleNumber, DragonType dragonType)
+    {
+        if (HasClaimedBossDragonEggReward(cycleNumber))
+        {
+            return false;
+        }
+
+        BossDragonEggRewards ??= new List<BossDragonEggReward>();
+        BossDragonEggRewards.Add(new BossDragonEggReward
+        {
+            CycleNumber = cycleNumber,
+            DragonType = dragonType,
+        });
+        return true;
+    }
 }
 
 
@@ -78,4 +113,11 @@ public class DragonEgg
 {
     public DragonType DragonType;
     public int FedDayCount; 
+}
+
+[Serializable]
+public sealed class BossDragonEggReward
+{
+    public int CycleNumber;
+    public DragonType DragonType;
 }
