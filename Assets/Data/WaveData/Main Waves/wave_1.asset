@@ -15,6 +15,23 @@ MonoBehaviour:
   _portalWaves:
   - _portalDirectionId: 1
     _startDelay: 5
+    _routeWaves:
+    - _routeIndex: 0
+      _startDelay: 0
+      _spawnGroups:
+      - _monsterPrefab: {fileID: -687291307508128235, guid: 605f8a4e1301da546840d9d7b05316c7, type: 3}
+        _monsterData: {fileID: 11400000, guid: ba58415c8b289ba47af5fea8b826533f, type: 2}
+        _spawnCount: 3
+        _spawnInterval: 1
+        _delayBeforeGroup: 0
+    - _routeIndex: 1
+      _startDelay: 0
+      _spawnGroups:
+      - _monsterPrefab: {fileID: -687291307508128235, guid: 605f8a4e1301da546840d9d7b05316c7, type: 3}
+        _monsterData: {fileID: 11400000, guid: ba58415c8b289ba47af5fea8b826533f, type: 2}
+        _spawnCount: 2
+        _spawnInterval: 1
+        _delayBeforeGroup: 0
     _spawnGroups:
     - _monsterPrefab: {fileID: -687291307508128235, guid: 605f8a4e1301da546840d9d7b05316c7, type: 3}
       _monsterData: {fileID: 11400000, guid: ba58415c8b289ba47af5fea8b826533f, type: 2}

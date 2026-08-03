@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaveCycleProgression
   _cycleManager: {fileID: 0}
-  _schedule: {fileID: 11400000, guid: 039b1d76d4a6a493789ac74841753166, type: 2}
+  _schedule: {fileID: 11400000, guid: b9f3b61aed52be24ca1cae3140d37f4d, type: 2}
   _cycleStarted:
     m_PersistentCalls:
       m_Calls: []
@@ -169,7 +169,9 @@ MonoBehaviour:
   _portalDirectionId: 1
   _terrainType: 4
   _spawnPoint: {fileID: 8027403722859682599}
-  _groundPath: {fileID: 0}
+  _groundPaths:
+  - {fileID: 0}
+  - {fileID: 0}
   _mainCastle: {fileID: 0}
   _isActive: 1
 --- !u!212 &1885093374230423598
@@ -276,6 +278,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PortalPathVisibility
   _waveCycleProgression: {fileID: 7111670838841903477}
+  _enemyEnhancementManager: {fileID: 7957178894349565239}
   _portals:
   - {fileID: 4048684464422841555}
   - {fileID: 4447194826402144382}
@@ -370,7 +373,9 @@ MonoBehaviour:
   _portalDirectionId: 4
   _terrainType: 1
   _spawnPoint: {fileID: 4441692582385001346}
-  _groundPath: {fileID: 0}
+  _groundPaths:
+  - {fileID: 0}
+  - {fileID: 0}
   _mainCastle: {fileID: 0}
   _isActive: 1
 --- !u!212 &3164320476025445881
@@ -578,7 +583,9 @@ MonoBehaviour:
   _portalDirectionId: 3
   _terrainType: 2
   _spawnPoint: {fileID: 8378657786121018723}
-  _groundPath: {fileID: 0}
+  _groundPaths:
+  - {fileID: 0}
+  - {fileID: 0}
   _mainCastle: {fileID: 0}
   _isActive: 1
 --- !u!212 &2406097473784273773
@@ -688,7 +695,9 @@ MonoBehaviour:
   _portalDirectionId: 2
   _terrainType: 3
   _spawnPoint: {fileID: 5372760197185258775}
-  _groundPath: {fileID: 0}
+  _groundPaths:
+  - {fileID: 0}
+  - {fileID: 0}
   _mainCastle: {fileID: 0}
   _isActive: 1
 --- !u!212 &2723511589523169167

@@ -51,15 +51,60 @@ public class WaveDefinitionSO : ScriptableObject
             Debug.LogError($"WaveDefinitionSO: {portalWave.PortalDirectionId} 포탈의 시작 지연은 음수일 수 없습니다.", this);
         }
 
-        if (portalWave.SpawnGroups == null)
+        if (portalWave.RouteWaves == null)
         {
-            Debug.LogError($"WaveDefinitionSO: {portalWave.PortalDirectionId} 포탈의 생성 그룹 목록이 없습니다.", this);
+            Debug.LogError($"WaveDefinitionSO: {portalWave.PortalDirectionId} 포탈의 루트 편성 목록이 없습니다.", this);
             return;
         }
 
-        foreach (SpawnGroupData spawnGroup in portalWave.SpawnGroups)
+        HashSet<int> routeIndices = new HashSet<int>();
+
+        foreach (RouteWaveData routeWave in portalWave.RouteWaves)
         {
-            ValidateSpawnGroup(portalWave.PortalDirectionId, spawnGroup);
+            ValidateRouteWave(portalWave.PortalDirectionId, routeWave, routeIndices);
+        }
+    }
+
+    private void ValidateRouteWave(
+        PortalDirection portalId,
+        RouteWaveData routeWave,
+        HashSet<int> routeIndices)
+    {
+        if (routeWave == null)
+        {
+            Debug.LogError($"WaveDefinitionSO: {portalId} 포탈에 비어 있는 루트 편성이 있습니다.", this);
+            return;
+        }
+
+        if (routeWave.RouteIndex < 0)
+        {
+            Debug.LogError($"WaveDefinitionSO: {portalId} 포탈의 루트 인덱스는 음수일 수 없습니다.", this);
+        }
+        else if (!routeIndices.Add(routeWave.RouteIndex))
+        {
+            Debug.LogError(
+                $"WaveDefinitionSO: {portalId} 포탈의 루트 {routeWave.RouteIndex} 편성이 중복되었습니다.",
+                this);
+        }
+
+        if (routeWave.StartDelay < 0)
+        {
+            Debug.LogError(
+                $"WaveDefinitionSO: {portalId} 포탈 루트 {routeWave.RouteIndex}의 시작 지연은 음수일 수 없습니다.",
+                this);
+        }
+
+        if (routeWave.SpawnGroups == null)
+        {
+            Debug.LogError(
+                $"WaveDefinitionSO: {portalId} 포탈 루트 {routeWave.RouteIndex}의 생성 그룹 목록이 없습니다.",
+                this);
+            return;
+        }
+
+        foreach (SpawnGroupData spawnGroup in routeWave.SpawnGroups)
+        {
+            ValidateSpawnGroup(portalId, spawnGroup);
         }
     }
 
