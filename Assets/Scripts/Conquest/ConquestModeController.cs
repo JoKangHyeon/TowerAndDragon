@@ -28,6 +28,10 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
     [SerializeField]
     private ChunkInfoOverlayRenderer _chunkInfoRenderer;
 
+    [Tooltip("호버/선택한 청크를 점령하면 얻게 될 땅의 경계선을 미리 그린다. 씬에서 Grid 오브젝트를 연결한다.")]
+    [SerializeField]
+    private ConqueredChunkBorderRenderer _borderRenderer;
+
     [SerializeField]
     private InputActionReference _selectAction;
 
@@ -58,6 +62,19 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
     // 영토가 바뀔 때만 재계산되는 청크 분류 캐시 - 호버마다 다시 계산하지 않는다.
     private readonly List<Vector2Int> _conquerableChunkBuffer = new();
     private readonly List<Vector2Int> _blockedChunkBuffer = new();
+
+    // 점령 대상 청크별로 "이 청크를 점령하면 딸려올 짜투리 청크" - 분류와 같이 갱신되는 캐시.
+    private readonly Dictionary<Vector2Int, List<Vector2Int>> _annexableNeighborsByChunk = new();
+
+    // 위 캐시의 역방향 - 짜투리 청크를 호버/클릭했을 때 어느 점령 대상으로 이어줄지.
+    private readonly Dictionary<Vector2Int, Vector2Int> _annexOwnerByChunk = new();
+    private readonly List<Vector2Int> _annexPreviewChunkBuffer = new();
+
+    // 경계선을 그릴 대상(호버/선택 청크 + 그 편입 청크)과, 이번 갱신에서 이미 칠한 청크.
+    private readonly HashSet<Vector2Int> _previewChunkCoords = new();
+    private readonly HashSet<Vector2Int> _paintedChunkCoords = new();
+
+    private static readonly List<Vector2Int> EMPTY_CHUNK_COORDS = new();
     private (List<Vector3Int> Coords, Color Color)[] _highlightGroups;
 
     private void Awake()
@@ -102,8 +119,8 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
         Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
         Chunk chunk = _gridMap.GetChunkAt(hoveredCell);
 
-        Vector2Int? hoveredChunkCoord = chunk != null && chunk.CurrentState == ChunkState.Visible && _conquestManager.HasExpeditionCost(chunk.ChunkCoord)
-            ? chunk.ChunkCoord
+        Vector2Int? hoveredChunkCoord = TryResolveConquestTarget(chunk, out Vector2Int targetChunkCoord)
+            ? targetChunkCoord
             : (Vector2Int?)null;
 
         if (hoveredChunkCoord == _selectedChunkCoord)
@@ -111,6 +128,25 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
 
         _selectedChunkCoord = hoveredChunkCoord;
         RebuildHighlightBuffers();
+    }
+
+    // 편입 예정 짜투리 청크도 점령 대상과 같은 색으로 칠해지므로 플레이어는 그 위도 똑같이 겨냥한다.
+    // 하지만 짜투리 청크는 코스트 테이블에 없어 그 자체로는 호버/선택 대상이 아니므로,
+    // 그 위에서는 자기를 편입시킬 점령 대상 청크를 대신 가리키게 한다.
+    private bool TryResolveConquestTarget(Chunk chunk, out Vector2Int targetChunkCoord)
+    {
+        targetChunkCoord = default;
+
+        if (chunk == null)
+            return false;
+
+        if (chunk.CurrentState == ChunkState.Visible && _conquestManager.HasExpeditionCost(chunk.ChunkCoord))
+        {
+            targetChunkCoord = chunk.ChunkCoord;
+            return true;
+        }
+
+        return _annexOwnerByChunk.TryGetValue(chunk.ChunkCoord, out targetChunkCoord);
     }
 
     public void SetConquestModeActive(bool isActive)
@@ -133,6 +169,9 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
 
             _isSelectionLocked = false;
             _mouseSelectController.ClearHighlights();
+
+            if (_borderRenderer != null)
+                _borderRenderer.ClearPreviewBorder();
 
             if (_chunkInfoRenderer != null)
                 _chunkInfoRenderer.Clear();
@@ -165,6 +204,8 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
     {
         _conquerableChunkBuffer.Clear();
         _blockedChunkBuffer.Clear();
+        _annexableNeighborsByChunk.Clear();
+        _annexOwnerByChunk.Clear();
 
         foreach (Chunk chunk in _gridMap.GetAllChunks())
         {
@@ -180,10 +221,43 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
                 _blockedChunkBuffer.Add(chunk.ChunkCoord);
         }
 
+        CacheAnnexableNeighbors(_conquerableChunkBuffer);
+        CacheAnnexableNeighbors(_blockedChunkBuffer);
+
         if (_chunkInfoRenderer != null)
             _chunkInfoRenderer.Refresh(_conquerableChunkBuffer);
 
         RebuildHighlightBuffers();
+    }
+
+    // 각 점령 대상 청크를 점령했을 때 함께 편입될 짜투리 청크를 미리 구해 둔다 - 판정 결과는
+    // 영토 상태(이웃의 Conquered 여부)에만 의존하므로 분류와 같은 주기로만 갱신하면 된다.
+    private void CacheAnnexableNeighbors(List<Vector2Int> chunkCoords)
+    {
+        foreach (Vector2Int coord in chunkCoords)
+        {
+            _conquestManager.CollectAnnexableNeighbors(coord, _annexPreviewChunkBuffer);
+
+            var annexableNeighbors = new List<Vector2Int>();
+            foreach (Vector2Int annexCoord in _annexPreviewChunkBuffer)
+            {
+                // 실제 편입은 ExpandVisibility가 먼저 돌아 이웃이 전부 Visible이 된 뒤에 일어나지만,
+                // 여기는 점령 전이라 아직 Hidden인 청크가 섞일 수 있다 - 미탐색 지역을 미리 드러내지
+                // 않도록 걸러낸다(편입 판정 자체를 바꾸면 안 되므로 표시 쪽에서만).
+                Chunk annexChunk = _gridMap.GetChunk(annexCoord);
+                if (annexChunk == null || annexChunk.CurrentState == ChunkState.Hidden)
+                    continue;
+
+                annexableNeighbors.Add(annexCoord);
+
+                // 짜투리 청크 하나가 여러 점령 대상의 편입 후보일 수 있다 - 점령 가능(초록) 목록을
+                // 먼저 캐싱하므로 TryAdd가 하이라이트 색 우선순위와 같은 주인을 남긴다.
+                _annexOwnerByChunk.TryAdd(annexCoord, coord);
+            }
+
+            if (annexableNeighbors.Count > 0)
+                _annexableNeighborsByChunk[coord] = annexableNeighbors;
+        }
     }
 
     // 분류 결과를 셀 단위 색상 버퍼로 옮겨 그린다 - 호버마다 도는 가벼운 부분.
@@ -192,6 +266,10 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
         _conquerableBuffer.Clear();
         _blockedBuffer.Clear();
         _selectedBuffer.Clear();
+        _paintedChunkCoords.Clear();
+
+        // 선택 청크를 먼저 칠해, 같은 짜투리 청크를 공유하는 다른 청크의 색에 덮이지 않게 한다.
+        AddSelectedChunkCells();
 
         AddClassifiedChunkCells(_conquerableChunkBuffer, _conquerableBuffer);
         AddClassifiedChunkCells(_blockedChunkBuffer, _blockedBuffer);
@@ -199,17 +277,64 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
         _mouseSelectController.HighlightCellGroups(_highlightGroups);
     }
 
-    private void AddClassifiedChunkCells(List<Vector2Int> chunkCoords, List<Vector3Int> defaultTarget)
+    // 호버/선택한 청크와 그 편입 예정 청크를 선택색으로 칠하고,
+    // 두 영역을 합친 "점령하면 얻게 될 땅"의 바깥 경계선을 그린다.
+    private void AddSelectedChunkCells()
+    {
+        _previewChunkCoords.Clear();
+
+        // 선택 상태가 잠긴 채로 점령이 완료되면 그 청크가 분류에서 빠지므로(이미 Conquered),
+        // 여전히 점령 대상인지 확인한 뒤에만 칠한다.
+        if (_selectedChunkCoord.HasValue && IsClassifiedChunk(_selectedChunkCoord.Value))
+        {
+            AddChunkCellsOnce(_selectedChunkCoord.Value, _selectedBuffer);
+            _previewChunkCoords.Add(_selectedChunkCoord.Value);
+
+            foreach (Vector2Int coord in GetAnnexableNeighbors(_selectedChunkCoord.Value))
+            {
+                AddChunkCellsOnce(coord, _selectedBuffer);
+                _previewChunkCoords.Add(coord);
+            }
+        }
+
+        if (_borderRenderer != null)
+            _borderRenderer.ShowPreviewBorder(_previewChunkCoords);
+    }
+
+    private bool IsClassifiedChunk(Vector2Int chunkCoord) =>
+        _conquerableChunkBuffer.Contains(chunkCoord) || _blockedChunkBuffer.Contains(chunkCoord);
+
+    // 점령 대상 청크와 함께, 그 청크를 점령하면 딸려올 짜투리 청크까지 같은 색으로 칠한다.
+    private void AddClassifiedChunkCells(List<Vector2Int> chunkCoords, List<Vector3Int> target)
     {
         foreach (Vector2Int coord in chunkCoords)
         {
-            Chunk chunk = _gridMap.GetChunk(coord);
-            if (chunk == null)
-                continue;
+            AddChunkCellsOnce(coord, target);
 
-            bool isSelected = _selectedChunkCoord.HasValue && coord == _selectedChunkCoord.Value;
-            AddChunkCellCoords(chunk, isSelected ? _selectedBuffer : defaultTarget);
+            foreach (Vector2Int annexCoord in GetAnnexableNeighbors(coord))
+            {
+                AddChunkCellsOnce(annexCoord, target);
+            }
         }
+    }
+
+    private List<Vector2Int> GetAnnexableNeighbors(Vector2Int chunkCoord) =>
+        _annexableNeighborsByChunk.TryGetValue(chunkCoord, out List<Vector2Int> annexableNeighbors)
+            ? annexableNeighbors
+            : EMPTY_CHUNK_COORDS;
+
+    // 하나의 짜투리 청크가 여러 점령 대상의 편입 후보일 수 있으므로, 이미 칠한 청크는 건너뛴다 -
+    // 같은 자리에 하이라이트 스프라이트가 겹쳐 쌓이는 것을 막는다.
+    private void AddChunkCellsOnce(Vector2Int chunkCoord, List<Vector3Int> target)
+    {
+        if (!_paintedChunkCoords.Add(chunkCoord))
+            return;
+
+        Chunk chunk = _gridMap.GetChunk(chunkCoord);
+        if (chunk == null)
+            return;
+
+        AddChunkCellCoords(chunk, target);
     }
 
     private void HandleSelectInput()
@@ -236,13 +361,11 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
         Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
         Chunk chunk = _gridMap.GetChunkAt(hoveredCell);
 
-        bool isSelectableChunk = chunk != null
-            && chunk.CurrentState == ChunkState.Visible
-            && _conquestManager.HasExpeditionCost(chunk.ChunkCoord);
-
-        if (isSelectableChunk)
+        // 짜투리 청크를 클릭하면 그 청크가 아니라 자기를 편입시킬 점령 대상 청크의 패널을 연다
+        // (짜투리 청크 자체는 코스트 테이블에 없어 패널에 띄울 비용/보상 데이터가 없다).
+        if (TryResolveConquestTarget(chunk, out Vector2Int targetChunkCoord))
         {
-            _conquestUI.OnChunkSelected(chunk.ChunkCoord);
+            _conquestUI.OnChunkSelected(targetChunkCoord);
             return;
         }
 

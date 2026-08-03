@@ -21,6 +21,9 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
     private const int CONQUERED_BORDER_SORTING_ORDER = 3;
     private const int IN_PROGRESS_BORDER_SORTING_ORDER = 2;
 
+    // 점령 미리보기는 이미 그려진 두 경계선 위에 올라와야 어느 땅을 얻는지 가려지지 않는다.
+    private const int PREVIEW_BORDER_SORTING_ORDER = 4;
+
     [SerializeField]
     private LineRenderer _borderLineRendererPrefab;
 
@@ -37,18 +40,24 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
     private Color _inProgressBorderColor = Color.gray;
 
     [SerializeField]
+    private Color _previewBorderColor = Color.gray;
+
+    [SerializeField]
     private float _lineWidth = 0.05f;
 
     private GridMap _gridMap;
     private ComponentPool<LineRenderer> _borderPool;
     private ComponentPool<LineRenderer> _inProgressBorderPool;
+    private ComponentPool<LineRenderer> _previewBorderPool;
     private HashSet<Vector2Int> _lastInProgressChunkCoords = new();
+    private HashSet<Vector2Int> _lastPreviewChunkCoords = new();
 
     private void Awake()
     {
         _gridMap = GetComponent<GridMap>();
         _borderPool = new ComponentPool<LineRenderer>(_borderLineRendererPrefab, transform);
         _inProgressBorderPool = new ComponentPool<LineRenderer>(_borderLineRendererPrefab, transform);
+        _previewBorderPool = new ComponentPool<LineRenderer>(_borderLineRendererPrefab, transform);
         _gridMap.OnChunkStateChanged.AddListener(RefreshBorders);
 
         // ConquestManager는 Grid.prefab을 쓰는 씬(다른 팀원 테스트 씬 등)에 항상 있는 게 아니므로,
@@ -114,6 +123,32 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
         }
 
         _inProgressBorderPool.DeactivateFrom(loops.Count);
+    }
+
+    // 점령 모드에서 "이 청크를 점령하면 얻게 될 땅"의 바깥 경계를 미리 그린다.
+    // 같은 범위를 칠하는 노란 하이라이트와 모양이 어긋나지 않도록 물 셀을 뺀 육지 셀만 대상으로 한다.
+    public void ShowPreviewBorder(HashSet<Vector2Int> chunkCoords)
+    {
+        if (chunkCoords.SetEquals(_lastPreviewChunkCoords))
+            return;
+
+        _lastPreviewChunkCoords = new HashSet<Vector2Int>(chunkCoords);
+
+        List<List<Vector2Int>> loops = BuildBorderLoops(CollectLandCellsForChunks(chunkCoords));
+
+        for (int i = 0; i < loops.Count; i++)
+        {
+            LineRenderer lineRenderer = _previewBorderPool.Get(i);
+            SetLoopPositions(lineRenderer, loops[i], _previewBorderColor, PREVIEW_BORDER_SORTING_ORDER);
+        }
+
+        _previewBorderPool.DeactivateFrom(loops.Count);
+    }
+
+    public void ClearPreviewBorder()
+    {
+        _lastPreviewChunkCoords.Clear();
+        _previewBorderPool?.DeactivateAll();
     }
 
     private void SetLoopPositions(LineRenderer lineRenderer, List<Vector2Int> loop, Color color, int sortingOrder)
@@ -185,6 +220,26 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
             foreach (GridCell cell in chunk.Cells)
             {
                 cells.Add(cell.Coord);
+            }
+        }
+
+        return cells;
+    }
+
+    // CollectCellsForChunks의 육지 전용 버전 - Chunk가 생성 시점에 캐싱해 둔 LandCellCoords를 그대로 쓴다.
+    private HashSet<Vector3Int> CollectLandCellsForChunks(HashSet<Vector2Int> chunkCoords)
+    {
+        var cells = new HashSet<Vector3Int>();
+
+        foreach (Vector2Int chunkCoord in chunkCoords)
+        {
+            Chunk chunk = _gridMap.GetChunk(chunkCoord);
+            if (chunk == null)
+                continue;
+
+            foreach (Vector3Int coord in chunk.LandCellCoords)
+            {
+                cells.Add(coord);
             }
         }
 

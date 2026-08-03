@@ -294,8 +294,26 @@ public class ConquestManager : MonoBehaviour
     // 부작용이 없다. 영토 테두리 렌더러는 ChunkState.Conquered 여부만 보므로 자동으로 반영된다.
     private void AnnexUnregisteredLandNeighbors(Vector2Int chunkCoord)
     {
-        Chunk conqueredChunk = _gridMap.GetChunk(chunkCoord);
-        if (conqueredChunk == null)
+        CollectAnnexableNeighbors(chunkCoord, _annexBuffer);
+
+        foreach (Vector2Int neighborCoord in _annexBuffer)
+        {
+            _gridMap.SetChunkState(neighborCoord, ChunkState.Conquered);
+        }
+    }
+
+    private readonly List<Vector2Int> _annexBuffer = new();
+
+    // 이 청크를 점령했을 때 함께 편입될 짜투리 청크 좌표를 result에 채운다 - 상태를 바꾸지 않는 조회 전용.
+    // 점령 모드의 편입 미리보기 하이라이트와 실제 편입이 같은 판정을 공유하게 하기 위해 분리했다.
+    // 판정이 이웃의 Conquered 여부와 불변 데이터(LandCellCoords)만 보므로, 점령 전에 미리 계산한
+    // 결과와 점령 완료 시점에 계산한 결과가 일치한다.
+    public void CollectAnnexableNeighbors(Vector2Int chunkCoord, List<Vector2Int> result)
+    {
+        result.Clear();
+
+        Chunk sourceChunk = _gridMap.GetChunk(chunkCoord);
+        if (sourceChunk == null)
             return;
 
         foreach (Chunk neighbor in _gridMap.GetOrthogonalAdjacentChunks(chunkCoord))
@@ -306,10 +324,10 @@ public class ConquestManager : MonoBehaviour
             if (HasExpeditionCost(neighbor.ChunkCoord))
                 continue;
 
-            if (!IsPrimaryLandConnection(neighbor, conqueredChunk))
+            if (!IsPrimaryLandConnection(neighbor, sourceChunk))
                 continue;
 
-            _gridMap.SetChunkState(neighbor.ChunkCoord, ChunkState.Conquered);
+            result.Add(neighbor.ChunkCoord);
         }
     }
 
