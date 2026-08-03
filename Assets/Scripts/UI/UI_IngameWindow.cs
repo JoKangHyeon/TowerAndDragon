@@ -76,6 +76,12 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private Button _buttonBuildMode;
     [SerializeField] private UI_BuildModeWindow _buildModeWindow;
 
+    [Header("인구 배치 (Panel_BottomCenter/Buttons)")]
+    [Tooltip("인구 배치 모드(Worker Mode) 토글 버튼.")]
+    [SerializeField] private Button _buttonWorkerMode;
+    [Tooltip("인구 배치 모드 컨트롤러. 버튼 클릭 시 모드를 토글한다.")]
+    [SerializeField] private WorkerModeController _workerModeController;
+
     [Header("점령 (Panel_BottomRight)")]
     [Tooltip("점령 모드 토글 버튼.")]
     [SerializeField] private Button _buttonConquest;
@@ -146,12 +152,19 @@ public class UI_IngameWindow : MonoBehaviour
             }
         }
 
-        // 점령 버튼: 누를 때마다 점령 모드를 켜고 끈다(토글). 실제 모드 처리는 점령 창이 담당.
+        // 건설 버튼: 누를 때마다 건설 모드를 켜고 끈다(토글). 실제 모드 처리는 건설 창이 담당.
         if (_buttonBuildMode != null && _buildModeWindow != null)
         {
             _buttonBuildMode.onClick.AddListener(_buildModeWindow.ToggleFromEntryPoint);
         }
 
+        // 인구 배치 버튼: 누를 때마다 인구 배치 모드를 켜고 끈다(토글). 실제 모드 처리는 컨트롤러가 담당.
+        if (_buttonWorkerMode != null && _workerModeController != null)
+        {
+            _buttonWorkerMode.onClick.AddListener(_workerModeController.ToggleWorkerMode);
+        }
+
+        // 점령 버튼: 누를 때마다 점령 모드를 켜고 끈다(토글). 실제 모드 처리는 점령 창이 담당.
         if (_buttonConquest != null && _conquestWindow != null)
         {
             _buttonConquest.onClick.AddListener(_conquestWindow.ToggleConquestMode);
