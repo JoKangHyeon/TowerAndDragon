@@ -58,6 +58,63 @@ MonoBehaviour:
   _dayWaveResolved:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &1349891631276929082
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8313005818197465626}
+  - component: {fileID: 1524292489982518287}
+  m_Layer: 0
+  m_Name: PortalWavePreviewRenderer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8313005818197465626
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1349891631276929082}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8159187858345902868}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1524292489982518287
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1349891631276929082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54fe1bec4a3e3224f9d8ab3ee154df8e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PortalWavePreviewRenderer
+  _waveCycleProgression: {fileID: 7111670838841903477}
+  _enemyEnhancementManager: {fileID: 7957178894349565239}
+  _portals:
+  - {fileID: 4048684464422841555}
+  - {fileID: 4447194826402144382}
+  - {fileID: 3956034444648169772}
+  - {fileID: 125053142725222225}
+  _gridMap: {fileID: 0}
+  _cycleManager: {fileID: 0}
+  _cardPrefab: {fileID: 9072625321882642297, guid: 55bda92baec117b4d883981bc154cbdb, type: 3}
+  _corridorRouteIndex: 1
+  _corridorSampleStep: 0.5
+  _cardOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &4304613168157574619
 GameObject:
   m_ObjectHideFlags: 0
@@ -323,6 +380,7 @@ Transform:
   - {fileID: 6759746458464121457}
   - {fileID: 7120417608356234648}
   - {fileID: 7537410955851164406}
+  - {fileID: 8313005818197465626}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6924266763069566304

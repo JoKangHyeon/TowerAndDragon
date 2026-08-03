@@ -53,20 +53,6 @@ public class BabyDragonTower : Tower, ITowerStaffing
     private static readonly int TYPE_ANIM_KEY = Animator.StringToHash("Type");
 
     // 밤 이동 제한은 BuildingPlacementController.CanMoveNow(모든 건물 공통)가 담당한다.
-
-
-    private void OnDisable()
-    {
-        _cycleManager.OnDayStart.RemoveListener(OnDayOrNightStart);
-        _cycleManager.OnNightStart.RemoveListener(OnDayOrNightStart);
-    }
-
-    public void OnDayOrNightStart(int _)
-    {
-        Debug.Log(_isFed);
-        _animator.SetBool(BROKEN_ANIM_KEY, !_isFed);
-    }
-
     protected void Start()
     {
         var anim = GetComponent<Animator>();
@@ -77,13 +63,6 @@ public class BabyDragonTower : Tower, ITowerStaffing
     public void SetFed(bool isFed)
     {
         _isFed = isFed;
-    }
-
-    public void SetCycleManager(CycleManager cycleManager)
-    {
-        _cycleManager = cycleManager;
-        _cycleManager.OnDayStart.AddListener(OnDayOrNightStart);
-        _cycleManager.OnNightStart.AddListener(OnDayOrNightStart);
     }
 
     // BabyDragonPlacementCoordinator.HandleBuildingAdded가 배치 시 호출한다.
