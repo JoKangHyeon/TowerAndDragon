@@ -9,6 +9,11 @@ public class Chunk
     private readonly List<GridCell> _cells;
     public IReadOnlyList<GridCell> Cells => _cells;
 
+    // 육지(비 Default) 셀 좌표 - 인접 청크와의 실제 지형 접촉 판정(점령지 편입 등)에 재사용된다.
+    // 지형은 생성 이후 절대 바뀌지 않으므로(GridCell.TerrainType은 get-only) 생성자에서 한 번만 계산해 캐싱한다.
+    private readonly HashSet<Vector3Int> _landCellCoords;
+    public IReadOnlyCollection<Vector3Int> LandCellCoords => _landCellCoords;
+
     public Vector2Int ChunkCoord { get; }
     public ChunkState CurrentState { get; private set; }
     public TerrainType DominantTerrain { get; }
@@ -19,7 +24,10 @@ public class Chunk
         _cells = cells;
         CurrentState = ChunkState.Hidden;
         DominantTerrain = ResolveDominantTerrain(cells);
+        _landCellCoords = ResolveLandCellCoords(cells);
     }
+
+    public bool ContainsLandCell(Vector3Int coord) => _landCellCoords.Contains(coord);
 
     public void SetState(ChunkState newState)
     {
@@ -58,5 +66,18 @@ public class Chunk
         }
 
         return dominant;
+    }
+
+    private static HashSet<Vector3Int> ResolveLandCellCoords(List<GridCell> cells)
+    {
+        var landCellCoords = new HashSet<Vector3Int>();
+
+        foreach (GridCell cell in cells)
+        {
+            if (cell.TerrainType != TerrainType.Default)
+                landCellCoords.Add(cell.Coord);
+        }
+
+        return landCellCoords;
     }
 }

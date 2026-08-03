@@ -219,6 +219,7 @@ public class ConquestManager : MonoBehaviour
     {
         _gridMap.SetChunkState(targetChunkCoord, ChunkState.Conquered);
         ExpandVisibility(targetChunkCoord);
+        AnnexUnregisteredLandNeighbors(targetChunkCoord);
         ApplyEnemyEnhancement(targetChunkCoord);
         OnConquestCompleted?.Invoke(targetChunkCoord);
     }
@@ -271,6 +272,87 @@ public class ConquestManager : MonoBehaviour
             if (neighbor.CurrentState == ChunkState.Hidden)
                 _gridMap.SetChunkState(neighbor.ChunkCoord, ChunkState.Visible);
         }
+    }
+
+    private static readonly Vector3Int[] CELL_ORTHOGONAL_DIRECTIONS =
+    {
+        new Vector3Int(1, 0, 0),
+        new Vector3Int(-1, 0, 0),
+        new Vector3Int(0, 1, 0),
+        new Vector3Int(0, -1, 0),
+    };
+
+    // 청크 네 개가 만나는 꼭짓점에서는 육지 셀이 단 1칸만 우연히 맞닿는 경우가 있다(예: 대각선
+    // 청크는 바다로 막혀 있는데 꼭짓점 셀 한 칸만 같은 육지 타입인 경우) - 이런 우연의 일치를
+    // "연결됨"으로 치지 않도록 최소 접촉 셀 수를 요구한다.
+    private const int MINIMUM_LAND_BORDER_CONTACT_CELLS = 2;
+
+    // 코스트 테이블에 등록되지 않았지만(=독자 점령 불가) 땅이 남아있는 모서리 청크를,
+    // 인접한 실제 점령 청크가 점령 완료되는 시점에 그 영토로 편입한다.
+    // 편입은 SetChunkState만 호출한다 - 코스트 테이블에 데이터가 없으므로 인구 보상/적강화가
+    // 애초에 없고, OnConquestCompleted도 발행하지 않아 원정 기반 리스너(인구 보상 코디네이터 등)에
+    // 부작용이 없다. 영토 테두리 렌더러는 ChunkState.Conquered 여부만 보므로 자동으로 반영된다.
+    private void AnnexUnregisteredLandNeighbors(Vector2Int chunkCoord)
+    {
+        Chunk conqueredChunk = _gridMap.GetChunk(chunkCoord);
+        if (conqueredChunk == null)
+            return;
+
+        foreach (Chunk neighbor in _gridMap.GetOrthogonalAdjacentChunks(chunkCoord))
+        {
+            if (neighbor.CurrentState == ChunkState.Conquered)
+                continue;
+
+            if (HasExpeditionCost(neighbor.ChunkCoord))
+                continue;
+
+            if (!IsPrimaryLandConnection(neighbor, conqueredChunk))
+                continue;
+
+            _gridMap.SetChunkState(neighbor.ChunkCoord, ChunkState.Conquered);
+        }
+    }
+
+    // scrapChunk 입장에서 conqueredChunk가 "가장 많이 맞닿아 있는" 이웃일 때만 true를 반환한다.
+    // 청크 경계가 실제로는 대부분 물일 수 있으므로 셀 단위 접촉 수를 기준으로 삼고, scrapChunk의
+    // 다른 이웃(아직 미점령)이 더 넓게 맞닿아 있다면 이번 점령으로는 편입하지 않고 보류한다 -
+    // 그래야 나중에 진짜 주 접경 청크를 점령했을 때 자연스럽게 편입된다.
+    private bool IsPrimaryLandConnection(Chunk scrapChunk, Chunk conqueredChunk)
+    {
+        int conqueredContact = CountLandBorderContact(scrapChunk, conqueredChunk);
+        if (conqueredContact < MINIMUM_LAND_BORDER_CONTACT_CELLS)
+            return false;
+
+        foreach (Chunk otherNeighbor in _gridMap.GetOrthogonalAdjacentChunks(scrapChunk.ChunkCoord))
+        {
+            if (otherNeighbor.ChunkCoord == conqueredChunk.ChunkCoord)
+                continue;
+
+            if (CountLandBorderContact(scrapChunk, otherNeighbor) > conqueredContact)
+                return false;
+        }
+
+        return true;
+    }
+
+    // chunkA의 육지 셀(Chunk가 생성 시점에 캐싱해 둔 LandCellCoords) 중 chunkB의 육지 셀과
+    // 상하좌우로 맞닿아 있는 셀의 개수 - 청크 경계선이 아니라 실제 지형 경계(접촉 폭)를 기준으로 판정한다.
+    private static int CountLandBorderContact(Chunk chunkA, Chunk chunkB)
+    {
+        int contactCount = 0;
+        foreach (Vector3Int cellCoord in chunkA.LandCellCoords)
+        {
+            foreach (Vector3Int direction in CELL_ORTHOGONAL_DIRECTIONS)
+            {
+                if (chunkB.ContainsLandCell(cellCoord + direction))
+                {
+                    contactCount++;
+                    break;
+                }
+            }
+        }
+
+        return contactCount;
     }
 
     private void ApplyEnemyEnhancement(Vector2Int chunkCoord)

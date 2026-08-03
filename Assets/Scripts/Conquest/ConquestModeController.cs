@@ -54,7 +54,10 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
     private readonly List<Vector3Int> _conquerableBuffer = new();
     private readonly List<Vector3Int> _blockedBuffer = new();
     private readonly List<Vector3Int> _selectedBuffer = new();
+
+    // 영토가 바뀔 때만 재계산되는 청크 분류 캐시 - 호버마다 다시 계산하지 않는다.
     private readonly List<Vector2Int> _conquerableChunkBuffer = new();
+    private readonly List<Vector2Int> _blockedChunkBuffer = new();
     private (List<Vector3Int> Coords, Color Color)[] _highlightGroups;
 
     private void Awake()
@@ -107,7 +110,7 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
             return;
 
         _selectedChunkCoord = hoveredChunkCoord;
-        HighlightAllConquerableChunks();
+        RebuildHighlightBuffers();
     }
 
     public void SetConquestModeActive(bool isActive)
@@ -121,7 +124,7 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
         if (isActive)
         {
             _buildingPlacementController.CancelAll();
-            HighlightAllConquerableChunks();
+            RecomputeConquerableClassification();
         }
         else
         {
@@ -140,7 +143,7 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
     public void RefreshConquerableHighlights()
     {
         if (IsActive)
-            HighlightAllConquerableChunks();
+            RecomputeConquerableClassification();
     }
 
     // 패널이 열릴 때 호출 — 선택 셀을 고정하고 hover 갱신을 중단한다.
@@ -148,7 +151,7 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
     {
         _isSelectionLocked = true;
         _selectedChunkCoord = chunkCoord;
-        HighlightAllConquerableChunks();
+        RebuildHighlightBuffers();
     }
 
     // 패널이 닫힐 때 호출 — 잠금을 해제해 hover가 다시 하이라이트를 갱신하도록 한다.
@@ -157,14 +160,11 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
         _isSelectionLocked = false;
     }
 
-    // 보이는(Visible) 청크 전부를 점령 가능/불가능 색으로 한 번에 표시한다 - 호버해야만 알 수 있던 것을
-    // 점령 모드 진입 즉시 전부 보여준다. 선택된 청크는 건물 재배치 선택과 동일한 노란색으로 구분 표시한다.
-    private void HighlightAllConquerableChunks()
+    // 코스트 테이블 조회 + 원정 가능 여부 판정으로 Visible 청크를 점령 가능/불가로 분류한다 - 무거운 부분.
+    private void RecomputeConquerableClassification()
     {
-        _conquerableBuffer.Clear();
-        _blockedBuffer.Clear();
-        _selectedBuffer.Clear();
         _conquerableChunkBuffer.Clear();
+        _blockedChunkBuffer.Clear();
 
         foreach (Chunk chunk in _gridMap.GetAllChunks())
         {
@@ -174,24 +174,42 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
             if (!_conquestManager.HasExpeditionCost(chunk.ChunkCoord))
                 continue;
 
-            bool canConquer = _conquestManager.CanSendExpedition(chunk.ChunkCoord);
-            if (canConquer)
+            if (_conquestManager.CanSendExpedition(chunk.ChunkCoord))
                 _conquerableChunkBuffer.Add(chunk.ChunkCoord);
-
-            if (_selectedChunkCoord.HasValue && chunk.ChunkCoord == _selectedChunkCoord.Value)
-            {
-                AddChunkCellCoords(chunk, _selectedBuffer);
-                continue;
-            }
-
-            List<Vector3Int> target = canConquer ? _conquerableBuffer : _blockedBuffer;
-            AddChunkCellCoords(chunk, target);
+            else
+                _blockedChunkBuffer.Add(chunk.ChunkCoord);
         }
-
-        _mouseSelectController.HighlightCellGroups(_highlightGroups);
 
         if (_chunkInfoRenderer != null)
             _chunkInfoRenderer.Refresh(_conquerableChunkBuffer);
+
+        RebuildHighlightBuffers();
+    }
+
+    // 분류 결과를 셀 단위 색상 버퍼로 옮겨 그린다 - 호버마다 도는 가벼운 부분.
+    private void RebuildHighlightBuffers()
+    {
+        _conquerableBuffer.Clear();
+        _blockedBuffer.Clear();
+        _selectedBuffer.Clear();
+
+        AddClassifiedChunkCells(_conquerableChunkBuffer, _conquerableBuffer);
+        AddClassifiedChunkCells(_blockedChunkBuffer, _blockedBuffer);
+
+        _mouseSelectController.HighlightCellGroups(_highlightGroups);
+    }
+
+    private void AddClassifiedChunkCells(List<Vector2Int> chunkCoords, List<Vector3Int> defaultTarget)
+    {
+        foreach (Vector2Int coord in chunkCoords)
+        {
+            Chunk chunk = _gridMap.GetChunk(coord);
+            if (chunk == null)
+                continue;
+
+            bool isSelected = _selectedChunkCoord.HasValue && coord == _selectedChunkCoord.Value;
+            AddChunkCellCoords(chunk, isSelected ? _selectedBuffer : defaultTarget);
+        }
     }
 
     private void HandleSelectInput()
@@ -238,11 +256,8 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
 
     private static void AddChunkCellCoords(Chunk chunk, List<Vector3Int> target)
     {
-        foreach (GridCell cell in chunk.Cells)
-        {
-            if (cell.TerrainType != TerrainType.Default)
-                target.Add(cell.Coord);
-        }
+        foreach (Vector3Int coord in chunk.LandCellCoords)
+            target.Add(coord);
     }
 
     bool IExclusiveMode.IsOpen => IsActive;
