@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// 알(부화 전 새끼용)은 슬라임 소비 없이 매일 아침 day count만 증가시켜 성장시키고, 임계치 도달 시 부화시킨다.
@@ -11,8 +13,19 @@ public class DragonEggInventorySystem : MonoBehaviour
     [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private BabyDragonDataCatalog _dataCatalog;
 
+    [Header("시작 지급")]
+    [Tooltip("게임 시작 시 자동으로 알을 지급할지 여부. 시작 알이 필요 없는 씬(디버그용 등)에서는 끈다.")]
+    [SerializeField] private bool _grantStartingEgg;
+    [Tooltip("시작 지급 알의 속성.")]
+    [SerializeField] private DragonType _startingEggType = DragonType.Life;
+
     // 디버그 GUI가 알의 부화 진행도(며칠째/목표 며칠)를 표시할 때 카탈로그를 다시 참조로 안 받고 이걸 쓴다.
     public BabyDragonDataCatalog DataCatalog => _dataCatalog;
+
+    // 알을 새로 얻은/부화한 시점 - 보상·시작 지급·디버그 등 모든 경로가 GrantEgg를 거치므로
+    // 여기에 붙이면 향후 점령·랜드마크 보상이 추가돼도 알림이 자동으로 따라온다.
+    public UnityEvent<DragonType> OnEggGranted = new();
+    public UnityEvent<DragonType> OnEggHatched = new();
 
     private void OnEnable()
     {
@@ -30,15 +43,31 @@ public class DragonEggInventorySystem : MonoBehaviour
         }
     }
 
+    private void Start()
+    {
+        if (_grantStartingEgg)
+        {
+            GrantStartingEggAsync().Forget();
+        }
+    }
+
+    // CLAUDE.md 이벤트 규칙: 다른 오브젝트(토스트 등)의 구독이 Start까지 끝난 뒤 발화되도록 한 프레임 미룬다.
+    private async UniTaskVoid GrantStartingEggAsync()
+    {
+        await UniTask.Yield(this.GetCancellationTokenOnDestroy());
+        GrantEgg(_startingEggType);
+    }
+
     public bool GrantEgg(DragonType dragonType)
     {
         if (_gameManager == null || _gameManager.CurrentRun == null)
         {
             return false;
         }
-        
+
         _gameManager.CurrentRun.DragonEggs.Add(new DragonEgg { DragonType = dragonType });
         _gameManager.CurrentRun.OnInventoryChanged.Invoke();
+        OnEggGranted?.Invoke(dragonType);
         return true;
     }
 

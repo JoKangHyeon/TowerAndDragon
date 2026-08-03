@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
@@ -48,6 +49,9 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
     [Header("탭 (알 / 용)")]
     [SerializeField] private FilterTab _eggTab;
     [SerializeField] private FilterTab _dragonTab;
+
+    // 탭이 실제로 화면에 보였을 때 발행 - true: 용 탭, false: 알 탭. HUD 뱃지가 "그 탭을 봤다"를 판정하는 데 쓴다.
+    public UnityEvent<bool> OnTabDisplayed = new();
 
     [Header("슬롯")]
     [SerializeField] private Transform _slotContainer;
@@ -216,6 +220,10 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
         {
             return;
         }
+
+        // OpenPanel/SelectTab/OnInventoryChanged 세 경로 모두 여기를 거치므로, 한 곳에서만
+        // 발행해도 "패널이 열렸을 때"와 "탭을 전환했을 때" 양쪽 다 잡힌다.
+        OnTabDisplayed?.Invoke(_currentTab == InventoryTab.Dragon);
 
         foreach (UI_DragonInventorySlot slot in _spawnedSlots)
         {
