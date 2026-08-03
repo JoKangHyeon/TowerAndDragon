@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -35,6 +36,11 @@ public class FogOfWarRenderer : MonoBehaviour
 
     private GridMap _gridMap;
     private Tilemap _terrainTilemap;
+
+    // 안개 밝기에 곱할 셀별 색조 - 점령 모드가 "아직 못 가는 지역"을 표시하는 데 쓴다.
+    // 지형 스프라이트 자체를 물들이므로, 셀마다 평면 조각을 얹을 때 생기는 고저차 틈이 존재하지 않는다.
+    private readonly Dictionary<Vector3Int, Color> _overlayTints = new();
+    private readonly HashSet<Vector3Int> _overlayRepaintBuffer = new();
 
     private void Awake()
     {
@@ -142,7 +148,56 @@ public class FogOfWarRenderer : MonoBehaviour
         }
 
         float brightness = 1f - alpha;
-        return new Color(brightness, brightness, brightness, 1f);
+        var fogColor = new Color(brightness, brightness, brightness, 1f);
+
+        // 안개는 밝기(그레이스케일)만 쓰므로 색조는 비어 있다 - 등록된 색조를 곱하면 안개가 전달하는
+        // 밝기는 그대로 보존되고 색만 바뀐다.
+        return _overlayTints.TryGetValue(coord, out Color overlayTint) ? fogColor * overlayTint : fogColor;
+    }
+
+    // 지형 타일 색상은 이 렌더러가 단독으로 쓴다(프로젝트 내 SetColor 호출부가 여기뿐).
+    // 다른 시스템이 지형에 색을 입히려면 따로 SetColor를 부르지 말고 여기에 색조를 등록해야 한다 -
+    // 안개가 셀 상태 변화로 재도색할 때 그 색을 덮어버리기 때문이다.
+    // 색조는 밝기에 곱해지므로 알파는 1로 두고 RGB로만 표현한다.
+    // 셀마다 색이 다를 수 있어(점령 가능은 노랑, 아직 못 가는 곳은 붉은색) 좌표별 색을 받는다.
+    public void ApplyOverlayTints(IReadOnlyDictionary<Vector3Int, Color> tintsByCell)
+    {
+        // 색조가 사라진 셀도 안개 색으로 되돌려야 하므로, 이전 대상과 새 대상을 합쳐 다시 칠한다.
+        _overlayRepaintBuffer.Clear();
+        _overlayRepaintBuffer.UnionWith(_overlayTints.Keys);
+
+        _overlayTints.Clear();
+        foreach (KeyValuePair<Vector3Int, Color> pair in tintsByCell)
+        {
+            _overlayTints[pair.Key] = pair.Value;
+            _overlayRepaintBuffer.Add(pair.Key);
+        }
+
+        RepaintCells(_overlayRepaintBuffer);
+    }
+
+    public void ClearOverlayTint()
+    {
+        if (_overlayTints.Count == 0)
+            return;
+
+        _overlayRepaintBuffer.Clear();
+        _overlayRepaintBuffer.UnionWith(_overlayTints.Keys);
+        _overlayTints.Clear();
+
+        RepaintCells(_overlayRepaintBuffer);
+    }
+
+    private void RepaintCells(HashSet<Vector3Int> cellCoords)
+    {
+        if (_terrainTilemap == null)
+            return;
+
+        foreach (Vector3Int coord in cellCoords)
+        {
+            if (_terrainTilemap.HasTile(coord))
+                PaintCellAt(coord);
+        }
     }
 
     private int GetFogOrder(ChunkState state) => state switch
