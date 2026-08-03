@@ -30,7 +30,7 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private RangeIndicator _rangeIndicator;
 
-    [Tooltip("새끼용 선택 시 버프 반경을 타원으로 표시할 인디케이터. 공격 사거리와 별개 원이라 서로 다른 색으로 구분해둘 것.")]
+    [Tooltip("오라 타워 또는 새끼용 선택 시 버프 반경을 타원으로 표시할 인디케이터. 공격 사거리와 별개 원이라 서로 다른 색으로 구분해둘 것.")]
     [SerializeField]
     private RangeIndicator _buffRangeIndicator;
 
@@ -129,6 +129,8 @@ public class BuildingPlacementController : MonoBehaviour
 
     private void Update()
     {
+        RefreshSelectedRangeIndicator();
+
         // 다른 모드(점령 등)가 클릭을 점유 중이면 건물 배치/선택 입력을 처리하지 않는다.
         if (InputSuppressed)
             return;
@@ -493,21 +495,69 @@ public class BuildingPlacementController : MonoBehaviour
         _rangeIndicator.Show(tower.Attack.EffectiveRange, tower.Attack.EffectiveRange * IsometricMath.RADIUS_Y_RATIO);
     }
 
-    // 선택한 건물이 버프 반경을 가진 새끼용이면(BabyDragonBuffSystem과 동일한 조건) 타원으로 표시한다.
+    // 오라 타워는 현재 유효 반경을, 기존 새끼용은 BabyDragonBuffSystem과 같은 BuffRadius를 표시한다.
     private void ShowBuffRangeIndicatorFor(Building building)
     {
-        if (_buffRangeIndicator == null ||
-            !(building is BabyDragonTower babyDragon) ||
-            babyDragon.DragonData == null ||
-            babyDragon.DragonData.BuffRadius <= 0f)
+        if (_buffRangeIndicator == null)
         {
-            _buffRangeIndicator?.Hide();
             return;
         }
 
-        float radiusX = babyDragon.DragonData.BuffRadius;
-        _buffRangeIndicator.SetCenter(babyDragon.transform.position);
-        _buffRangeIndicator.Show(radiusX, radiusX * IsometricMath.RADIUS_Y_RATIO);
+        if (building is Tower tower &&
+            tower.Data is ITowerAuraDataProvider provider &&
+            provider.HasTowerAura)
+        {
+            if (TowerAuraSystem.TryGetActiveAura(
+                tower,
+                out _,
+                out float auraRadius))
+            {
+                ShowBuffRange(tower.transform.position, auraRadius);
+            }
+            else
+            {
+                _buffRangeIndicator.Hide();
+            }
+
+            return;
+        }
+
+        if (building is BabyDragonTower babyDragon &&
+            babyDragon.DragonData != null &&
+            babyDragon.DragonData.BuffRadius > 0f)
+        {
+            ShowBuffRange(
+                babyDragon.transform.position,
+                babyDragon.DragonData.BuffRadius);
+            return;
+        }
+
+        _buffRangeIndicator.Hide();
+    }
+
+    private void RefreshSelectedRangeIndicator()
+    {
+        if (!_selectedExistingBuildingCoord.HasValue)
+        {
+            return;
+        }
+
+        Building building =
+            _gridMap.GetBuildingAt(_selectedExistingBuildingCoord.Value);
+
+        if (building != null)
+        {
+            ShowRangeIndicatorFor(building);
+        }
+    }
+
+    private void ShowBuffRange(Vector3 center, float radiusX)
+    {
+        float radiusY =
+            radiusX * IsometricMath.RADIUS_Y_RATIO;
+
+        _buffRangeIndicator.SetCenter(center);
+        _buffRangeIndicator.Show(radiusX, radiusY);
     }
 
     public void CancelAll()

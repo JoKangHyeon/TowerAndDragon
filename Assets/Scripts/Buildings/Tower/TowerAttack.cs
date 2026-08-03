@@ -11,6 +11,8 @@ public class TowerAttack : MonoBehaviour
     private ITowerStaffing _staffing;
     private ITowerStatMultiplierQuery _statMultiplierQuery;
     private ITowerHitStatusQuery _hitStatusQuery;
+    private Tower _ownerTower;
+    private TowerAuraSystem _auraSystem;
     private float _nextAttackTime;
     private bool _isAttackEnabled;
 
@@ -40,15 +42,27 @@ public class TowerAttack : MonoBehaviour
         return towerData.Attack.Range * rangeMultiplier;
     }
 
-    private float AttackSpeedMultiplier => _statMultiplierQuery != null
-        ? _statMultiplierQuery.GetAttackSpeedMultiplier(_towerData)
-        : 1f;
+    private float AttackSpeedMultiplier
+    {
+        get
+        {
+            float globalMultiplier =
+                _statMultiplierQuery != null
+                ? _statMultiplierQuery
+                    .GetAttackSpeedMultiplier(_towerData)
+                : 1f;
+
+            return globalMultiplier *
+                ResolveAuraModifiers().AttackSpeedMultiplier;
+        }
+    }
 
     public BaseMonster CurrentTarget => _target;
     private static readonly int ATTACK_ANIM_KEY = Animator.StringToHash("Attack");
 
     private void Awake()
     {
+        _ownerTower = GetComponent<Tower>();
         _staffing = GetComponent<ITowerStaffing>();
     }
 
@@ -75,6 +89,11 @@ public class TowerAttack : MonoBehaviour
         ITowerStatMultiplierQuery statMultiplierQuery)
     {
         _statMultiplierQuery = statMultiplierQuery;
+    }
+
+    public void SetAuraSystem(TowerAuraSystem auraSystem)
+    {
+        _auraSystem = auraSystem;
     }
 
     public void SetHitStatusQuery(ITowerHitStatusQuery hitStatusQuery)
@@ -191,6 +210,16 @@ public class TowerAttack : MonoBehaviour
         return closestTarget;
     }
 
+    private TowerAuraModifiers ResolveAuraModifiers()
+    {
+        if (_auraSystem == null || _ownerTower == null)
+        {
+            return TowerAuraModifiers.Neutral;
+        }
+
+        return _auraSystem.ResolveModifiers(_ownerTower);
+    }
+
     /// <summary>
     /// 사거리 내 대상에 공격을 적용한다.
     /// 투사체가 설정된 경우 투사체가 피해를 운반해 명중 시점에 적용하고,
@@ -203,9 +232,17 @@ public class TowerAttack : MonoBehaviour
             Debug.Log($"[TowerAttack] {name} → {_target.name} 공격 발사!", this);
         }
 
-        float damageMultiplier = _statMultiplierQuery != null
+        float globalDamageMultiplier = _statMultiplierQuery != null
             ? _statMultiplierQuery.GetDamageMultiplier(_towerData)
             : 1f;
+
+        TowerAuraModifiers auraModifiers =
+            ResolveAuraModifiers();
+
+        float damageMultiplier =
+            globalDamageMultiplier *
+            auraModifiers.DamageMultiplier;
+
         var damageModifier = new ResolvedEnemyStatModifier(0f, damageMultiplier);
 
         StatusEffectSO hitStatus = _hitStatusQuery?.GetTowerHitStatus(_towerData);
@@ -213,7 +250,11 @@ public class TowerAttack : MonoBehaviour
             ? new[] { hitStatus }
             : null;
 
-        AttackContext context = new AttackContext(gameObject, damageModifier, extraStatuses);
+        AttackContext context = new AttackContext(
+            gameObject, 
+            damageModifier, 
+            extraStatuses,
+            _targetLayers);
 
         if(_animator != null)
         {

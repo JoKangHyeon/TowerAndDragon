@@ -9,6 +9,7 @@ public readonly struct AttackContext
 {
     public GameObject Source { get; }
     public ResolvedEnemyStatModifier AttackPowerModifier { get; }
+    public LayerMask TargetLayers { get; }
 
     // 명중 시점에 대상에 추가로 얹을 상태이상(용 스킬트리 얼음 패시브 등).
     // 발사 시점(TowerAttack.Fire)이 아니라 명중 시점(AttackSO.Execute)에 적용해야
@@ -16,24 +17,60 @@ public readonly struct AttackContext
     public IReadOnlyList<StatusEffectSO> ExtraStatuses { get; }
 
     public AttackContext(GameObject source)
-        : this(source, ResolvedEnemyStatModifier.Neutral, null)
-    {
-    }
-
-    public AttackContext(
-        GameObject source,
-        ResolvedEnemyStatModifier attackPowerModifier)
-        : this(source, attackPowerModifier, null)
+        : this(source,
+        ResolvedEnemyStatModifier.Neutral,
+        null,
+        Physics2D.AllLayers)
     {
     }
 
     public AttackContext(
         GameObject source,
         ResolvedEnemyStatModifier attackPowerModifier,
+        LayerMask targetLayers)
+        : this(
+            source, 
+            attackPowerModifier,
+            null,
+            targetLayers)
+    {
+    }
+
+    public AttackContext (
+        GameObject source,
+        ResolvedEnemyStatModifier attackPowerModifier)
+        : this (
+            source,
+            attackPowerModifier,
+            null,
+            Physics2D.AllLayers
+        )
+    {
+        
+    }
+
+    public AttackContext(
+        GameObject source,
+        ResolvedEnemyStatModifier attackPowerModifier,
         IReadOnlyList<StatusEffectSO> extraStatuses)
+        : this (
+            source,
+            attackPowerModifier,
+            extraStatuses,
+            Physics2D.AllLayers
+        )
+    {
+    }
+
+    public AttackContext(
+        GameObject source,
+        ResolvedEnemyStatModifier attackPowerModifier,
+        IReadOnlyList<StatusEffectSO> extraStatuses,
+        LayerMask targetLayers)
     {
         Source = source;
         AttackPowerModifier = attackPowerModifier;
         ExtraStatuses = extraStatuses;
+        TargetLayers = targetLayers;
     }
 }

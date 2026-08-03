@@ -35,8 +35,13 @@ public class BabyDragonTower : Tower, ITowerStaffing
     public float StaffingRatio => 1f;
 
     public BabyDragonMode Mode => Record != null ? Record.Mode : BabyDragonMode.Attack;
-    public bool CanUseAttackMode => DragonData != null && DragonData.CanAttack;
-    public bool CanUseBuffMode => DragonData != null && DragonData.BuffRadius > 0f;
+    public bool CanUseAttackMode =>
+        DragonData != null &&
+        DragonData.CanAttack;
+    public bool CanUseBuffMode =>
+        DragonData != null && 
+        (DragonData.BuffRadius > 0f ||
+        DragonData.HasTowerAura);
 
     // 버프모드일 때는 공격을 멈춘다 - TowerAttack.SetAttackEnabled가 이미 CanAttack(공격 데이터 유무)과
     // AND하므로, 공격 데이터가 아예 없는 개체(예: 생명 속성)에는 이 훅이 영향을 주지 않는다.

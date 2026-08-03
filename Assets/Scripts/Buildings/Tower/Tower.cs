@@ -11,6 +11,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     [SerializeField] private TowerData _towerData;
     private Health _health;
     private TowerAttack _attack;
+    private TowerAuraSystem _auraSystem;
     private CancellationTokenSource _reviveCts;
     private CancellationTokenSource _paralysisCts;
     protected Animator _animator;
@@ -18,6 +19,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     private bool _isInitialized;
     private bool _isDisabled;
     private float _disabledAtTime;
+    private float _reviveProgress;
 
     // 감전 효과
     private bool _isParalyzed;
@@ -43,8 +45,8 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     // 체력바 UI가 부활 게이지를 그리는 데 쓴다 - _isDisabled로 판정하므로 별도 상태 추가가 필요 없다.
     public bool IsReviving => _isDisabled;
     public float ReviveProgress =>
-        _isDisabled && _towerData != null && _towerData.ReviveDelay > 0f
-            ? Mathf.Clamp01((Time.time - _disabledAtTime) / _towerData.ReviveDelay)
+        _isDisabled
+            ? Mathf.Clamp01(_reviveProgress)
             : 0f;
 
     protected static readonly int HIT_ANIM_KEY = Animator.StringToHash("Hit");
@@ -114,6 +116,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     {
         _isDisabled = true;
         _disabledAtTime = Time.time;
+        _reviveProgress = 0f;
 
         RefreshAttackEnabled();
 
@@ -144,8 +147,31 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
 
     private async UniTaskVoid ReviveAfterDelayAsync(CancellationToken token)
     {
-        await UniTask.Delay(TimeSpan.FromSeconds(_towerData.ReviveDelay), cancellationToken: token);
+        if (_towerData.ReviveDelay <= 0f)
+        {
+            RestoreAndReactivate();
+            return;
+        }
+
+        while (_reviveProgress < 1f)
+        {
+            await UniTask.Yield(token);
+
+            float reviveSpeedMultiplier = _auraSystem != null
+                ? _auraSystem.ResolveModifiers(this).ReviveSpeedMultiplier
+                : 1f;
+
+            _reviveProgress +=
+                Time.deltaTime * reviveSpeedMultiplier /
+                _towerData.ReviveDelay;
+        }
+
         RestoreAndReactivate();
+    }
+
+    public void SetAuraSystem(TowerAuraSystem auraSystem)
+    {
+        _auraSystem = auraSystem;
     }
 
     private void CancelRevive()
@@ -169,6 +195,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         // HealthChanged를 체력바가 "만피"로 인식해 즉시 사라진다. 순서가 바뀌면
         // 부활 게이지가 완료 후에도 화면에 남는다.
         _isDisabled = false;
+        _reviveProgress = 0f;
         _health.RestoreToFull();
 
         RefreshAttackEnabled();
