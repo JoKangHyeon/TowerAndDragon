@@ -17,13 +17,7 @@ public class PortalWaveData
     [Tooltip("이 포탈에서 실행할 루트별 편성입니다. 루트마다 병렬로 진행됩니다.")]
     [SerializeField] private List<RouteWaveData> _routeWaves;
 
-    [Tooltip("구 구조입니다. 루트 구조로 이관한 뒤 제거될 예정이므로 새로 입력하지 마세요.")]
-    [SerializeField] private List<SpawnGroupData> _spawnGroups;
-
     public PortalDirection PortalDirectionId => _portalDirectionId;
     public float StartDelay => _startDelay;
     public IReadOnlyList<RouteWaveData> RouteWaves => _routeWaves;
-
-    /// <summary>구 구조 데이터. 에디터 이관 스크립트 전용이며 런타임에서는 읽지 않는다.</summary>
-    public IReadOnlyList<SpawnGroupData> LegacySpawnGroups => _spawnGroups;
 }
