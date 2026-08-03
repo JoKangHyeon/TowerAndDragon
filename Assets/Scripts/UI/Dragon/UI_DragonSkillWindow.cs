@@ -12,6 +12,7 @@ using UnityEngine.UI;
 public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
 {
     [Header("Dependencies")]
+    [SerializeField] private GameManager _gameManager;
     [SerializeField] private DragonTreeManager _dragonTreeManager;
     [SerializeField] private ResourceManager _resourceManager;
     [SerializeField] private UIManager _uiManager;
@@ -92,6 +93,11 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
             _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleActiveAttributeChanged);
         }
 
+        if (_gameManager != null && _gameManager.CurrentRun != null)
+        {
+            _gameManager.CurrentRun.OnInventoryChanged.AddListener(HandleInventoryChanged);
+        }
+
         if(_closeAction != null)
         {
             _closeAction.action.performed += OnCloseActionPerformed;
@@ -104,6 +110,11 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
         {
             _dragonTreeManager.NodeUnlocked.RemoveListener(HandleNodeUnlocked);
             _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleActiveAttributeChanged);
+        }
+
+        if (_gameManager != null && _gameManager.CurrentRun != null)
+        {
+            _gameManager.CurrentRun.OnInventoryChanged.RemoveListener(HandleInventoryChanged);
         }
 
         if (_closeAction != null)
@@ -304,6 +315,7 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
 
     private void HandleNodeUnlocked(ProgressionNodeData node) => RefreshAll();
     private void HandleActiveAttributeChanged(DragonType attribute) => RefreshActiveAttributeRing();
+    private void HandleInventoryChanged() => RefreshAll();
 
     private void RefreshAll()
     {
