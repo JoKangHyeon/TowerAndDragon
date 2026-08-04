@@ -78,24 +78,10 @@ public sealed class HealAuraBehaviorSO : SpecialBehaviorSO
 
         private void HealNearbyMonsters()
         {
-            _healedTargets.Clear();
+            AuraTargetScanner.FindNearbyMonsters(_owner, _radius, _targetLayers, _healedTargets);
 
-            Collider2D[] candidates = Physics2D.OverlapCircleAll(
-                _owner.transform.position,
-                _radius,
-                _targetLayers);
-
-            foreach (Collider2D candidate in candidates)
+            foreach (BaseMonster target in _healedTargets)
             {
-                BaseMonster target = candidate.GetComponentInParent<BaseMonster>();
-                if (target == null ||
-                    target == _owner ||
-                    target.IsDead ||
-                    !_healedTargets.Add(target))
-                {
-                    continue;
-                }
-
                 float previousHealth = target.CurrentHealth;
                 target.Heal(_healAmount);
                 float healedAmount = target.CurrentHealth - previousHealth;

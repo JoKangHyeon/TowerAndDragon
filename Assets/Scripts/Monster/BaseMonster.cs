@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.Splines;
 
@@ -174,6 +173,22 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget
         }
 
         _health.Heal(amount);
+    }
+
+    public bool GrantShield (float amount)
+    {
+        if (IsDead || _shield == null || _shield.HasShield)
+        {
+            return false;
+        }
+
+        _shield.Initialize(amount);
+        return true;
+    }
+
+    public void RevokeGrantedShield()
+    {
+        _shield?.Clear();
     }
 
     public void HaltMovement()

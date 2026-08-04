@@ -53,4 +53,11 @@ public class MonsterShield : MonoBehaviour, IShieldInfo
 
         return amount - absorbed;
     }
+
+    public void Clear()
+    {
+        _maxShield = 0f;
+        _currentShield = 0f;
+        ShieldChanged?.Invoke(_currentShield, _maxShield);
+    }
 }
