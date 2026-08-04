@@ -10,8 +10,9 @@ public static class AuraTargetScanner
         HashSet<BaseMonster> results    
     )
     {
-        results.Clear();
+        float radiusY = radius * IsometricMath.RADIUS_Y_RATIO;
 
+        results.Clear();
         Collider2D[] candidates = Physics2D.OverlapCircleAll(
             owner.transform.position,
             radius,
@@ -20,11 +21,23 @@ public static class AuraTargetScanner
 
         foreach (Collider2D candidate in candidates)
         {
+            if (!IsometricMath.IsWithinEllipse(
+                candidate.transform.position,
+                owner.transform.position,
+                radius,
+                radiusY
+            ))
+            {
+                continue;
+            }
+
             BaseMonster target = candidate.GetComponentInParent<BaseMonster>();
             if (target == null || target == owner || target.IsDead)
             {
                 continue;
             }
+
+            
 
             results.Add(target);
         }
