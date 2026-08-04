@@ -6,6 +6,9 @@ using UnityEngine;
 /// <summary>
 /// 범용 알림 토스트. 문구를 데이터(로컬 키 + 포맷 인자)로만 받으므로 어떤 도메인(새끼용·점령 등)도 모른다.
 /// 여러 알림이 짧은 시간에 겹치면 큐에 쌓아 순차적으로 페이드 인 → 유지 → 아웃한다(UI_WarningWindow와 달리 앞 메시지를 지우지 않음).
+/// 포맷 인자가 들어가는 문구라 LocalizedText를 붙일 수 없으므로(팀 스트링테이블 규칙), UI_IngameWindow와 같이
+/// StringTable.OnLanguageChanged를 직접 구독해 다시 그린다. 키와 인자를 들고 있다가 포맷을 다시 하므로
+/// 큐에서 대기 중인 알림도 바뀐 언어로 뜬다.
 /// </summary>
 public class UI_NotificationToast : MonoBehaviour
 {
@@ -22,10 +25,52 @@ public class UI_NotificationToast : MonoBehaviour
     [Tooltip("페이드 인/아웃 연출 시간(초).")]
     [SerializeField] private float _fadeDuration = DEFAULT_FADE_DURATION;
 
+    // 알림 하나가 뜨고 사라지기까지 걸리는 총 시간. 토스트 뒤에 무언가를 이어 붙이는 쪽이
+    // 길이를 따로 베껴 두지 않고 여기서 읽어가도록 노출한다.
+    public float TotalDuration => _fadeDuration + _showDuration + _fadeDuration;
+
+    // 포맷된 결과가 아니라 원재료(키 + 인자)를 쌓는다 - 대기 중에 언어가 바뀌어도 새 언어로 뜬다.
+    private readonly struct Message
+    {
+        public readonly string LocKey;
+        public readonly object[] Args;
+
+        public Message(string locKey, object[] args)
+        {
+            LocKey = locKey;
+            Args = args;
+        }
+
+        public string Resolve()
+        {
+            string raw = StringTable.GetString(LocKey);
+            return Args == null || Args.Length == 0 ? raw : string.Format(raw, Args);
+        }
+    }
+
     private CanvasGroup _messageGroup;
     private Sequence _sequence;
-    private readonly Queue<string> _pendingMessages = new();
+    private readonly Queue<Message> _pendingMessages = new();
+    private Message _currentMessage;
     private bool _isShowing;
+
+    private void OnEnable()
+    {
+        StringTable.OnLanguageChanged += RefreshCurrentMessage;
+    }
+
+    private void OnDisable()
+    {
+        StringTable.OnLanguageChanged -= RefreshCurrentMessage;
+    }
+
+    private void RefreshCurrentMessage()
+    {
+        if (_isShowing && _messageText != null)
+        {
+            _messageText.text = _currentMessage.Resolve();
+        }
+    }
 
     private void Awake()
     {
@@ -51,7 +96,7 @@ public class UI_NotificationToast : MonoBehaviour
             return;
         }
 
-        _pendingMessages.Enqueue(string.Format(StringTable.GetString(locKey), args));
+        _pendingMessages.Enqueue(new Message(locKey, args));
 
         if (!_isShowing)
         {
@@ -68,7 +113,8 @@ public class UI_NotificationToast : MonoBehaviour
         }
 
         _isShowing = true;
-        _messageText.text = _pendingMessages.Dequeue();
+        _currentMessage = _pendingMessages.Dequeue();
+        _messageText.text = _currentMessage.Resolve();
 
         _sequence?.Kill();
         _messageRoot.SetActive(true);

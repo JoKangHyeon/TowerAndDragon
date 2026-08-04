@@ -12,6 +12,10 @@ public class RunData
     public List<DragonEgg> DragonEggs = new();
     public List<BossDragonEggReward> BossDragonEggRewards = new();
 
+    // "완료한" 단계가 아니라 "진입한" 단계를 기록한다 - 안내는 단계에 들어선 순간 떠야 하므로,
+    // 종료 조건으로 기록하면 화살표가 한 박자 늦는다.
+    public List<BabyDragonGuideStep> EnteredGuideSteps = new();
+
     public UnityEvent OnInventoryChanged = new();
 
     public GridMap Map;
@@ -78,6 +82,23 @@ public class RunData
             CycleNumber = cycleNumber,
             DragonType = dragonType,
         });
+        return true;
+    }
+
+    public bool HasEnteredGuideStep(BabyDragonGuideStep step)
+    {
+        return EnteredGuideSteps != null && EnteredGuideSteps.Contains(step);
+    }
+
+    public bool TryEnterGuideStep(BabyDragonGuideStep step)
+    {
+        if (HasEnteredGuideStep(step))
+        {
+            return false;
+        }
+
+        EnteredGuideSteps ??= new List<BabyDragonGuideStep>();
+        EnteredGuideSteps.Add(step);
         return true;
     }
 }

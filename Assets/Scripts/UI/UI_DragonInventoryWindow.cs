@@ -53,6 +53,16 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
     // 탭이 실제로 화면에 보였을 때 발행 - true: 용 탭, false: 알 탭. HUD 뱃지가 "그 탭을 봤다"를 판정하는 데 쓴다.
     public UnityEvent<bool> OnTabDisplayed = new();
 
+    // 슬롯 구성이 바뀐 뒤 발행 - 재생성 완료 시점과 창이 닫혀 슬롯이 사라지는 시점 양쪽. 슬롯은 갱신마다
+    // 전부 Destroy 후 재생성되므로, 슬롯을 가리키는 쪽(가이드 화살표 등)은 참조를 보관하지 말고
+    // 이 신호를 받아 매번 다시 조회해야 한다.
+    public UnityEvent OnSlotViewChanged = new();
+
+    public bool IsOpen => _isOpen;
+    public bool IsDragonTabShown => _currentTab == InventoryTab.Dragon;
+    public RectTransform EggTabRect => ResolveTabRect(_eggTab);
+    public RectTransform DragonTabRect => ResolveTabRect(_dragonTab);
+
     [Header("슬롯")]
     [SerializeField] private Transform _slotContainer;
     [SerializeField] private UI_DragonInventorySlot _slotPrefab;
@@ -207,6 +217,10 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
         SoundManager.Play(SoundId.UiWindowClose);
 
         _isOpen = false;
+
+        // 닫히면 슬롯을 가리키던 안내가 대상을 잃으므로 다시 고를 기회를 준다.
+        OnSlotViewChanged?.Invoke();
+
         _panelTween?.Kill();
         _panelTween = _panelRect.DOAnchorPos(_homePos + _closeToOffset, _slideDuration)
             .SetEase(Ease.InCubic)
@@ -249,6 +263,30 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
         {
             BuildDragonSlots(run);
         }
+
+        OnSlotViewChanged?.Invoke();
+    }
+
+    // 현재 탭에 그려진 첫 슬롯. 어느 슬롯을 가리킬지는 호출부가 탭으로 판단한다 -
+    // 이 창이 가이드 단계를 알 필요는 없다.
+    public bool TryGetFirstSlotRect(out RectTransform slotRect)
+    {
+        foreach (UI_DragonInventorySlot slot in _spawnedSlots)
+        {
+            if (slot != null)
+            {
+                slotRect = (RectTransform)slot.transform;
+                return true;
+            }
+        }
+
+        slotRect = null;
+        return false;
+    }
+
+    private static RectTransform ResolveTabRect(FilterTab tab)
+    {
+        return tab.Button == null ? null : (RectTransform)tab.Button.transform;
     }
 
     private void BuildEggSlots(RunData run)

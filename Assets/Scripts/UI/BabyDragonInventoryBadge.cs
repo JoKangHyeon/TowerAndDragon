@@ -1,8 +1,10 @@
 using UnityEngine;
 
 /// <summary>
-/// 새끼용 인벤토리 HUD 버튼의 미확인 알림 표시(작은 동그라미). 알/용 탭별로 "미확인이 있다/없다"만
-/// 따로 추적하다가, 해당 탭을 실제로 봤을 때(UI_DragonInventoryWindow.OnTabDisplayed)만 그 몫을 지운다.
+/// 새끼용 인벤토리의 미확인 알림 표시(작은 동그라미). 알/용 탭별로 "미확인이 있다/없다"만 따로
+/// 추적하다가, 해당 탭을 실제로 봤을 때(UI_DragonInventoryWindow.OnTabDisplayed)만 그 몫을 지운다.
+/// HUD 버튼에는 둘 중 하나라도 있으면 켜고, 창 안의 탭 버튼에는 그 탭 몫만 켠다 - 창을 열었을 때
+/// 어느 탭을 봐야 하는지가 바로 보인다.
 /// 이 표시 상태는 튜토리얼 진행도와 구분되는 UI 전용 상태라 RunData에는 넣지 않는다.
 /// </summary>
 public class BabyDragonInventoryBadge : MonoBehaviour
@@ -12,6 +14,12 @@ public class BabyDragonInventoryBadge : MonoBehaviour
 
     [Tooltip("새끼용 인벤토리 버튼 구석에 표시되는 작은 동그라미.")]
     [SerializeField] private GameObject _badgeDot;
+
+    [Tooltip("알 탭 버튼 구석에 표시되는 작은 동그라미.")]
+    [SerializeField] private GameObject _eggTabBadgeDot;
+
+    [Tooltip("용 탭 버튼 구석에 표시되는 작은 동그라미.")]
+    [SerializeField] private GameObject _dragonTabBadgeDot;
 
     private bool _hasUnreadEgg;
     private bool _hasUnreadDragon;
@@ -77,9 +85,16 @@ public class BabyDragonInventoryBadge : MonoBehaviour
 
     private void Render()
     {
-        if (_badgeDot != null)
+        SetDotActive(_badgeDot, _hasUnreadEgg || _hasUnreadDragon);
+        SetDotActive(_eggTabBadgeDot, _hasUnreadEgg);
+        SetDotActive(_dragonTabBadgeDot, _hasUnreadDragon);
+    }
+
+    private static void SetDotActive(GameObject dot, bool isActive)
+    {
+        if (dot != null)
         {
-            _badgeDot.SetActive(_hasUnreadEgg || _hasUnreadDragon);
+            dot.SetActive(isActive);
         }
     }
 }
