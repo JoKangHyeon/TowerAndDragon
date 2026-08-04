@@ -13,6 +13,10 @@ public class MonsterData : ScriptableObject
     [Tooltip("스트링테이블 key. 코드에 직접 이름 문자열을 넣지 않는다.")]
     [SerializeField] private string _nameLocKey;
 
+    [Header("Monster Type")]
+    [Tooltip("몬스터 종류")]
+    [SerializeField] private MonsterType _monsterType;
+
     [Header("Stats")]
     [SerializeField] private float _maxHealth;
     [SerializeField] private float _moveSpeed;
@@ -40,6 +44,7 @@ public class MonsterData : ScriptableObject
     [SerializeField] private float _projectileSpeed;
 
     public string NameLocKey => _nameLocKey;
+    public MonsterType MonsterType => _monsterType;
     public float MaxHealth => _maxHealth;
     public float MoveSpeed => _moveSpeed;
     public MonsterMovementType MovementType => _movementType;
