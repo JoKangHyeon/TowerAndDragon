@@ -3,16 +3,26 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 몬스터/타워 머리 위에 표시하는 월드 스페이스 체력바. 값 주입만 받는 순수 View.
-/// 만피 상태에서는 표시하지 않는다. 파괴(체력 0)되어 부활 대기 중인 타워는
+/// 무손상(체력 만피 + 방어막 무손상) 상태에서는 표시하지 않는다. 방어막은 체력 위에 회색으로
+/// 덮어 그리다가 깎이는 만큼 빨간 체력이 드러난다. 파괴(체력 0)되어 부활 대기 중인 타워는
 /// IReviveProgress를 통해 부활 게이지로 전환해 보여준다.
 /// </summary>
 public class UI_WorldHealthBar : MonoBehaviour
 {
+    [Tooltip("숨김 여부를 토글하는 대상 Canvas. SetActive 대신 이걸 꺼서, Update()가 계속 돌게 한다.")]
+    [SerializeField] private Canvas _canvas;
+
     [Tooltip("체력/부활 진행도를 채우는 Fill 이미지 (Image Type = Filled).")]
     [SerializeField] private Image _fillImage;
 
+    [Tooltip("방어막 양을 체력 Fill 위에 덮어 그리는 회색 Fill 이미지 (Image Type = Filled).")]
+    [SerializeField] private Image _shieldFillImage;
+
     [Tooltip("피해를 입었을 때 Fill 색상.")]
     [SerializeField] private Color _healthColor = new Color(0.85f, 0.2f, 0.2f);
+
+    [Tooltip("방어막이 남아있을 때 Fill 색상. 알파는 반드시 1이어야 한다 - 1 미만이면 아래 체력색과 섞여 회색이 아니라 탁한 색으로 보인다.")]
+    [SerializeField] private Color _shieldColor = new Color(0.7f, 0.7f, 0.7f);
 
     [Tooltip("파괴 후 부활 대기 중일 때 Fill 색상.")]
     [SerializeField] private Color _reviveColor = new Color(0.3f, 0.6f, 1f);
@@ -25,28 +35,32 @@ public class UI_WorldHealthBar : MonoBehaviour
 
     private Health _health;
     private IReviveProgress _reviveSource;
+    private IShieldInfo _shieldSource;
 
-    /// <summary>주어진 Health/부활 진행도 소스에 바를 연결한다. 이미 다른 대상에 연결돼 있었다면 먼저 해제한다.</summary>
-    public void Bind(Health health, IReviveProgress reviveSource, SpriteRenderer ownerRenderer)
+    /// <summary>주어진 Health/부활 진행도/방어막 소스에 바를 연결한다. 이미 다른 대상에 연결돼 있었다면 먼저 해제한다.</summary>
+    public void Bind(Health health, IReviveProgress reviveSource, IShieldInfo shieldSource, SpriteRenderer ownerRenderer)
     {
         Unbind();
 
         _health = health;
         _reviveSource = reviveSource;
+        _shieldSource = shieldSource;
 
         ApplyScaleCompensation();
         ApplyYOffset(ownerRenderer);
 
         if (_health != null)
         {
+            // 대상(몬스터/타워)이 런타임에 동적으로 주입되므로, Awake/OnEnable이 아니라
+            // 여기(Bind)에서 구독한다 - 구독 직후 현재 값을 한 번 수동으로 반영해 초기 발화를 놓쳐도 안전하게 한다.
             _health.HealthChanged.AddListener(HandleHealthChanged);
-            _health.Died.AddListener(HandleDied);
-            // 구독 직후 현재 값을 한 번 수동으로 반영한다 - 초기 발화를 놓쳐도 안전하도록.
-            Render(_health.CurrentHealth, _health.MaxHealth);
         }
 
-        // 부활 대기 중일 때만 매 프레임 진행도를 폴링한다 - 몬스터(부활 없음)는 Update를 돌리지 않는다.
-        enabled = _reviveSource != null;
+        Render();
+
+        // 부활 대기 중이거나 방어막을 보유한 동안만 매 프레임 폴링한다(IShieldInfo는 이벤트가 없는
+        // 폴링 전용 계약이라 여기서 갱신을 받는다) - 아무것도 없는 몬스터는 계속 Update를 돌리지 않는다.
+        enabled = _reviveSource != null || _shieldSource != null;
     }
 
     private void Unbind()
@@ -54,11 +68,11 @@ public class UI_WorldHealthBar : MonoBehaviour
         if (_health != null)
         {
             _health.HealthChanged.RemoveListener(HandleHealthChanged);
-            _health.Died.RemoveListener(HandleDied);
         }
 
         _health = null;
         _reviveSource = null;
+        _shieldSource = null;
         enabled = false;
     }
 
@@ -69,44 +83,66 @@ public class UI_WorldHealthBar : MonoBehaviour
         if (_reviveSource != null && _reviveSource.IsReviving)
         {
             RenderRevive();
+            return;
         }
+
+        Render();
     }
 
-    private void HandleHealthChanged(float current, float max) => Render(current, max);
+    private void HandleHealthChanged(float current, float max) => Render();
 
-    private void HandleDied()
+    private void Render()
     {
-        // 타워는 곧이어 부활 대기(IsReviving)로 전환되므로 이후 Update가 이어받는다.
-        // 몬스터는 Died 직후 파괴되므로(BaseMonster.HandleDeath) 이 갱신은 잠깐 빈 바를 보였다 함께 사라진다.
-        if (_reviveSource != null && _reviveSource.IsReviving)
+        if (_health == null)
         {
-            RenderRevive();
+            return;
         }
-    }
 
-    private void Render(float current, float max)
-    {
         if (_reviveSource != null && _reviveSource.IsReviving)
         {
             RenderRevive();
             return;
         }
 
-        bool isFullHealth = max <= 0f || current >= max;
-        gameObject.SetActive(!isFullHealth);
+        float maxHealth = _health.MaxHealth;
+        bool hasShield = _shieldSource != null && _shieldSource.HasShield;
+        bool isUndamaged =
+            maxHealth <= 0f ||
+            (_health.CurrentHealth >= maxHealth && (!hasShield || _shieldSource.IsIntact));
 
-        if (isFullHealth || _fillImage == null)
+        SetHidden(isUndamaged);
+
+        if (isUndamaged)
         {
             return;
         }
 
-        _fillImage.color = _healthColor;
-        _fillImage.fillAmount = Mathf.Clamp01(current / max);
+        if (_fillImage != null)
+        {
+            _fillImage.color = _healthColor;
+            _fillImage.fillAmount = Mathf.Clamp01(_health.CurrentHealth / maxHealth);
+        }
+
+        if (_shieldFillImage != null)
+        {
+            // 죽는 순간(방어막을 우회하는 즉사 등)에는 방어막이 남아 있어도 회색을 보이지 않는다.
+            float shieldRatio = !hasShield || _health.IsDead
+                ? 0f
+                : Mathf.Clamp01(_shieldSource.CurrentShield / maxHealth);
+
+            _shieldFillImage.color = _shieldColor;
+            _shieldFillImage.fillAmount = shieldRatio;
+        }
     }
 
     private void RenderRevive()
     {
-        gameObject.SetActive(true);
+        SetHidden(false);
+
+        if (_shieldFillImage != null)
+        {
+            _shieldFillImage.fillAmount = 0f;
+        }
 
         if (_fillImage == null)
         {
@@ -115,6 +151,14 @@ public class UI_WorldHealthBar : MonoBehaviour
 
         _fillImage.color = _reviveColor;
         _fillImage.fillAmount = Mathf.Clamp01(_reviveSource.ReviveProgress);
+    }
+
+    private void SetHidden(bool isHidden)
+    {
+        if (_canvas != null)
+        {
+            _canvas.enabled = !isHidden;
+        }
     }
 
     // 프리팹마다 루트 스케일이 제각각이라(0.12배~3배), 부모 스케일의 역수를 걸어
