@@ -2,6 +2,7 @@ using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 /// <summary>
@@ -82,10 +83,13 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("점령 정보 창. 버튼 클릭 시 점령 모드를 토글한다.")]
     [SerializeField] private UI_ConquestWindow _conquestWindow;
 
-    [Header("용 스킬트리 (Panel_BottomRight)")]
-    [Tooltip("용 스킬 모드 토글 버튼.")]
-    [SerializeField] private Button _buttonDragonSkill;
-    [Tooltip("용 스킬 정보 창. 버튼 클릭 시 용 스킬 모드를 토글한다.")]
+    [Header("용 창 (Panel_BottomRight)")]
+    [Tooltip("용 창 토글 버튼(Button_Dragon).")]
+    [FormerlySerializedAs("_buttonDragonSkill")]
+    [SerializeField] private Button _buttonDragon;
+    [Tooltip("용 창. 버튼 클릭 시 어미용/새끼용 탭 창을 토글한다.")]
+    [SerializeField] private UI_DragonWindow _dragonWindow;
+    [Tooltip("용 스킬트리 창. HUD 진입점은 용 창 안으로 옮길 예정이라 지금은 배선만 유지한다(성 창에서 계속 접근 가능).")]
     [SerializeField] private UI_DragonSkillWindow _dragonSkillWindow;
 
     [Header("연구 (Panel_BottomRight)")]
@@ -157,9 +161,9 @@ public class UI_IngameWindow : MonoBehaviour
             _buttonConquest.onClick.AddListener(_conquestWindow.ToggleConquestMode);
         }
 
-        if (_buttonDragonSkill != null && _dragonSkillWindow != null)
+        if (_buttonDragon != null && _dragonWindow != null)
         {
-            _buttonDragonSkill.onClick.AddListener(_dragonSkillWindow.ToggleFromEntryPoint);
+            _buttonDragon.onClick.AddListener(_dragonWindow.ToggleFromEntryPoint);
         }
 
         if (_buttonResearch != null && _researchWindow != null)
