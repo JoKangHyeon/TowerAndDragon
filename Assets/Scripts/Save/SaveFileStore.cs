@@ -13,14 +13,24 @@ public static class SaveFileStore
     /// 임시 파일에 먼저 쓴 뒤 교체한다. 쓰기 도중 크래시가 나도 기존 세이브가 그대로 남는다.
     /// BOM 없는 UTF-8로 쓴다(StringTable이 CSV를 읽는 방식과 맞춘다).
     /// </summary>
-    public static bool TryWriteAtomic(string filePath, string contents, out string error)
+    public static bool TryWriteAtomic(string filePath, string contents, out string error) =>
+        TryWriteAtomic(
+            filePath,
+            tempPath => File.WriteAllText(tempPath, contents, new UTF8Encoding(false)),
+            out error);
+
+    /// <summary>썸네일 등 바이너리 파일용. 원자적 교체 규칙은 텍스트와 동일하다.</summary>
+    public static bool TryWriteBytesAtomic(string filePath, byte[] contents, out string error) =>
+        TryWriteAtomic(filePath, tempPath => File.WriteAllBytes(tempPath, contents), out error);
+
+    private static bool TryWriteAtomic(string filePath, Action<string> writeToTemp, out string error)
     {
         string tempPath = SavePaths.ToTempPath(filePath);
 
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-            File.WriteAllText(tempPath, contents, new UTF8Encoding(false));
+            writeToTemp(tempPath);
 
             // File.Replace는 대상 파일이 없으면 예외를 던지므로 첫 저장은 Move로 처리한다.
             if (File.Exists(filePath))
@@ -39,6 +49,29 @@ public static class SaveFileStore
         {
             error = exception.Message;
             TryDeleteFile(tempPath);
+            return false;
+        }
+    }
+
+    public static bool TryReadAllBytes(string filePath, out byte[] contents, out string error)
+    {
+        contents = null;
+
+        if (!File.Exists(filePath))
+        {
+            error = $"파일이 없습니다: {filePath}";
+            return false;
+        }
+
+        try
+        {
+            contents = File.ReadAllBytes(filePath);
+            error = null;
+            return true;
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
             return false;
         }
     }

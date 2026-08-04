@@ -4271,6 +4271,7 @@ GameObject:
   - component: {fileID: 914589624}
   - component: {fileID: 914589625}
   - component: {fileID: 914589626}
+  - component: {fileID: 914589627}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -4580,6 +4581,7 @@ MonoBehaviour:
   _conquestManager: {fileID: 1721790482}
   _gridMap: {fileID: 313449541}
   _waveCycleProgression: {fileID: 704850240}
+  _thumbnailCapturer: {fileID: 914589627}
   _isAutoSaveEnabled: 1
   _debugForceContinue: 0
   _debugSlotIndex: 0
@@ -4606,6 +4608,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SaveDebugController
   _saveService: {fileID: 914589625}
   _slotIndex: 1
+--- !u!114 &914589627
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914589609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c00c5483db8e2cd42bd7469173db50c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SaveThumbnailCapturer
+  _gridMap: {fileID: 313449541}
+  _conquestManager: {fileID: 1721790482}
+  _captureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967007
+  _backgroundColor: {r: 0.192, g: 0.302, b: 0.475, a: 1}
 --- !u!1 &936144404
 GameObject:
   m_ObjectHideFlags: 0
@@ -8457,17 +8477,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 1521450988358325637, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
   m_PrefabInstance: {fileID: 944163938}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &944163941 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6882898113726626769, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-  m_PrefabInstance: {fileID: 944163938}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1ec2a13c3f53c1843af2e66ddfb15069, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SettingsService
 --- !u!224 &944163942 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6298447113766678015, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -11824,33 +11833,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -10, y: -10}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &4773012940279635694
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7965712532680902350}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d2147bb3956e98348930ba7cddf672dc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UI_ConfigWindow
-  _settings: {fileID: 944163941}
-  _uiManager: {fileID: 944163939}
-  _saveService: {fileID: 0}
-  _closeButton: {fileID: 468679196}
-  _blockerButton: {fileID: 5301227506934524196}
-  _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _resolutionText: {fileID: 0}
-  _resolutionPrevButton: {fileID: 0}
-  _resolutionNextButton: {fileID: 0}
-  _fullScreenToggle: {fileID: 0}
-  _volumeStep: 0.1
-  _languageDropdown: {fileID: 0}
-  _languagePrevButton: {fileID: 0}
-  _languageNextButton: {fileID: 0}
-  _saveAndRetrunButton: {fileID: 0}
 --- !u!224 &5054209475894089146
 RectTransform:
   m_ObjectHideFlags: 0
@@ -12344,7 +12326,6 @@ GameObject:
   - component: {fileID: 1324183559497817294}
   - component: {fileID: 5895195262918074441}
   - component: {fileID: 1092748667801578827}
-  - component: {fileID: 4773012940279635694}
   - component: {fileID: 5301227506934524196}
   m_Layer: 5
   m_Name: Save_window

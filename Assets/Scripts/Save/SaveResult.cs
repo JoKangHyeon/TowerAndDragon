@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 public enum SaveFailureReason
 {
@@ -79,6 +80,12 @@ public readonly struct SaveSlotInfo
     public int SchemaVersion { get; }
     public int DragonType { get; }
 
+    /// <summary>썸네일 파일이 있는지. 없으면 UI는 빈 프레임을 그린다(구버전 세이브·렌더 실패).</summary>
+    public bool HasThumbnail { get; }
+
+    // DTO를 그대로 노출하면 UI가 세이브 파일 포맷에 묶이므로 조회만 열어 둔다.
+    private readonly IReadOnlyList<ResourceAmountDto> _resources;
+
     private SaveSlotInfo(
         int slotIndex,
         bool isEmpty,
@@ -88,7 +95,9 @@ public readonly struct SaveSlotInfo
         int cycleNumber,
         bool isAutoSave,
         int schemaVersion,
-        int dragonType)
+        int dragonType,
+        bool hasThumbnail,
+        IReadOnlyList<ResourceAmountDto> resources)
     {
         SlotIndex = slotIndex;
         IsEmpty = isEmpty;
@@ -99,16 +108,37 @@ public readonly struct SaveSlotInfo
         IsAutoSave = isAutoSave;
         SchemaVersion = schemaVersion;
         DragonType = dragonType;
+        HasThumbnail = hasThumbnail;
+        _resources = resources;
+    }
+
+    /// <summary>저장 당시의 자원 보유량. 기록이 없는 자원은 0이다.</summary>
+    public int GetResourceAmount(ResourceType type)
+    {
+        if (_resources == null)
+        {
+            return 0;
+        }
+
+        foreach (ResourceAmountDto amount in _resources)
+        {
+            if (amount.Type == (int)type)
+            {
+                return amount.Amount;
+            }
+        }
+
+        return 0;
     }
 
     public static SaveSlotInfo Empty(int slotIndex) =>
-        new SaveSlotInfo(slotIndex, true, false, default, 0, 0, false, 0, 0);
+        new SaveSlotInfo(slotIndex, true, false, default, 0, 0, false, 0, 0, false, null);
 
     /// <summary>세이브 파일은 있는데 메타조차 읽히지 않는 슬롯. 빈 슬롯과 구분해서 표시한다.</summary>
     public static SaveSlotInfo Corrupted(int slotIndex) =>
-        new SaveSlotInfo(slotIndex, false, true, default, 0, 0, false, 0, 0);
+        new SaveSlotInfo(slotIndex, false, true, default, 0, 0, false, 0, 0, false, null);
 
-    public static SaveSlotInfo FromMeta(SaveMetaDto meta, bool isCorrupted) =>
+    public static SaveSlotInfo FromMeta(SaveMetaDto meta, bool isCorrupted, bool hasThumbnail) =>
         new SaveSlotInfo(
             meta.SlotIndex,
             false,
@@ -118,5 +148,7 @@ public readonly struct SaveSlotInfo
             meta.CycleNumber,
             meta.IsAutoSave,
             meta.SchemaVersion,
-            meta.DragonType);
+            meta.DragonType,
+            hasThumbnail,
+            meta.Resources);
 }

@@ -93,6 +93,13 @@ public sealed class SaveMetaDto
 
     /// <summary>슬롯 아이콘 표시용 어미용 속성.</summary>
     public int DragonType;
+
+    /// <summary>
+    /// 슬롯 목록에 자원 보유량을 띄우기 위한 표시 전용 사본(본문 Resources와 같은 값).
+    /// 복원은 항상 save.json의 ResourceStateDto를 쓰므로 이 값은 읽지 않는다 -
+    /// meta.json만 읽는 슬롯 목록이 본문을 열지 않고도 자원을 그릴 수 있게 하는 것이 유일한 목적이다.
+    /// </summary>
+    public List<ResourceAmountDto> Resources;
 }
 
 public sealed class RunStateDto

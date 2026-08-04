@@ -40,6 +40,9 @@ public sealed class SaveService : MonoBehaviour
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private WaveCycleProgression _waveCycleProgression;
 
+    [Tooltip("슬롯 목록에 띄울 점령 현황 썸네일을 찍는다. 비워 두면 썸네일 없이 저장한다.")]
+    [SerializeField] private SaveThumbnailCapturer _thumbnailCapturer;
+
     [Tooltip("낮이 시작될 때마다 자동으로 저장할지 여부.")]
     [SerializeField] private bool _isAutoSaveEnabled = true;
 
@@ -135,10 +138,12 @@ public sealed class SaveService : MonoBehaviour
 
         // 본문이 깨져도 슬롯 목록에 "마지막 저장: ... (손상됨)"을 띄울 수 있도록,
         // 메타는 본문과 별도 파일에서 읽는다. 메타가 없으면 본문에서 뽑아 자가치유한다.
+        bool hasThumbnail = SaveFileStore.Exists(SavePaths.ThumbnailFilePath(slotIndex));
+
         if (TryReadMetaFile(slotIndex, out SaveMetaDto meta))
         {
             bool isCorrupted = meta.SchemaVersion != SaveSchema.CURRENT_VERSION;
-            info = SaveSlotInfo.FromMeta(meta, isCorrupted);
+            info = SaveSlotInfo.FromMeta(meta, isCorrupted, hasThumbnail);
             return true;
         }
 
@@ -147,7 +152,7 @@ public sealed class SaveService : MonoBehaviour
         if (TryReadSave(slotIndex, out SaveGameDto dto, out _, false))
         {
             WriteMetaFile(slotIndex, dto.Meta);
-            info = SaveSlotInfo.FromMeta(dto.Meta, false);
+            info = SaveSlotInfo.FromMeta(dto.Meta, false, hasThumbnail);
             return true;
         }
 
@@ -181,6 +186,44 @@ public sealed class SaveService : MonoBehaviour
 
             return bestSlotIndex;
         }
+    }
+
+    /// <summary>
+    /// 슬롯의 점령 현황 썸네일을 UI가 바로 붙일 수 있는 스프라이트로 읽는다.
+    /// 부를 때마다 텍스처를 새로 만들므로, 슬롯을 다시 그릴 때는 호출자가 이전 스프라이트와
+    /// 그 스프라이트의 texture를 함께 Destroy해야 한다 - 목록을 여닫을 때마다 누적되면
+    /// 슬롯 하나당 수백 KB짜리 텍스처가 그대로 새는 자리다.
+    /// </summary>
+    public bool TryLoadThumbnail(int slotIndex, out Sprite thumbnail)
+    {
+        thumbnail = null;
+
+        if (!SavePaths.IsValidSlotIndex(slotIndex))
+        {
+            return false;
+        }
+
+        if (!SaveFileStore.TryReadAllBytes(SavePaths.ThumbnailFilePath(slotIndex), out byte[] pngBytes, out _))
+        {
+            return false;
+        }
+
+        // 실제 크기는 LoadImage가 PNG 헤더를 읽어 다시 잡으므로 여기 값은 의미가 없다.
+        var texture = new Texture2D(1, 1, TextureFormat.RGB24, false);
+
+        if (!texture.LoadImage(pngBytes))
+        {
+            Debug.LogError($"[SaveService] 썸네일 디코딩 실패(슬롯 {slotIndex})");
+            Destroy(texture);
+            return false;
+        }
+
+        thumbnail = Sprite.Create(
+            texture,
+            new Rect(0f, 0f, texture.width, texture.height),
+            new Vector2(0.5f, 0.5f));
+
+        return true;
     }
 
     // --- 저장 ---
@@ -234,10 +277,16 @@ public sealed class SaveService : MonoBehaviour
                 return Fail(SaveFailureReason.SerializationFailed, slotIndex);
             }
 
+            // 썸네일도 캡처와 같은 이유로 메인 스레드에서 찍는다(카메라·텍스처를 만진다).
+            // 실패는 무시한다 - 메타 파일과 같은 파생물이라 없어도 세이브는 온전하다.
+            byte[] thumbnailPng = null;
+            _thumbnailCapturer?.TryCapturePng(out thumbnailPng);
+
             // 경로는 반드시 메인 스레드에서 만든다 - SavePaths.RootDirectory가
             // Application.persistentDataPath를 읽는데, 이건 메인 스레드 전용 Unity API다.
             string savePath = SavePaths.SaveFilePath(slotIndex);
             string metaPath = SavePaths.MetaFilePath(slotIndex);
+            string thumbnailPath = SavePaths.ThumbnailFilePath(slotIndex);
 
             // 디스크 쓰기만 스레드풀로 뺀다. 페이로드는 수 KB지만 백신 실시간 검사나 동기화 폴더가
             // 걸리면 수십~수백 ms 블록될 수 있고, 이 저장은 낮 전환 프레임에 걸려 있다.
@@ -246,7 +295,7 @@ public sealed class SaveService : MonoBehaviour
             try
             {
                 writeError = await UniTask.RunOnThreadPool(
-                    () => WriteSlotFiles(savePath, metaPath, saveJson, metaJson),
+                    () => WriteSlotFiles(savePath, metaPath, thumbnailPath, saveJson, metaJson, thumbnailPng),
                     cancellationToken: cancellationToken);
             }
             catch (System.OperationCanceledException)
@@ -268,7 +317,7 @@ public sealed class SaveService : MonoBehaviour
 
             _consecutiveAutoSaveFailures = 0;
 
-            SaveSlotInfo info = SaveSlotInfo.FromMeta(dto.Meta, false);
+            SaveSlotInfo info = SaveSlotInfo.FromMeta(dto.Meta, false, thumbnailPng != null);
             _saveCompleted.Invoke(info);
             return SaveResult.Success(info);
         }
@@ -480,14 +529,17 @@ public sealed class SaveService : MonoBehaviour
         }
     }
 
-    // 스레드풀에서 실행된다. Unity API를 절대 만지면 안 되므로 경로를 완성된 문자열로 받는다
+    // 스레드풀에서 실행된다. Unity API를 절대 만지면 안 되므로 경로를 완성된 문자열로,
+    // 썸네일은 이미 인코딩된 바이트로 받는다
     // (SavePaths는 Application.persistentDataPath를 읽어 메인 스레드 전용이다).
     // 본문을 먼저 확정한 뒤 메타를 쓴다 - 반대 순서면 "새 메타 + 옛 본문" 상태가 잠깐 생긴다.
     private static string WriteSlotFiles(
         string savePath,
         string metaPath,
+        string thumbnailPath,
         string saveJson,
-        string metaJson)
+        string metaJson,
+        byte[] thumbnailPng)
     {
         if (!SaveFileStore.TryWriteAtomic(savePath, saveJson, out string error))
         {
@@ -497,6 +549,14 @@ public sealed class SaveService : MonoBehaviour
         // 메타는 파생 캐시이므로 실패해도 저장 자체는 성공으로 본다.
         // 다음 슬롯 조회 때 본문에서 다시 만들어진다(TryGetSlot 참고).
         SaveFileStore.TryWriteAtomic(metaPath, metaJson, out _);
+
+        // 썸네일도 같은 이유로 실패를 무시한다. 다만 본문에서 되살릴 수 없으므로,
+        // 이 슬롯은 다음에 저장할 때까지 썸네일 없이 표시된다.
+        if (thumbnailPng != null)
+        {
+            SaveFileStore.TryWriteBytesAtomic(thumbnailPath, thumbnailPng, out _);
+        }
+
         return null;
     }
 

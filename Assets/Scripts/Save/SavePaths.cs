@@ -9,6 +9,7 @@ using UnityEngine;
 /// 레이아웃:
 ///   {persistentDataPath}/Saves/slot_00/save.json          전체 세이브 (단일 진실 원본)
 ///   {persistentDataPath}/Saves/slot_00/meta.json          메타만 (본문이 깨져도 읽히는 파생 캐시)
+///   {persistentDataPath}/Saves/slot_00/thumbnail.png      점령 현황 썸네일 (파생 캐시)
 ///   {persistentDataPath}/Saves/slot_00/save.corrupt.json  파싱 실패 시 격리본
 /// </summary>
 public static class SavePaths
@@ -17,6 +18,7 @@ public static class SavePaths
     private const string SLOT_FOLDER_FORMAT = "slot_{0:00}";
     private const string SAVE_FILE_NAME = "save.json";
     private const string META_FILE_NAME = "meta.json";
+    private const string THUMBNAIL_FILE_NAME = "thumbnail.png";
     private const string CORRUPT_FILE_NAME = "save.corrupt.json";
     private const string TEMP_EXTENSION = ".tmp";
 
@@ -41,6 +43,9 @@ public static class SavePaths
 
     public static string MetaFilePath(int slotIndex) =>
         Path.Combine(SlotDirectory(slotIndex), META_FILE_NAME);
+
+    public static string ThumbnailFilePath(int slotIndex) =>
+        Path.Combine(SlotDirectory(slotIndex), THUMBNAIL_FILE_NAME);
 
     public static string CorruptFilePath(int slotIndex) =>
         Path.Combine(SlotDirectory(slotIndex), CORRUPT_FILE_NAME);

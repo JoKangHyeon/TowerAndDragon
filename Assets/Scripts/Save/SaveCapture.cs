@@ -26,13 +26,14 @@ public static class SaveCapture
             Map = CaptureMap(context.ConquestManager, context.GridMap),
         };
 
-        dto.Meta = CaptureMeta(context, dto.Run, slotIndex, isAutoSave);
+        dto.Meta = CaptureMeta(context, dto.Run, dto.Resources, slotIndex, isAutoSave);
         return dto;
     }
 
     private static SaveMetaDto CaptureMeta(
         SaveCaptureContext context,
         RunStateDto run,
+        ResourceStateDto resources,
         int slotIndex,
         bool isAutoSave)
     {
@@ -52,6 +53,10 @@ public static class SaveCapture
                 ? context.WaveCycleProgression.CurrentCycleNumber
                 : 0,
             DragonType = run.DragonType,
+
+            // 본문에서 이미 만든 목록을 그대로 참조한다 - 다시 순회하지 않고, 본문과 메타가
+            // 서로 다른 값을 담을 여지도 없앤다.
+            Resources = resources.Amounts,
         };
     }
 
