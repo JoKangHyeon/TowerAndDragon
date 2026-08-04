@@ -9,9 +9,10 @@ public class UI_EggListSlot : MonoBehaviour
 {
     // 부화까지 남은 일수. 데이터가 일(day) 단위뿐이라 초·분 표기는 만들 수 없다
     // (DragonEggInventorySystem이 OnDayStart마다 FedDayCount를 1씩 올린다).
-    // baby_dragon_egg_progress("{0}/{1}일")를 재사용하지 않는 이유: 그 키는 기존 BabyDragon_window가
-    // 인자 2개(먹은 일수/필요 일수)로 쓰고 있어 값을 바꾸면 그쪽 표시가 깨진다.
-    private const string HATCH_TIME_LEFT_LOC_KEY = "baby_dragon_egg_time_left";
+    // 인자는 남은 일수 하나만 넘긴다 - 스트링테이블 값은 "{0}일" 형태를 기대한다.
+    // 주의: 이 키는 기존 BabyDragon_window(UI_DragonInventorySlot)도 쓰는데 그쪽은 인자 2개
+    // (먹은 일수/필요 일수)를 넘긴다 - 값을 "{0}일"로 바꾸면 그쪽은 '먹은 일수'가 표시된다.
+    private const string HATCH_TIME_LEFT_LOC_KEY = "baby_dragon_egg_progress";
 
     [Tooltip("Icon_egg 의 Image.")]
     [SerializeField] private Image _icon;

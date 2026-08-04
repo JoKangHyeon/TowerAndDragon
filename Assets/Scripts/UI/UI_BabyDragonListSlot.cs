@@ -1,11 +1,12 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 새끼용 리스트(Panel_BabyDragon/Scroll View_BabyDragonList)의 슬롯 하나 - 아이콘과 이름만 표시한다.
-// 표시 전용이라 클릭 동작이 없다(그리드 배치는 기존 BabyDragon_window가 계속 담당한다).
-// 목록 구성·데이터 조회는 UI_DragonWindow가 하고 이 뷰는 Setup으로 값만 채운다
-// (UI_DragonInventorySlot / UI_ConquestRewardSlot과 동일한 값-주입 패턴).
+// 새끼용 리스트(Panel_BabyDragon/Scroll View_BabyDragonList)의 슬롯 하나.
+// 아이콘·이름을 표시하고, Icon_Focus 버튼으로 배치 시작 / 배치된 개체로 카메라 이동을 요청한다.
+// 배치나 카메라는 이 뷰가 직접 하지 않는다 - 클릭을 콜백으로 UI_DragonWindow에 넘긴다
+// (UI_DragonInventorySlot.SetupDragon의 onClickPlace와 같은 방식).
 public class UI_BabyDragonListSlot : MonoBehaviour
 {
     // 새끼용에는 고유 이름이 없다(RunData.BabyDragon.DragonName은 어디에서도 쓰이지 않는 死필드) -
@@ -18,7 +19,20 @@ public class UI_BabyDragonListSlot : MonoBehaviour
     [Tooltip("Text _dragonName.")]
     [SerializeField] private TMP_Text _nameText;
 
-    public void Setup(BabyDragon dragon, BabyDragonData data)
+    [Header("Icon_Focus - 미배치/배치 상태에 따라 그림과 동작이 바뀐다")]
+    [Tooltip("Icon_Focus 의 Image.")]
+    [SerializeField] private Image _focusIcon;
+
+    [Tooltip("Icon_Focus 의 Button.")]
+    [SerializeField] private Button _focusButton;
+
+    [Tooltip("미배치 상태 아이콘 - 누르면 그리드 배치를 시작한다.")]
+    [SerializeField] private Sprite _placeSprite;
+
+    [Tooltip("배치 상태 아이콘 - 누르면 카메라를 그 개체로 옮긴다.")]
+    [SerializeField] private Sprite _focusSprite;
+
+    public void Setup(BabyDragon dragon, BabyDragonData data, Action<BabyDragon> onFocusClicked)
     {
         if (_icon != null && data.Sprite != null)
         {
@@ -32,6 +46,23 @@ public class UI_BabyDragonListSlot : MonoBehaviour
             _nameText.text = string.Format(
                 StringTable.GetString(NAME_LOC_KEY),
                 StringTable.GetString(DragonLocKeys.AttributeLocKey(dragon.DragonType)));
+        }
+
+        if (_focusIcon != null)
+        {
+            // 스프라이트가 지정되지 않은 상태에서는 프리팹에 authoring된 그림을 그대로 둔다.
+            Sprite stateSprite = dragon.IsInTower ? _focusSprite : _placeSprite;
+            if (stateSprite != null)
+            {
+                _focusIcon.sprite = stateSprite;
+            }
+        }
+
+        if (_focusButton != null)
+        {
+            // 슬롯은 풀에서 재사용되므로 이전에 붙은 다른 개체의 리스너를 반드시 지운다.
+            _focusButton.onClick.RemoveAllListeners();
+            _focusButton.onClick.AddListener(() => onFocusClicked(dragon));
         }
     }
 }

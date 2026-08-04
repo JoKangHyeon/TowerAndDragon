@@ -88,6 +88,15 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("보유 새끼용·알 목록의 출처(RunData). 없으면 두 리스트를 비운다.")]
     [SerializeField] private GameManager _gameManager;
 
+    [Tooltip("미배치 새끼용의 그리드 배치를 시작한다. 없으면 배치 클릭이 무시된다.")]
+    [SerializeField] private BabyDragonPlacementCoordinator _placementCoordinator;
+
+    [Tooltip("배치된 새끼용으로 카메라를 옮긴다. 없으면 포커스 클릭이 무시된다.")]
+    [SerializeField] private CameraController _cameraController;
+
+    [Tooltip("배치된 새끼용 인스턴스를 찾는 데 쓴다(GridMap.Buildings).")]
+    [SerializeField] private GridMap _gridMap;
+
     [Tooltip("새끼용 슬롯 프리팹(Slot_BabyDragon_List).")]
     [FormerlySerializedAs("_babyDragonSlotTemplate")]
     [SerializeField] private UI_BabyDragonListSlot _babyDragonSlotPrefab;
@@ -415,24 +424,59 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         }
 
         int used = 0;
+
+        // 설치 중인 용도 함께 표시한다 - 슬롯의 Icon_Focus가 미배치(배치 시작)/배치(카메라 이동)로
+        // 갈리므로 목록에서 빼면 배치된 개체를 찾아갈 방법이 없어진다.
+        // (기존 BabyDragon_window는 슬롯이 배치 버튼이라 IsInTower를 걸러냈다.)
         foreach (BabyDragon dragon in run.BabyDragons)
         {
-            // 설치 중인 용은 목록에 표시하지 않는다 - 기존 BabyDragon_window(UI_DragonInventoryWindow)와 같은 규칙.
-            if (dragon.IsInTower)
-            {
-                continue;
-            }
-
             if (!TryResolveBabyDragonData(dragon.DragonType, out BabyDragonData data))
             {
                 continue;
             }
 
-            _babyDragonSlotPool.Get(used).Setup(dragon, data);
+            _babyDragonSlotPool.Get(used).Setup(dragon, data, HandleBabyDragonFocusClicked);
             used++;
         }
 
         _babyDragonSlotPool.DeactivateFrom(used);
+    }
+
+    // Icon_Focus 클릭 - 어느 쪽이든 창을 먼저 닫는다(그리드를 봐야 하는 동작이라 창이 방해된다).
+    private void HandleBabyDragonFocusClicked(BabyDragon dragon)
+    {
+        Close();
+
+        if (dragon.IsInTower)
+        {
+            FocusCameraOn(dragon);
+            return;
+        }
+
+        if (_placementCoordinator != null)
+        {
+            _placementCoordinator.BeginPlacement(dragon);
+        }
+    }
+
+    // 레코드에 결속된 인스턴스를 찾아 카메라를 옮긴다.
+    // 속성으로 찾으면 같은 속성 두 마리 중 엉뚱한 쪽이 잡히므로 Record 동일성으로 찾는다
+    // (BabyDragonPlacementCoordinator.HandleBuildingRemoving과 같은 이유).
+    private void FocusCameraOn(BabyDragon dragon)
+    {
+        if (_cameraController == null || _gridMap == null)
+        {
+            return;
+        }
+
+        foreach (Building building in _gridMap.Buildings)
+        {
+            if (building is BabyDragonTower tower && tower.Record == dragon)
+            {
+                _cameraController.MoveTo(tower.transform.position);
+                return;
+            }
+        }
     }
 
     private void BuildEggSlots(RunData run)
