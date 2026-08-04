@@ -10,7 +10,18 @@ public class CycleManager : MonoBehaviour
         Night,
     }
 
+    // 게임은 1일차부터 시작한다 - StartDay가 0에서 1로 올린다.
+    private const int FIRST_DAY_NUMBER = 1;
+
     private GameManager _gameManager;
+
+    // 일차가 증가하고 낮으로 전환된 직후, 어떤 낮 시작 "처리"보다도 먼저 발화한다.
+    // 상태를 관측만 하는 구독자(자동저장) 전용 - 여기서 게임 상태를 변경하면 안 된다.
+    // 자동저장이 OnDayStart/OnDayStartUpkeep에 직접 붙지 않는 이유: 같은 UnityEvent 안에서
+    // 구독자 순서는 등록순(각 오브젝트의 OnEnable 순서)이라 보장되지 않아, 씬 오브젝트 순서를
+    // 바꾸면 저장되는 내용이 조용히 달라진다. "정산 전 경계"라는 시점을 여기서 명시적으로 만든다.
+    // OnDayStartUpkeep(:20)과 같은 이유로 인라인 초기화가 필수다(씬 YAML에 이 필드 항목이 없다).
+    public UnityEvent<int> OnDayAdvanced = new();
 
     public UnityEvent<int> OnDayStart;
 
@@ -40,9 +51,28 @@ public class CycleManager : MonoBehaviour
     {
         _gameManager.CurrentRun.CurrentCycle += 1;
         CurrentCycle = CycleState.Day;
+        SafeInvoke(OnDayAdvanced, _gameManager.CurrentRun.CurrentCycle);
         SafeInvoke(OnDayStart, _gameManager.CurrentRun.CurrentCycle);
         SafeInvoke(OnDayStartUpkeep, _gameManager.CurrentRun.CurrentCycle);
         SafeInvoke(OnCycleChanged, CycleState.Day);
+    }
+
+    /// <summary>
+    /// 이어하기 전용. 저장된 일차 N을 "아직 N일차 처리를 하지 않은" 상태로 시드한다.
+    /// 호출자는 나머지 복원을 마친 뒤 <see cref="StartDay"/>를 호출해야 하며, 그 StartDay가 N일차를 만든다.
+    ///
+    /// 세이브 스냅샷은 OnDayAdvanced 시점(= OnDayStart 발화 이전)에 캡처되므로, 이렇게 해야
+    /// 생산 지급·식량 유지비·알 성장이 정확히 한 번만 실행된다. 여기서 일차를 N으로 바로 넣고
+    /// StartDay를 부르면 N+1일차가 되고, StartDay를 부르지 않으면 조명·UI·웨이브 스냅샷·포탈 개방이
+    /// 전부 초기 상태로 남는다.
+    /// </summary>
+    public void RestoreDay(int savedDayNumber)
+    {
+        Debug.Assert(
+            savedDayNumber >= FIRST_DAY_NUMBER,
+            $"[CycleManager] 복원할 일차가 유효하지 않습니다: {savedDayNumber}");
+
+        _gameManager.CurrentRun.CurrentCycle = savedDayNumber - 1;
     }
 
     public void EndDay()

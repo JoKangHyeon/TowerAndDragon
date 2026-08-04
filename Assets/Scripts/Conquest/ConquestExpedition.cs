@@ -16,6 +16,18 @@ public class ConquestExpedition
         DaysRequired = daysRequired;
     }
 
+    // 세이브 복원 전용. DaysProgressed가 private set이라 AdvanceDay를 반복 호출하지 않고
+    // 진행도를 직접 세운다.
+    public ConquestExpedition(
+        Vector2Int targetChunkCoord,
+        ResourceCost cost,
+        int daysRequired,
+        int daysProgressed)
+        : this(targetChunkCoord, cost, daysRequired)
+    {
+        DaysProgressed = daysProgressed;
+    }
+
     public void AdvanceDay()
     {
         DaysProgressed++;

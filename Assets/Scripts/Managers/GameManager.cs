@@ -46,6 +46,10 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private GameSpeedManager _gameSpeedManager;
 
+    [SerializeField]
+    [Tooltip("이어하기 지원용. 비워 두면 항상 새 게임으로 시작한다(세이브 없는 테스트 씬).")]
+    private SaveService _saveService;
+
     [SerializeField] private UnityEvent _victoryOccurred = new();
 
     public RunData CurrentRun => _currentRun;
@@ -106,6 +110,24 @@ public class GameManager : MonoBehaviour
             light.Construct(_cycleManager);
         }
 
+        // 이어하기 요청이 있으면 초기 자원 지급도 StartDay도 하지 않는다 - 둘 다 복원 흐름이
+        // 대신 처리한다(SaveService가 저장된 상태를 적용한 뒤 StartDay를 부른다).
+        // _saveService가 없는 씬에서는 기존 동작 그대로다.
+        if (_saveService != null && _saveService.HasPendingLoad)
+        {
+            _saveService.BeginLoadFlow(this);
+            return;
+        }
+
+        StartNewRun();
+    }
+
+    /// <summary>
+    /// 새 게임 시작. 이어하기 로드가 실패했을 때 SaveService가 폴백으로 호출하기도 한다 -
+    /// 그래서 public이며, 이 경로가 없으면 로드 실패 시 조명·UI·일차가 전부 초기 상태로 멈춘다.
+    /// </summary>
+    public void StartNewRun()
+    {
         // OnEnable 단계에서 이미 구독을 마친 ResourceChanged 리스너(UI 등)가 최초 자원 지급까지
         // 받을 수 있도록, Awake가 아닌 Start에서 Construct한다.
         if (_resourceManager != null)

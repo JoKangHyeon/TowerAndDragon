@@ -126,6 +126,18 @@ public class PopulationManager : MonoBehaviour
         PopulationChanged?.Invoke(CurrentState);
     }
 
+    /// <summary>
+    /// 세이브 복원 전용. 총 인구를 저장된 절대값으로 덮어쓴다.
+    /// TryIncreaseMaxPopulation은 증분이라 인스펙터 초기값이 0이 아닌 경우 절대값을 만들 수 없다.
+    /// _allocations는 건드리지 않는다 - 배치는 건물 인스턴스에 종속돼 있고, 원정 인구 배치는
+    /// ConquestManager.RestoreExpeditions가 OnExpeditionSent를 재발화해 되살린다.
+    /// </summary>
+    public void RestoreMaxPopulation(int maxPopulation)
+    {
+        _maxPopulation = Math.Max(0, maxPopulation);
+        NotifyPopulationChanged();
+    }
+
     public bool TryIncreaseMaxPopulation (int amount)
     {
         if (amount <= 0)

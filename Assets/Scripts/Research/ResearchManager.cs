@@ -41,6 +41,9 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public int ResearchPoints => _researchPoints;
 
+    /// <summary>세이브 캡처용 완료 노드 집합. DragonTreeManager.UnlockedIds와 대칭이다.</summary>
+    public IReadOnlyCollection<string> CompletedNodeIds => _completedNodeIds;
+
     /// <summary>
     /// 티어 잠금 판정에 쓰는 현재 주기. 주기 진행 컴포넌트가 배선되지 않은 씬에서는
     /// 첫 주기로 간주해 T1만 열어 둔다(기존 동작과 동일).
@@ -209,6 +212,41 @@ public sealed class ResearchManager : MonoBehaviour,
         _nodeCompleted.Invoke(node);
         failureReason = ResearchFailureReason.None;
         return true;
+    }
+
+    /// <summary>
+    /// 세이브 복원 전용. RP와 완료 노드 집합을 저장값으로 갈아 끼운다.
+    /// TryResearch 경로를 타지 않으므로 자원과 RP가 다시 차감되지 않는다.
+    ///
+    /// 연구 효과는 전부 pull 방식(GetYieldMultiplier 등이 호출 시점에 _completedNodeIds를 순회)이라
+    /// 집합만 복원하면 자동으로 살아난다. NodeCompleted를 재발화하는 것은 push 방식 구독자
+    /// (성 시야 확장, 인구 정원 재조정, UI 갱신)를 위해서이며 이들은 전부 멱등하다.
+    /// </summary>
+    public void RestoreProgress(int researchPoints, IReadOnlyList<string> completedNodeIds)
+    {
+        _researchPoints = Mathf.Max(0, researchPoints);
+        _completedNodeIds.Clear();
+
+        foreach (string nodeId in completedNodeIds)
+        {
+            // 트리에 없는 id(밸런싱으로 삭제된 노드)는 버린다 - 남기면 IsCompleted는 true인데
+            // 효과 계산에서는 매번 조회에 실패하는 어긋난 상태가 된다.
+            if (string.IsNullOrWhiteSpace(nodeId) || !_nodesById.ContainsKey(nodeId))
+            {
+                Debug.LogWarning($"[ResearchManager] 트리에 없는 연구 노드 ID를 건너뜁니다: {nodeId}");
+                continue;
+            }
+
+            _completedNodeIds.Add(nodeId);
+        }
+
+        _researchPointsChanged.Invoke(_researchPoints);
+
+        // 구독자가 완료 집합을 건드려도 순회가 깨지지 않도록 복사본을 돌린다.
+        foreach (string nodeId in new List<string>(_completedNodeIds))
+        {
+            _nodeCompleted.Invoke(_nodesById[nodeId]);
+        }
     }
 
     public float GetYieldMultiplier(

@@ -113,8 +113,10 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private UI_DragonInventoryWindow _babyDragonInventoryWindow;
 
     [Header("설정 (Button_Setting)")]
-    [Tooltip("누르면 사용 가능한 언어를 순환 전환한다(en_us ↔ ko_kr).")]
+    [Tooltip("설정 창 토글 버튼.")]
     [SerializeField] private Button _buttonSetting;
+    [Tooltip("설정 창(Config_window). 버튼 클릭 시 토글한다.")]
+    [SerializeField] private UI_ConfigWindow _configWindow;
 
     [Header("웨이브 진행 바 (Panel_TopCenter/BossWave)")]
     [Tooltip("웨이브 진행 슬라이더(Slider_wave).")]
@@ -194,10 +196,9 @@ public class UI_IngameWindow : MonoBehaviour
             _buttonBabyDragonInventory.onClick.AddListener(_babyDragonInventoryWindow.ToggleFromEntryPoint);
         }
 
-        // 설정 버튼: 누를 때마다 다음 언어로 순환 전환한다(테스트용 언어 토글).
-        if (_buttonSetting != null)
+        if (_buttonSetting != null && _configWindow != null)
         {
-            _buttonSetting.onClick.AddListener(StringTable.CycleLanguage);
+            _buttonSetting.onClick.AddListener(_configWindow.ToggleFromEntryPoint);
         }
     }
 

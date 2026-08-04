@@ -85,6 +85,29 @@ public abstract class ProgressionManagerBase : MonoBehaviour, IProgressionState
         return null;
     }
 
+    /// <summary>
+    /// 세이브 복원 전용. 해금 집합만 갈아 끼우고 NodeUnlocked를 다시 발화한다.
+    /// TryUnlock 경로를 타지 않으므로 자원이 다시 차감되지 않는다.
+    ///
+    /// 노드 효과는 전부 pull 방식(호출 시점에 UnlockedIds를 순회)이라 집합만 복원하면 자동으로
+    /// 살아난다. 그럼에도 NodeUnlocked를 재발화하는 이유는 push 방식 구독자(시야 확장, 인구 정원
+    /// 재조정, UI 갱신) 때문이며, 이들은 전부 멱등하다.
+    /// </summary>
+    public void RestoreUnlockedNodes(IEnumerable<string> nodeIds)
+    {
+        _state.RestoreUnlocked(nodeIds);
+
+        // 구독자가 해금 집합을 건드려도 순회가 깨지지 않도록 복사본을 돌린다.
+        foreach (string nodeId in new List<string>(_state.UnlockedIds))
+        {
+            if (_state.TryGetNode(nodeId, out ProgressionNodeData node))
+            {
+                OnNodeUnlocked(node);
+                _nodeUnlocked.Invoke(node);
+            }
+        }
+    }
+
     public bool TryUnlock(ProgressionNodeData node, out ProgressionFailureReason reason)
     {
         ProgressionNodeState nodeState = GetNodeState(node);

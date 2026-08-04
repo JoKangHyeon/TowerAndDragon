@@ -58,4 +58,28 @@ public sealed class ProgressionTreeState : IProgressionState
     {
         _unlockedIds.Add(nodeId);
     }
+
+    // 세이브 복원 전용. 해금 집합을 통째로 갈아 끼운다.
+    // 트리에 등록되지 않은 id(밸런싱으로 삭제된 노드 등)는 조용히 버린다 -
+    // 남겨 두면 IsUnlocked는 true인데 TryGetNode는 실패하는 어긋난 상태가 된다.
+    public void RestoreUnlocked(IEnumerable<string> nodeIds)
+    {
+        _unlockedIds.Clear();
+
+        foreach (string nodeId in nodeIds)
+        {
+            if (string.IsNullOrWhiteSpace(nodeId))
+            {
+                continue;
+            }
+
+            if (!_nodesById.ContainsKey(nodeId))
+            {
+                Debug.LogWarning($"[ProgressionTreeState] 트리에 없는 노드 ID를 건너뜁니다: {nodeId}");
+                continue;
+            }
+
+            _unlockedIds.Add(nodeId);
+        }
+    }
 }
