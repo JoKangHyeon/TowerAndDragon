@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "TowerAndDragon/Baby Dragon Data", fileName = "BabyDragonData")]
-public class BabyDragonData : TowerData, ITowerAuraDataProvider
+public class BabyDragonData : TowerData, ITowerAuraDataProvider, IElementalAttackData
 {
     [Header("Baby Dragon")]
     [Tooltip("먹이가 되는 슬라임 종류를 결정한다 - DragonSlimeTable 참고.")]

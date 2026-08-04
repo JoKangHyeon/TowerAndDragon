@@ -6,9 +6,16 @@
 public readonly struct DamageInfo
 {
     public float Amount { get; }
+    public DragonType? Element { get; }
 
     public DamageInfo(float amount)
+        : this(amount, null)
+    {
+    }
+
+    public DamageInfo(float amount, DragonType? element)
     {
         Amount = amount;
+        Element = element;
     }
 }

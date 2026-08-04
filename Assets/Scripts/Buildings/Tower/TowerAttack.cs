@@ -250,11 +250,17 @@ public class TowerAttack : MonoBehaviour
             ? new[] { hitStatus }
             : null;
 
+        DragonType? attackElement =
+            _towerData is IElementalAttackData elementalAttackData
+                ? elementalAttackData.DragonType
+                : null;
+
         AttackContext context = new AttackContext(
-            gameObject, 
-            damageModifier, 
+            gameObject,
+            damageModifier,
             extraStatuses,
-            _targetLayers);
+            _targetLayers,
+            attackElement);
 
         if(_animator != null)
         {
