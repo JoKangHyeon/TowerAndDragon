@@ -232,6 +232,8 @@ public class TowerAttack : MonoBehaviour
             Debug.Log($"[TowerAttack] {name} → {_target.name} 공격 발사!", this);
         }
 
+        SoundManager.Play(SoundId.TowerFire);
+
         float globalDamageMultiplier = _statMultiplierQuery != null
             ? _statMultiplierQuery.GetDamageMultiplier(_towerData)
             : 1f;

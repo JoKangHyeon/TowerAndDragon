@@ -134,6 +134,7 @@ GameObject:
   - component: {fileID: 3827584066500768911}
   - component: {fileID: 449109871165840085}
   - component: {fileID: 6882898113726626769}
+  - component: {fileID: 7776425439380939184}
   m_Layer: 5
   m_Name: UI_Canvas
   m_TagString: Untagged
@@ -274,6 +275,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SettingsService
   _audioMixer: {fileID: 24100000, guid: 75200cb1ff1bfe740bc3cddafbd9af76, type: 2}
+--- !u!114 &7776425439380939184
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8003193053682628615}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35bfc4e83cf35184e91b5eeb2b929a25, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SoundManager
+  _catalog: {fileID: 11400000, guid: 82e85e6d7dc7aca41b007cc31e142973, type: 2}
+  _seGroup: {fileID: 7985749124298236340, guid: 75200cb1ff1bfe740bc3cddafbd9af76, type: 2}
+  _bgmGroup: {fileID: 6472148879593848246, guid: 75200cb1ff1bfe740bc3cddafbd9af76, type: 2}
+  _sePoolSize: 12
+  _bgmFadeDuration: 2
+  _cycleManager: {fileID: 0}
 --- !u!1001 &547792555085582550
 PrefabInstance:
   m_ObjectHideFlags: 0

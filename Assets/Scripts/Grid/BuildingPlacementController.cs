@@ -417,6 +417,8 @@ public class BuildingPlacementController : MonoBehaviour
         if (_resourceManager != null)
             _resourceManager.Spend(cost);
 
+        SoundManager.Play(SoundId.BuildPlace);
+
         CancelBuildMode();
         return true;
     }
