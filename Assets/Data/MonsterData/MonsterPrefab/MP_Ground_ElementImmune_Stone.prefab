@@ -20,7 +20,7 @@ GameObject:
   - component: {fileID: 2112847561719677857}
   - component: {fileID: 3711555873522755562}
   m_Layer: 7
-  m_Name: MP_Ground_ElementOnly_Fire
+  m_Name: MP_Ground_ElementImmune_Stone
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -36,7 +36,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 10}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -90,7 +90,7 @@ SpriteRenderer:
   m_SortingLayer: 1
   m_SortingOrder: 2
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 53862eee291164d249363b52a2db5052, type: 3}
+  m_Sprite: {fileID: 1241408643, guid: 5ebc4b83b1287cc46bab79cc0e4bd9c3, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -183,7 +183,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 663b977c16c7e054bbe9406e75320647, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseMonster
-  _data: {fileID: 11400000, guid: 1dfcea909424e486ba98facfe30a1b29, type: 2}
+  _data: {fileID: 11400000, guid: f288f44eae302a14bb9342a328aa9fdc, type: 2}
 --- !u!114 &6409980068893795165
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1157,22 +1157,22 @@ MonoBehaviour:
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cc70f87391bb556438189252040bf4be, type: 3}
+  m_Script: {fileID: 11500000, guid: db3200645c162584daeae3f0b9ed9bd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _wasdSpeed: 30
+  _wasdSpeed: 40
   _edgeScrollSpeed: 12
   _dragSensitivity: 1
   _edgeScrollEnabled: 0
   _edgeScrollThreshold: 20
-  _zoomSpeed: 30
+  _zoomSpeed: 40
   _minZoom: 3
   _maxZoom: 18
   _zoomSmoothing: 8
   _moveSmoothTime: 0.08
-  _boundsTilemap: {fileID: 362517319}
-  _excludedBoundsTile: {fileID: 11400000, guid: 72c049b1c04abcf41a1152ba4c5fb4cb, type: 2}
+  _boundsTilemap: {fileID: 0}
+  _excludedBoundsTile: {fileID: 0}
   _boundsMarginMin: {x: 0, y: 0}
   _boundsMarginMax: {x: 0, y: 0}
   _mapMin: {x: -60, y: -60}
@@ -2181,6 +2181,7 @@ MonoBehaviour:
     DragonEggs:
     - DragonType: 4
       FedDayCount: 0
+    BossDragonEggRewards: []
     OnInventoryChanged:
       m_PersistentCalls:
         m_Calls: []
@@ -2221,6 +2222,14 @@ MonoBehaviour:
   - Type: 2
     Amount: 250
   - Type: 4
+    Amount: 250
+  - Type: 8
+    Amount: 250
+  - Type: 16
+    Amount: 250
+  - Type: 32
+    Amount: 250
+  - Type: 64
     Amount: 250
   ResourceChanged:
     m_PersistentCalls:
@@ -3236,7 +3245,7 @@ PrefabInstance:
       objectReference: {fileID: 1692054028}
     - target: {fileID: 1951392491219283558, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -50.000183
+      value: -50.000244
       objectReference: {fileID: 0}
     - target: {fileID: 2066964590835195413, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -4502,6 +4511,26 @@ PrefabInstance:
       propertyPath: _buildingPlacementController
       value: 
       objectReference: {fileID: 1692054028}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _filterTabs.Array.data[0].Buildings.Array.size
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[0].Buildings.Array.data[3]'
+      value: 
+      objectReference: {fileID: -1179263789838454351, guid: a706279fcccf44012b26145cd97149d8, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[0].Buildings.Array.data[4]'
+      value: 
+      objectReference: {fileID: -1179263789838454351, guid: f2ba9f1ec5ecf4fde9e252661af5701f, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[0].Buildings.Array.data[5]'
+      value: 
+      objectReference: {fileID: -1179263789838454351, guid: 90ba856639b834c5d920112b0f6a4782, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[0].Buildings.Array.data[6]'
+      value: 
+      objectReference: {fileID: -1179263789838454351, guid: c11e5591fe2e14de4b5590efe36b5716, type: 3}
     - target: {fileID: 5669120966225515351, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -4916,7 +4945,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6864070389072513261, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -50.000183
+      value: -50.000244
       objectReference: {fileID: 0}
     - target: {fileID: 6874002290473965843, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
