@@ -2238,13 +2238,26 @@ MonoBehaviour:
       Mode: 0
       IsModeInitialized: 0
     - DragonName: 
-      DragonType: 3
+      DragonType: 4
       IsInTower: 0
       Mode: 0
       IsModeInitialized: 0
-    DragonEggs:
-    - DragonType: 4
-      FedDayCount: 0
+    - DragonName: 
+      DragonType: 1
+      IsInTower: 0
+      Mode: 0
+      IsModeInitialized: 0
+    - DragonName: 
+      DragonType: 0
+      IsInTower: 0
+      Mode: 0
+      IsModeInitialized: 0
+    - DragonName: 
+      DragonType: 2
+      IsInTower: 0
+      Mode: 0
+      IsModeInitialized: 0
+    DragonEggs: []
     BossDragonEggRewards: []
     OnInventoryChanged:
       m_PersistentCalls:
@@ -2295,6 +2308,8 @@ MonoBehaviour:
   - Type: 32
     Amount: 250
   - Type: 64
+    Amount: 250
+  - Type: 128
     Amount: 250
   ResourceChanged:
     m_PersistentCalls:

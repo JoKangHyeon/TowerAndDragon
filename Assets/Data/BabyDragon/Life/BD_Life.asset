@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 06366a68fba7eed46aecd4336b56145b, type: 3}
-  m_Name: BD_Grass
+  m_Name: BD_Life
   m_EditorClassIdentifier: Assembly-CSharp::BabyDragonData
-  _nameLocKey: GrassBabyDragon
+  _nameLocKey: LifeBabyDragon
   _populationCapacity: 1
   _buildCost: []
-  _maxHealth: 100
+  _maxHealth: 120
   _reviveDelay: 30
-  _attack: {fileID: 0}
-  _projectilePrefab: {fileID: 0}
-  _projectileSpeed: 0
+  _attack: {fileID: 11400000, guid: 153bf4818137ee642842ee5be2ec5424, type: 2}
+  _projectilePrefab: {fileID: 2874056009116883397, guid: c13a7b1d583d7cf46bbf1358248fe5e1, type: 3}
+  _projectileSpeed: 10
   _dragonType: 4
   _sprite: {fileID: 21300000, guid: 28e74cd38bcf34b4daa471e409623285, type: 3}
   _baseFeed: 5
