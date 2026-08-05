@@ -23,24 +23,11 @@ public class UI_IngameWindow : MonoBehaviour
     private const string DAY_LOC_KEY = "main_day";
     private static string DayFormat => StringTable.GetString(DAY_LOC_KEY);
 
-    // 자원 표기: 보유량 + 하루 예상 생산량. 생산량은 연두색으로 "보유량(+생산량)" 형태(TMP 리치텍스트 컬러 태그).
-    private const string RESOURCE_WITH_PRODUCTION_FORMAT = "{0}<color=#{1}>(+{2})</color>";
-
-    // 하루 생산량 글씨 기본 색(연두색).
-    private static readonly Color PRODUCTION_COLOR_DEFAULT = new Color(0.62f, 1f, 0.42f);
+    // 자원 표기 형식·아이콘 적용·레이아웃 보정은 ResourceAmountView가 담당한다
+    // (용 창의 슬라임 현황 패널과 같은 구현을 쓰기 위해 분리).
 
     // 웨이브 진행 바가 가득 찰 때까지의 일수. 이 값째 클리어에 슬라이더가 가득 찬다.
     private const int WAVE_FILL_LENGTH = 6;
-
-    // 자원 표시 1칸: 자원 종류 ↔ 수량 텍스트(+ 선택적으로 아이콘).
-    [System.Serializable]
-    private struct ResourceSlot
-    {
-        public ResourceType Type;
-        public TMP_Text AmountText;
-        [Tooltip("비워두면 프리팹에 배치된 아이콘을 그대로 쓴다. 지정하면 ResourceData의 아이콘으로 덮어쓴다.")]
-        public Image IconImage;
-    }
 
     [SerializeField] private CycleManager _cycleManager;
 
@@ -62,12 +49,12 @@ public class UI_IngameWindow : MonoBehaviour
 
     [Header("자원 표시 (Panel_TopLeft)")]
     [SerializeField] private ResourceManager _resourceManager;
-    [Tooltip("자원 종류별 수량 텍스트. 기본 3종 + 특화 4종 + 슬라임 5종.")]
-    [SerializeField] private ResourceSlot[] _resourceSlots;
+    [Tooltip("자원 종류별 수량 텍스트. 기본 3종 + 특화 4종. 슬라임 5종은 용 창(UI_ResourceAmountPanel)이 표시한다.")]
+    [SerializeField] private ResourceAmountSlot[] _resourceSlots;
     [Tooltip("하루 예상 생산량 표기용. 각 자원 보유량 옆에 (+생산량)으로 노출한다.")]
     [SerializeField] private ProductionForecast _productionForecast;
     [Tooltip("하루 생산량 글씨 색(연두색).")]
-    [SerializeField] private Color _productionColor = PRODUCTION_COLOR_DEFAULT;
+    [SerializeField] private Color _productionColor = ResourceAmountView.PRODUCTION_COLOR_DEFAULT;
 
     [Header("인구 표시 (Panel_peopleAmount)")]
     [SerializeField] private PopulationManager _populationManager;
@@ -87,10 +74,8 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("용 창 토글 버튼(Button_Dragon).")]
     [FormerlySerializedAs("_buttonDragonSkill")]
     [SerializeField] private Button _buttonDragon;
-    [Tooltip("용 창. 버튼 클릭 시 어미용/새끼용 탭 창을 토글한다.")]
+    [Tooltip("용 창. 버튼 클릭 시 어미용/새끼용 탭 창을 토글한다. 스킬트리도 이 창의 어미용 탭 안에 있다.")]
     [SerializeField] private UI_DragonWindow _dragonWindow;
-    [Tooltip("용 스킬트리 창. HUD 진입점은 용 창 안으로 옮길 예정이라 지금은 배선만 유지한다(성 창에서 계속 접근 가능).")]
-    [SerializeField] private UI_DragonSkillWindow _dragonSkillWindow;
 
     [Header("연구 (Panel_BottomRight)")]
     [Tooltip("연구 창 토글 버튼.")]
@@ -121,6 +106,9 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private float _waveTweenDuration = 0.4f;
 
     private Vector2 _wavePointStartPos;
+
+    // 자원 표시 로직 - 용 창의 슬라임 현황 패널(UI_ResourceAmountPanel)과 같은 구현을 공유한다.
+    private ResourceAmountView _resourceView;
 
     // 가득 찬 다음 날(보스 격파 다음 날)에는 진행 바를 시작점으로 되돌린다. 즉 실제 한 주기는
     // '가득 찬 뒤 되돌아가는 하루'까지 포함해 WAVE_FILL_LENGTH + 1일이다.
@@ -198,16 +186,9 @@ public class UI_IngameWindow : MonoBehaviour
 
         if (_resourceManager != null)
         {
-            _resourceManager.ResourceChanged.AddListener(RenderResource);
-            ApplyResourceIcons();
-
-            // 생산량 예측이 바뀌면(건물/인구 변경) 보유량 옆 (+생산량) 표기를 다시 그린다.
-            if (_productionForecast != null)
-            {
-                _productionForecast.ForecastChanged.AddListener(RenderAllResources);
-            }
-
-            RenderAllResources();
+            _resourceView ??= new ResourceAmountView(
+                _resourceManager, _productionForecast, _productionColor, _resourceSlots);
+            _resourceView.Subscribe();
         }
 
         if (_populationManager != null)
@@ -229,36 +210,7 @@ public class UI_IngameWindow : MonoBehaviour
 
         // 자원 패널(ContentSizeFitter) 폭이 확정된 뒤 인구 패널이 겹치지 않도록,
         // 다음 프레임에 '자식 자원 패널 → 부모 층' 순서로 레이아웃을 한 번만 갱신한다.
-        RefreshResourceLayoutNextFrame().Forget();
-    }
-
-    // 활성화 다음 프레임(자원 패널·텍스트 크기 확정 시점)에 딱 한 번 실행.
-    // 순서 보장: (1) 각 자원 패널을 먼저 갱신해 폭을 확정 → (2) 그 부모 층을 갱신해 확정된 폭으로 재배치.
-    private async UniTaskVoid RefreshResourceLayoutNextFrame()
-    {
-        await UniTask.NextFrame(this.GetCancellationTokenOnDestroy());
-
-        foreach (ResourceSlot slot in _resourceSlots)
-        {
-            if (slot.AmountText == null)
-            {
-                continue;
-            }
-
-            ContentSizeFitter panelFitter = slot.AmountText.GetComponentInParent<ContentSizeFitter>();
-            if (panelFitter == null)
-            {
-                continue;
-            }
-
-            RectTransform panelRect = (RectTransform)panelFitter.transform;
-            LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
-
-            if (panelRect.parent is RectTransform floorRect)
-            {
-                LayoutRebuilder.ForceRebuildLayoutImmediate(floorRect);
-            }
-        }
+        _resourceView?.RefreshLayoutNextFrame(this.GetCancellationTokenOnDestroy()).Forget();
     }
 
     private void GoToNight()
@@ -276,15 +228,7 @@ public class UI_IngameWindow : MonoBehaviour
             _cycleManager.OnCycleChanged.RemoveListener(ApplyCycle);
         }
 
-        if (_resourceManager != null)
-        {
-            _resourceManager.ResourceChanged.RemoveListener(RenderResource);
-
-            if (_productionForecast != null)
-            {
-                _productionForecast.ForecastChanged.RemoveListener(RenderAllResources);
-            }
-        }
+        _resourceView?.Unsubscribe();
 
         if (_populationManager != null)
         {
@@ -341,64 +285,6 @@ public class UI_IngameWindow : MonoBehaviour
         {
             _populationText.text = string.Format(POPULATION_FORMAT, state.AvailablePopulation, state.MaxPopulation);
         }
-    }
-
-    // 아이콘은 자원 종류마다 고정이라 보유량과 달리 활성화 시 1회만 채우면 된다.
-    // 자원 아이콘은 데이터 에셋(ResourceData)이 단일 출처 - 카탈로그에서 종류로 조회한다.
-    // 슬라임 5종은 공용 흰 스프라이트 하나를 쓰므로 속성 색으로 틴트해 구분한다.
-    private void ApplyResourceIcons()
-    {
-        if (_resourceManager.Catalog == null)
-        {
-            return;
-        }
-
-        foreach (ResourceSlot slot in _resourceSlots)
-        {
-            if (slot.IconImage == null || !_resourceManager.Catalog.TryGet(slot.Type, out ResourceData data))
-            {
-                continue;
-            }
-
-            slot.IconImage.sprite = data.Icon;
-            slot.IconImage.color = DragonAttributePalette.TintFor(slot.Type);
-        }
-    }
-
-    // 활성화 시점의 보유량을 전 슬롯에 즉시 반영한다(이벤트를 놓친 초기 지급분 포함).
-    private void RenderAllResources()
-    {
-        foreach (ResourceSlot slot in _resourceSlots)
-        {
-            RenderResource(slot.Type, _resourceManager.GetAmount(slot.Type));
-        }
-    }
-
-    private void RenderResource(ResourceType type, int amount)
-    {
-        foreach (ResourceSlot slot in _resourceSlots)
-        {
-            if (slot.Type == type && slot.AmountText != null)
-            {
-                slot.AmountText.text = FormatResourceAmount(type, amount);
-            }
-        }
-    }
-
-    // "보유량" 또는 하루 예상 생산량이 있으면 "보유량(+생산량)"(생산량은 연두색)으로 만든다.
-    private string FormatResourceAmount(ResourceType type, int amount)
-    {
-        int production = _productionForecast != null ? _productionForecast.GetDailyProduction(type) : 0;
-        if (production <= 0)
-        {
-            return amount.ToString();
-        }
-
-        return string.Format(
-            RESOURCE_WITH_PRODUCTION_FORMAT,
-            amount,
-            ColorUtility.ToHtmlStringRGB(_productionColor),
-            production);
     }
 
     // 웨이브 바를 빈 상태(0칸, Point 시작 위치)로 되돌린다. 진행 중이던 트윈이 있다면 먼저 멈춘다.

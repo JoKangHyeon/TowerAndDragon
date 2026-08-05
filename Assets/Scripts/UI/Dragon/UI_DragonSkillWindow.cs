@@ -2,30 +2,28 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-// 용 스킬트리 창 - DragonSkillTree.asset을 순회해 30노드+30엣지를 방사형으로 런타임 배치하고,
-// 클릭 시 상세 패널에 바인딩한다. blocker 루트(전체화면 dim Image)에 부착되어
-// 바깥 클릭 닫기와 IExclusiveMode(UIManager.OpenExclusive) 조정을 겸한다.
-// 해금/속성 변경 규칙은 여기서 재구현하지 않는다 - 전부 DragonTreeManager에 위임.
-public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
+// 용 스킬트리 - DragonSkillTree.asset을 순회해 30노드+30엣지를 방사형으로 런타임 배치하고,
+// 클릭 시 상세 패널에 바인딩한다. 해금/속성 변경 규칙은 여기서 재구현하지 않는다
+// - 전부 DragonTreeManager에 위임.
+//
+// Dragon_window의 Panel_MomDragon/Right_Scroll View_skillTree에 부착해 쓰는 '심는 패널'이다.
+// 독립 창(blocker + ExitButton + IExclusiveMode)이었던 시절의 여닫기 기능은 제거했다 -
+// 이제 창 자체를 여닫는 건 UI_DragonWindow가 하고, 이 컴포넌트는 부모 패널이 켜질 때 도는
+// OnEnable에서 트리를 빌드·갱신한다.
+public class UI_DragonSkillWindow : MonoBehaviour
 {
     [Header("Dependencies")]
     [SerializeField] private DragonTreeManager _dragonTreeManager;
     [SerializeField] private ResourceManager _resourceManager;
-    [SerializeField] private UIManager _uiManager;
 
     [Header("Layout Targets")]
     [SerializeField] private RectTransform _content;
     [SerializeField] private UI_DragonSkillNode _nodePrefab;
     [SerializeField] private RectTransform _edgePrefab;
     [SerializeField] private TextMeshProUGUI[] _attributeLabels = new TextMeshProUGUI[5];
-    [SerializeField] private RectTransform _activeAttributeRing;
     [SerializeField] private UI_DragonSkillDetailsPanel _detailsPanel;
-    [SerializeField] private TextMeshProUGUI _headerText;
-    [SerializeField] private Button _exitButton;
-    [SerializeField] private Button _blockerButton;
 
     [Header("Radii (Docs/용_스킬트리_프로토타입.html 기준)")]
     [SerializeField] private float _radiusAttributeLabel = 92f;
@@ -40,9 +38,6 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
     // 속성 색은 DragonAttributePalette가 단일 출처다(창마다 따로 지정하면 값이 어긋난다).
     [SerializeField] private Color _edgeLockedColor = new Color(0.2f, 0.18f, 0.16f, 0.6f);
 
-    [Header("Keys")]
-    [SerializeField] private InputActionReference _closeAction;
-
     private static readonly DragonType[] ATTRIBUTES_IN_ORDER =
         (DragonType[])Enum.GetValues(typeof(DragonType));
 
@@ -52,7 +47,6 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
     private readonly Dictionary<string, Vector2> _nodePositions = new();
 
     private bool _built;
-    private bool _isOpen;
 
     private struct EdgeView
     {
@@ -63,21 +57,6 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
 
     private void Awake()
     {
-        if (_exitButton != null)
-        {
-            _exitButton.onClick.AddListener(Close);
-        }
-
-        if (_blockerButton != null)
-        {
-            _blockerButton.onClick.AddListener(Close);
-        }
-
-        if (_headerText != null)
-        {
-            _headerText.text = StringTable.GetString(DragonLocKeys.WINDOW_HEADER);
-        }
-
         if (_detailsPanel != null)
         {
             _detailsPanel.Construct(_dragonTreeManager, _resourceManager, RefreshAll);
@@ -89,13 +68,13 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.NodeUnlocked.AddListener(HandleNodeUnlocked);
-            _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleActiveAttributeChanged);
         }
 
-        if(_closeAction != null)
-        {
-            _closeAction.action.performed += OnCloseActionPerformed;
-        }
+        // 어미용 탭이 켜질 때(부모 Panel_MomDragon의 SetActive) 여기가 진입점이 된다 -
+        // 창을 여는 주체가 UI_DragonWindow로 옮겨가 Open()이 없어졌기 때문이다.
+        // _built 플래그가 트리 재생성을 막고 RefreshAll은 멱등하므로 탭을 여러 번 오가도 안전하다.
+        BuildTreeIfNeeded();
+        RefreshAll();
     }
 
     private void OnDisable()
@@ -103,54 +82,12 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.NodeUnlocked.RemoveListener(HandleNodeUnlocked);
-            _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleActiveAttributeChanged);
         }
 
-        if (_closeAction != null)
-        {
-            _closeAction.action.performed -= OnCloseActionPerformed;
-        }
-    }
-
-    public void OnCloseActionPerformed(InputAction.CallbackContext context)
-    {
-        Close();
-    }
-
-    public void Open()
-    {
-        _isOpen = true;
-        gameObject.SetActive(true);
-        BuildTreeIfNeeded();
-        RefreshAll();
-    }
-
-    public void Close()
-    {
-        _isOpen = false;
+        // 상세 팝업(Popup_SkillDetailsPanel)은 이 스크롤뷰가 아니라 Dragon_window 루트의 자식이라
+        // 어미용 탭이 꺼져도 스스로 사라지지 않는다 - 새끼용 탭 위에 남지 않도록 여기서 닫는다.
+        // (없어진 Close()가 하던 일이다.)
         _detailsPanel?.Clear();
-        gameObject.SetActive(false);
-    }
-
-    bool IExclusiveMode.IsOpen => _isOpen;
-    void IExclusiveMode.Open() => Open();
-    void IExclusiveMode.Close() => Close();
-
-    // 성 창(UI_MainCastleWindow)의 스킬트리 버튼이 호출하는 진입점.
-    public void ToggleFromEntryPoint()
-    {
-        if (_isOpen)
-        {
-            Close();
-        }
-        else if (_uiManager != null)
-        {
-            _uiManager.OpenExclusive(this);
-        }
-        else
-        {
-            Open();
-        }
     }
 
     private void BuildTreeIfNeeded()
@@ -303,13 +240,11 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
     }
 
     private void HandleNodeUnlocked(ProgressionNodeData node) => RefreshAll();
-    private void HandleActiveAttributeChanged(DragonType attribute) => RefreshActiveAttributeRing();
 
     private void RefreshAll()
     {
         RefreshNodeViews();
         RefreshEdgeViews();
-        RefreshActiveAttributeRing();
         _detailsPanel?.Refresh();
     }
 
@@ -357,38 +292,6 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
 
             bool lit = _dragonTreeManager.IsUnlocked(edge.DependentNodeId);
             image.color = lit ? ColorForAttribute(edge.Attribute) : _edgeLockedColor;
-        }
-    }
-
-    private void RefreshActiveAttributeRing()
-    {
-        if (_activeAttributeRing == null || _dragonTreeManager == null)
-        {
-            return;
-        }
-
-        DragonType? active = _dragonTreeManager.ActiveAttribute;
-
-        if (!active.HasValue)
-        {
-            _activeAttributeRing.gameObject.SetActive(false);
-            return;
-        }
-
-        int index = Array.IndexOf(ATTRIBUTES_IN_ORDER, active.Value);
-        if (index < 0 || _attributeLabels == null || index >= _attributeLabels.Length || _attributeLabels[index] == null)
-        {
-            _activeAttributeRing.gameObject.SetActive(false);
-            return;
-        }
-
-        _activeAttributeRing.gameObject.SetActive(true);
-        _activeAttributeRing.anchoredPosition = _attributeLabels[index].rectTransform.anchoredPosition;
-
-        Image ringImage = _activeAttributeRing.GetComponent<Image>();
-        if (ringImage != null)
-        {
-            ringImage.color = ColorForAttribute(active.Value);
         }
     }
 

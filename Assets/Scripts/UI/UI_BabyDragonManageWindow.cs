@@ -37,7 +37,8 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private GameManager _gameManager;
     [SerializeField] private ResourceCatalog _resourceCatalog;
-    [SerializeField] private UI_DragonSkillWindow _dragonSkillWindow;
+    [Tooltip("용 창. 강화 트리는 이 창의 어미용 탭 안에 있다(과거 독립 스킬트리 창은 은퇴).")]
+    [SerializeField] private UI_DragonWindow _dragonWindow;
 
     [Header("패널")]
     [SerializeField] private GameObject _panel;
@@ -259,12 +260,13 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
             StringTable.GetString(STATUS_LABEL_LOC_KEY),
             StringTable.GetString(isActive ? STATUS_ACTIVE_LOC_KEY : STATUS_STARVING_LOC_KEY));
 
-        RefreshFeedRow(data, attributeColor);
+        RefreshFeedRow(data);
         RefreshBuffRows(data, attributeColor);
         RefreshButtons();
     }
 
-    private void RefreshFeedRow(BabyDragonData data, Color attributeColor)
+    // 속성 색을 받지 않는다 - 먹이 슬라임이 속성별 전용 스프라이트를 갖게 되어 틴트가 필요 없다.
+    private void RefreshFeedRow(BabyDragonData data)
     {
         int dailyFeed = ComputeDailyFeed(data);
 
@@ -274,9 +276,8 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
             _resourceCatalog != null &&
             _resourceCatalog.TryGet(slimeType, out ResourceData resourceData))
         {
-            // 슬라임도 공용 스프라이트를 속성 색으로 틴트해 구분한다(UI_DragonInventorySlot과 동일한 방식).
+            // 슬라임은 속성별 전용 스프라이트를 갖고 있으므로 틴트하지 않는다(feedColor는 흰색 그대로).
             feedIcon = resourceData.Icon;
-            feedColor = attributeColor;
         }
 
         _feedRow?.Setup(
@@ -392,7 +393,7 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
 
     private void HandleAttackModeClicked() => _boundTower?.SetMode(BabyDragonMode.Attack);
     private void HandleBuffModeClicked() => _boundTower?.SetMode(BabyDragonMode.Buff);
-    private void HandleSkillTreeClicked() => _dragonSkillWindow?.ToggleFromEntryPoint();
+    private void HandleSkillTreeClicked() => _dragonWindow?.ToggleFromEntryPoint();
     private void HandleRelocateClicked() => _buildingPlacementController?.EnterMoveMode();
     private void HandleRemoveClicked() => _buildingPlacementController?.RemoveSelectedBuilding();
 

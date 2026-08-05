@@ -10,7 +10,8 @@ using UnityEngine.UI;
 // 동일한 구조(Assets/Scripts/UI/Research/UI_ResearchWindow.cs, Assets/Scripts/UI/Dragon/UI_DragonSkillWindow.cs).
 // 속성 변경 규칙·속성 색·아이콘 원본은 여기서 재구현하지 않는다
 // - DragonTreeManager / DragonAttributePalette / BabyDragonDataCatalog에 위임한다.
-// Button_change와 Panel_Info는 이번 범위가 아니다(배선하지 않는다).
+// Button_change는 UI_DragonChangePopup을 열기만 하고, 실제 변경 로직은 그 팝업이 갖고 있다.
+// Panel_Info는 이번 범위가 아니다(배선하지 않는다).
 public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 {
     // 탭 - Panel_MomDragon / Panel_BabyDragon 중 하나만 활성이 된다.
@@ -84,6 +85,12 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("_motherSprites 칸이 비었을 때 대신 쓸 새끼용 스프라이트 카탈로그. 새끼용/알 리스트의 데이터 조회에도 쓴다.")]
     [SerializeField] private BabyDragonDataCatalog _babyDragonDataCatalog;
 
+    [Tooltip("Left_Panel_frame/Icon_dragon/Button_change - 속성 변경 팝업을 연다.")]
+    [SerializeField] private Button _changeButton;
+
+    [Tooltip("Popup_Dragon_Change - 실제 변경 로직은 이 팝업이 갖고 있다.")]
+    [SerializeField] private UI_DragonChangePopup _changePopup;
+
     [Header("Baby Dragon / Egg 리스트 (Panel_BabyDragon)")]
     [Tooltip("보유 새끼용·알 목록의 출처(RunData). 없으면 두 리스트를 비운다.")]
     [SerializeField] private GameManager _gameManager;
@@ -139,6 +146,11 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         if (_babyTabButton != null)
         {
             _babyTabButton.onClick.AddListener(() => SelectTab(DragonTab.Baby));
+        }
+
+        if (_changeButton != null && _changePopup != null)
+        {
+            _changeButton.onClick.AddListener(_changePopup.Open);
         }
 
         CreateSlotPools();

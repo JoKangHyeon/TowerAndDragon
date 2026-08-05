@@ -2,7 +2,6 @@
 // 노드별 이름/설명 키는 DragonSkillNodeData가 직접 들고 있으므로 여기 포함하지 않는다.
 public static class DragonLocKeys
 {
-    public const string WINDOW_HEADER = "dragon_window_header";
     public const string UPGRADE_BUTTON = "dragon_upgrade_button";
     public const string UNKNOWN_RESOURCE = "dragon_unknown_resource";
     public const string RESOURCE_COST = "dragon_resource_cost";

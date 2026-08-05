@@ -18,9 +18,8 @@ public class DragonTreeDebugGUI : MonoBehaviour
     [SerializeField] private DragonTreeManager _dragonTreeManager;
     [SerializeField] private ResourceManager _resourceManager;
 
-    // UI_MainCastleWindow._dragonSkillTreeButton이 아직 씬에 없어(C-1/C-2 미완) 임시로 여기서 연다.
-    // C-1/C-2 완료 후 정식 진입점이 연결되면 이 필드는 제거한다.
-    [SerializeField] private UI_DragonSkillWindow _dragonSkillWindow;
+    // 스킬트리가 용 창(Dragon_window)의 어미용 탭으로 옮겨갔으므로 그 창을 연다.
+    [SerializeField] private UI_DragonWindow _dragonWindow;
 
     private Vector2 _scroll;
 
@@ -45,9 +44,9 @@ public class DragonTreeDebugGUI : MonoBehaviour
             GrantTestResources();
         }
 
-        if (_dragonSkillWindow != null && GUILayout.Button("Open Dragon Skill Tree Window"))
+        if (_dragonWindow != null && GUILayout.Button("Open Dragon Window (Skill Tree)"))
         {
-            _dragonSkillWindow.ToggleFromEntryPoint();
+            _dragonWindow.ToggleFromEntryPoint();
         }
 
         GUILayout.Space(8);

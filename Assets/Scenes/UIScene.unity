@@ -3197,6 +3197,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1334054200266679953, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_Name
+      value: Right_Scroll View_skillTree
+      objectReference: {fileID: 0}
     - target: {fileID: 1349509382364187125, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _cycleManager
       value: 
@@ -4367,7 +4371,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.000018451066
+      value: -0.000046559122
       objectReference: {fileID: 0}
     - target: {fileID: 3531365243633958967, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -4627,7 +4631,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3850757389291668338, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.00010795224
+      value: -0.00007711817
       objectReference: {fileID: 0}
     - target: {fileID: 3885653735571003850, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -6333,6 +6337,14 @@ PrefabInstance:
       propertyPath: m_Value
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6966979664576677599, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _gameManager
+      value: 
+      objectReference: {fileID: 914589612}
+    - target: {fileID: 6966979664576677599, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _dragonTreeManager
+      value: 
+      objectReference: {fileID: 914589622}
     - target: {fileID: 6976266742747140792, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -7233,6 +7245,26 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8497179314242060143, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _resourceManager
+      value: 
+      objectReference: {fileID: 914589613}
+    - target: {fileID: 8497179314242060143, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _productionForecast
+      value: 
+      objectReference: {fileID: 334704092}
+    - target: {fileID: 8516353166847018572, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _uiManager
+      value: 
+      objectReference: {fileID: 1343810301}
+    - target: {fileID: 8516353166847018572, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _resourceManager
+      value: 
+      objectReference: {fileID: 914589613}
+    - target: {fileID: 8516353166847018572, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _dragonTreeManager
+      value: 
+      objectReference: {fileID: 914589622}
     - target: {fileID: 8520732907528372902, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -7980,6 +8012,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1343810301 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 944163938}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5db4aac255165ed4a83e68df370bf90c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UIManager
 --- !u!1 &1356859329
 GameObject:
   m_ObjectHideFlags: 0

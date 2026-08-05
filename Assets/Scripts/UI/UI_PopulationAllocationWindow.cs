@@ -258,7 +258,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
                 SetOutputRow(
                     usedCount++,
                     ResolveResourceIcon(resourceType),
-                    DragonAttributePalette.TintFor(resourceType),
+                    Color.white,
                     ResolveResourceName(resourceType),
                     string.Format(
                         VALUE_FORMAT,
