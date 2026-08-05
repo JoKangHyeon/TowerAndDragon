@@ -17,13 +17,32 @@ public class Factory : Building
     [SerializeField] private GridMap _gridMap;
 
     private bool _isInitialized;
-    protected FactoryPopulation _population;
-    private float _areaYieldMultiplier = NEUTRAL_YIELD_MULTIPLIER;
+    private FactoryPopulation _population;
+    
+    private readonly Dictionary<ResourceType, float> _areaYieldMultiplierByResource = new();
 
-    public void SetAreaYieldMultiplier(float multiplier)
+// BabyDragonBuffSystem이 재계산할 때마다 전체를 덮어쓴다 - 부분 갱신을 허용하면 버프
+// 범위를 벗어난 뒤에도 이전 배율이 남는다.
+public void SetAreaYieldMultipliers(IReadOnlyDictionary<ResourceType, float> multiplierByResource)
+{
+    _areaYieldMultiplierByResource.Clear();
+
+    if (multiplierByResource == null)
     {
-        _areaYieldMultiplier = multiplier;
+        return;
     }
+
+    foreach (KeyValuePair<ResourceType, float> entry in multiplierByResource)
+    {
+        _areaYieldMultiplierByResource[entry.Key] = entry.Value;
+    }
+}
+
+// 등록되지 않은 자원은 버프 대상이 아니므로 중립 배율을 쓴다(GridCell.GetYield와 같은 관례).
+private float GetAreaYieldMultiplier(ResourceType resourceType) =>
+    _areaYieldMultiplierByResource.TryGetValue(resourceType, out float multiplier)
+        ? multiplier
+        : NEUTRAL_YIELD_MULTIPLIER;
 
     // 건설 가능 여부 판정에 필요 - GridMap.CanConstructResourceFootprint 호출 시 전달한다.
     public ResourceType RequiredResourceNode => _data != null ? _data.RequiredResourceNode : ResourceType.None;
@@ -54,7 +73,7 @@ public class Factory : Building
         // 생산량은 이 생산시설의 footprint에 속한 셀들이 보유한 자원별 생산량의 합이다(GridMap.GetFootprintYield 참고).
         int footprintYield = _gridMap.GetFootprintYield(this, resourceType);
         int produced = _data.CalculateYield(footprintYield, staffingRatio);
-        return Mathf.RoundToInt(produced * _areaYieldMultiplier);
+        return Mathf.RoundToInt(produced * GetAreaYieldMultiplier(resourceType));
     }
 
     // 현재 배치 인구 기준 생산량 - 다음 정산에서 실제로 들어올 양이다.
@@ -104,7 +123,7 @@ public class Factory : Building
         foreach (ResourceType resourceType in EnumerateProducedResourceTypes())
         {
             int produced = CalculateYield(resourceType, staffingRatio);
-            Debug.Log($"[Factory] {name} 정산 - staffingRatio: {staffingRatio:F2}, areaYieldMultiplier: {_areaYieldMultiplier:F2}, produced: {produced} ({resourceType})");
+            Debug.Log($"[Factory] {name} 정산 - staffingRatio: {staffingRatio:F2}, areaYieldMultiplier: {GetAreaYieldMultiplier(resourceType):F2}, produced: {produced} ({resourceType})");
             _resourceManager.Add(resourceType, produced);
         }
     }
