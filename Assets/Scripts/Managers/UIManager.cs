@@ -23,14 +23,21 @@ public class UIManager : MonoBehaviour
     [Tooltip("한 번에 하나만 열려야 하는 UI 모드 목록(IExclusiveMode 구현체). 예: UI_BuildModeWindow, ConquestModeController.")]
     [SerializeField] private MonoBehaviour[] _exclusiveModeBehaviours;
 
-    [Header("새끼용 인벤토리 단축키")]
-    [Tooltip("새끼용 인벤토리 창 열기/닫기 토글 - 보통 Tab.")]
-    [SerializeField] private InputActionReference _babyDragonInventoryToggleAction;
-    [Tooltip("IExclusiveMode를 구현한 UI_DragonInventoryWindow - _exclusiveModeBehaviours에 넣은 것과 같은 오브젝트를 지정할 것(안 그러면 빌드모드/점령 창을 열 때 이 창이 안 닫힘).")]
-    [SerializeField] private MonoBehaviour _babyDragonInventoryWindow;
+    [Serializable]
+    private struct ExclusiveModeShortcut
+    {
+        [Tooltip("이 단축키에 대응하는 InputAction (예: BuildModeShortCut).")]
+        public InputActionReference Action;
+        [Tooltip("IExclusiveMode를 구현한 대상 - _exclusiveModeBehaviours에 넣은 것과 같은 오브젝트를 지정할 것(안 그러면 다른 배타 모드를 열 때 이 창이 안 닫힘).")]
+        public MonoBehaviour TargetBehaviour;
+    }
+
+    [Header("배타 모드 단축키")]
+    [Tooltip("단축키 → 배타 모드 열기/닫기 토글 목록. 예: 새끼용 인벤토리(Tab), 건설모드(B), 인구배치(V), 점령(C).")]
+    [SerializeField] private ExclusiveModeShortcut[] _exclusiveModeShortcuts;
 
     private IExclusiveMode[] _exclusiveModes;
-    private IExclusiveMode _babyDragonInventoryMode;
+    private (InputActionReference action, IExclusiveMode mode)[] _cachedShortcuts;
 
     private void Awake()
     {
@@ -39,28 +46,63 @@ public class UIManager : MonoBehaviour
         Hide(_victoryWindow);
 
         CacheExclusiveModes();
-        _babyDragonInventoryMode = _babyDragonInventoryWindow as IExclusiveMode;
+        CacheExclusiveModeShortcuts();
     }
 
-    // 새끼용 인벤토리 창은 열려있는 동안 자기 오브젝트(_panel)를 스스로 비활성화하므로(BuildMode와 같은 패턴)
-    // 창 자신의 Update()로는 다시 열 수 없다 - 항상 켜져있는 UIManager가 단축키를 폴링해 직접 열어준다.
+    // 배타 모드 창들은 열려있는 동안 자기 오브젝트를 스스로 비활성화하는 경우가 있어
+    // (예: 새끼용 인벤토리, 빌드모드) 창 자신의 Update()로는 다시 열 수 없다.
+    // 항상 켜져있는 UIManager가 단축키를 폴링해 직접 열어준다.
     private void Update()
     {
-        if (_babyDragonInventoryToggleAction == null ||
-            _babyDragonInventoryMode == null ||
-            !_babyDragonInventoryToggleAction.action.WasPerformedThisFrame())
+        foreach ((InputActionReference action, IExclusiveMode mode) in _cachedShortcuts)
         {
+            if (!action.action.WasPerformedThisFrame())
+            {
+                continue;
+            }
+
+            if (mode.IsOpen)
+            {
+                mode.Close();
+            }
+            else
+            {
+                OpenExclusive(mode);
+            }
+        }
+    }
+
+    // 인스펙터에는 MonoBehaviour로 받고(유니티가 인터페이스 필드를 직렬화하지 못하므로)
+    // 여기서 IExclusiveMode로 캐스팅해 둔다. Action이나 대상이 비어있거나 구현하지 않은 항목은
+    // 경고만 남기고 제외한다.
+    private void CacheExclusiveModeShortcuts()
+    {
+        if (_exclusiveModeShortcuts == null)
+        {
+            _cachedShortcuts = Array.Empty<(InputActionReference, IExclusiveMode)>();
             return;
         }
 
-        if (_babyDragonInventoryMode.IsOpen)
+        var shortcuts = new List<(InputActionReference, IExclusiveMode)>(_exclusiveModeShortcuts.Length);
+        foreach (ExclusiveModeShortcut shortcut in _exclusiveModeShortcuts)
         {
-            _babyDragonInventoryMode.Close();
+            if (shortcut.Action == null || shortcut.TargetBehaviour == null)
+            {
+                Debug.LogWarning("[UIManager] 단축키 항목에 Action 또는 TargetBehaviour가 비어있어 제외됩니다.");
+                continue;
+            }
+
+            if (shortcut.TargetBehaviour is IExclusiveMode mode)
+            {
+                shortcuts.Add((shortcut.Action, mode));
+            }
+            else
+            {
+                Debug.LogWarning($"[UIManager] {shortcut.TargetBehaviour.name}은 IExclusiveMode를 구현하지 않아 단축키 대상에서 제외됩니다.");
+            }
         }
-        else
-        {
-            OpenExclusive(_babyDragonInventoryMode);
-        }
+
+        _cachedShortcuts = shortcuts.ToArray();
     }
 
     // 인스펙터에는 MonoBehaviour로 받고(유니티가 인터페이스 필드를 직렬화하지 못하므로)
