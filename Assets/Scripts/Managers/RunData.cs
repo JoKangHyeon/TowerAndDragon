@@ -16,6 +16,13 @@ public class RunData
     // 종료 조건으로 기록하면 화살표가 한 박자 늦는다.
     public List<BabyDragonGuideStep> EnteredGuideSteps = new();
 
+    // 1일차 튜토리얼 진행도. 단계가 enum이 아니라 에셋이므로 순서 번호가 아니라 StepId로 남긴다 -
+    // 번호로 남기면 중간에 단계를 끼워 넣는 순간 기존 진행도가 다른 단계를 가리킨다.
+    public List<string> EnteredTutorialStepIds = new();
+
+    // 끝까지 봤거나 건너뛴 경우. 둘을 구분하지 않는 이유는 어느 쪽이든 다시 뜨면 안 되기 때문이다.
+    public bool IsTutorialDismissed;
+
     public UnityEvent OnInventoryChanged = new();
 
     public GridMap Map;
@@ -99,6 +106,23 @@ public class RunData
 
         EnteredGuideSteps ??= new List<BabyDragonGuideStep>();
         EnteredGuideSteps.Add(step);
+        return true;
+    }
+
+    public bool HasEnteredTutorialStep(string stepId)
+    {
+        return EnteredTutorialStepIds != null && EnteredTutorialStepIds.Contains(stepId);
+    }
+
+    public bool TryEnterTutorialStep(string stepId)
+    {
+        if (string.IsNullOrWhiteSpace(stepId) || HasEnteredTutorialStep(stepId))
+        {
+            return false;
+        }
+
+        EnteredTutorialStepIds ??= new List<string>();
+        EnteredTutorialStepIds.Add(stepId);
         return true;
     }
 }

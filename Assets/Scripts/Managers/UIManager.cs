@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 /// <summary>
@@ -37,6 +38,15 @@ public class UIManager : MonoBehaviour
     [Header("배타 모드 단축키")]
     [Tooltip("단축키 → 배타 모드 열기/닫기 토글 목록. 예: 새끼용 인벤토리(Tab), 건설모드(B), 인구배치(V), 점령(C).")]
     [SerializeField] private ExclusiveModeShortcut[] _exclusiveModeShortcuts;
+
+    // 배타 모드가 열렸을 때 알린다. 버튼·단축키 어느 경로로 열어도 OpenExclusive 하나를 지나므로
+    // 여기 한 곳에 붙이면 창이 늘어나도 자동으로 따라온다(DragonEggInventorySystem.GrantEgg와 같은 패턴).
+    // IExclusiveMode 구현체는 모두 MonoBehaviour라 구독자가 구체 타입으로 판별할 수 있게 그대로 넘긴다.
+    public UnityEvent<MonoBehaviour> ExclusiveModeOpened = new();
+
+    // 튜토리얼이 배선한다 - 배선되지 않은 씬에서는 null로 남아 모든 창이 그대로 열린다(기존 동작 유지).
+    // PopulationManager.CapacityModifierQuery와 같은 주입 방식.
+    public IExclusiveModeOpenQuery OpenQuery { get; set; }
 
     private IExclusiveMode[] _exclusiveModes;
     private (InputActionReference action, IExclusiveMode mode)[] _cachedShortcuts;
@@ -137,6 +147,13 @@ public class UIManager : MonoBehaviour
     // 진입에 인자가 필요해 Open()으로 표현할 수 없는 모드(스킬 타겟팅 등)가 직접 호출한다.
     public void CloseAllExcept(IExclusiveMode target)
     {
+        // 열리지 않는 것으로 끝난다 - 이미 열린 창을 닫지도 않는다. 안내 중에 아직 설명하지 않은 창이
+        // 열리는 것만 막는 용도라, 거절이 다른 창을 닫는 부작용을 내면 안 된다.
+        if (OpenQuery != null && !OpenQuery.CanOpen(target as MonoBehaviour))
+        {
+            return;
+        }
+
         foreach (IExclusiveMode mode in _exclusiveModes)
         {
             if (!ReferenceEquals(mode, target) && mode.IsOpen)
@@ -149,6 +166,9 @@ public class UIManager : MonoBehaviour
     {
         CloseAllExcept(target);
         target.Open();
+
+        // 열린 뒤에 알린다 - 구독자가 IsOpen을 읽을 수 있어야 한다.
+        ExclusiveModeOpened.Invoke(target as MonoBehaviour);
     }
 
     private void OnEnable()

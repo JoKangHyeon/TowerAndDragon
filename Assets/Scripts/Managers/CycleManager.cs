@@ -113,8 +113,18 @@ public class CycleManager : MonoBehaviour
         SafeInvoke(OnCycleChanged, CycleState.Day);
     }
 
+    // 튜토리얼이 배선한다 - 배선되지 않은 씬에서는 null로 남아 언제나 밤으로 넘어간다(기존 동작 유지).
+    // PopulationManager.CapacityModifierQuery와 같은 주입 방식.
+    public IDayEndBlockQuery DayEndBlockQuery { get; set; }
+
     public void EndDay()
     {
+        // 밤 시작은 되돌릴 수 없으므로 버튼이 아니라 이 관문에서 막는다 - 다른 진입 경로가 생겨도 함께 막힌다.
+        if (DayEndBlockQuery != null && !DayEndBlockQuery.CanEndDay())
+        {
+            return;
+        }
+
         SafeInvoke(OnDayEnd, _gameManager.CurrentRun.CurrentCycle);
         StartNight();
     }

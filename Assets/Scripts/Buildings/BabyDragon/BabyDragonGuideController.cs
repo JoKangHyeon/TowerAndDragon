@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 /// <summary>
@@ -16,6 +17,7 @@ public class BabyDragonGuideController : MonoBehaviour
     private const string SWITCH_TAB_LOC_KEY = "baby_dragon_guide_switch_tab";
     private const string WAIT_HATCH_LOC_KEY = "baby_dragon_guide_wait_hatch";
     private const string PLACE_DRAGON_LOC_KEY = "baby_dragon_guide_place_dragon";
+    private const string PLACE_DRAGON_TILE_LOC_KEY = "baby_dragon_guide_place_dragon_tile";
     private const string COMPLETED_LOC_KEY = "baby_dragon_guide_completed";
     private const string MANAGE_HINT_LOC_KEY = "baby_dragon_guide_manage_hint";
 
@@ -25,6 +27,10 @@ public class BabyDragonGuideController : MonoBehaviour
     [SerializeField] private DragonEggInventorySystem _eggInventorySystem;
     [SerializeField] private UI_DragonInventoryWindow _inventoryWindow;
     [SerializeField] private GridMap _gridMap;
+
+    [Tooltip("새끼용을 골라 배치 대기 상태가 됐는지 판정하는 데 쓴다. 골랐으면 딤을 걷어 그리드를 그대로 보여준다.")]
+    [SerializeField] private BuildingPlacementController _placementController;
+
     [SerializeField] private UI_GuideOverlay _overlay;
 
     [Tooltip("안내가 끝났을 때 남길 문구를 띄운다. 획득 토스트와 같은 오브젝트를 써도 된다.")]
@@ -39,6 +45,12 @@ public class BabyDragonGuideController : MonoBehaviour
     [Tooltip("알 획득·부화 토스트가 사라진 뒤 안내를 시작하기까지의 추가 여유(초). " +
              "토스트 자체의 길이는 토스트에서 읽어오므로 여기에 포함하지 않는다.")]
     [SerializeField] private float _guideStartDelay = DEFAULT_GUIDE_START_DELAY;
+
+    /// <summary>
+    /// 새 단계에 들어섰다. 건너뛴 중간 단계까지 한 번에 지나갈 수 있으므로 인자는 "도달한 단계"다 -
+    /// 특정 지점을 기다리는 쪽은 == 이 아니라 >= 로 판정해야 한다.
+    /// </summary>
+    public UnityEvent<BabyDragonGuideStep> StepEntered = new();
 
     // 아직 시작 전이면 값이 없다 - 첫 알을 얻는 순간 OpenInventory로 들어간다.
     private BabyDragonGuideStep? _currentStep;
@@ -64,8 +76,20 @@ public class BabyDragonGuideController : MonoBehaviour
             _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
         }
 
+        if (_placementController != null)
+        {
+            _placementController.BuildingToPlaceChanged.AddListener(HandleBuildingToPlaceChanged);
+        }
+
+        // 더 높은 우선순위(1일차 튜토리얼)에 표시권을 양보한 동안에도 단계는 계속 전진한다.
+        // 그쪽이 놓는 순간 옛 요청을 되살리는 게 아니라 지금 단계로 다시 유도해야 하므로 Render를 태운다.
+        if (_overlay != null)
+        {
+            _overlay.DisplayReleased += Render;
+        }
+
         // 이 컴포넌트의 활성 체크박스가 곧 가이드 on/off 스위치다. 플레이 중 다시 켜면 현재 단계 안내를
-        // 즉시 복구한다(최초 활성 시점엔 아직 단계가 없어 Hide만 되고, 실제 안내는 Start 이후에 나온다).
+        // 즉시 복구한다(최초 활성 시점엔 아직 단계가 없어 아무것도 안 뜨고, 실제 안내는 Start 이후에 나온다).
         Render();
     }
 
@@ -88,15 +112,28 @@ public class BabyDragonGuideController : MonoBehaviour
             _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingAdded);
         }
 
+        if (_placementController != null)
+        {
+            _placementController.BuildingToPlaceChanged.RemoveListener(HandleBuildingToPlaceChanged);
+        }
+
         // 끄면 떠 있던 딤·말풍선도 같이 걷는다 - 안 그러면 화면에 그대로 남는다.
+        // 구독을 먼저 끊어야 Release가 부르는 DisplayReleased가 방금 끈 이 컨트롤러를 다시 그리지 않는다.
         if (_overlay != null)
         {
-            _overlay.Hide();
+            _overlay.DisplayReleased -= Render;
+            _overlay.Release(this);
         }
     }
 
     private void Start()
     {
+        // 비어 있으면 배치 대기 판정이 늘 false가 되어 딤이 걷히지 않는데, 그게 조용히 넘어가면 원인을 찾기 어렵다.
+        if (_placementController == null)
+        {
+            Debug.LogWarning("[BabyDragonGuideController] _placementController가 비어 있어 새끼용 배치 중에도 딤이 그대로 남습니다.", this);
+        }
+
         RestoreFromRunData();
         Render();
     }
@@ -182,6 +219,7 @@ public class BabyDragonGuideController : MonoBehaviour
         }
 
         Render();
+        StepEntered.Invoke(step);
     }
 
     private void AnnounceCompletion()
@@ -205,7 +243,7 @@ public class BabyDragonGuideController : MonoBehaviour
 
         if (!_currentStep.HasValue)
         {
-            _overlay.Hide();
+            _overlay.Release(this);
             return;
         }
 
@@ -213,14 +251,14 @@ public class BabyDragonGuideController : MonoBehaviour
         {
             case BabyDragonGuideStep.OpenInventory:
                 // 유일하게 입력을 막는 단계 - 버튼 한 번 누르면 끝나는 행동이라 막아도 갇히지 않는다.
-                _overlay.Show(_inventoryButton, OPEN_INVENTORY_LOC_KEY, blocksInput: true, ResolveToggleKeyLabel());
+                ShowGuide(_inventoryButton, OPEN_INVENTORY_LOC_KEY, blocksInput: true, ResolveToggleKeyLabel());
                 break;
 
             case BabyDragonGuideStep.WaitHatch:
                 // 창을 닫은 건 시킨 대로 한 것이다 - 다시 열라고 하면 안내가 제자리를 돈다.
                 if (!IsInventoryOpen)
                 {
-                    _overlay.Hide();
+                    _overlay.Release(this);
                     break;
                 }
 
@@ -229,11 +267,19 @@ public class BabyDragonGuideController : MonoBehaviour
                 break;
 
             case BabyDragonGuideStep.PlaceDragon:
+                // 새끼용을 이미 골랐다면 남은 일은 타일을 찍는 것뿐이다 - 가리킬 대상 없이 말풍선만 띄워
+                // 딤을 걷는다. 그리드를 덮은 채로 "타일을 클릭하라"고 하면 어디를 눌러야 할지 가려진다.
+                if (IsPlacingBabyDragon)
+                {
+                    ShowGuide(null, PLACE_DRAGON_TILE_LOC_KEY, blocksInput: false);
+                    break;
+                }
+
                 // 부화는 WaitHatch에서 창을 닫아둔 상태로 맞이하므로, 여기서 다시 열도록 HUD 버튼을 강조한다.
                 // 이미 하루를 굴려본 시점이라 입력까지 막지는 않는다.
                 if (!IsInventoryOpen)
                 {
-                    _overlay.Show(_inventoryButton, REOPEN_INVENTORY_LOC_KEY, blocksInput: false, ResolveToggleKeyLabel());
+                    ShowGuide(_inventoryButton, REOPEN_INVENTORY_LOC_KEY, blocksInput: false, ResolveToggleKeyLabel());
                     break;
                 }
 
@@ -242,9 +288,23 @@ public class BabyDragonGuideController : MonoBehaviour
                 break;
 
             default:
-                _overlay.Hide();
+                _overlay.Release(this);
                 break;
         }
+    }
+
+    // 표시권을 못 잡으면(1일차 튜토리얼이 화면을 쓰는 중) 그냥 넘어간다 - 단계는 이미 전진해 있고,
+    // 튜토리얼이 놓을 때 DisplayReleased로 Render가 다시 돌아 그 시점의 단계부터 유도한다.
+    private void ShowGuide(RectTransform target, string locKey, bool blocksInput, params object[] args)
+    {
+        // 새끼용 안내는 전부 행동형이라 확인 버튼을 쓰지 않는다.
+        // 용을 배치할 때만 그리드를 가리지 않게 말풍선을 아래로 내린다.
+        GuideBubbleSlot slot = locKey == PLACE_DRAGON_TILE_LOC_KEY
+            ? GuideBubbleSlot.Bottom
+            : GuideBubbleSlot.Default;
+
+        _overlay.Show(this, GuidePriority.BABY_DRAGON_GUIDE, target, locKey, blocksInput,
+            showConfirmButton: false, slot, args);
     }
 
     // 참조가 비어 있어도 문구 자체는 떠야 하므로 키 이름만 빈 문자열로 대체한다.
@@ -257,13 +317,20 @@ public class BabyDragonGuideController : MonoBehaviour
 
     private bool IsInventoryOpen => _inventoryWindow != null && _inventoryWindow.IsOpen;
 
+    // 새끼용 고스트가 커서를 따라다니는 중. ESC로 인벤토리를 닫아도 고스트는 살아있으므로
+    // (UI_DragonInventoryWindow는 창만 닫고 배치를 취소하지 않는다) 창 열림 여부보다 이 판정이 먼저다.
+    private bool IsPlacingBabyDragon =>
+        _placementController != null && _placementController.BuildingToPlace is BabyDragonTower;
+
+    private void HandleBuildingToPlaceChanged(Building _) => Render();
+
     // 창이 열려 있는 동안 그 안의 대상을 강조한다. 창이 닫힌 동안 무엇을 할지는 단계마다 다르므로
     // 여기서 정하지 않고 호출부(Render)가 미리 걸러낸다.
     private void ShowSlotGuide(bool wantDragonTab, string slotLocKey, params object[] slotArgs)
     {
         if (!IsInventoryOpen)
         {
-            _overlay.Hide();
+            _overlay.Release(this);
             return;
         }
 
@@ -272,16 +339,16 @@ public class BabyDragonGuideController : MonoBehaviour
         if (_inventoryWindow.IsDragonTabShown != wantDragonTab)
         {
             RectTransform tabRect = wantDragonTab ? _inventoryWindow.DragonTabRect : _inventoryWindow.EggTabRect;
-            _overlay.Show(tabRect, SWITCH_TAB_LOC_KEY, blocksInput: false);
+            ShowGuide(tabRect, SWITCH_TAB_LOC_KEY, blocksInput: false);
             return;
         }
 
         if (_inventoryWindow.TryGetFirstSlotRect(out RectTransform slotRect))
         {
-            _overlay.Show(slotRect, slotLocKey, blocksInput: false, slotArgs);
+            ShowGuide(slotRect, slotLocKey, blocksInput: false, slotArgs);
             return;
         }
 
-        _overlay.Hide();
+        _overlay.Release(this);
     }
 }

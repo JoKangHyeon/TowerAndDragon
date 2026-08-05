@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -73,6 +74,50 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     private bool _initialized;
 
     private readonly List<UI_BuildingSlot> _spawnedSlots = new();
+
+    // 슬롯은 탭을 고를 때마다 새로 만들어지므로, 슬롯을 가리키려는 안내는 이 이벤트를 듣고 다시 조준해야 한다.
+    // UI_DragonInventoryWindow.OnSlotViewChanged와 같은 용도·같은 이름이다.
+    public UnityEvent OnSlotViewChanged = new();
+
+    // 어느 탭이 골라졌는지 그 탭 버튼으로 알린다 - 인덱스로 넘기면 호출부가 순서를 알아야 하고,
+    // 탭 순서가 바뀌면 조용히 어긋난다. 버튼이면 안내가 가리키던 대상과 그대로 비교할 수 있다.
+    public UnityEvent<RectTransform> OnTabSelected = new();
+
+    /// <summary>
+    /// 현재 탭에 그려진 슬롯 중 이 건물 프리팹에 해당하는 것. 슬롯은 런타임 생성이라
+    /// GuideAnchor로는 가리킬 수 없어서 창이 직접 돌려준다.
+    /// </summary>
+    public bool TryGetSlotRect(Building prefab, out RectTransform slotRect)
+    {
+        slotRect = null;
+
+        if (prefab == null || _filterTabs == null ||
+            _currentFilterIndex < 0 || _currentFilterIndex >= _filterTabs.Length)
+        {
+            return false;
+        }
+
+        // RebuildSlots가 Buildings를 순서대로 순회해 생성하므로 인덱스가 1:1로 대응한다.
+        Building[] buildings = _filterTabs[_currentFilterIndex].Buildings;
+        if (buildings == null)
+        {
+            return false;
+        }
+
+        int count = Mathf.Min(buildings.Length, _spawnedSlots.Count);
+        for (int i = 0; i < count; i++)
+        {
+            if (buildings[i] != prefab || _spawnedSlots[i] == null)
+            {
+                continue;
+            }
+
+            slotRect = (RectTransform)_spawnedSlots[i].transform;
+            return true;
+        }
+
+        return false;
+    }
 
     private void Awake()
     {
@@ -325,6 +370,9 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         }
 
         RebuildSlots(_filterTabs[index].SlotPrefab, _filterTabs[index].Buildings);
+
+        Button selectedButton = _filterTabs[index].Button;
+        OnTabSelected?.Invoke(selectedButton == null ? null : (RectTransform)selectedButton.transform);
     }
 
     // 컨테이너의 기존 슬롯을 지우고, 주어진 슬롯 프리팹으로 건물 목록만큼 슬롯을 새로 생성한다.
@@ -337,8 +385,12 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         }
         _spawnedSlots.Clear();
 
+        // 슬롯을 지운 것도 조준 대상이 사라진 변화이므로 이 경로에서도 알린다.
         if (slotPrefab == null || _slotContainer == null || buildings == null)
+        {
+            OnSlotViewChanged?.Invoke();
             return;
+        }
 
         bool isPlaceable = _buildingPlacementController == null || _buildingPlacementController.IsDayForBuildActions;
 
@@ -349,6 +401,8 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
             slot.SetInteractable(isPlaceable);
             _spawnedSlots.Add(slot);
         }
+
+        OnSlotViewChanged?.Invoke();
     }
 
     // 슬롯 클릭 시 해당 건물을 배치 대상으로 선택 (기존 building buttons에서 옮겨온 기능).
