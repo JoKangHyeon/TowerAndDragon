@@ -1171,8 +1171,8 @@ MonoBehaviour:
   _maxZoom: 18
   _zoomSmoothing: 8
   _moveSmoothTime: 0.08
-  _boundsTilemap: {fileID: 0}
-  _excludedBoundsTile: {fileID: 0}
+  _boundsTilemap: {fileID: 362517319}
+  _excludedBoundsTile: {fileID: 11400000, guid: 72c049b1c04abcf41a1152ba4c5fb4cb, type: 2}
   _boundsMarginMin: {x: 0, y: 0}
   _boundsMarginMax: {x: 0, y: 0}
   _mapMin: {x: -60, y: -60}
@@ -1557,8 +1557,8 @@ MonoBehaviour:
   _sePoolSize: 12
   _bgmFadeDuration: 2
   _cycleManager: {fileID: 914589611}
-  _waveCycleProgression: {fileID: 0}
-  _gameManager: {fileID: 0}
+  _waveCycleProgression: {fileID: 704850240}
+  _gameManager: {fileID: 914589612}
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -1892,6 +1892,8 @@ Transform:
   - {fileID: 334704091}
   - {fileID: 37122975}
   - {fileID: 619099542}
+  - {fileID: 1239370978}
+  - {fileID: 1464424654}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &704850238
@@ -2283,6 +2285,14 @@ MonoBehaviour:
     Amount: 250
   - Type: 4
     Amount: 250
+  - Type: 8
+    Amount: 250
+  - Type: 16
+    Amount: 250
+  - Type: 32
+    Amount: 250
+  - Type: 64
+    Amount: 250
   ResourceChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -2379,7 +2389,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GlobalInputBootstrap
   _confirmAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _closeAction: {fileID: 0}
+  _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
 --- !u!114 &914589622
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6195,6 +6205,54 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1239370977
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1239370978}
+  - component: {fileID: 1239370979}
+  m_Layer: 0
+  m_Name: CycleBossDragonEggRewardSystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1239370978
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1239370977}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 698775030}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1239370979
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1239370977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e752e8b8a404864e9e713bdb93f1cde, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CycleBossDragonEggRewardSystem
+  _gameManager: {fileID: 914589612}
+  _cycleProgression: {fileID: 704850240}
+  _eggInventorySystem: {fileID: 936144407}
+  _rewardPool: {fileID: 11400000, guid: ae4ba2cbfbd78e843a6ab233d5228842, type: 2}
 --- !u!1 &1356859329
 GameObject:
   m_ObjectHideFlags: 0
@@ -6207,6 +6265,8 @@ GameObject:
   - component: {fileID: 1356859332}
   - component: {fileID: 1356859331}
   - component: {fileID: 1356859330}
+  - component: {fileID: 1356859334}
+  - component: {fileID: 1356859335}
   m_Layer: 0
   m_Name: PopulationSystem
   m_TagString: Untagged
@@ -6271,6 +6331,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1356859334
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1356859329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a1bd16229944dbaaac27589ba9fe73b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PopulationUpkeepSystem
+  _resourceManager: {fileID: 914589613}
+  _populationManager: {fileID: 914589617}
+--- !u!114 &1356859335
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1356859329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6be23e9eda0fae419e51a48e6705989, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DailySettlementManager
+  _cycleManager: {fileID: 914589611}
+  _populationUpkeepSystem: {fileID: 1356859334}
+  SettlementCompleted:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &1368852691 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7988158261880957332, guid: e091b5dd15ea87a4da8ffc0996241271, type: 3}
@@ -6282,6 +6373,51 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dab5c7d4c32e743048dfca98e2d5914f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Splines::UnityEngine.Splines.SplineContainer
+--- !u!1 &1464424653
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1464424654}
+  - component: {fileID: 1464424655}
+  m_Layer: 0
+  m_Name: TowerAuraSystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1464424654
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1464424653}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 698775030}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1464424655
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1464424653}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09ce571eea50746f4a7a59f8f7b9acbf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerAuraSystem
+  _gridMap: {fileID: 313449541}
 --- !u!1 &1494252250
 GameObject:
   m_ObjectHideFlags: 0
@@ -6913,7 +7049,7 @@ MonoBehaviour:
   _gridMap: {fileID: 313449541}
   _statComposite: {fileID: 1652351645}
   _dragonTreeManager: {fileID: 914589622}
-  _towerAuraSystem: {fileID: 0}
+  _towerAuraSystem: {fileID: 1464424655}
 --- !u!114 &1652351655
 MonoBehaviour:
   m_ObjectHideFlags: 0
