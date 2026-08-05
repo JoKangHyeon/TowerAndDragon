@@ -390,14 +390,39 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
         }
     }
 
-    private void HandleAttackModeClicked() => _boundTower?.SetMode(BabyDragonMode.Attack);
-    private void HandleBuffModeClicked() => _boundTower?.SetMode(BabyDragonMode.Buff);
+    private void HandleAttackModeClicked()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        _boundTower?.SetMode(BabyDragonMode.Attack);
+    }
+
+    private void HandleBuffModeClicked()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        _boundTower?.SetMode(BabyDragonMode.Buff);
+    }
+
+    // 클릭음을 내지 않는다 - 창을 여닫는 제스처라 대상 창(UI_DragonSkillWindow)이 열림/닫힘음을 낸다.
     private void HandleSkillTreeClicked() => _dragonSkillWindow?.ToggleFromEntryPoint();
-    private void HandleRelocateClicked() => _buildingPlacementController?.EnterMoveMode();
-    private void HandleRemoveClicked() => _buildingPlacementController?.RemoveSelectedBuilding();
+
+    private void HandleRelocateClicked()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        _buildingPlacementController?.EnterMoveMode();
+    }
+
+    private void HandleRemoveClicked()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        _buildingPlacementController?.RemoveSelectedBuilding();
+    }
 
     // 선택을 해제하면 Update가 창을 자동으로 닫는다(UI_PopulationAllocationWindow.CloseWindow와 동일).
-    private void HandleCloseClicked() => _buildingPlacementController?.Deselect();
+    private void HandleCloseClicked()
+    {
+        SoundManager.Play(SoundId.UiWindowClose);
+        _buildingPlacementController?.Deselect();
+    }
 
     private void AddButtonListeners()
     {

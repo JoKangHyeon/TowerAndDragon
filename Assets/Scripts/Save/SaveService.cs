@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
@@ -107,124 +106,24 @@ public sealed class SaveService : MonoBehaviour
         }
     }
 
-    // --- 조회 (meta.json만 읽어 저렴하므로 동기) ---
+    // --- 조회 (SaveSlotQuery로 위임. 씬 없이도 읽혀야 해서 로직은 static 쪽에 있다) ---
 
-    public IReadOnlyList<SaveSlotInfo> GetSlots()
-    {
-        var slots = new List<SaveSlotInfo>();
+    public IReadOnlyList<SaveSlotInfo> GetSlots() => SaveSlotQuery.GetSlots();
 
-        for (int slotIndex = 0; slotIndex < MAX_SLOT_COUNT; slotIndex++)
-        {
-            TryGetSlot(slotIndex, out SaveSlotInfo info);
-            slots.Add(info);
-        }
+    public bool TryGetSlot(int slotIndex, out SaveSlotInfo info) =>
+        SaveSlotQuery.TryGetSlot(slotIndex, out info);
 
-        return slots;
-    }
+    public bool HasAnySave => SaveSlotQuery.HasAnySave;
 
-    public bool TryGetSlot(int slotIndex, out SaveSlotInfo info)
-    {
-        info = SaveSlotInfo.Empty(slotIndex);
-
-        if (!SavePaths.IsValidSlotIndex(slotIndex))
-        {
-            return false;
-        }
-
-        if (!SaveFileStore.Exists(SavePaths.SaveFilePath(slotIndex)))
-        {
-            return false;
-        }
-
-        // 본문이 깨져도 슬롯 목록에 "마지막 저장: ... (손상됨)"을 띄울 수 있도록,
-        // 메타는 본문과 별도 파일에서 읽는다. 메타가 없으면 본문에서 뽑아 자가치유한다.
-        bool hasThumbnail = SaveFileStore.Exists(SavePaths.ThumbnailFilePath(slotIndex));
-
-        if (TryReadMetaFile(slotIndex, out SaveMetaDto meta))
-        {
-            bool isCorrupted = meta.SchemaVersion != SaveSchema.CURRENT_VERSION;
-            info = SaveSlotInfo.FromMeta(meta, isCorrupted, hasThumbnail);
-            return true;
-        }
-
-        // 목록 조회에서는 손상 격리를 하지 않는다 - 격리하면 save.json이 사라져 다음 조회에서
-        // "손상됨"이 아니라 "비어 있음"으로 보이고, 사용자가 무슨 일이 있었는지 알 수 없게 된다.
-        if (TryReadSave(slotIndex, out SaveGameDto dto, out _, false))
-        {
-            WriteMetaFile(slotIndex, dto.Meta);
-            info = SaveSlotInfo.FromMeta(dto.Meta, false, hasThumbnail);
-            return true;
-        }
-
-        // 파일은 있는데 읽히지 않는다. 저장 시각조차 알 수 없지만, 빈 슬롯이 아니라는 사실은 알린다.
-        info = SaveSlotInfo.Corrupted(slotIndex);
-        return true;
-    }
-
-    public bool HasAnySave => MostRecentSlotIndex != SavePaths.INVALID_SLOT_INDEX;
-
-    public int MostRecentSlotIndex
-    {
-        get
-        {
-            int bestSlotIndex = SavePaths.INVALID_SLOT_INDEX;
-            var bestSavedAtUtc = System.DateTimeOffset.MinValue;
-
-            for (int slotIndex = 0; slotIndex < MAX_SLOT_COUNT; slotIndex++)
-            {
-                if (!TryGetSlot(slotIndex, out SaveSlotInfo info) || info.IsCorrupted)
-                {
-                    continue;
-                }
-
-                if (info.SavedAtUtc > bestSavedAtUtc)
-                {
-                    bestSavedAtUtc = info.SavedAtUtc;
-                    bestSlotIndex = slotIndex;
-                }
-            }
-
-            return bestSlotIndex;
-        }
-    }
+    public int MostRecentSlotIndex => SaveSlotQuery.MostRecentSlotIndex;
 
     /// <summary>
     /// 슬롯의 점령 현황 썸네일을 UI가 바로 붙일 수 있는 스프라이트로 읽는다.
     /// 부를 때마다 텍스처를 새로 만들므로, 슬롯을 다시 그릴 때는 호출자가 이전 스프라이트와
-    /// 그 스프라이트의 texture를 함께 Destroy해야 한다 - 목록을 여닫을 때마다 누적되면
-    /// 슬롯 하나당 수백 KB짜리 텍스처가 그대로 새는 자리다.
+    /// 그 스프라이트의 texture를 함께 Destroy해야 한다.
     /// </summary>
-    public bool TryLoadThumbnail(int slotIndex, out Sprite thumbnail)
-    {
-        thumbnail = null;
-
-        if (!SavePaths.IsValidSlotIndex(slotIndex))
-        {
-            return false;
-        }
-
-        if (!SaveFileStore.TryReadAllBytes(SavePaths.ThumbnailFilePath(slotIndex), out byte[] pngBytes, out _))
-        {
-            return false;
-        }
-
-        // 실제 크기는 LoadImage가 PNG 헤더를 읽어 다시 잡으므로 여기 값은 의미가 없다.
-        var texture = new Texture2D(1, 1, TextureFormat.RGB24, false);
-
-        if (!texture.LoadImage(pngBytes))
-        {
-            Debug.LogError($"[SaveService] 썸네일 디코딩 실패(슬롯 {slotIndex})");
-            Destroy(texture);
-            return false;
-        }
-
-        thumbnail = Sprite.Create(
-            texture,
-            new Rect(0f, 0f, texture.width, texture.height),
-            new Vector2(0.5f, 0.5f));
-
-        return true;
-    }
+    public bool TryLoadThumbnail(int slotIndex, out Sprite thumbnail) =>
+        SaveSlotQuery.TryLoadThumbnail(slotIndex, out thumbnail);
 
     // --- 저장 ---
 
@@ -327,21 +226,7 @@ public sealed class SaveService : MonoBehaviour
         }
     }
 
-    public bool TryDelete(int slotIndex)
-    {
-        if (!SavePaths.IsValidSlotIndex(slotIndex))
-        {
-            return false;
-        }
-
-        if (!SaveFileStore.TryDeleteDirectory(SavePaths.SlotDirectory(slotIndex), out string error))
-        {
-            Debug.LogError($"[SaveService] 슬롯 {slotIndex} 삭제 실패: {error}");
-            return false;
-        }
-
-        return true;
-    }
+    public bool TryDelete(int slotIndex) => SaveSlotQuery.TryDelete(slotIndex);
 
     // --- 로드 ---
 
@@ -392,7 +277,7 @@ public sealed class SaveService : MonoBehaviour
 
     private SaveLoadResult TryApplySlot(int slotIndex)
     {
-        if (!TryReadSave(slotIndex, out SaveGameDto dto, out SaveLoadFailureReason reason))
+        if (!SaveSlotQuery.TryReadSave(slotIndex, out SaveGameDto dto, out SaveLoadFailureReason reason))
         {
             return SaveLoadResult.Failure(reason);
         }
@@ -419,82 +304,6 @@ public sealed class SaveService : MonoBehaviour
         }
 
         return SaveLoadResult.Success();
-    }
-
-    /// <summary>
-    /// 2단계 파싱. DTO로 바로 역직렬화하면 필드 타입이 바뀐 구버전 세이브가 버전 판정 전에
-    /// 예외로 터져 원인을 진단할 수 없다. 또한 복원을 시작한 뒤에는 롤백이 불가능하므로
-    /// 모든 검증을 여기서 끝낸다.
-    /// </summary>
-    private bool TryReadSave(
-        int slotIndex,
-        out SaveGameDto dto,
-        out SaveLoadFailureReason reason,
-        bool quarantineOnFailure = true)
-    {
-        dto = null;
-        string savePath = SavePaths.SaveFilePath(slotIndex);
-
-        if (!SaveFileStore.Exists(savePath))
-        {
-            reason = SaveLoadFailureReason.NotFound;
-            return false;
-        }
-
-        if (!SaveFileStore.TryReadAllText(savePath, out string json, out string readError))
-        {
-            Debug.LogError($"[SaveService] 세이브 읽기 실패(슬롯 {slotIndex}): {readError}");
-            reason = SaveLoadFailureReason.FileReadFailed;
-            return false;
-        }
-
-        if (!SaveJson.TryParseObject(json, out JObject root, out string parseError))
-        {
-            Debug.LogError($"[SaveService] 세이브 파싱 실패(슬롯 {slotIndex}): {parseError}");
-            Quarantine(slotIndex, quarantineOnFailure);
-            reason = SaveLoadFailureReason.ParseFailed;
-            return false;
-        }
-
-        if (!SaveJson.TryReadSchemaVersion(root, out int schemaVersion))
-        {
-            Quarantine(slotIndex, quarantineOnFailure);
-            reason = SaveLoadFailureReason.ParseFailed;
-            return false;
-        }
-
-        if (schemaVersion > SaveSchema.CURRENT_VERSION)
-        {
-            reason = SaveLoadFailureReason.SchemaTooNew;
-            return false;
-        }
-
-        if (schemaVersion < SaveSchema.MIN_SUPPORTED_VERSION)
-        {
-            reason = SaveLoadFailureReason.SchemaTooOld;
-            return false;
-        }
-
-        // 여기에 마이그레이션 체인이 들어간다(현재는 구현체 0개 - 검증할 구버전 세이브가 없다).
-        // JObject 단계에서 v -> v+1로 끌어올린 뒤 마지막에 한 번만 ToObject 하면
-        // 구버전 DTO 클래스를 남기지 않아도 된다.
-
-        if (!SaveJson.TryToObject(root, out dto, out string convertError))
-        {
-            Debug.LogError($"[SaveService] 세이브 변환 실패(슬롯 {slotIndex}): {convertError}");
-            Quarantine(slotIndex, quarantineOnFailure);
-            reason = SaveLoadFailureReason.ParseFailed;
-            return false;
-        }
-
-        if (!dto.TryNormalize())
-        {
-            reason = SaveLoadFailureReason.ValidationFailed;
-            return false;
-        }
-
-        reason = SaveLoadFailureReason.None;
-        return true;
     }
 
     // --- 내부 헬퍼 ---
@@ -558,35 +367,6 @@ public sealed class SaveService : MonoBehaviour
         }
 
         return null;
-    }
-
-    private static void WriteMetaFile(int slotIndex, SaveMetaDto meta)
-    {
-        if (SaveJson.TrySerialize(meta, out string metaJson, out _))
-        {
-            SaveFileStore.TryWriteAtomic(SavePaths.MetaFilePath(slotIndex), metaJson, out _);
-        }
-    }
-
-    private static bool TryReadMetaFile(int slotIndex, out SaveMetaDto meta)
-    {
-        meta = null;
-
-        return SaveFileStore.TryReadAllText(SavePaths.MetaFilePath(slotIndex), out string json, out _) &&
-            SaveJson.TryDeserialize(json, out meta, out _);
-    }
-
-    // 손상된 세이브는 지우지 않고 옆으로 치운다 - 제보와 수동 복구의 여지를 남긴다.
-    private static void Quarantine(int slotIndex, bool isEnabled)
-    {
-        if (!isEnabled)
-        {
-            return;
-        }
-
-        SaveFileStore.TryQuarantine(
-            SavePaths.SaveFilePath(slotIndex),
-            SavePaths.CorruptFilePath(slotIndex));
     }
 
     private SaveResult Fail(SaveFailureReason reason, int slotIndex) =>

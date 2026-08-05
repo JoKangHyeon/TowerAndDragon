@@ -5,7 +5,8 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// 스킬 발동 흐름을 담당한다: 즉시 발동 / 지점 지정(광역) / 적 지정(단일).
 /// 건설·점령 모드(BuildingPlacementController, ConquestModeController)와 동일한 입력 패턴
-/// (InputActionReference Enable/Disable, 좌클릭 확정, 포인터-오버-UI 가드)을 따른다.
+/// (전용 액션만 Enable/Disable, 공유 액션은 GlobalInputBootstrap에 맡김, 좌클릭 확정,
+/// 포인터-오버-UI 가드)을 따른다.
 /// </summary>
 public class SkillTargetingController : MonoBehaviour
 {
@@ -43,22 +44,20 @@ public class SkillTargetingController : MonoBehaviour
         _cam = Camera.main;
     }
 
+    // _cancelAction(Esc)은 모든 창이 함께 쓰는 공유 액션이라 GlobalInputBootstrap이 켠다 -
+    // 여기서 끄면 이 컨트롤러가 비활성화되는 순간 모든 창의 Esc가 같이 죽는다.
+    // _confirmAction(좌클릭)은 이 컨트롤러 전용이므로 여기서 직접 관리한다
+    // (BuildingPlacementController의 _placeAction / _cancelMoveAction 구분과 같은 기준).
     private void OnEnable()
     {
         if (_confirmAction != null)
             _confirmAction.action.Enable();
-
-        if (_cancelAction != null)
-            _cancelAction.action.Enable();
     }
 
     private void OnDisable()
     {
         if (_confirmAction != null)
             _confirmAction.action.Disable();
-
-        if (_cancelAction != null)
-            _cancelAction.action.Disable();
     }
 
     private void Update()

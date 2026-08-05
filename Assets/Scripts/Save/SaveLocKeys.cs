@@ -12,6 +12,14 @@ public static class SaveLocKeys
     public const string SLOT_AUTO_BADGE = "save_slot_auto_badge";
     public const string SLOT_DAY_LABEL = "save_slot_day_label";
 
+    /// <summary>슬롯 목록 창을 저장 모드로 열었을 때의 헤더. 불러오기 모드는 TitleLocKeys가 갖는다.</summary>
+    public const string SAVE_WINDOW_HEADER = "save_window_header";
+
+    /// <summary>이미 데이터가 있는 슬롯을 처음 눌렀을 때, 타임스탬프 자리에 대신 띄우는 확인 문구.</summary>
+    public const string SLOT_OVERWRITE_CONFIRM = "save_slot_overwrite_confirm";
+
+    public const string SLOT_SAVED = "save_slot_saved";
+
     public const string SAVE_FAIL_GENERIC = "save_fail_generic";
     public const string SAVE_FAIL_PHASE = "save_fail_phase";
     public const string SAVE_FAIL_SERIALIZE = "save_fail_serialize";

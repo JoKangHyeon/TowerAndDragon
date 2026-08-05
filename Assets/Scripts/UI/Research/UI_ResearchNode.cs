@@ -60,7 +60,11 @@ public class UI_ResearchNode : MonoBehaviour
         if (_button != null)
         {
             _button.onClick.RemoveAllListeners();
-            _button.onClick.AddListener(() => onClick?.Invoke(Node));
+            _button.onClick.AddListener(() =>
+            {
+                SoundManager.Play(SoundId.UiButtonClick);
+                onClick?.Invoke(Node);
+            });
         }
     }
 

@@ -1,4 +1,3 @@
-using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -58,8 +57,15 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("드롭다운을 열지 않고 다음 언어로 넘기는 화살표.")]
     [SerializeField] private Button _languageNextButton;
 
-    [Header("저장 후 메인화면")]
-    [SerializeField] private Button _saveAndRetrunButton;
+    [Header("저장 / 불러오기")]
+    [Tooltip("슬롯 창을 저장 모드로 여는 버튼.")]
+    [SerializeField] private Button _saveButton;
+    [Tooltip("슬롯 창을 불러오기 모드로 여는 버튼.")]
+    [SerializeField] private Button _loadButton;
+    [Tooltip("두 버튼이 공유하는 세이브 슬롯 목록 창.")]
+    [SerializeField] private UI_LoadGameWindow _slotWindow;
+    [Tooltip("두 버튼을 담은 줄(SaveLoad_Button). 버튼이 전부 빠질 때 줄째로 접기 위해 받는다.")]
+    [SerializeField] private GameObject _slotButtonRow;
 
     private readonly List<string> _languageOptionBuffer = new();
 
@@ -110,10 +116,23 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
             _languageNextButton.onClick.AddListener(() => StepLanguage(STEP_NEXT));
         }
 
-        if (_saveAndRetrunButton != null)
+        if (_saveButton != null)
         {
-            _saveAndRetrunButton.onClick.AddListener(SaveAndReturnToMainscreen);
+            _saveButton.onClick.AddListener(OpenSaveWindow);
         }
+
+        if (_loadButton != null)
+        {
+            _loadButton.onClick.AddListener(OpenLoadWindow);
+        }
+
+        // 단순 setter라 슬롯 창의 Awake보다 앞서도 안전하다(UI_TitleWindow의 Construct와 같은 처리).
+        if (_slotWindow != null)
+        {
+            _slotWindow.Construct(_saveService);
+        }
+
+        RenderSlotButtons();
 
         _volumeRows = GetComponentsInChildren<UI_VolumeRow>(true);
         foreach (UI_VolumeRow row in _volumeRows)
@@ -153,6 +172,8 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
 
     public void Open()
     {
+        SoundManager.Play(SoundId.UiWindowOpen);
+
         _isOpen = true;
         gameObject.SetActive(true);
         Render();
@@ -160,6 +181,8 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
 
     public void Close()
     {
+        SoundManager.Play(SoundId.UiWindowClose);
+
         _isOpen = false;
         gameObject.SetActive(false);
 
@@ -193,6 +216,8 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
 
     private void StepResolution(int direction)
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         if (_settings == null)
         {
             return;
@@ -213,6 +238,8 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
     // 언어를 바꾸면 OnLanguageChanged → Render로 드롭다운 선택도 따라오므로, 여기선 인덱스만 넘긴다.
     private void StepLanguage(int direction)
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         if (_settings != null)
         {
             _settings.SetLanguageIndex(_settings.LanguageIndex + direction);
@@ -319,13 +346,57 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         return null;
     }
 
-    public async void SaveAndReturnToMainscreen()
-    {
+    // 슬롯 창은 같은 프리팹을 쓰는 인게임 설정 창에만 배선된다. 타이틀 화면 인스턴스에는 없다.
+    private bool HasSlotWindow => _slotWindow != null;
 
-        //TODO : 세이브 창 만들고, 
-        SaveResult result = await _saveService.SaveAsync(
-            1,
-            false,
-            this.GetCancellationTokenOnDestroy());
+    // 저장은 인게임에서만 가능하다 - 타이틀 화면에는 저장할 게임 상태도 SaveService도 없다.
+    private bool CanOfferSave => HasSlotWindow && _saveService != null;
+
+    // 배선은 인스펙터에서 정해지고 런타임에 바뀌지 않으므로 Awake에서 한 번만 반영한다.
+    // 눌러도 아무 일이 없는 버튼을 남겨 두면 타이틀 화면에서 로그만 찍히고 끝난다.
+    private void RenderSlotButtons()
+    {
+        if (_saveButton != null)
+        {
+            _saveButton.gameObject.SetActive(CanOfferSave);
+        }
+
+        if (_loadButton != null)
+        {
+            _loadButton.gameObject.SetActive(HasSlotWindow);
+        }
+
+        // 버튼만 끄면 세로 레이아웃에 빈 줄이 남는다. 줄을 끄면 VerticalLayoutGroup이 자리째 거둔다.
+        if (_slotButtonRow != null)
+        {
+            _slotButtonRow.SetActive(HasSlotWindow);
+        }
+    }
+
+    private void OpenSaveWindow() => OpenSlotWindow(UI_LoadGameWindow.WindowMode.Save);
+
+    private void OpenLoadWindow() => OpenSlotWindow(UI_LoadGameWindow.WindowMode.Load);
+
+    // 슬롯 창을 설정 창 위에 겹치지 않고 설정 창 대신 연다. 두 창이 같은 Esc 액션을 구독하고 있어
+    // 겹쳐 두면 Esc 한 번에 둘 다 닫히고, Close()가 설정값 저장까지 겸한다.
+    private void OpenSlotWindow(UI_LoadGameWindow.WindowMode mode)
+    {
+        if (_slotWindow == null)
+        {
+            Debug.LogError("[UI_ConfigWindow] 슬롯 창이 배선되지 않았습니다.");
+            return;
+        }
+
+        // 여닫는 소리는 각 창의 Open()/Close()가 낸다 - 여기서 또 내면 겹친다.
+        Close();
+
+        if (mode == UI_LoadGameWindow.WindowMode.Save)
+        {
+            _slotWindow.OpenForSave();
+        }
+        else
+        {
+            _slotWindow.OpenForLoad();
+        }
     }
 }

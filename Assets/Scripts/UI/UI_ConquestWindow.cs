@@ -221,6 +221,7 @@ public class UI_ConquestWindow : MonoBehaviour
 
     public void ToggleConquestMode()
     {
+        // 클릭음을 내지 않는다 - 점령 모드 진입/해제는 SetConquestModeActive가 창음을 낸다.
         bool nextActive = !_conquestModeController.IsActive;
 
         // 밤에는 점령 모드를 켤 수 없다(창이 아예 열리지 않는다). 끄는 것은 항상 허용.
@@ -253,6 +254,8 @@ public class UI_ConquestWindow : MonoBehaviour
     // 씬에 미리 세팅해 둔 위치(_homePos)에서 슬라이드 인 시킨다.
     private void OpenPanel()
     {
+        SoundManager.Play(SoundId.UiWindowOpen);
+
         _panelTween?.Kill();
 
         _conquestModePanel.SetActive(true);
@@ -266,6 +269,8 @@ public class UI_ConquestWindow : MonoBehaviour
     // 청크 하이라이트는 지우지 않는다 - 호버로 계속 갱신되고, 점령 모드가 꺼질 때까지 유지된다.
     public void Close()
     {
+        SoundManager.Play(SoundId.UiWindowClose);
+
         _selectedChunkCoord = null;
         _conquestModeController.UnlockChunkSelection();
 
@@ -522,6 +527,7 @@ public class UI_ConquestWindow : MonoBehaviour
 
     private void OnConquerButtonClicked()
     {
+        // 클릭음을 내지 않는다 - 마지막에 Close()가 창 닫힘음을 낸다.
         if (!_selectedChunkCoord.HasValue)
         {
             return;

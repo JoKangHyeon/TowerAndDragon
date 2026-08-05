@@ -177,6 +177,8 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
     public void Open()
     {
+        SoundManager.Play(SoundId.UiWindowOpen);
+
         _isOpen = true;
         gameObject.SetActive(true);
         BuildTreeIfNeeded();
@@ -200,6 +202,8 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
     public void Close()
     {
+        SoundManager.Play(SoundId.UiWindowClose);
+
         _isOpen = false;
         _detailsPanel?.Clear();
         gameObject.SetActive(false);
@@ -212,6 +216,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     // 연구소 창·HUD의 연구 버튼이 호출하는 진입점.
     public void ToggleFromEntryPoint()
     {
+        // 클릭음을 내지 않는다 - 창을 여닫는 제스처는 Open/Close의 창음만 낸다.
         if (_isOpen)
         {
             Close();

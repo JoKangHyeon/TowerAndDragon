@@ -136,6 +136,8 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
 
     private void HandleUpgradeClicked()
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         if (_selectedNode == null || _dragonTreeManager == null)
         {
             return;

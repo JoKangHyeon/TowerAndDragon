@@ -164,13 +164,18 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
 
         if (isActive)
         {
+            SoundManager.Play(SoundId.UiWindowOpen);
+
             _buildingPlacementController.CancelAll();
             RecomputeConquerableClassification();
         }
         else
         {
+            // 패널이 열려 있으면 _conquestUI.Close()가 닫힘음을 낸다 - 여기서 또 내지 않는다.
             if (_isSelectionLocked)
                 _conquestUI.Close();
+            else
+                SoundManager.Play(SoundId.UiWindowClose);
 
             _isSelectionLocked = false;
 

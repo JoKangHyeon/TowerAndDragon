@@ -1,0 +1,11 @@
+# Unity가 자동 생성하는 YAML 에셋은 diff 출력에서 제외합니다.
+# 저장 방식·머지 동작에는 영향이 없고, diff 화면에만 "Binary files differ"로 표시됩니다.
+# 내용을 직접 봐야 할 때는 `git diff --text <경로>`로 강제로 볼 수 있습니다.
+# .meta는 GUID가 깨졌을 때 확인·discard가 필요하므로 의도적으로 제외하지 않습니다.
+
+*.unity      -diff
+*.prefab     -diff
+*.asset      -diff
+*.mat        -diff
+*.controller -diff
+*.anim       -diff

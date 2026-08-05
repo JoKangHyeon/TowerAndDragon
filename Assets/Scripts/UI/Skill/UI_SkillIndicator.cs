@@ -102,6 +102,7 @@ public class UI_SkillIndicator : MonoBehaviour
 
     private void HandleClicked()
     {
+        SoundManager.Play(SoundId.UiButtonClick);
         _onClicked?.Invoke(_skill);
     }
 }

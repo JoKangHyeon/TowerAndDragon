@@ -152,6 +152,8 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
 
     private void HandleResearchClicked()
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         if (_selectedNode == null || _researchManager == null)
         {
             return;

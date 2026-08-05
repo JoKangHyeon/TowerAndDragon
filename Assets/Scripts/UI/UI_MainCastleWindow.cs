@@ -247,17 +247,22 @@ public class UI_MainCastleWindow : MonoBehaviour
     // (UI_PopulationAllocationWindow.CloseWindow와 동일).
     private void CloseWindow()
     {
+        SoundManager.Play(SoundId.UiWindowClose);
         _buildingPlacementController?.Deselect();
     }
 
     public void SelectDragonType(DragonType dragonType)
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         _currentSelectedType = dragonType;
         Render();
     }
 
     public void ApplyDragonType()
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         Dragon dragon = CurrentDragon;
         if (dragon == null)
         {
@@ -282,6 +287,7 @@ public class UI_MainCastleWindow : MonoBehaviour
         Render();
     }
 
+    // 클릭음을 내지 않는다 - 창을 여닫는 제스처라 대상 창(UI_DragonSkillWindow)이 열림/닫힘음을 낸다.
     public void OpenDragonSkillTree()
     {
         if (_dragonSkillWindow == null)

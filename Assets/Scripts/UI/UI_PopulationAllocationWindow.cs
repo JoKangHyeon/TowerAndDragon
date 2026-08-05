@@ -382,6 +382,8 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
     // (인구 배치 모드 WorkerModeController의 클릭 처리와 같은 규칙을 쓴다).
     private void AssignOne()
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         if (CanEditTarget())
         {
             PopulationAssignmentRules.TryAssignClamped(
@@ -391,6 +393,8 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
 
     private void UnassignOne()
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         if (CanEditTarget())
         {
             PopulationAssignmentRules.TryUnassignClamped(
@@ -400,6 +404,8 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
 
     private void AssignAll()
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         if (CanEditTarget())
         {
             PopulationAssignmentRules.TryAssignClamped(
@@ -409,6 +415,8 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
 
     private void UnassignAll()
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         if (CanEditTarget())
         {
             PopulationAssignmentRules.TryUnassignClamped(
@@ -419,6 +427,8 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
     // 선택을 해제하면 Update가 창을 자동으로 닫는다(ResearchLabDebugGUI의 ESC 처리와 동일).
     private void CloseWindow()
     {
+        SoundManager.Play(SoundId.UiWindowClose);
+
         if (_buildingPlacementController != null)
         {
             _buildingPlacementController.Deselect();

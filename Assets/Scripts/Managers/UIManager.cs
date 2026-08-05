@@ -108,6 +108,13 @@ public class UIManager : MonoBehaviour
             _gameManager.GameOverOccurred.AddListener(HandleGameOver);
             _gameManager.VictoryOccurred.AddListener(HandleVictory);
         }
+
+        // 이 단축키는 다른 컴포넌트와 공유하지 않는 UIManager 전용 액션이라 여기서 직접 켠다
+        // (공유 액션이면 GlobalInputBootstrap이 켜야 한다).
+        if (_babyDragonInventoryToggleAction != null)
+        {
+            _babyDragonInventoryToggleAction.action.Enable();
+        }
     }
 
     private void OnDisable()

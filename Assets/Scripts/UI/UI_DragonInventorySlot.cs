@@ -75,7 +75,11 @@ public class UI_DragonInventorySlot : MonoBehaviour
         // 밤에는 배치를 시작할 수 없다(BuildingPlacementController.IsDayForBuildActions와 같은 판정).
         button.interactable = isPlaceable;
         button.onClick.RemoveAllListeners();
-        button.onClick.AddListener(() => onClickPlace(dragon));
+        button.onClick.AddListener(() =>
+        {
+            SoundManager.Play(SoundId.UiButtonClick);
+            onClickPlace(dragon);
+        });
     }
 
     private void ApplyAttributeText(DragonType dragonType, bool isDragonMode)

@@ -30,18 +30,38 @@ public class UI_SpeedSettingWindow : MonoBehaviour
     {
         if (_buttonPause != null && _speedManager != null)
         {
-            _buttonPause.onClick.AddListener(_speedManager.Pause);
+            _buttonPause.onClick.AddListener(Pause);
         }
 
         if (_buttonPlay != null && _speedManager != null)
         {
-            _buttonPlay.onClick.AddListener(_speedManager.ResumeNormal);
+            _buttonPlay.onClick.AddListener(ResumeNormal);
         }
 
         if (_buttonSpeedUp != null && _speedManager != null)
         {
-            _buttonSpeedUp.onClick.AddListener(_speedManager.CycleFastForward);
+            _buttonSpeedUp.onClick.AddListener(CycleFastForward);
         }
+    }
+
+    // GameSpeedManager를 그대로 물리지 않고 래핑하는 이유: 같은 메서드가 단축키 경로에서도
+    // 호출되므로, 클릭음은 버튼을 물리는 이쪽에서만 내야 한다.
+    private void Pause()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        _speedManager.Pause();
+    }
+
+    private void ResumeNormal()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        _speedManager.ResumeNormal();
+    }
+
+    private void CycleFastForward()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        _speedManager.CycleFastForward();
     }
 
     private void OnEnable()

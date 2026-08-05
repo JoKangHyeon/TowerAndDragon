@@ -167,7 +167,7 @@ public class UI_IngameWindow : MonoBehaviour
         // 인구 배치 버튼: 누를 때마다 인구 배치 모드를 켜고 끈다(토글). 실제 모드 처리는 컨트롤러가 담당.
         if (_buttonWorkerMode != null && _workerModeController != null)
         {
-            _buttonWorkerMode.onClick.AddListener(_workerModeController.ToggleWorkerMode);
+            _buttonWorkerMode.onClick.AddListener(ToggleWorkerMode);
         }
 
         // 점령 버튼: 누를 때마다 점령 모드를 켜고 끈다(토글). 실제 모드 처리는 점령 창이 담당.
@@ -275,8 +275,18 @@ public class UI_IngameWindow : MonoBehaviour
         }
     }
 
+    // 클릭음을 붙이기 위한 래퍼. WorkerModeController는 단축키 경로에서도 호출되므로
+    // 컨트롤러가 아니라 버튼을 물리는 이쪽에서 소리를 낸다(창 토글 버튼들은 창이 직접 낸다).
+    private void ToggleWorkerMode()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        _workerModeController.ToggleWorkerMode();
+    }
+
     private void GoToNight()
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         if (_cycleManager != null)
         {
             _cycleManager.EndDay();

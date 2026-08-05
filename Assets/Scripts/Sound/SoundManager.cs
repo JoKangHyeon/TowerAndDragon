@@ -39,6 +39,13 @@ public class SoundManager : MonoBehaviour
     [Tooltip("낮/밤 BGM 전환에 사용. 비워 두면 씬에서 자동으로 찾고, 없으면 자동 전환만 꺼진다.")]
     [SerializeField] private CycleManager _cycleManager;
 
+    [Tooltip("보스 웨이브(주기 마지막 밤) 판별에 사용. 비워 두면 씬에서 자동으로 찾고, " +
+        "없으면 보스 밤에도 일반 밤 BGM이 나온다.")]
+    [SerializeField] private WaveCycleProgression _waveCycleProgression;
+
+    [Tooltip("게임오버 BGM 전환에 사용. 비워 두면 씬에서 자동으로 찾는다.")]
+    [SerializeField] private GameManager _gameManager;
+
     private AudioSource[] _seSources;
     private int _nextSeIndex;
 
@@ -102,16 +109,32 @@ public class SoundManager : MonoBehaviour
         {
             _cycleManager = FindFirstObjectByType<CycleManager>();
         }
+
+        // UI_Canvas는 프리팹이라 씬 오브젝트를 직렬화해 둘 수 없다 - 실제로는 이쪽 경로로 연결된다.
+        if (_waveCycleProgression == null)
+        {
+            _waveCycleProgression = FindFirstObjectByType<WaveCycleProgression>();
+        }
+
+        if (_gameManager == null)
+        {
+            _gameManager = FindFirstObjectByType<GameManager>();
+        }
     }
 
     private void OnEnable()
     {
+        // 이 UnityEvent들은 인라인 초기화가 없어 씬 YAML에 항목이 없으면 null이다(테스트 씬 등).
+        if (_gameManager != null)
+        {
+            _gameManager.GameOverOccurred?.AddListener(HandleGameOver);
+        }
+
         if (_cycleManager == null)
         {
             return;
         }
 
-        // 이 UnityEvent들은 인라인 초기화가 없어 씬 YAML에 항목이 없으면 null이다(테스트 씬 등).
         _cycleManager.OnDayStart?.AddListener(HandleDayStart);
         _cycleManager.OnNightStart?.AddListener(HandleNightStart);
 
@@ -121,6 +144,11 @@ public class SoundManager : MonoBehaviour
 
     private void OnDisable()
     {
+        if (_gameManager != null)
+        {
+            _gameManager.GameOverOccurred?.RemoveListener(HandleGameOver);
+        }
+
         if (_cycleManager == null)
         {
             return;
@@ -208,13 +236,45 @@ public class SoundManager : MonoBehaviour
         return oldest;
     }
 
-    private void HandleDayStart(int cycle) => StartBgm(BgmId.Day);
+    private void HandleGameOver() => StartBgm(BgmId.GameOver);
 
-    private void HandleNightStart(int cycle) => StartBgm(BgmId.Night);
+    private void HandleDayStart(int cycle) => PlayCycleBgm(CycleManager.CycleState.Day);
+
+    private void HandleNightStart(int cycle) => PlayCycleBgm(CycleManager.CycleState.Night);
 
     private void PlayCycleBgm(CycleManager.CycleState state)
     {
-        StartBgm(state == CycleManager.CycleState.Night ? BgmId.Night : BgmId.Day);
+        // 게임이 끝난 뒤에도 주기가 한 번 더 돌면 결과 BGM이 낮/밤 BGM에 덮인다.
+        if (_gameManager != null && _gameManager.IsGameEnded)
+        {
+            return;
+        }
+
+        StartBgm(state == CycleManager.CycleState.Night ? NightBgm : BgmId.Day);
+    }
+
+    /// <summary>
+    /// 이번 밤에 틀 BGM. 주기의 마지막 웨이브(7일차)는 보스전이라 곡이 다르다.
+    /// 스냅샷은 그날 낮 시작에 확정되므로(WaveCycleProgression.HandleDayStart),
+    /// 밤 시작 시점에는 이미 오늘 값으로 갱신돼 있다.
+    /// </summary>
+    private BgmId NightBgm
+    {
+        get
+        {
+            bool isBossNight =
+                _waveCycleProgression != null &&
+                _waveCycleProgression.HasCurrentSnapshot &&
+                _waveCycleProgression.CurrentSnapshot.IsBossWave;
+
+            // 보스 곡을 아직 못 받았다면 무음이 되는 것보다 일반 밤 BGM이 낫다.
+            return isBossNight && HasBgmClip(BgmId.Boss) ? BgmId.Boss : BgmId.Night;
+        }
+    }
+
+    private bool HasBgmClip(BgmId id)
+    {
+        return _catalog != null && _catalog.TryGet(id, out BgmEntry entry) && entry.Clip != null;
     }
 
     private void StartBgm(BgmId id)

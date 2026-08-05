@@ -89,6 +89,8 @@ public class UI_VolumeRow : MonoBehaviour
 
     private void StepVolume(int direction)
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         if (_settings == null)
         {
             return;
