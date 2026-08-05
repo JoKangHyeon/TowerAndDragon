@@ -74,6 +74,20 @@ public class BuildingPlacementController : MonoBehaviour
 
     public bool IsMoving => _moveSourceCoord.HasValue;
 
+    // 지금 마우스를 따라다니는 배치 대기 프리팹. 그리드 위에서 고른 기존 건물(SelectedBuilding)과는 다른 것이다.
+    public Building BuildingToPlace => _selectedBuilding;
+
+    // 배치 대기 프리팹이 바뀔 때 알린다 - 선택·취소·배치 완료가 모두 SetBuildingToPlace 한 곳을 지난다.
+    // 안내 오버레이가 "무엇을 지을지 고르기 전"과 "타일을 찍기 전"을 구분하는 데 쓴다.
+    public UnityEvent<Building> BuildingToPlaceChanged = new();
+
+    // 그리드에 이미 있는 건물을 클릭해 고른 대상이 바뀔 때 알린다(고른 게 없어지면 null).
+    // 인구 패널은 열림/닫힘 훅이 없어서, 안내가 "건물을 클릭했다"를 잡을 유일한 창구다.
+    public UnityEvent<Building> SelectedBuildingChanged = new();
+
+    // 상태에서 파생시켜 비교하므로 알림이 실제 선택과 어긋날 일이 없다.
+    private Building _notifiedSelection;
+
     // 건설/철거 공통 낮 판정 - CycleManager가 배선되지 않은 씬은 무제한 허용한다
     // (BabyDragonTower.IsMoveable과 같은 fail-open 관례).
     public bool IsDayForBuildActions =>
@@ -199,12 +213,17 @@ public class BuildingPlacementController : MonoBehaviour
         if (prefab == null)
             return;
 
-        _selectedBuilding = prefab;
+        bool changed = TryChangeBuildingToPlace(prefab);
         Deselect();
         CancelMove();
         _mouseSelectController.BeginPlacementPreview(prefab);
         _mouseSelectController.SetPlacementActive(true);
         Debug.Log($"[BuildingPlacementController] 선택된 건물: {prefab.name}");
+
+        if (changed)
+        {
+            BuildingToPlaceChanged.Invoke(prefab);
+        }
     }
 
     // BabyDragonTower처럼 프리팹 자체엔 스프라이트가 없고 배치 시점에야 데이터로 정해지는
@@ -214,8 +233,27 @@ public class BuildingPlacementController : MonoBehaviour
 
     public void CancelBuildMode()
     {
-        _selectedBuilding = null;
+        bool changed = TryChangeBuildingToPlace(null);
         _mouseSelectController.SetPlacementActive(false);
+
+        if (changed)
+        {
+            BuildingToPlaceChanged.Invoke(null);
+        }
+    }
+
+    // 값만 바꾸고 알리지 않는다 - 알림은 미리보기 세팅이 끝난 뒤 호출부가 보낸다.
+    // 구독자가 절반만 준비된 상태를 보면 안 되기 때문이다.
+    // CancelBuildMode는 이미 아무것도 고르지 않은 상태에서도 여러 경로에서 불리므로 바뀐 경우만 true를 준다.
+    private bool TryChangeBuildingToPlace(Building prefab)
+    {
+        if (_selectedBuilding == prefab)
+        {
+            return false;
+        }
+
+        _selectedBuilding = prefab;
+        return true;
     }
 
     public void RemoveSelectedBuilding()
@@ -241,6 +279,8 @@ public class BuildingPlacementController : MonoBehaviour
         _mouseSelectController.ClearHighlights();
         _rangeIndicator?.Hide();
         _buffRangeIndicator?.Hide();
+
+        NotifySelectedBuildingChanged();
     }
 
     // 건설 비용을 환급한다 - 낮밤 사이클이 한 번도 돌지 않은 당일 건설/철거는 전액, 그 외엔 DEMOLISH_REFUND_RATIO_LATE만큼.
@@ -281,6 +321,7 @@ public class BuildingPlacementController : MonoBehaviour
         CancelBuildMode();
         _moveSourceCoord = _selectedExistingBuildingCoord;
         _selectedExistingBuildingCoord = null;
+        NotifySelectedBuildingChanged();
 
         _mouseSelectController.BeginRepositionPreview(building);
         _mouseSelectController.SetPlacementActive(true);
@@ -313,6 +354,25 @@ public class BuildingPlacementController : MonoBehaviour
         _mouseSelectController.ClearHighlights();
         _rangeIndicator?.Hide();
         _buffRangeIndicator?.Hide();
+
+        NotifySelectedBuildingChanged();
+    }
+
+    // 값을 따로 들고 다니지 않고 매번 현재 상태에서 계산한다 - 선택이 풀리는 경로가 여러 개라
+    // 각자 알림을 맞춰 넣으면 어긋난다. 실제로 바뀐 경우만 알린다.
+    private void NotifySelectedBuildingChanged()
+    {
+        Building current = _selectedExistingBuildingCoord.HasValue
+            ? _gridMap.GetBuildingAt(_selectedExistingBuildingCoord.Value)
+            : null;
+
+        if (ReferenceEquals(current, _notifiedSelection))
+        {
+            return;
+        }
+
+        _notifiedSelection = current;
+        SelectedBuildingChanged.Invoke(current);
     }
 
     // _cancelMoveAction(우클릭)으로 새 건물 배치 미리보기, 기존 건물 이동 미리보기, 기존 건물 선택 하이라이트를 모두 취소한다.
