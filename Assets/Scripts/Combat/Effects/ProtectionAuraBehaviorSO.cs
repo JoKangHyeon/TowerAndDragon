@@ -78,6 +78,10 @@ public sealed class ProtectionAuraBehaviorSO : SpecialBehaviorSO
 
         public void Dispose()
         {
+            foreach (BaseMonster target in _currentlyProtected)
+            {
+                target?.RevokeGrantedShield();
+            }
             _owner = null;
             _grantedOnce.Clear();
             _currentlyProtected.Clear();

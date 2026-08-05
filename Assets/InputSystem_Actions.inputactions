@@ -95,6 +95,33 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "ConquerModeShortCut",
+                    "type": "Button",
+                    "id": "b8bac66f-a1e6-42ab-b58c-423eeb0d6aba",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "WorkerModeShortCut",
+                    "type": "Button",
+                    "id": "c0140f15-845a-4591-b00e-b7be7ce9aba7",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "BuildModeShortCut",
+                    "type": "Button",
+                    "id": "9fd329ce-0f3d-42a7-a62d-c5630f59cc64",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -491,6 +518,39 @@
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
                     "action": "ScrollZoom",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "e03217f8-ed5a-43b7-a9f6-252cd895f5ef",
+                    "path": "<Keyboard>/c",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "ConquerModeShortCut",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "60e7c796-b579-444d-88a6-3eb803c79668",
+                    "path": "<Keyboard>/v",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "WorkerModeShortCut",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a0d09bd0-d5d7-4c9b-8f75-da8872da9750",
+                    "path": "<Keyboard>/b",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "BuildModeShortCut",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
