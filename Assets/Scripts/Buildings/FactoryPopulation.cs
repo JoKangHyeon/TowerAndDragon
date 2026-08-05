@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// 생산시설 한 개의 인구 할당을 관리한다.
@@ -28,6 +29,8 @@ public class FactoryPopulation : MonoBehaviour, IPopulationAllocationTarget
 
     public bool IsInitialized => _isInitialized;
 
+    public UnityEvent OnPopulationChanged;
+        
     private void Awake()
     {
         _factory = GetComponent<Factory>();
@@ -57,19 +60,22 @@ public class FactoryPopulation : MonoBehaviour, IPopulationAllocationTarget
 
         _populationManager = populationManager;
         _isInitialized = true;
+        OnPopulationChanged?.Invoke();
         return true;
     }
 
     public bool TryAssign(int amount)
     {
-        return _isInitialized &&
-            _populationManager.TryAssign(_allocation, amount);
+        bool result = _isInitialized && _populationManager.TryAssign(_allocation, amount);
+        OnPopulationChanged?.Invoke();
+        return result;
     }
 
     public bool TryUnassign(int amount)
     {
-        return _isInitialized &&
-            _populationManager.TryUnassign(_allocation, amount);
+        bool result = _isInitialized && _populationManager.TryUnassign(_allocation, amount);
+        OnPopulationChanged?.Invoke();
+        return result;
     }
 
     public bool Release()

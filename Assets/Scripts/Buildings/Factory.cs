@@ -17,7 +17,7 @@ public class Factory : Building
     [SerializeField] private GridMap _gridMap;
 
     private bool _isInitialized;
-    private FactoryPopulation _population;
+    protected FactoryPopulation _population;
     private float _areaYieldMultiplier = NEUTRAL_YIELD_MULTIPLIER;
 
     public void SetAreaYieldMultiplier(float multiplier)
@@ -46,7 +46,7 @@ public class Factory : Building
     }
 
     // 정산 시점과 UI 미리보기가 반드시 같은 값을 내야 하므로 계산식은 여기 하나만 둔다.
-    private int CalculateYield(ResourceType resourceType, float staffingRatio)
+    protected int CalculateYield(ResourceType resourceType, float staffingRatio)
     {
         if (_data == null || _gridMap == null)
             return 0;
@@ -72,7 +72,7 @@ public class Factory : Building
 
     // 프리팹은 씬 오브젝트(ResourceManager/CycleManager/GridMap)를 들고 있을 수 없으므로,
     // 건설 직후 FactoryResourceCoordinator가 주입한다(TowerPopulation.Initialize와 동일한 패턴).
-    public bool Initialize(ResourceManager resourceManager, CycleManager cycleManager, GridMap gridMap)
+    public virtual bool Initialize(ResourceManager resourceManager, CycleManager cycleManager, GridMap gridMap)
     {
         if (_isInitialized || resourceManager == null || cycleManager == null || gridMap == null)
             return false;
