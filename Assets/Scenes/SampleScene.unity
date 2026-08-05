@@ -1160,23 +1160,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db3200645c162584daeae3f0b9ed9bd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
-  _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _wasdSpeed: 30
-  _edgeScrollSpeed: 12
-  _dragSensitivity: 1
-  _edgeScrollEnabled: 0
-  _edgeScrollThreshold: 20
-  _zoomSpeed: 30
-  _minZoom: 3
-  _maxZoom: 18
-  _zoomSmoothing: 8
-  _moveSmoothTime: 0.08
-  _boundsTilemap: {fileID: 0}
-  _excludedBoundsTile: {fileID: 0}
-  _boundsMarginMin: {x: 0, y: 0}
-  _boundsMarginMax: {x: 0, y: 0}
-  _mapMin: {x: -60, y: -60}
-  _mapMax: {x: 60, y: 60}
 --- !u!1 &528527939
 GameObject:
   m_ObjectHideFlags: 0
@@ -7049,6 +7032,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4045de5de46a3144b38fb3fd1b08f0e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ConquestManager
+--- !u!114 &1721790484 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5959431859424174035, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+  m_PrefabInstance: {fileID: 2046588818}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd28d963bd980384eb4d90b507c17235, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FogOfWarRenderer
+--- !u!114 &1721790485 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8324432385230451432, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+  m_PrefabInstance: {fileID: 2046588818}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de5e6f79a7263774d9de71d0e1ea6e72, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConqueredChunkBorderRenderer
 --- !u!1001 &2046588818
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7248,9 +7253,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 455165707}
     - target: {fileID: 5952906172798228213, guid: a5f46e54304c76041916faa81b1dabdc, type: 3}
+      propertyPath: _borderRenderer
+      value: 
+      objectReference: {fileID: 1721790485}
+    - target: {fileID: 5952906172798228213, guid: a5f46e54304c76041916faa81b1dabdc, type: 3}
       propertyPath: _conquestManager
       value: 
       objectReference: {fileID: 1721790482}
+    - target: {fileID: 5952906172798228213, guid: a5f46e54304c76041916faa81b1dabdc, type: 3}
+      propertyPath: _fogOfWarRenderer
+      value: 
+      objectReference: {fileID: 1721790484}
     - target: {fileID: 5952906172798228213, guid: a5f46e54304c76041916faa81b1dabdc, type: 3}
       propertyPath: _mouseSelectController
       value: 
