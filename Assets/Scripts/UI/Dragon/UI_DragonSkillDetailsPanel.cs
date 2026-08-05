@@ -1,13 +1,25 @@
 using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // 스킬트리 창의 상세 패널 - 선택된 노드의 이름·설명·코스트·상태를 표시하고 해금 버튼을 연결한다.
 // 코스트 칸은 UI_ConquestWindow와 동일하게 UI_ResourceCostSlot을 필요한 개수만 인스턴스화한다.
 public class UI_DragonSkillDetailsPanel : MonoBehaviour
 {
+    private const float OPEN_START_SCALE = 0.8f;
+    private const float OPEN_OVERSHOOT_SCALE = 1.1f;
+    private const float NORMAL_SCALE = 1f;
+    private const float DEFAULT_OPEN_OVERSHOOT_DURATION = 0.18f;
+    private const float DEFAULT_OPEN_SETTLE_DURATION = 0.1f;
+    private const float DEFAULT_CLOSE_DURATION = 0.12f;
+
+    private static readonly Color UPGRADE_DISABLED_COLOR_DEFAULT = new Color(0.5f, 0.5f, 0.5f, 1f);
+
     [SerializeField] private GameObject _root;
     [SerializeField] private TextMeshProUGUI _nameText;
     [SerializeField] private TextMeshProUGUI _descriptionText;
@@ -19,12 +31,29 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
     [SerializeField] private Color _sufficientColor = Color.white;
     [SerializeField] private Color _insufficientColor = Color.red;
 
+    [Header("업그레이드 버튼 비활성 연출")]
+    [Tooltip("업그레이드 불가(자원 부족 등)일 때 버튼 이미지·텍스트에 입힐 회색.")]
+    [SerializeField] private Color _upgradeDisabledColor = UPGRADE_DISABLED_COLOR_DEFAULT;
+
+    [Header("패널 열림/닫힘 스케일 연출")]
+    [Tooltip("열릴 때 시작(80%)에서 오버슈트(110%)까지 걸리는 시간.")]
+    [SerializeField] private float _openOvershootDuration = DEFAULT_OPEN_OVERSHOOT_DURATION;
+    [Tooltip("오버슈트(110%)에서 정상(100%)으로 정착하는 시간.")]
+    [SerializeField] private float _openSettleDuration = DEFAULT_OPEN_SETTLE_DURATION;
+    [Tooltip("닫힐 때 100%에서 80%로 줄며 사라지는 시간.")]
+    [SerializeField] private float _closeDuration = DEFAULT_CLOSE_DURATION;
+
     private readonly List<UI_ResourceCostSlot> _costSlots = new();
 
     private DragonTreeManager _dragonTreeManager;
     private ResourceManager _resourceManager;
     private DragonSkillNodeData _selectedNode;
     private Action _onChanged;
+    private readonly List<RaycastResult> _raycastResults = new();
+    private Color _upgradeImageBaseColor = Color.white;
+    private Color _upgradeTextBaseColor = Color.white;
+    private Tween _scaleTween;
+    private bool _isOpen;
 
     public void Construct(DragonTreeManager dragonTreeManager, ResourceManager resourceManager, Action onChanged)
     {
@@ -35,19 +64,55 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
         if (_upgradeButtonText != null)
         {
             _upgradeButtonText.text = StringTable.GetString(DragonLocKeys.UPGRADE_BUTTON);
+            _upgradeTextBaseColor = _upgradeButtonText.color;
         }
 
         if (_upgradeButton != null)
         {
             _upgradeButton.onClick.AddListener(HandleUpgradeClicked);
+            if (_upgradeButton.image != null)
+            {
+                _upgradeImageBaseColor = _upgradeButton.image.color;
+            }
         }
 
-        Clear();
+        HideImmediate();
     }
 
     public void Clear()
     {
         _selectedNode = null;
+        _isOpen = false;
+
+        if (_root == null)
+        {
+            return;
+        }
+
+        _scaleTween?.Kill();
+
+        // 실제로 보이는 상태에서만 닫힘 연출(100%→80%)을 재생하고,
+        // 그 외(부모 탭이 꺼지는 중 등)에는 즉시 숨긴다.
+        if (_root.activeInHierarchy)
+        {
+            _scaleTween = _root.transform
+                .DOScale(OPEN_START_SCALE, _closeDuration)
+                .SetEase(Ease.InQuad)
+                .SetLink(_root)
+                .OnComplete(() => _root.SetActive(false));
+        }
+        else
+        {
+            _root.SetActive(false);
+        }
+    }
+
+    // 초기화 등 연출 없이 즉시 숨겨야 할 때 사용.
+    private void HideImmediate()
+    {
+        _selectedNode = null;
+        _isOpen = false;
+        _scaleTween?.Kill();
 
         if (_root != null)
         {
@@ -61,10 +126,89 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
 
         if (_root != null)
         {
+            // 닫혀 있거나 닫히는 중이었을 때만 팝 연출을 재생한다 - 이미 열린 채로 다른 노드를
+            // 클릭해 상세만 바꿀 때는 스케일을 다시 튀기지 않는다.
+            bool wasOpen = _isOpen;
+            _isOpen = true;
             _root.SetActive(true);
+
+            if (!wasOpen)
+            {
+                PlayOpenScale();
+            }
         }
 
         Refresh();
+    }
+
+    // 열림 연출: 80% → 110% → 100%.
+    private void PlayOpenScale()
+    {
+        Transform panelTransform = _root.transform;
+
+        _scaleTween?.Kill();
+        panelTransform.localScale = Vector3.one * OPEN_START_SCALE;
+
+        _scaleTween = DOTween.Sequence()
+            .Append(panelTransform.DOScale(OPEN_OVERSHOOT_SCALE, _openOvershootDuration).SetEase(Ease.OutQuad))
+            .Append(panelTransform.DOScale(NORMAL_SCALE, _openSettleDuration).SetEase(Ease.InOutQuad))
+            .SetLink(_root);
+    }
+
+    // 상세 패널이 열려 있을 때, 스킬 노드도 패널 자신도 아닌 빈 공간을 클릭하면 닫는다.
+    private void Update()
+    {
+        if (_root == null || !_root.activeSelf)
+        {
+            return;
+        }
+
+        if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            return;
+        }
+
+        if (IsPointerOverPanelOrNode())
+        {
+            return;
+        }
+
+        Clear();
+    }
+
+    // 포인터 아래에 패널(자기 자신·자식)이나 스킬 노드가 있으면 닫지 않는다
+    // - 노드 클릭은 다른 스킬의 상세로 전환하기 위한 것이므로 유지해야 한다.
+    private bool IsPointerOverPanelOrNode()
+    {
+        if (EventSystem.current == null)
+        {
+            return false;
+        }
+
+        var pointerData = new PointerEventData(EventSystem.current)
+        {
+            position = Mouse.current.position.ReadValue()
+        };
+
+        _raycastResults.Clear();
+        EventSystem.current.RaycastAll(pointerData, _raycastResults);
+
+        foreach (RaycastResult result in _raycastResults)
+        {
+            Transform hit = result.gameObject.transform;
+
+            if (hit.IsChildOf(_root.transform))
+            {
+                return true;
+            }
+
+            if (hit.GetComponentInParent<UI_DragonSkillNode>() != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void Refresh()
@@ -93,9 +237,28 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
 
         RebuildCostSlots();
 
+        UpdateUpgradeButtonState(state);
+    }
+
+    // 업그레이드 가능(Available)일 때만 버튼을 켜고, 아니면(자원 부족 등) 이미지·텍스트를 회색으로 바꾼다.
+    // 자원 부족은 GetNodeState가 InsufficientResources를 돌려주므로 Available이 아니게 되어 여기서 걸러진다.
+    private void UpdateUpgradeButtonState(ProgressionNodeState state)
+    {
+        bool canUpgrade = state == ProgressionNodeState.Available;
+
         if (_upgradeButton != null)
         {
-            _upgradeButton.interactable = state == ProgressionNodeState.Available;
+            _upgradeButton.interactable = canUpgrade;
+
+            if (_upgradeButton.image != null)
+            {
+                _upgradeButton.image.color = canUpgrade ? _upgradeImageBaseColor : _upgradeDisabledColor;
+            }
+        }
+
+        if (_upgradeButtonText != null)
+        {
+            _upgradeButtonText.color = canUpgrade ? _upgradeTextBaseColor : _upgradeDisabledColor;
         }
     }
 
