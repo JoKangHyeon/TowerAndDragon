@@ -17,7 +17,7 @@ public class Factory : Building
     [SerializeField] private GridMap _gridMap;
 
     private bool _isInitialized;
-    private FactoryPopulation _population;
+    protected FactoryPopulation _population;
     
     private readonly Dictionary<ResourceType, float> _areaYieldMultiplierByResource = new();
 
