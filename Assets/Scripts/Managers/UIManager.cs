@@ -23,6 +23,8 @@ public class UIManager : MonoBehaviour
     [Tooltip("한 번에 하나만 열려야 하는 UI 모드 목록(IExclusiveMode 구현체). 예: UI_BuildModeWindow, ConquestModeController.")]
     [SerializeField] private MonoBehaviour[] _exclusiveModeBehaviours;
 
+    [SerializeField] private InputActionReference _babyDragonInventoryToggleAction;
+
     [Serializable]
     private struct ExclusiveModeShortcut
     {
