@@ -6,28 +6,26 @@ using UnityEngine;
 // (BabyDragonBuffSystem·연구 관례와 동일한 곱연산 합성).
 public sealed class TowerStatMultiplierComposite : MonoBehaviour, ITowerStatMultiplierQuery
 {
-    private readonly List<ITowerStatMultiplierQuery> _sources = new();
+    private readonly RefCountedSourceSet<ITowerStatMultiplierQuery> _sources = new();
 
     public void Register(ITowerStatMultiplierQuery source)
     {
-        if (source != null && !_sources.Contains(source))
-        {
-            _sources.Add(source);
-        }
+        _sources.Register(source);
     }
 
     public void Unregister(ITowerStatMultiplierQuery source)
     {
-        _sources.Remove(source);
+        _sources.Unregister(source);
     }
 
     public float GetDamageMultiplier(TowerData towerData)
     {
         float multiplier = 1f;
+        IReadOnlyList<ITowerStatMultiplierQuery> sources = _sources.Sources;
 
-        foreach (ITowerStatMultiplierQuery source in _sources)
+        for (int i = 0; i < sources.Count; i++)
         {
-            multiplier *= source.GetDamageMultiplier(towerData);
+            multiplier *= sources[i].GetDamageMultiplier(towerData);
         }
 
         return multiplier;
@@ -36,10 +34,11 @@ public sealed class TowerStatMultiplierComposite : MonoBehaviour, ITowerStatMult
     public float GetRangeMultiplier(TowerData towerData)
     {
         float multiplier = 1f;
+        IReadOnlyList<ITowerStatMultiplierQuery> sources = _sources.Sources;
 
-        foreach (ITowerStatMultiplierQuery source in _sources)
+        for (int i = 0; i < sources.Count; i++)
         {
-            multiplier *= source.GetRangeMultiplier(towerData);
+            multiplier *= sources[i].GetRangeMultiplier(towerData);
         }
 
         return multiplier;
@@ -48,10 +47,11 @@ public sealed class TowerStatMultiplierComposite : MonoBehaviour, ITowerStatMult
     public float GetAttackSpeedMultiplier(TowerData towerData)
     {
         float multiplier = 1f;
+        IReadOnlyList<ITowerStatMultiplierQuery> sources = _sources.Sources;
 
-        foreach (ITowerStatMultiplierQuery source in _sources)
+        for (int i = 0; i < sources.Count; i++)
         {
-            multiplier *= source.GetAttackSpeedMultiplier(towerData);
+            multiplier *= sources[i].GetAttackSpeedMultiplier(towerData);
         }
 
         return multiplier;

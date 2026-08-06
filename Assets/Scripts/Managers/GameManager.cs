@@ -22,7 +22,7 @@ public class GameManager : MonoBehaviour
 
     [SerializeField]
     [FormerlySerializedAs("DefaultLights")]
-    private List<CycleLight> _defaultLights;
+    private List<CycleLight> _defaultLights = new();
 
     [SerializeField]
     private ResourceManager _resourceManager;
@@ -62,7 +62,9 @@ public class GameManager : MonoBehaviour
     public GameSpeedManager GameSpeedManager => _gameSpeedManager;
 
     /// <summary>성이 파괴되어 게임오버가 되면 발생. 게임오버 UI 등이 구독한다.</summary>
-    public UnityEvent GameOverOccurred;
+    // 인라인 초기화가 없으면 씬 YAML에 항목이 없는 씬(테스트 씬 등)에서 null이 되어
+    // 구독자의 OnEnable이 NRE로 중단된다. 직렬화된 씬 값이 있으면 그 값이 우선한다.
+    public UnityEvent GameOverOccurred = new();
     public UnityEvent VictoryOccurred => _victoryOccurred;
     public GameResult CurrentGameResult {get; private set;} = GameResult.None;
     public bool IsGameEnded => CurrentGameResult != GameResult.None;
@@ -105,8 +107,18 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        // 빈 항목 하나로 Start 전체가 중단되면 아래 StartNewRun까지 건너뛰어 게임이 시작되지
+        // 않는다. 해당 조명만 포기하고 나머지 초기화는 계속 진행한다.
         foreach (CycleLight light in _defaultLights)
         {
+            if (light == null)
+            {
+                Debug.LogError(
+                    "[GameManager] DefaultLights에 빈 항목이 있습니다 - 해당 조명은 낮/밤 전환을 따르지 않습니다.",
+                    this);
+                continue;
+            }
+
             light.Construct(_cycleManager);
         }
 

@@ -1157,7 +1157,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db3200645c162584daeae3f0b9ed9bd1, type: 3}
+  m_Script: {fileID: 11500000, guid: cc70f87391bb556438189252040bf4be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
@@ -2353,6 +2353,8 @@ MonoBehaviour:
   _waveManager: {fileID: 704850239}
   _gridMap: {fileID: 313449541}
   _castle: {fileID: 1161439827}
+  _uiManager: {fileID: 944163939}
+  _buildingPlacementController: {fileID: 1692054028}
 --- !u!114 &914589617
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2876,6 +2878,10 @@ PrefabInstance:
       value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _exclusiveModeBehaviours.Array.size
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[0]'
       value: 
       objectReference: {fileID: 802675912}
@@ -2883,6 +2889,10 @@ PrefabInstance:
       propertyPath: '_exclusiveModeBehaviours.Array.data[4]'
       value: 
       objectReference: {fileID: 37122977}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_exclusiveModeBehaviours.Array.data[5]'
+      value: 
+      objectReference: {fileID: 914589615}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _exclusiveModeShortcuts.Array.data[0].Action
       value: 
@@ -7285,6 +7295,7 @@ MonoBehaviour:
   _rangeIndicator: {fileID: 1494252251}
   _buffRangeIndicator: {fileID: 528527941}
   _moveHoldDuration: 2
+  _dragThreshold: 10
 --- !u!4 &1692054029
 Transform:
   m_ObjectHideFlags: 0

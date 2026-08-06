@@ -4,28 +4,26 @@ using UnityEngine;
 // 점령 비용 할인·소요일 감소는 배율이 아니라 감산치이므로 소스 간 합은 Σ.
 public sealed class ConquestModifierComposite : MonoBehaviour, IConquestModifierQuery
 {
-    private readonly List<IConquestModifierQuery> _sources = new();
+    private readonly RefCountedSourceSet<IConquestModifierQuery> _sources = new();
 
     public void Register(IConquestModifierQuery source)
     {
-        if (source != null && !_sources.Contains(source))
-        {
-            _sources.Add(source);
-        }
+        _sources.Register(source);
     }
 
     public void Unregister(IConquestModifierQuery source)
     {
-        _sources.Remove(source);
+        _sources.Unregister(source);
     }
 
     public float GetConquestCostReductionRatio()
     {
         float ratio = 0f;
+        IReadOnlyList<IConquestModifierQuery> sources = _sources.Sources;
 
-        foreach (IConquestModifierQuery source in _sources)
+        for (int i = 0; i < sources.Count; i++)
         {
-            ratio += source.GetConquestCostReductionRatio();
+            ratio += sources[i].GetConquestCostReductionRatio();
         }
 
         return ratio;
@@ -34,10 +32,11 @@ public sealed class ConquestModifierComposite : MonoBehaviour, IConquestModifier
     public int GetConquestDaysReduction()
     {
         int days = 0;
+        IReadOnlyList<IConquestModifierQuery> sources = _sources.Sources;
 
-        foreach (IConquestModifierQuery source in _sources)
+        for (int i = 0; i < sources.Count; i++)
         {
-            days += source.GetConquestDaysReduction();
+            days += sources[i].GetConquestDaysReduction();
         }
 
         return days;

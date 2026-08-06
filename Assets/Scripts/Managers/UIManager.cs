@@ -172,6 +172,7 @@ public class UIManager : MonoBehaviour
         if (_gameManager != null)
         {
             _gameManager.GameOverOccurred.RemoveListener(HandleGameOver);
+            _gameManager.VictoryOccurred.RemoveListener(HandleVictory);
         }
     }
 
