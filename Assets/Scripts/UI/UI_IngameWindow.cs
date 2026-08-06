@@ -134,6 +134,11 @@ public class UI_IngameWindow : MonoBehaviour
     // '가득 찬 뒤 되돌아가는 하루'까지 포함해 WAVE_FILL_LENGTH + 1일이다.
     private int _resetInterval;
 
+    // 진행 바가 마지막으로 반영한 클리어 수. 낮 진입(OnDayReady)마다 일차로부터 유도한 값과 비교해,
+    // 이미 같은 값이면 아무것도 하지 않는다 - 밤 종료 트윈이 도는 중에 이어서 오는 낮 진입이
+    // 트윈을 끊고 순간이동시키지 않게 하기 위한 캐시다.
+    private int _shownClearedWaves;
+
     private void Awake()
     {
         // 시작/리셋 위치는 눈금 배열의 첫 칸(Day1, line_01)으로 잡는다.
@@ -235,7 +240,7 @@ public class UI_IngameWindow : MonoBehaviour
             _cycleManager.OnNightEnd.AddListener(HandleWaveCleared);
             ResetWaveBar();
 
-            _cycleManager.OnDayReady.AddListener(RenderDay);
+            _cycleManager.OnDayReady.AddListener(HandleDayReady);
         }
 
         // 언어가 바뀌면 이 창의 로컬라이즈된 텍스트를 다시 그린다.
@@ -318,7 +323,7 @@ public class UI_IngameWindow : MonoBehaviour
         if (_cycleManager != null)
         {
             _cycleManager.OnNightEnd.RemoveListener(HandleWaveCleared);
-            _cycleManager.OnDayReady.RemoveListener(RenderDay);
+            _cycleManager.OnDayReady.RemoveListener(HandleDayReady);
         }
 
         StringTable.OnLanguageChanged -= RefreshLocalizedTexts;
@@ -337,7 +342,15 @@ public class UI_IngameWindow : MonoBehaviour
     // 언어 변경 시 현재 일수로 다시 그릴 수 있도록 마지막 표시 일수를 저장한다.
     private int _currentDay;
 
-    // CycleManager.OnDayReady(day)로 갱신된다.
+    // 낮 진입(CycleManager.OnDayReady) 시 1회. 새 낮(StartDay)과 이어하기 복원(ResumeDay)이 함께 타는
+    // 단계이므로, 밤 종료 이벤트를 재생하지 않는 이어하기에서도 이 경로로 진행 바가 일차에 맞춰진다.
+    private void HandleDayReady(int day)
+    {
+        RenderDay(day);
+        SyncWaveBar(day);
+    }
+
+    // HandleDayReady(day) / 언어 변경으로 갱신된다.
     private void RenderDay(int day)
     {
         _currentDay = day;
@@ -497,6 +510,8 @@ public class UI_IngameWindow : MonoBehaviour
             _wavePoint.DOKill();
             _wavePoint.anchoredPosition = _wavePointStartPos;
         }
+
+        _shownClearedWaves = 0;
     }
 
     // 웨이브 클리어(CycleManager.OnNightEnd) 시마다 호출된다. wave는 방금 끝난 웨이브(누적 클리어) 번호.
@@ -504,20 +519,59 @@ public class UI_IngameWindow : MonoBehaviour
     // 리셋도 DOTween으로 부드럽게 시작점(line_01)/0으로 되돌린다.
     private void HandleWaveCleared(int wave)
     {
+        // cleared==0은 Day8(리셋) → 진행도 0, Point는 시작 칸(인덱스 0).
+        ApplyWaveBar(wave % _resetInterval, animate: true);
+    }
+
+    // 이어하기(세이브 로드)는 OnNightEnd를 재생하지 않으므로 밤마다 전진하는 것만으로는 바가 복원되지 않는다.
+    // 낮 진입 시 일차에서 클리어 수를 되돌려 계산해 바를 맞춘다(연출 없이 즉시).
+    private void SyncWaveBar(int day)
+    {
+        int cleared = ClearedWavesForDay(day);
+        if (cleared == _shownClearedWaves)
+        {
+            // 정상 진행(밤 종료 → 곧바로 다음 낮)에서는 이미 같은 칸이므로, 진행 중인 트윈을 끊지 않는다.
+            return;
+        }
+
+        ApplyWaveBar(cleared, animate: false);
+    }
+
+    // day일차의 낮에는 그 전날 밤까지 day-1회를 클리어한 상태다. HandleWaveCleared가 쓰는
+    // "방금 끝난 밤의 일차 % _resetInterval"과 같은 값이 되도록 같은 주기로 접는다.
+    private int ClearedWavesForDay(int day)
+    {
+        if (day <= 0)
+        {
+            return 0;
+        }
+
+        return (day - 1) % _resetInterval;
+    }
+
+    // 진행 바(슬라이더 + Point)를 클리어 수에 맞춘다. animate면 트윈, 아니면 즉시 반영한다.
+    private void ApplyWaveBar(int cleared, bool animate)
+    {
         if (_wavePointStops == null || _wavePointStops.Length == 0)
         {
             return;
         }
 
-        // cleared==0은 Day8(리셋) → 진행도 0, Point는 시작 칸(인덱스 0).
-        int cleared = wave % _resetInterval;
         float progress = (float)cleared / WAVE_FILL_LENGTH;
 
         if (_waveSlider != null)
         {
             _waveSlider.DOKill();
-            // 순수 UI 연출이라 일시정지(Time.timeScale == 0) 중에도 정상 재생되어야 한다.
-            _waveSlider.DOValue(progress, _waveTweenDuration).SetUpdate(true);
+
+            if (animate)
+            {
+                // 순수 UI 연출이라 일시정지(Time.timeScale == 0) 중에도 정상 재생되어야 한다.
+                _waveSlider.DOValue(progress, _waveTweenDuration).SetUpdate(true);
+            }
+            else
+            {
+                _waveSlider.value = progress;
+            }
         }
 
         // 배열은 일수별 위치([0]=Day1 … [6]=Day7). cleared만큼 진행했으니 그 인덱스로 이동한다.
@@ -527,11 +581,21 @@ public class UI_IngameWindow : MonoBehaviour
         if (_wavePoint != null && stop != null)
         {
             _wavePoint.DOKill();
-            _wavePoint.DOAnchorPos(stop.anchoredPosition, _waveTweenDuration)
-                .SetEase(Ease.OutCubic)
-                .SetUpdate(true)
-                .SetLink(_wavePoint.gameObject);
+
+            if (animate)
+            {
+                _wavePoint.DOAnchorPos(stop.anchoredPosition, _waveTweenDuration)
+                    .SetEase(Ease.OutCubic)
+                    .SetUpdate(true)
+                    .SetLink(_wavePoint.gameObject);
+            }
+            else
+            {
+                _wavePoint.anchoredPosition = stop.anchoredPosition;
+            }
         }
+
+        _shownClearedWaves = cleared;
     }
 
     private void ApplyCycle(CycleManager.CycleState state)

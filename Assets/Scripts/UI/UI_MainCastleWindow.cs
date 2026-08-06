@@ -117,6 +117,12 @@ public class UI_MainCastleWindow : MonoBehaviour
     private Vector2 _homePos;
     private Tween _panelTween;
 
+    // 창이 열려 있는지(또는 열리는 중인지). _windowRoot.activeSelf로 판정하면 닫힘 트윈이
+    // OnComplete에서야 SetActive(false)를 하므로 닫히는 중에도 "열려 있다"로 읽혀,
+    // 그 사이의 재선택이 OpenPanel()(= 닫힘 트윈 Kill)을 건너뛰고 창이 꺼진 채 고착된다.
+    // UI_BabyDragonManageWindow와 같은 방식으로 상태를 직접 들고 있는다.
+    private bool _isOpen;
+
     private Castle _selectedCastle;
     private bool _wasInputSuppressed;
 
@@ -204,7 +210,7 @@ public class UI_MainCastleWindow : MonoBehaviour
             CurrentDragon != null &&
             !_wasInputSuppressed;
 
-        bool isOpen = _windowRoot.activeSelf;
+        bool isOpen = _isOpen;
 
         if (shouldOpen && !isOpen)
         {
@@ -225,6 +231,7 @@ public class UI_MainCastleWindow : MonoBehaviour
     // 씬에 미리 세팅해 둔 위치(_homePos)에서 슬라이드 인 시킨다(UI_ConquestWindow.OpenPanel과 동일 패턴).
     private void OpenPanel()
     {
+        _isOpen = true;
         _panelTween?.Kill();
 
         _windowRoot.SetActive(true);
@@ -236,6 +243,7 @@ public class UI_MainCastleWindow : MonoBehaviour
 
     private void Close()
     {
+        _isOpen = false;
         _panelTween?.Kill();
         _panelTween = _panelRect.DOAnchorPos(_homePos + _closeToOffset, _slideDuration)
             .SetEase(Ease.InCubic)

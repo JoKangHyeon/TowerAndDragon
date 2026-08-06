@@ -11,6 +11,10 @@ using UnityEngine.UI;
 // 자원 아이콘 정렬은 컨테이너의 LayoutGroup(HorizontalLayoutGroup 등)에 맡긴다.
 public class UI_ChunkInfoCard : MonoBehaviour
 {
+    [Tooltip("청크의 대표 지형 아이콘.")]
+    [SerializeField]
+    private Image _terrainIconImage;
+
     [Tooltip("인구 보상 아이콘.")]
     [SerializeField]
     private Image _populationIconImage;
@@ -45,6 +49,13 @@ public class UI_ChunkInfoCard : MonoBehaviour
         string populationLabel,
         IReadOnlyList<(Sprite Icon, Color IconColor)> resourceIcons)
     {
+        if (_terrainIconImage != null)
+        {
+            // 카드는 ComponentPool로 재사용되므로 스프라이트가 없을 때 대입을 건너뛰면 직전 청크의
+            // 지형이 남는다(UI_ConquestRewardSlot.Setup과 같은 이유). 표시할 것이 없으면 그리지 않는다.
+            _terrainIconImage.sprite = terrainSprite;
+            _terrainIconImage.enabled = terrainSprite != null;
+        }
 
         if (_populationIconImage != null && populationIcon != null)
         {
