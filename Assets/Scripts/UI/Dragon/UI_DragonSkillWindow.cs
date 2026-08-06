@@ -55,6 +55,11 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
     private bool _built;
     private bool _isOpen;
 
+    // 낮/밤 이벤트용. 별도 SerializeField를 두지 않고 이미 배선된 _gameManager에서 받아 캐시한다
+    // (GameManager.CycleManager는 SerializeField 기반 접근자라 Awake 시점부터 유효하다).
+    // 구독과 해제가 반드시 같은 인스턴스를 보게 하려고 필드로 들고 있는다.
+    private CycleManager _cycleManager;
+
     private struct EdgeView
     {
         public RectTransform Transform;
@@ -64,6 +69,11 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
 
     private void Awake()
     {
+        if (_gameManager != null)
+        {
+            _cycleManager = _gameManager.CycleManager;
+        }
+
         if (_exitButton != null)
         {
             _exitButton.onClick.AddListener(Close);
@@ -98,6 +108,20 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
             _gameManager.CurrentRun.OnInventoryChanged.AddListener(HandleInventoryChanged);
         }
 
+        // 노드 상태는 자원 보유량과 낮/밤에도 걸리므로(코스트 부족 → 해금 버튼 비활성, 밤 → 해금 불가)
+        // 창이 열려 있는 동안 그 변화도 반영해야 한다 - UI_ResearchWindow.OnEnable과 같은 구성이다.
+        // OnInventoryChanged는 알·새끼용 인벤토리 전용 이벤트라 이 둘을 대신하지 못한다.
+        if (_resourceManager != null)
+        {
+            _resourceManager.ResourceChanged.AddListener(HandleResourceChanged);
+        }
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnDayReady.AddListener(HandleCycleProgressed);
+            _cycleManager.OnNightEnd.AddListener(HandleCycleProgressed);
+        }
+
         if(_closeAction != null)
         {
             _closeAction.action.performed += OnCloseActionPerformed;
@@ -115,6 +139,17 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
         if (_gameManager != null && _gameManager.CurrentRun != null)
         {
             _gameManager.CurrentRun.OnInventoryChanged.RemoveListener(HandleInventoryChanged);
+        }
+
+        if (_resourceManager != null)
+        {
+            _resourceManager.ResourceChanged.RemoveListener(HandleResourceChanged);
+        }
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnDayReady.RemoveListener(HandleCycleProgressed);
+            _cycleManager.OnNightEnd.RemoveListener(HandleCycleProgressed);
         }
 
         if (_closeAction != null)
@@ -321,6 +356,8 @@ public class UI_DragonSkillWindow : MonoBehaviour, IExclusiveMode
     private void HandleNodeUnlocked(ProgressionNodeData node) => RefreshAll();
     private void HandleActiveAttributeChanged(DragonType attribute) => RefreshActiveAttributeRing();
     private void HandleInventoryChanged() => RefreshAll();
+    private void HandleResourceChanged(ResourceType type, int amount) => RefreshAll();
+    private void HandleCycleProgressed(int value) => RefreshAll();
 
     private void RefreshAll()
     {

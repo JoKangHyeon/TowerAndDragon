@@ -133,15 +133,21 @@ public class UIManager : MonoBehaviour
         _exclusiveModes = modes.ToArray();
     }
 
-    // target을 제외한 나머지 배타 모드가 열려 있으면 닫고, target을 연다.
-    public void OpenExclusive(IExclusiveMode target)
+    // target을 제외하고 열려 있는 배타 모드를 모두 닫는다.
+    // 진입에 인자가 필요해 Open()으로 표현할 수 없는 모드(스킬 타겟팅 등)가 직접 호출한다.
+    public void CloseAllExcept(IExclusiveMode target)
     {
         foreach (IExclusiveMode mode in _exclusiveModes)
         {
             if (!ReferenceEquals(mode, target) && mode.IsOpen)
                 mode.Close();
         }
+    }
 
+    // target을 제외한 나머지 배타 모드가 열려 있으면 닫고, target을 연다.
+    public void OpenExclusive(IExclusiveMode target)
+    {
+        CloseAllExcept(target);
         target.Open();
     }
 

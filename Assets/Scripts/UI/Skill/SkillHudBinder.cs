@@ -60,6 +60,13 @@ public class SkillHudBinder : MonoBehaviour
 
     public void HideAll()
     {
+        // 아이콘만 사라지고 타겟팅이 살아남으면 InputSuppressed가 걸린 채로 낮이 시작돼
+        // 건물 선택/배치가 통째로 막힌다. 아이콘을 감추는 시점에 타겟팅도 함께 푼다.
+        if (_targetingController != null)
+        {
+            _targetingController.CancelTargeting();
+        }
+
         foreach(UI_SkillIndicator indicator in _indicators)
         {
             indicator.gameObject.SetActive(false);
