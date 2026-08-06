@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 /// <summary>
@@ -24,9 +26,16 @@ public class UI_IngameWindow : MonoBehaviour
     private const string DAY_LOC_KEY = "main_day";
     private static string DayFormat => StringTable.GetString(DAY_LOC_KEY);
 
-    // 자원 표기: 보유량과 다음 정산의 생산량을 TMP 리치텍스트 색으로 구분한다.
-    private const string RESOURCE_WITH_PRODUCTION_FORMAT =
+    // 자원 표기: 보유량 옆에 다음 정산의 순증감(생산 - 소모)을 한 값으로만 붙인다.
+    // "(+10)(-20)"처럼 나누어 쓰지 않고 합산해 "(-10)"으로 보여준다.
+    private const string RESOURCE_WITH_GAIN_FORMAT =
         "{0}<color=#{1}>(+{2})</color>";
+    private const string RESOURCE_WITH_LOSS_FORMAT =
+        "{0}<color=#{1}>(-{2})</color>";
+
+    // 다음 정산 후 보유량이 0 이하가 되는 자원은 보유량 숫자까지 적색으로 물들여 경고한다.
+    private const string RESOURCE_DEPLETING_FORMAT =
+        "<color=#{1}>{0}(-{2})</color>";
 
     // 하루 생산량 글씨 기본 색(연두색).
     private static readonly Color PRODUCTION_COLOR_DEFAULT = new Color(0.62f, 1f, 0.42f);
@@ -67,10 +76,19 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private ResourceManager _resourceManager;
     [Tooltip("자원 종류별 수량 텍스트. 기본 3종 + 특화 4종 + 슬라임 5종.")]
     [SerializeField] private ResourceSlot[] _resourceSlots;
-    [Tooltip("하루 예상 생산량 표기용. 각 자원 보유량 옆에 (+생산량)으로 노출한다.")]
-    [SerializeField] private ProductionForecast _productionForecast;
-    [Tooltip("하루 생산량 글씨 색(연두색).")]
+    [Tooltip("하루 예상 증감 표기용. 각 자원 보유량 옆에 (+증가) 또는 (-감소)로 노출한다.")]
+    [FormerlySerializedAs("_productionForecast")]
+    [SerializeField] private ResourceForecast _resourceForecast;
+    [Tooltip("하루 순증가 글씨 색(연두색).")]
     [SerializeField] private Color _productionColor = PRODUCTION_COLOR_DEFAULT;
+    [Tooltip("자원 칸 툴팁을 그릴 표시기. 각 자원 행의 UI_TooltipTrigger에 주입한다.")]
+    [SerializeField] private UI_TooltipPresenter _tooltipPresenter;
+
+    // _resourceSlots와 인덱스가 대응하는 툴팁 트리거 캐시.
+    private UI_TooltipTrigger[] _resourceTooltipTriggers;
+
+    // 툴팁 내역을 받아오는 재사용 버퍼(ResourceForecast.CollectBreakdown이 매번 덮어쓴다).
+    private readonly List<ResourceForecastEntry> _forecastBreakdownBuffer = new();
 
     [Header("인구 표시 (Panel_peopleAmount)")]
     [SerializeField] private PopulationManager _populationManager;
@@ -215,17 +233,19 @@ public class UI_IngameWindow : MonoBehaviour
             ApplyCycle(_cycleManager.CurrentCycle);
         }
 
+        ResolveResourceTooltipTriggers();
+
+        // 예측이 바뀌면(건물/인구/버프/지형 변경) 보유량 옆 증감 표기와 툴팁을 다시 그린다.
+        // 자원 보유량 참조와 무관하게 구독해야, ResourceManager 미연결 씬에서도 표기가 갱신된다.
+        if (_resourceForecast != null)
+        {
+            _resourceForecast.ForecastChanged.AddListener(HandleForecastChanged);
+        }
+
         if (_resourceManager != null)
         {
             _resourceManager.ResourceChanged.AddListener(HandleResourceChanged);
             ApplyResourceIcons();
-
-            // 생산량 예측이 바뀌면(건물/인구 변경) 보유량 옆 (+생산량) 표기를 다시 그린다.
-            if (_productionForecast != null)
-            {
-                _productionForecast.ForecastChanged.AddListener(HandleForecastChanged);
-            }
-
             RenderAllResources();
         }
 
@@ -308,11 +328,16 @@ public class UI_IngameWindow : MonoBehaviour
         if (_resourceManager != null)
         {
             _resourceManager.ResourceChanged.RemoveListener(HandleResourceChanged);
+        }
 
-            if (_productionForecast != null)
-            {
-                _productionForecast.ForecastChanged.RemoveListener(HandleForecastChanged);
-            }
+        if (_resourceForecast != null)
+        {
+            _resourceForecast.ForecastChanged.RemoveListener(HandleForecastChanged);
+        }
+
+        if (_tooltipPresenter != null)
+        {
+            _tooltipPresenter.ForceHide();
         }
 
         if (_populationManager != null)
@@ -426,8 +451,10 @@ public class UI_IngameWindow : MonoBehaviour
             return default;
         }
 
-        int projectedFoodProduction = _productionForecast != null
-            ? _productionForecast.GetDailyProduction(ResourceType.Food)
+        // 순증감이 아니라 '생산량'을 넘긴다 - Calculate가 요구량을 다시 빼므로,
+        // 순증감을 넘기면 인구 유지비가 두 번 차감된다.
+        int projectedFoodProduction = _resourceForecast != null
+            ? _resourceForecast.GetDailyProduction(ResourceType.Food)
             : 0;
 
         return PopulationUpkeepRules.Calculate(
@@ -470,30 +497,110 @@ public class UI_IngameWindow : MonoBehaviour
 
     private void RenderResource(ResourceType type, int amount)
     {
-        foreach (ResourceSlot slot in _resourceSlots)
+        for (int i = 0; i < _resourceSlots.Length; i += 1)
         {
-            if (slot.Type == type && slot.AmountText != null)
+            ResourceSlot slot = _resourceSlots[i];
+
+            if (slot.Type != type)
+            {
+                continue;
+            }
+
+            if (slot.AmountText != null)
             {
                 slot.AmountText.text = FormatResourceAmount(type, amount);
             }
+
+            RenderResourceTooltip(i, type, amount);
         }
     }
 
-    // 하루 예상 생산량이 있으면 "보유량(+생산량)"으로 표시한다.
+    // 하루 순증감(생산 - 소모)을 합산해 한 값으로만 표시한다.
+    // 증가면 연두색 (+N), 감소면 적색 (-N), 다음 정산 후 바닥나면 보유량까지 적색으로 물들인다.
     private string FormatResourceAmount(ResourceType type, int amount)
     {
-        int production = _productionForecast != null ? _productionForecast.GetDailyProduction(type) : 0;
+        int netChange = _resourceForecast != null ? _resourceForecast.GetDailyNetChange(type) : 0;
 
-        if (production > 0)
+        if (netChange == 0)
         {
-            return string.Format(
-                RESOURCE_WITH_PRODUCTION_FORMAT,
-                amount,
-                ColorUtility.ToHtmlStringRGB(_productionColor),
-                production);
+            return amount.ToString();
         }
 
-        return amount.ToString();
+        if (netChange > 0)
+        {
+            return string.Format(
+                RESOURCE_WITH_GAIN_FORMAT,
+                amount,
+                ColorUtility.ToHtmlStringRGB(_productionColor),
+                netChange);
+        }
+
+        string lossFormat = ResourceForecastRules.WillRunOut(amount, netChange)
+            ? RESOURCE_DEPLETING_FORMAT
+            : RESOURCE_WITH_LOSS_FORMAT;
+
+        return string.Format(
+            lossFormat,
+            amount,
+            ColorUtility.ToHtmlStringRGB(LOSS_COLOR_DEFAULT),
+            Mathf.Abs(netChange));
+    }
+
+    // 자원 행의 툴팁 트리거는 _resourceSlots와 같은 인덱스로 캐시해 둔다(OnEnable에서 1회 해석).
+    private void RenderResourceTooltip(int slotIndex, ResourceType type, int amount)
+    {
+        if (_resourceTooltipTriggers == null || _resourceTooltipTriggers[slotIndex] == null)
+        {
+            return;
+        }
+
+        if (_resourceForecast == null)
+        {
+            _resourceTooltipTriggers[slotIndex].ClearContent();
+            return;
+        }
+
+        _resourceTooltipTriggers[slotIndex].SetContent(
+            ResourceForecastTooltipBuilder.Build(
+                type,
+                amount,
+                _resourceForecast,
+                _resourceManager != null ? _resourceManager.Catalog : null,
+                _forecastBreakdownBuffer,
+                _productionColor,
+                LOSS_COLOR_DEFAULT));
+    }
+
+    // 자원 행의 툴팁 트리거를 찾아 표시기를 주입한다. 트리거는 수량 텍스트의 부모 행(배경 Image가
+    // 레이캐스트를 받는 패널)에 붙어 있다 - ResourceSlot 배열에 필드를 더하지 않고 부모에서 찾는다.
+    private void ResolveResourceTooltipTriggers()
+    {
+        if (_resourceTooltipTriggers != null && _resourceTooltipTriggers.Length == _resourceSlots.Length)
+        {
+            return;
+        }
+
+        _resourceTooltipTriggers = new UI_TooltipTrigger[_resourceSlots.Length];
+
+        for (int i = 0; i < _resourceSlots.Length; i += 1)
+        {
+            TMP_Text amountText = _resourceSlots[i].AmountText;
+
+            if (amountText == null)
+            {
+                continue;
+            }
+
+            UI_TooltipTrigger trigger = amountText.GetComponentInParent<UI_TooltipTrigger>(true);
+
+            if (trigger == null)
+            {
+                continue;
+            }
+
+            trigger.SetPresenter(_tooltipPresenter);
+            _resourceTooltipTriggers[i] = trigger;
+        }
     }
 
     // 웨이브 바를 빈 상태(0칸, Point 시작 위치)로 되돌린다. 진행 중이던 트윈이 있다면 먼저 멈춘다.

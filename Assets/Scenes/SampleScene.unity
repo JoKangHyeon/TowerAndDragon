@@ -816,6 +816,7 @@ MonoBehaviour:
   _populationManager: {fileID: 914589617}
   _babyDragonBuffSystem: {fileID: 936144406}
   _terrainPenaltySystem: {fileID: 1652351659}
+  _terrainUpkeepSystem: {fileID: 1356859336}
   ForecastChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -3160,7 +3161,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1279881857148087755, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 371.89
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 1349509382364187125, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _cycleManager
@@ -3551,6 +3552,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 914589613}
     - target: {fileID: 2426799609749584309, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _resourceForecast
+      value: 
+      objectReference: {fileID: 334704092}
+    - target: {fileID: 2426799609749584309, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _populationManager
       value: 
       objectReference: {fileID: 914589617}
@@ -3874,6 +3879,10 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 20
       objectReference: {fileID: 0}
+    - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -0.00050759077
+      objectReference: {fileID: 0}
     - target: {fileID: 3531365243633958967, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -4058,6 +4067,10 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 20
       objectReference: {fileID: 0}
+    - target: {fileID: 3850757389291668338, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -0.0008485692
+      objectReference: {fileID: 0}
     - target: {fileID: 3923689226478234560, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -4168,6 +4181,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4358032571276575663, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4358032571276575663, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMin.y
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4393204236105103469, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -5442,6 +5459,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7388603096536745153, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7420364969390555488, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -5689,6 +5710,18 @@ PrefabInstance:
     - target: {fileID: 8050365807496547011, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -35
+      objectReference: {fileID: 0}
+    - target: {fileID: 8093327447724857939, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: d3a2252f7f43b2945a0df79a2d374a53, type: 2}
+    - target: {fileID: 8093327447724857939, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: f8b3d8ba327c90b48a8da0e1a13be408, type: 2}
+    - target: {fileID: 8093327447724857939, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8158633462820958065, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y

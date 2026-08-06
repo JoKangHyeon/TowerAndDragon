@@ -49,6 +49,38 @@ public class TerrainUpkeepSystem : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// 다음 정산에서 걷힐 하루치 자재 유지비를 자원 종류별로 누적한다. 자원을 소비하거나 인구를 해제하지 않는다.
+    /// 실제 정산(TrySettle)과 같은 경로(CollectFacilities + AccumulateRequirement)를 그대로 쓰므로
+    /// 예측치와 실제 차감액이 어긋나지 않는다 (Factory.AccumulateProjectedProduction과 같은 구조).
+    ///
+    /// 재사용 버퍼(_facilities·_upkeeps)를 TrySettle과 공유하지만, 둘 다 메인 스레드에서만 돌고
+    /// 서로 중첩 호출되지 않으므로 안전하다.
+    /// </summary>
+    public void AccumulateProjectedUpkeep(IDictionary<ResourceType, int> into)
+    {
+        if (into == null || _gridMap == null || _terrainPenaltySystem == null)
+        {
+            return;
+        }
+
+        CollectFacilities();
+        TerrainUpkeepRules.AccumulateRequirement(_upkeeps, out int requiredWood, out int requiredStone);
+
+        Accumulate(into, ResourceType.Wood, requiredWood);
+        Accumulate(into, ResourceType.Stone, requiredStone);
+    }
+
+    private static void Accumulate(IDictionary<ResourceType, int> into, ResourceType type, int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        into[type] = into.TryGetValue(type, out int existing) ? existing + amount : amount;
+    }
+
     // 인구가 배치된 시설만 모은다 - 인구 0인 시설은 유지비도 0이고, 비활성화 대상으로 골라도
     // 미납분을 전혀 줄이지 못한다.
     private void CollectFacilities()

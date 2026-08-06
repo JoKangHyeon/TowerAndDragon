@@ -20,7 +20,7 @@ public class BabyDragonBuffSystem : MonoBehaviour
     // 새끼용 지역형(B 슬롯) 노드 해금 시 추가되는 보너스 - 미해금이면 0을 반환해 기존 동작과 같다.
     [SerializeField] private DragonTreeManager _dragonTreeManager;
 
-    // 새끼용/생산시설 배치가 바뀌어 배율이 다시 확정될 때마다 발화 - ProductionForecast 등
+    // 새끼용/생산시설 배치가 바뀌어 배율이 다시 확정될 때마다 발화 - ResourceForecast 등
     // 파생 UI가 OnBuildingAdded/OnBuildingRemoving과 같은 프레임에서 순서에 의존하지 않고
     // 최신 배율을 읽을 수 있게 하기 위한 훅이다.
     public UnityEvent BuffsRecomputed;

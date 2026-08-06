@@ -23,7 +23,7 @@ public class TerrainPenaltySystem : MonoBehaviour, IBuildingTerrainPenaltyQuery
 
     /// <summary>
     /// 페널티가 다시 계산될 여지가 생겼을 때 발화(건물 배치·철거·이동, 완화 소스 변경).
-    /// ProductionForecast 등 파생 표시가 최신 값을 다시 읽게 하는 훅이다.
+    /// ResourceForecast 등 파생 표시가 최신 값을 다시 읽게 하는 훅이다.
     /// </summary>
     public UnityEvent PenaltiesRecomputed = new();
 
