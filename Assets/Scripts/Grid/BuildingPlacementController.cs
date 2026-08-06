@@ -83,9 +83,10 @@ public class BuildingPlacementController : MonoBehaviour
     public bool CanRemoveNow(Building building) =>
         building != null && building.IsRemoveable && IsDayForBuildActions;
 
-    // 이동 버튼 interactable 판정 및 실제 이동 진입 판정에 쓴다 - IsMoveable(건물 종류 + 이동 예산) AND 낮(시점).
+    // 이동 버튼 interactable 판정 및 실제 이동 진입 판정에 쓴다 - IsMoveable(건물 종류 + 이동 예산) AND
+    // (낮(시점) OR 건물이 밤 이동을 예외적으로 허용). 시간 새끼용 공격 모드가 후자에 해당한다.
     public bool CanMoveNow(Building building) =>
-        building != null && building.IsMoveable && IsDayForBuildActions;
+        building != null && building.IsMoveable && (IsDayForBuildActions || building.CanMoveAtNight);
 
     // 점령 모드 등 다른 모드가 켜져 있을 때 이 컨트롤러의 클릭 처리를 막는다.
     // (컴포넌트를 비활성화하면 공유 입력 액션까지 Disable되므로, 입력만 선택적으로 억제한다.)

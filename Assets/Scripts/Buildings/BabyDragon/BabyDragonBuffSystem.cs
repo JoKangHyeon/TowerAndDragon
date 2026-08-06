@@ -56,6 +56,11 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
             _gridMap.OnBuildingMoved.AddListener(HandleBuildingMoved);
         }
 
+        if (_terrainPenaltyScaleComposite != null)
+        {
+            _terrainPenaltyScaleComposite.Register(this);
+        }
+
         if (_cycleManager != null)
         {
             // 생산 정산(Factory.OnSettlement)은 OnDayStart, 먹이 지불은 그 뒤 단계인
@@ -71,6 +76,11 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         if (_gridMap != null && ReferenceEquals(_gridMap.ConstructionOverrideQuery, this))
         {
             _gridMap.ConstructionOverrideQuery = null;
+        }
+
+        if (_terrainPenaltyScaleComposite != null)
+        {
+            _terrainPenaltyScaleComposite.Unregister(this);
         }
 
         if (_cycleManager != null)
@@ -164,6 +174,7 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         }
 
         RecomputeConstructionUnlocks();
+        RecomputePenaltyMitigation();
 
         BuffsRecomputed?.Invoke();
     }
@@ -224,6 +235,55 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
             if (IsometricMath.IsWithinEllipse(cellWorldPos, center, radius, radiusY))
             {
                 _unlockedConstructionCells.Add(coord);
+            }
+        }
+    }
+
+    // 완화 소스(이 새끼용의 버프 상태·위치)가 바뀔 때마다 TerrainPenaltySystem의 캐시를 버려야
+    // 한다 - 그 시스템은 건물 배치/철거/이동만 구독하고, 완화 배율 자체의 변화는 스스로 감지하지
+    // 못하기 때문이다(TerrainPenaltySystem.NotifyScaleChanged 주석 참고).
+    private void RecomputePenaltyMitigation()
+    {
+        _penaltyMitigatedPairs.Clear();
+
+        foreach (BabyDragonTower babyDragon in _babyDragons)
+        {
+            if (!babyDragon.CanOperate ||
+                babyDragon.DragonData == null ||
+                babyDragon.Mode != BabyDragonMode.Buff)
+            {
+                continue;
+            }
+
+            CollectPenaltyMitigation(babyDragon);
+        }
+
+        _terrainPenaltySystem?.NotifyScaleChanged();
+    }
+
+    private void CollectPenaltyMitigation(BabyDragonTower babyDragon)
+    {
+        float radius = babyDragon.DragonData.BuffRadius;
+        IReadOnlyList<TerrainType> mitigationTerrains = babyDragon.DragonData.PenaltyMitigationTerrains;
+
+        if (radius <= 0f || mitigationTerrains == null || mitigationTerrains.Count == 0)
+        {
+            return;
+        }
+
+        float radiusY = radius * IsometricMath.RADIUS_Y_RATIO;
+        Vector3 center = babyDragon.transform.position;
+
+        foreach (Building building in _gridMap.Buildings)
+        {
+            if (!IsometricMath.IsWithinEllipse(building.transform.position, center, radius, radiusY))
+            {
+                continue;
+            }
+
+            for (int i = 0; i < mitigationTerrains.Count; i++)
+            {
+                _penaltyMitigatedPairs.Add((building, mitigationTerrains[i]));
             }
         }
     }
@@ -327,8 +387,8 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         return _unlockedConstructionCells.Contains(coord);
     }
 
-    public float GetPenaltyScale(Building building, TerrainType terrain, TerrainPenaltyKind kind)
-    {
-        throw new System.NotImplementedException();
-    }
+    // kind는 구분하지 않는다 - (건물,지형) 쌍이 완화 대상이면 4종 페널티를 전부 0으로 만든다.
+    // 사막은 어차피 Yield·TowerAttackSpeed만 값이 있어(WoodUpkeep·StoneUpkeep은 원래 0) 결과는 같다.
+    public float GetPenaltyScale(Building building, TerrainType terrain, TerrainPenaltyKind kind) =>
+        _penaltyMitigatedPairs.Contains((building, terrain)) ? 0f : 1f;
 }
