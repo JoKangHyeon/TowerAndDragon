@@ -40,6 +40,20 @@ public class WaveCycleRulesTests
         Assert.That(waveNumber, Is.Zero);
     }
 
+    [TestCase(1, true)]
+    [TestCase(3, true)]
+    [TestCase(4, false)]
+    [TestCase(0, false)]
+    [TestCase(5, false)]
+    public void HasNextCycle_FinalOrInvalidCycle_ReturnsFalse(
+        int cycleNumber,
+        bool expected)
+    {
+        bool hasNextCycle = WaveCycleRules.HasNextCycle(cycleNumber);
+
+        Assert.That(hasNextCycle, Is.EqualTo(expected));
+    }
+
     [TestCase(1, PortalDirection.North)]
     [TestCase(2, PortalDirection.South)]
     [TestCase(3, PortalDirection.East)]

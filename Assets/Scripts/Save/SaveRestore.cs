@@ -133,7 +133,22 @@ public static class SaveRestore
             });
         }
 
-        run.RestoreInventory((DragonType)dto.DragonType, babyDragons, dragonEggs);
+        var bossDragonEggRewards = new List<BossDragonEggReward>();
+
+        foreach (BossDragonEggRewardDto entry in dto.BossDragonEggRewards)
+        {
+            bossDragonEggRewards.Add(new BossDragonEggReward
+            {
+                CycleNumber = entry.CycleNumber,
+                DragonType = (DragonType)entry.DragonType,
+            });
+        }
+
+        run.RestoreInventory(
+            (DragonType)dto.DragonType,
+            babyDragons,
+            dragonEggs,
+            bossDragonEggRewards);
     }
 
     private static List<ConquestExpedition> ToExpeditions(ConquestStateDto dto)

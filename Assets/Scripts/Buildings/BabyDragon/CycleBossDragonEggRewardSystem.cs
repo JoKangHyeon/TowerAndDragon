@@ -43,8 +43,21 @@ public sealed class CycleBossDragonEggRewardSystem : MonoBehaviour
         if (_gameManager == null ||
             _gameManager.CurrentRun == null ||
             _eggInventorySystem == null ||
-            _rewardPool == null ||
-            !WaveCycleRules.IsValidCycleNumber(cycleNumber))
+            _rewardPool == null)
+        {
+            return false;
+        }
+
+        // 마지막 주기는 클리어 즉시 승리로 끝나 알을 쓸 다음 주기가 없다.
+        // CycleCompleted가 AllCyclesCompleted보다 먼저 발행되므로 이 시점의 IsGameEnded는
+        // 아직 false다 - 마지막 주기 판정은 반드시 주기 번호로 해야 한다.
+        if (!WaveCycleRules.HasNextCycle(cycleNumber))
+        {
+            return false;
+        }
+
+        // 포탈 4개 봉인처럼 주기 도중에 승부가 난 경우를 막는다.
+        if (_gameManager.IsGameEnded)
         {
             return false;
         }

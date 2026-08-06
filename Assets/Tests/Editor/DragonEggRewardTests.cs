@@ -1,6 +1,9 @@
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 public sealed class DragonEggRewardTests
 {
@@ -78,5 +81,89 @@ public sealed class DragonEggRewardTests
         Assert.That(secondRecorded, Is.False);
         Assert.That(run.BossDragonEggRewards, Has.Count.EqualTo(1));
         Assert.That(run.BossDragonEggRewards[0].DragonType, Is.EqualTo(DragonType.Ice));
+    }
+
+    [Test]
+    public void Normalize_LegacySaveWithoutRewardList_ProducesEmptyList()
+    {
+        RunStateDto dto = new RunStateDto();
+
+        dto.Normalize();
+
+        Assert.That(dto.BossDragonEggRewards, Is.Not.Null);
+        Assert.That(dto.BossDragonEggRewards, Is.Empty);
+    }
+
+    [Test]
+    public void Normalize_UndefinedDragonType_DropsRewardEntry()
+    {
+        const int UNDEFINED_DRAGON_TYPE = 99;
+
+        RunStateDto dto = new RunStateDto
+        {
+            BossDragonEggRewards = new List<BossDragonEggRewardDto>
+            {
+                new BossDragonEggRewardDto
+                {
+                    CycleNumber = WaveCycleRules.FIRST_CYCLE_NUMBER,
+                    DragonType = UNDEFINED_DRAGON_TYPE,
+                },
+            },
+        };
+
+        LogAssert.Expect(LogType.Warning, new Regex(UNDEFINED_DRAGON_TYPE.ToString()));
+
+        dto.Normalize();
+
+        Assert.That(dto.BossDragonEggRewards, Is.Empty);
+    }
+
+    [TestCase(0)]
+    [TestCase(WaveCycleRules.MAX_CYCLE_COUNT + 1)]
+    public void Normalize_OutOfRangeCycleNumber_DropsRewardEntry(int cycleNumber)
+    {
+        RunStateDto dto = new RunStateDto
+        {
+            BossDragonEggRewards = new List<BossDragonEggRewardDto>
+            {
+                new BossDragonEggRewardDto
+                {
+                    CycleNumber = cycleNumber,
+                    DragonType = (int)DragonType.Fire,
+                },
+            },
+        };
+
+        LogAssert.Expect(LogType.Warning, new Regex(cycleNumber.ToString()));
+
+        dto.Normalize();
+
+        Assert.That(dto.BossDragonEggRewards, Is.Empty);
+    }
+
+    [Test]
+    public void Normalize_ValidReward_IsKept()
+    {
+        RunStateDto dto = new RunStateDto
+        {
+            BossDragonEggRewards = new List<BossDragonEggRewardDto>
+            {
+                new BossDragonEggRewardDto
+                {
+                    CycleNumber = WaveCycleRules.MAX_CYCLE_COUNT,
+                    DragonType = (int)DragonType.Life,
+                },
+            },
+        };
+
+        dto.Normalize();
+
+        Assert.That(dto.BossDragonEggRewards, Has.Count.EqualTo(1));
+        Assert.That(
+            dto.BossDragonEggRewards[0].CycleNumber,
+            Is.EqualTo(WaveCycleRules.MAX_CYCLE_COUNT));
+        Assert.That(
+            dto.BossDragonEggRewards[0].DragonType,
+            Is.EqualTo((int)DragonType.Life));
     }
 }

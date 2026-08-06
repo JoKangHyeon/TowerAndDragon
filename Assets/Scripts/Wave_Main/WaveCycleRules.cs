@@ -43,6 +43,16 @@ public static class WaveCycleRules
                cycleNumber <= MAX_CYCLE_COUNT;
     }
 
+    /// <summary>
+    /// 이 주기 다음에 이어질 주기가 있는지. 마지막 주기는 클리어 즉시 게임이 끝나므로
+    /// "다음 주기에서 쓸" 보상(새끼용 알 등)을 지급하지 않는 판정에 쓴다.
+    /// </summary>
+    public static bool HasNextCycle(int cycleNumber)
+    {
+        return IsValidCycleNumber(cycleNumber) &&
+               cycleNumber < MAX_CYCLE_COUNT;
+    }
+
     public static bool TryGetPortalToUnlock(
         int cycleNumber,
         out PortalDirection portalDirection)

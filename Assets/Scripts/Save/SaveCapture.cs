@@ -74,6 +74,7 @@ public static class SaveCapture
             DragonType = run.CurrentDragon != null ? (int)run.CurrentDragon.CurrentType : 0,
             BabyDragons = new List<BabyDragonDto>(),
             DragonEggs = new List<DragonEggDto>(),
+            BossDragonEggRewards = new List<BossDragonEggRewardDto>(),
         };
 
         foreach (BabyDragon babyDragon in run.BabyDragons)
@@ -94,6 +95,15 @@ public static class SaveCapture
             {
                 DragonType = (int)egg.DragonType,
                 FedDayCount = egg.FedDayCount,
+            });
+        }
+
+        foreach (BossDragonEggReward reward in run.BossDragonEggRewards)
+        {
+            dto.BossDragonEggRewards.Add(new BossDragonEggRewardDto
+            {
+                CycleNumber = reward.CycleNumber,
+                DragonType = (int)reward.DragonType,
             });
         }
 

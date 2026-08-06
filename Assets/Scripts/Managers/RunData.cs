@@ -17,7 +17,8 @@ public class RunData
     public GridMap Map;
 
     /// <summary>
-    /// 세이브 복원 전용. 어미용 속성과 새끼용·알 목록을 저장값으로 갈아 끼운다.
+    /// 세이브 복원 전용. 어미용 속성과 새끼용·알 목록, 주기 보상 수령 이력을 저장값으로 갈아 끼운다.
+    /// 보상 이력까지 복원해야 불러오기 후에도 주기당 1회 지급 제한이 유지된다.
     /// CurrentDragon 인스턴스 자체는 교체하지 않는다 - GameManager.Awake에서 Construct로 걸어 둔
     /// CycleManager 구독(하루 1회 속성 변경 제한)이 끊기기 때문이다.
     /// CurrentCycle은 CycleManager.SeedRestoredDay가 담당하므로 여기서 건드리지 않는다.
@@ -25,7 +26,8 @@ public class RunData
     public void RestoreInventory(
         DragonType dragonType,
         List<BabyDragon> babyDragons,
-        List<DragonEgg> dragonEggs)
+        List<DragonEgg> dragonEggs,
+        List<BossDragonEggReward> bossDragonEggRewards)
     {
         if (CurrentDragon != null)
         {
@@ -37,6 +39,10 @@ public class RunData
 
         DragonEggs.Clear();
         DragonEggs.AddRange(dragonEggs);
+
+        BossDragonEggRewards ??= new List<BossDragonEggReward>();
+        BossDragonEggRewards.Clear();
+        BossDragonEggRewards.AddRange(bossDragonEggRewards);
 
         OnInventoryChanged?.Invoke();
     }

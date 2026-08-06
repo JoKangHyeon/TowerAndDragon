@@ -137,16 +137,29 @@ public sealed class RunStateDto
     public List<BabyDragonDto> BabyDragons;
     public List<DragonEggDto> DragonEggs;
 
+    /// <summary>
+    /// 주기 보스 처치 보상으로 알을 이미 받은 주기 목록. 인벤토리와 별개로 저장해야
+    /// 불러오기 후에도 "주기당 1회" 중복 지급 방지가 유지된다(RunData.HasClaimedBossDragonEggReward).
+    /// </summary>
+    public List<BossDragonEggRewardDto> BossDragonEggRewards;
+
     public void Normalize()
     {
         BabyDragons ??= new List<BabyDragonDto>();
         DragonEggs ??= new List<DragonEggDto>();
+
+        // 이 필드가 없던 구버전 세이브는 null로 들어온다 - 빈 목록이면 기존 동작 그대로다.
+        BossDragonEggRewards ??= new List<BossDragonEggRewardDto>();
 
         DragonType = SaveValidation.CoerceDefinedEnum(
             DragonType, typeof(DragonType), SaveValidation.DEFAULT_DRAGON_TYPE);
 
         SaveValidation.DropUndefinedEnums(BabyDragons, dto => dto.DragonType, typeof(DragonType));
         SaveValidation.DropUndefinedEnums(DragonEggs, dto => dto.DragonType, typeof(DragonType));
+        SaveValidation.DropUndefinedEnums(
+            BossDragonEggRewards, dto => dto.DragonType, typeof(DragonType));
+        SaveValidation.DropInvalidCycleNumbers(
+            BossDragonEggRewards, dto => dto.CycleNumber);
 
         foreach (BabyDragonDto babyDragon in BabyDragons)
         {
@@ -180,6 +193,12 @@ public sealed class DragonEggDto
 {
     public int DragonType;
     public int FedDayCount;
+}
+
+public sealed class BossDragonEggRewardDto
+{
+    public int CycleNumber;
+    public int DragonType;
 }
 
 public sealed class CastleStateDto
@@ -436,6 +455,31 @@ public static class SaveValidation
             }
 
             return !isDefined;
+        });
+    }
+
+    /// <summary>
+    /// 주기 번호가 유효 범위(WaveCycleRules) 밖인 항목을 버린다. 주기 수가 줄어든
+    /// 구버전 세이브나 손댄 파일이 존재하지 않는 주기의 기록을 들고 오는 것을 막는다.
+    /// </summary>
+    public static void DropInvalidCycleNumbers<T>(List<T> items, Func<T, int> selectCycleNumber)
+    {
+        items.RemoveAll(item =>
+        {
+            if (item == null)
+            {
+                return true;
+            }
+
+            int cycleNumber = selectCycleNumber(item);
+            bool isValid = WaveCycleRules.IsValidCycleNumber(cycleNumber);
+
+            if (!isValid)
+            {
+                Debug.LogWarning($"[SaveValidation] 유효하지 않은 주기 번호 {cycleNumber} - 항목을 버립니다.");
+            }
+
+            return !isValid;
         });
     }
 
