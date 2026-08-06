@@ -303,7 +303,7 @@ public class UI_DragonSkillWindow : MonoBehaviour
 
     private void RefreshNodeViews()
     {
-        if (_dragonTreeManager == null)
+        if (!WiringGuard.Require(_dragonTreeManager, nameof(_dragonTreeManager), this))
         {
             return;
         }
@@ -325,7 +325,7 @@ public class UI_DragonSkillWindow : MonoBehaviour
 
     private void RefreshEdgeViews()
     {
-        if (_dragonTreeManager == null)
+        if (!WiringGuard.Require(_dragonTreeManager, nameof(_dragonTreeManager), this))
         {
             return;
         }

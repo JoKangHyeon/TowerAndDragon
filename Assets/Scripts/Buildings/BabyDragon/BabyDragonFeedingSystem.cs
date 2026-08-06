@@ -22,13 +22,13 @@ public class BabyDragonFeedingSystem : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_gridMap != null)
+        if (WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
             _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoving);
         }
 
-        if (_cycleManager != null)
+        if (WiringGuard.Require(_cycleManager, nameof(_cycleManager), this))
         {
             _cycleManager.OnDayStartUpkeep.AddListener(FeedAll);
         }
@@ -78,7 +78,7 @@ public class BabyDragonFeedingSystem : MonoBehaviour
     // OnDayStartUpkeep의 일차 인자는 쓰지 않는다 - 먹이량은 날짜와 무관하다.
     private void FeedAll(int _)
     {
-        if (_resourceManager == null)
+        if (!WiringGuard.Require(_resourceManager, nameof(_resourceManager), this))
         {
             return;
         }

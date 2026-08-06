@@ -190,7 +190,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     // (휠 확대는 UI_DragonSkillTreeZoom이 Content localScale을 직접 바꾸므로 여기서 되돌린다)
     private void ResetView()
     {
-        if (_content == null)
+        if (!WiringGuard.Require(_content, nameof(_content), this))
         {
             return;
         }
@@ -459,7 +459,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         string dependentNodeId,
         ResearchBranch branch)
     {
-        if (_edgePrefab == null)
+        if (!WiringGuard.Require(_edgePrefab, nameof(_edgePrefab), this))
         {
             return;
         }
@@ -513,7 +513,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
     private void RefreshNodeViews()
     {
-        if (_researchManager == null)
+        if (!WiringGuard.Require(_researchManager, nameof(_researchManager), this))
         {
             return;
         }
@@ -534,7 +534,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     // 어디까지 진행됐는지 한눈에 보이게 한다.
     private void RefreshEdgeViews()
     {
-        if (_researchManager == null)
+        if (!WiringGuard.Require(_researchManager, nameof(_researchManager), this))
         {
             return;
         }
@@ -571,7 +571,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
     private void RefreshTierLabels()
     {
-        if (_researchManager == null)
+        if (!WiringGuard.Require(_researchManager, nameof(_researchManager), this))
         {
             return;
         }

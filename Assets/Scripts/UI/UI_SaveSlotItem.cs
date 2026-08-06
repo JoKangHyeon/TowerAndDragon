@@ -168,7 +168,7 @@ public class UI_SaveSlotItem : MonoBehaviour
     {
         ReleaseThumbnail();
 
-        if (_thumbnailImage == null)
+        if (!WiringGuard.Require(_thumbnailImage, nameof(_thumbnailImage), this))
         {
             return;
         }

@@ -84,7 +84,7 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
         _selectedNode = null;
         _isOpen = false;
 
-        if (_root == null)
+        if (!WiringGuard.Require(_root, nameof(_root), this))
         {
             return;
         }

@@ -218,7 +218,7 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
     {
         SoundManager.Play(SoundId.UiButtonClick);
 
-        if (_settings == null)
+        if (!WiringGuard.Require(_settings, nameof(_settings), this))
         {
             return;
         }

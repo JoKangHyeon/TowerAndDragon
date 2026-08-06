@@ -575,13 +575,17 @@ public class BuildingPlacementController : MonoBehaviour
     // 선택한 건물이 공격 가능한 타워면 실제 판정(TowerAttack.IsWithinAttackRange)과 같은 타원으로 사거리를 표시한다.
     private void ShowAttackRangeIndicatorFor(Building building)
     {
-        if (_rangeIndicator == null ||
-            !(building is Tower tower) ||
+        if (!WiringGuard.Require(_rangeIndicator, nameof(_rangeIndicator), this))
+        {
+            return;
+        }
+
+        if (!(building is Tower tower) ||
             tower.Data == null ||
             !tower.Data.CanAttack ||
             tower.Attack == null)
         {
-            _rangeIndicator?.Hide();
+            _rangeIndicator.Hide();
             return;
         }
 
@@ -592,7 +596,7 @@ public class BuildingPlacementController : MonoBehaviour
     // 오라 타워는 현재 유효 반경을, 기존 새끼용은 BabyDragonBuffSystem과 같은 BuffRadius를 표시한다.
     private void ShowBuffRangeIndicatorFor(Building building)
     {
-        if (_buffRangeIndicator == null)
+        if (!WiringGuard.Require(_buffRangeIndicator, nameof(_buffRangeIndicator), this))
         {
             return;
         }

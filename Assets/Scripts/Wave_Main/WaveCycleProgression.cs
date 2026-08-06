@@ -36,9 +36,8 @@ public class WaveCycleProgression : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_cycleManager == null)
+        if (!WiringGuard.Require(_cycleManager, nameof(_cycleManager), this))
         {
-            Debug.LogError("[WaveCycleProgression] CycleManager 참조가 없습니다.", this);
             return;
         }
 
@@ -77,9 +76,8 @@ public class WaveCycleProgression : MonoBehaviour
 
     private void HandleDayStart(int currentDay)
     {
-        if (_schedule == null)
+        if (!WiringGuard.Require(_schedule, nameof(_schedule), this))
         {
-            Debug.LogError("[WaveCycleProgression] 주기 일정 데이터가 없습니다.", this);
             HasCurrentSnapshot = false;
             return;
         }

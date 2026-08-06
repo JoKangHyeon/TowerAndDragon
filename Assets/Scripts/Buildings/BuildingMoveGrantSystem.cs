@@ -15,7 +15,8 @@ public sealed class BuildingMoveGrantSystem : MonoBehaviour, IBuildingMoveGrantQ
     // HasRemainingMoveGrant는 매번 ResearchManager.GetMoveAllowance()를 다시 조회하므로,
     // 건물이 들고 있는 이 쿼리 참조 자체는 연구 완료 시 다시 주입할 필요가 없다.
     public bool HasRemainingMoveGrant =>
-        _researchManager != null && _usedToday < _researchManager.GetMoveAllowance();
+        WiringGuard.Require(_researchManager, nameof(_researchManager), this) &&
+        _usedToday < _researchManager.GetMoveAllowance();
 
     public void ConsumeMoveGrant()
     {
@@ -24,12 +25,12 @@ public sealed class BuildingMoveGrantSystem : MonoBehaviour, IBuildingMoveGrantQ
 
     private void OnEnable()
     {
-        if (_cycleManager != null)
+        if (WiringGuard.Require(_cycleManager, nameof(_cycleManager), this))
         {
             _cycleManager.OnDayStart.AddListener(HandleDayStart);
         }
 
-        if (_gridMap == null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             return;
         }

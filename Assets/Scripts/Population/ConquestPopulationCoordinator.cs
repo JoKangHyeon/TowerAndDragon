@@ -16,7 +16,7 @@ public class ConquestPopulationCoordinator : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_conquestManager == null)
+        if (!WiringGuard.Require(_conquestManager, nameof(_conquestManager), this))
         {
             return;
         }
@@ -38,7 +38,12 @@ public class ConquestPopulationCoordinator : MonoBehaviour
 
     private void HandleExpeditionSent(Vector2Int chunkCoord, ResourceCost cost)
     {
-        if (_populationManager == null || cost.Population <= 0)
+        if (!WiringGuard.Require(_populationManager, nameof(_populationManager), this))
+        {
+            return;
+        }
+
+        if (cost.Population <= 0)
         {
             return;
         }
@@ -58,7 +63,7 @@ public class ConquestPopulationCoordinator : MonoBehaviour
 
     private void HandleConquestCompleted(Vector2Int chunkCoord)
     {
-        if (_populationManager == null)
+        if (!WiringGuard.Require(_populationManager, nameof(_populationManager), this))
         {
             return;
         }

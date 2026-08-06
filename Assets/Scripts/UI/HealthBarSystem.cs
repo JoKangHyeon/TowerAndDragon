@@ -16,12 +16,12 @@ public class HealthBarSystem : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_waveManager != null)
+        if (WiringGuard.Require(_waveManager, nameof(_waveManager), this))
         {
             _waveManager.MonsterSpawned.AddListener(HandleMonsterSpawned);
         }
 
-        if (_gridMap != null)
+        if (WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
         }
@@ -51,7 +51,7 @@ public class HealthBarSystem : MonoBehaviour
     {
         await UniTask.Yield(token);
 
-        if (_gridMap == null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             return;
         }
@@ -83,7 +83,12 @@ public class HealthBarSystem : MonoBehaviour
 
     private void Attach(GameObject entity)
     {
-        if (_barPrefab == null || entity == null)
+        if (!WiringGuard.Require(_barPrefab, nameof(_barPrefab), this))
+        {
+            return;
+        }
+
+        if (entity == null)
         {
             return;
         }

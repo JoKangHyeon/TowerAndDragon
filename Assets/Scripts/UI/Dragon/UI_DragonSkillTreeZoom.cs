@@ -17,7 +17,7 @@ public class UI_DragonSkillTreeZoom : MonoBehaviour, IScrollHandler
 
     public void OnScroll(PointerEventData eventData)
     {
-        if (_target == null)
+        if (!WiringGuard.Require(_target, nameof(_target), this))
         {
             return;
         }

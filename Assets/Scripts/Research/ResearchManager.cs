@@ -492,7 +492,7 @@ public sealed class ResearchManager : MonoBehaviour,
     {
         _nodesById.Clear();
 
-        if (_tree == null)
+        if (!WiringGuard.Require(_tree, nameof(_tree), this))
         {
             return;
         }
@@ -517,7 +517,12 @@ public sealed class ResearchManager : MonoBehaviour,
     // 활성 연구소가 아니면 인구를 배치해도 0이다(UI가 그 사실을 그대로 보여줄 수 있게 public).
     public int PreviewResearchPointsPerDay(ResearchLab lab, int assignedPopulation)
     {
-        if (lab == null || lab != ActiveLab || _balance == null)
+        if (lab == null || lab != ActiveLab)
+        {
+            return 0;
+        }
+
+        if (!WiringGuard.Require(_balance, nameof(_balance), this))
         {
             return 0;
         }

@@ -11,7 +11,7 @@ public class TowerPopulationCoordinator : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_gridMap == null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             return;
         }
@@ -43,12 +43,8 @@ public class TowerPopulationCoordinator : MonoBehaviour
             return;
         }
 
-        TowerPopulation towerPopulation = tower.GetComponent<TowerPopulation>();
-        if (towerPopulation == null)
+        if (!WiringGuard.RequireComponent(tower, out TowerPopulation towerPopulation, tower))
         {
-            Debug.LogError(
-                "[TowerPopulationCoordinator] 타워에 TowerPopulation 컴포넌트가 없습니다.",
-                tower);
             return;
         }
 
@@ -57,7 +53,12 @@ public class TowerPopulationCoordinator : MonoBehaviour
             return;
         }
 
-        if (_populationManager == null || !towerPopulation.Initialize(_populationManager))
+        if (!WiringGuard.Require(_populationManager, nameof(_populationManager), this))
+        {
+            return;
+        }
+
+        if (!towerPopulation.Initialize(_populationManager))
         {
             Debug.LogWarning(
                 "[TowerPopulationCoordinator] 타워 인구 할당 생성에 실패했습니다.",

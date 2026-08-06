@@ -144,7 +144,7 @@ public class UI_WorldHealthBar : MonoBehaviour
             _shieldFillImage.fillAmount = 0f;
         }
 
-        if (_fillImage == null)
+        if (!WiringGuard.Require(_fillImage, nameof(_fillImage), this))
         {
             return;
         }

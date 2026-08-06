@@ -147,7 +147,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
     // 매 프레임 확인한다 - UI_BuildModeWindow 등 기존 소비자들과 같은 방식이다.
     private void Update()
     {
-        if (_buildingPlacementController == null)
+        if (!WiringGuard.Require(_buildingPlacementController, nameof(_buildingPlacementController), this))
         {
             return;
         }

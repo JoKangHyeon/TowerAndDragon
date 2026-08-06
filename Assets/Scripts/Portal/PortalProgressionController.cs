@@ -11,11 +11,8 @@ public class PortalProgressionController : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_waveCycleProgression == null)
+        if (!WiringGuard.Require(_waveCycleProgression, nameof(_waveCycleProgression), this))
         {
-            Debug.LogError(
-                "[PortalProgressionController] WaveCycleProgression 참조가 없습니다.",
-                this);
             return;
         }
 
@@ -60,9 +57,8 @@ public class PortalProgressionController : MonoBehaviour
             }
         }
 
-        if (_portals == null)
+        if (!WiringGuard.RequireNotEmpty(_portals, nameof(_portals), this))
         {
-            Debug.LogError("[PortalProgressionController] 포탈 목록이 없습니다.", this);
             return;
         }
 

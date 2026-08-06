@@ -11,7 +11,7 @@ public class FactoryPopulationCoordinator : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_gridMap == null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             return;
         }
@@ -38,12 +38,8 @@ public class FactoryPopulationCoordinator : MonoBehaviour
             return;
         }
 
-        FactoryPopulation factoryPopulation = factory.GetComponent<FactoryPopulation>();
-        if (factoryPopulation == null)
+        if (!WiringGuard.RequireComponent(factory, out FactoryPopulation factoryPopulation, factory))
         {
-            Debug.LogError(
-                "[FactoryPopulationCoordinator] 생산시설에 FactoryPopulation 컴포넌트가 없습니다.",
-                factory);
             return;
         }
 
@@ -52,7 +48,12 @@ public class FactoryPopulationCoordinator : MonoBehaviour
             return;
         }
 
-        if (_populationManager == null || !factoryPopulation.Initialize(_populationManager))
+        if (!WiringGuard.Require(_populationManager, nameof(_populationManager), this))
+        {
+            return;
+        }
+
+        if (!factoryPopulation.Initialize(_populationManager))
         {
             Debug.LogWarning(
                 "[FactoryPopulationCoordinator] 생산시설 인구 할당 생성에 실패했습니다.",

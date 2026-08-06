@@ -182,7 +182,7 @@ public class UI_MainCastleWindow : MonoBehaviour
     // 매 프레임 확인한다 - UI_PopulationAllocationWindow와 같은 방식이다.
     private void Update()
     {
-        if (_buildingPlacementController == null)
+        if (!WiringGuard.Require(_buildingPlacementController, nameof(_buildingPlacementController), this))
         {
             return;
         }
@@ -300,7 +300,7 @@ public class UI_MainCastleWindow : MonoBehaviour
     // 클릭음을 내지 않는다 - 창을 여닫는 제스처라 대상 창(UI_DragonWindow)이 열림/닫힘음을 낸다.
     public void OpenDragonSkillTree()
     {
-        if (_dragonWindow == null)
+        if (!WiringGuard.Require(_dragonWindow, nameof(_dragonWindow), this))
         {
             return;
         }
@@ -348,7 +348,7 @@ public class UI_MainCastleWindow : MonoBehaviour
             _attributeNameText.color = DragonAttributePalette.ColorOf(type);
         }
 
-        if (_dragonImage == null)
+        if (!WiringGuard.Require(_dragonImage, nameof(_dragonImage), this))
         {
             return;
         }
@@ -385,7 +385,7 @@ public class UI_MainCastleWindow : MonoBehaviour
 
     private void RenderAttributeButtons(DragonType activeType, DragonType selectedType)
     {
-        if (_attributeButtons == null)
+        if (!WiringGuard.RequireNotEmpty(_attributeButtons, nameof(_attributeButtons), this))
         {
             return;
         }

@@ -13,7 +13,7 @@ public sealed class TowerStatMultiplierCoordinator : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_gridMap == null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             return;
         }

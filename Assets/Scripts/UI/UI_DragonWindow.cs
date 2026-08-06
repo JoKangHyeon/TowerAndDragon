@@ -479,7 +479,7 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     // 아무 슬롯에도 올라가 있지 않으면 비운다(프리팹 자리표시 문구 노출 방지).
     private void RenderBabyInfo()
     {
-        if (_babyInfoText == null)
+        if (!WiringGuard.Require(_babyInfoText, nameof(_babyInfoText), this))
         {
             return;
         }
@@ -549,7 +549,7 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             _motherInfoText.text = StringTable.GetString(DragonLocKeys.MotherInfoLocKey(type));
         }
 
-        if (_motherIcon == null)
+        if (!WiringGuard.Require(_motherIcon, nameof(_motherIcon), this))
         {
             return;
         }

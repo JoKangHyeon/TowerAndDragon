@@ -13,7 +13,7 @@ public sealed class TowerMorningRestoreSystem : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_cycleManager == null)
+        if (!WiringGuard.Require(_cycleManager, nameof(_cycleManager), this))
         {
             return;
         }
@@ -34,7 +34,7 @@ public sealed class TowerMorningRestoreSystem : MonoBehaviour
     // OnDayStart의 일차 인자는 쓰지 않는다 - 복구량은 날짜와 무관하다.
     private void RestoreAll(int _)
     {
-        if (_gridMap == null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             return;
         }

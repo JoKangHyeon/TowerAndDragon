@@ -11,11 +11,13 @@ public sealed class TerrainPenaltyCoordinator : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_gridMap == null || _terrainPenaltySystem == null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
-            Debug.LogError(
-                "[TerrainPenaltyCoordinator] 참조 누락 - 지역 페널티가 생산량·공격속도에 전혀 적용되지 않습니다.",
-                this);
+            return;
+        }
+
+        if (!WiringGuard.Require(_terrainPenaltySystem, nameof(_terrainPenaltySystem), this))
+        {
             return;
         }
 

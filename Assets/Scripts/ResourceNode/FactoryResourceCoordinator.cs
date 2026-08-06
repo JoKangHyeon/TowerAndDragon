@@ -12,7 +12,7 @@ public class FactoryResourceCoordinator : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_gridMap == null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             return;
         }
@@ -42,7 +42,17 @@ public class FactoryResourceCoordinator : MonoBehaviour
             return;
         }
 
-        if (_resourceManager == null || _cycleManager == null || !factory.Initialize(_resourceManager, _cycleManager, _gridMap))
+        if (!WiringGuard.Require(_resourceManager, nameof(_resourceManager), this))
+        {
+            return;
+        }
+
+        if (!WiringGuard.Require(_cycleManager, nameof(_cycleManager), this))
+        {
+            return;
+        }
+
+        if (!factory.Initialize(_resourceManager, _cycleManager, _gridMap))
         {
             Debug.LogWarning(
                 "[FactoryResourceCoordinator] 생산시설 자원 연결에 실패했습니다.",

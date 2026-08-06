@@ -44,23 +44,23 @@ public class ResourceForecast : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_gridMap != null)
+        if (WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             _gridMap.OnBuildingAdded.AddListener(HandleBuildingChanged);
             _gridMap.OnBuildingRemoving.AddListener(HandleBuildingChanged);
         }
 
-        if (_populationManager != null)
+        if (WiringGuard.Require(_populationManager, nameof(_populationManager), this))
         {
             _populationManager.PopulationChanged.AddListener(HandlePopulationChanged);
         }
 
-        if (_babyDragonBuffSystem != null)
+        if (WiringGuard.Optional(_babyDragonBuffSystem, nameof(_babyDragonBuffSystem), this))
         {
             _babyDragonBuffSystem.BuffsRecomputed.AddListener(HandleBuffsRecomputed);
         }
 
-        if (_terrainPenaltySystem != null)
+        if (WiringGuard.Optional(_terrainPenaltySystem, nameof(_terrainPenaltySystem), this))
         {
             _terrainPenaltySystem.PenaltiesRecomputed.AddListener(HandleBuffsRecomputed);
         }
@@ -145,7 +145,7 @@ public class ResourceForecast : MonoBehaviour
 
     private void AccumulateProduction()
     {
-        if (_gridMap == null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             return;
         }
@@ -167,7 +167,7 @@ public class ResourceForecast : MonoBehaviour
     // 식량은 최대 인구 1명당 1씩 걷힌다(PopulationUpkeepSystem이 실제로 쓰는 값과 같은 출처).
     private void AccumulatePopulationUpkeep()
     {
-        if (_populationManager == null)
+        if (!WiringGuard.Require(_populationManager, nameof(_populationManager), this))
         {
             return;
         }
@@ -178,7 +178,7 @@ public class ResourceForecast : MonoBehaviour
 
     private void AccumulateTerrainUpkeep()
     {
-        if (_terrainUpkeepSystem == null)
+        if (!WiringGuard.Optional(_terrainUpkeepSystem, nameof(_terrainUpkeepSystem), this))
         {
             return;
         }

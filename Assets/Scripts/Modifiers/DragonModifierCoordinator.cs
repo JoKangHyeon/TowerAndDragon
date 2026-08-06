@@ -16,7 +16,7 @@ public sealed class DragonModifierCoordinator : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_dragonTreeManager == null)
+        if (!WiringGuard.Require(_dragonTreeManager, nameof(_dragonTreeManager), this))
         {
             return;
         }

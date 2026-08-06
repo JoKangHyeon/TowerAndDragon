@@ -63,7 +63,7 @@ public class ResourceManager : MonoBehaviour
     /// <summary>카탈로그의 전 종류를 0으로 시드해 GetAmount가 항상 유효한 값을 반환하게 한다.</summary>
     private void SeedCatalog()
     {
-        if (_catalog == null)
+        if (!WiringGuard.Require(_catalog, nameof(_catalog), this))
         {
             return;
         }
@@ -92,7 +92,7 @@ public class ResourceManager : MonoBehaviour
             return;
         }
 
-        if (_catalog == null)
+        if (!WiringGuard.Require(_catalog, nameof(_catalog), this))
         {
             return;
         }

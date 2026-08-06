@@ -60,7 +60,7 @@ public class Castle : Building, IAttackTarget
     // (GridMap.Awake가 그리드 생성을 끝낸 뒤인 Start에서 실행되므로 그리드가 준비돼 있다.)
     private void RegisterCenterFootprint()
     {
-        if (_gridMap == null)
+        if (!WiringGuard.Optional(_gridMap, nameof(_gridMap), this))
         {
             return;
         }

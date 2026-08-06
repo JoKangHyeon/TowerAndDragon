@@ -96,7 +96,7 @@ public class UI_TooltipTrigger : MonoBehaviour,
 
     private void RefreshWhileHovered()
     {
-        if (_presenter == null)
+        if (!WiringGuard.Require(_presenter, nameof(_presenter), this))
         {
             return;
         }

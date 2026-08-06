@@ -35,7 +35,7 @@ public class TerrainPenaltySystem : MonoBehaviour, IBuildingTerrainPenaltyQuery
 
     private void OnEnable()
     {
-        if (_gridMap == null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             return;
         }

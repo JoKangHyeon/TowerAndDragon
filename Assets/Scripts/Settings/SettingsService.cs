@@ -202,7 +202,7 @@ public class SettingsService : MonoBehaviour
 
     private void ApplyVolume(AudioChannel channel)
     {
-        if (_audioMixer == null)
+        if (!WiringGuard.Require(_audioMixer, nameof(_audioMixer), this))
         {
             return;
         }

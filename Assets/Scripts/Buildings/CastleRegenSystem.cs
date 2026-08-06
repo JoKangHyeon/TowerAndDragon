@@ -13,7 +13,7 @@ public sealed class CastleRegenSystem : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_cycleManager == null)
+        if (!WiringGuard.Require(_cycleManager, nameof(_cycleManager), this))
         {
             return;
         }
@@ -33,7 +33,12 @@ public sealed class CastleRegenSystem : MonoBehaviour
 
     private void HandleDayStart(int currentDay)
     {
-        if (_castle == null || _researchManager == null)
+        if (!WiringGuard.Require(_castle, nameof(_castle), this))
+        {
+            return;
+        }
+
+        if (!WiringGuard.Require(_researchManager, nameof(_researchManager), this))
         {
             return;
         }

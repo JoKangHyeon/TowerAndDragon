@@ -408,7 +408,7 @@ public class UI_IngameWindow : MonoBehaviour
     // 가용 인구 / 총(최대) 인구로 표시한다.
     private void RenderPopulation(PopulationState state)
     {
-        if (_populationText == null)
+        if (!WiringGuard.Require(_populationText, nameof(_populationText), this))
         {
             return;
         }

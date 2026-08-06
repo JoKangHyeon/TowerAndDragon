@@ -18,11 +18,13 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_gridMap != null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
-            _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
-            _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoving);
+            return;
         }
+
+        _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
+        _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoving);
     }
 
     private void OnDisable()
@@ -37,7 +39,17 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
     // 정식 인벤토리 UI가 생기면 그 UI가 이 메서드를 호출한다. 이번 배치는 디버그 GUI가 대신 호출한다.
     public void BeginPlacement(BabyDragon record)
     {
-        if (record == null || _placementController == null || _babyDragonPrefab == null)
+        if (!WiringGuard.Require(_placementController, nameof(_placementController), this))
+        {
+            return;
+        }
+
+        if (!WiringGuard.Require(_babyDragonPrefab, nameof(_babyDragonPrefab), this))
+        {
+            return;
+        }
+
+        if (record == null)
         {
             return;
         }

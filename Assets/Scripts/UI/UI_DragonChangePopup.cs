@@ -78,7 +78,7 @@ public class UI_DragonChangePopup : MonoBehaviour
     // TryChangeType이 성공 처리되면서 낮 1회 변경 기회만 소모된다.
     private void ApplyCardVisibility()
     {
-        if (_attributeCards == null)
+        if (!WiringGuard.RequireNotEmpty(_attributeCards, nameof(_attributeCards), this))
         {
             return;
         }

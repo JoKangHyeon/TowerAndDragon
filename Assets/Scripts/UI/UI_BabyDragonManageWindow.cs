@@ -129,7 +129,7 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     // 매 프레임 확인한다 - UI_PopulationAllocationWindow와 동일한 방식.
     private void Update()
     {
-        if (_buildingPlacementController == null)
+        if (!WiringGuard.Require(_buildingPlacementController, nameof(_buildingPlacementController), this))
         {
             return;
         }

@@ -9,7 +9,7 @@ public sealed class ResearchLabCoordinator : MonoBehaviour
 
     private void OnEnable()
     {
-        if (_gridMap == null)
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             return;
         }
@@ -36,11 +36,16 @@ public sealed class ResearchLabCoordinator : MonoBehaviour
             return;
         }
 
+        if (!WiringGuard.Require(_researchManager, nameof(_researchManager), this))
+        {
+            return;
+        }
+
         ResearchLabPopulation population = lab.Population;
         bool initialized = population != null &&
             population.Initialize(_populationManager, _cycleManager);
 
-        if (!initialized || _researchManager == null || !_researchManager.RegisterLab(lab))
+        if (!initialized || !_researchManager.RegisterLab(lab))
         {
             Debug.LogWarning(
                 "[ResearchLabCoordinator] 연구소 연결에 실패했습니다.",

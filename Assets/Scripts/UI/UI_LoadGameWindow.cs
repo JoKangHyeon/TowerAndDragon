@@ -230,7 +230,7 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
 
     private void RenderStatus()
     {
-        if (_statusText == null)
+        if (!WiringGuard.Require(_statusText, nameof(_statusText), this))
         {
             return;
         }
