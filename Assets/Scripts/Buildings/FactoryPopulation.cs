@@ -66,7 +66,9 @@ public class FactoryPopulation : MonoBehaviour, IPopulationAllocationTarget
 
     public bool TryAssign(int amount)
     {
-        bool result = _isInitialized && _populationManager.TryAssign(_allocation, amount);
+        bool result = _isInitialized && 
+                    !_factory.IsSuspended &&
+                        _populationManager.TryAssign(_allocation, amount);
         OnPopulationChanged?.Invoke();
         return result;
     }

@@ -1159,22 +1159,22 @@ MonoBehaviour:
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cc70f87391bb556438189252040bf4be, type: 3}
+  m_Script: {fileID: 11500000, guid: db3200645c162584daeae3f0b9ed9bd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _wasdSpeed: 30
   _edgeScrollSpeed: 12
   _dragSensitivity: 1
-  _edgeScrollEnabled: 1
+  _edgeScrollEnabled: 0
   _edgeScrollThreshold: 20
   _zoomSpeed: 30
   _minZoom: 3
   _maxZoom: 18
   _zoomSmoothing: 8
   _moveSmoothTime: 0.08
-  _boundsTilemap: {fileID: 362517319}
-  _excludedBoundsTile: {fileID: 11400000, guid: 72c049b1c04abcf41a1152ba4c5fb4cb, type: 2}
+  _boundsTilemap: {fileID: 0}
+  _excludedBoundsTile: {fileID: 0}
   _boundsMarginMin: {x: 0, y: 0}
   _boundsMarginMax: {x: 0, y: 0}
   _mapMin: {x: -60, y: -60}
@@ -2313,6 +2313,14 @@ MonoBehaviour:
     Amount: 250
   - Type: 128
     Amount: 250
+  - Type: 256
+    Amount: 250
+  - Type: 512
+    Amount: 250
+  - Type: 2048
+    Amount: 250
+  - Type: 1024
+    Amount: 250
   ResourceChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -2670,6 +2678,10 @@ PrefabInstance:
     - target: {fileID: 19017203961118997, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 25365362595350845, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0.39013672
       objectReference: {fileID: 0}
     - target: {fileID: 87529091660270881, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -4449,6 +4461,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4051158298719874637, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4074255537605704612, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4152325902730552130, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}

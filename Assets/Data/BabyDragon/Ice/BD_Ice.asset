@@ -16,8 +16,8 @@ MonoBehaviour:
   _populationCapacity: 1
   _buildCost: []
   _maxHealth: 100
-  _reviveDelay: 2
-  _attack: {fileID: 11400000, guid: c36cb6ae4b5234534bbc333602efeb6e, type: 2}
+  _reviveDelay: 30
+  _attack: {fileID: 11400000, guid: d9986a43fb0d73342a3c28319b2968f1, type: 2}
   _projectilePrefab: {fileID: 2874056009116883397, guid: 38af852f1edcb409b86dc0c03eddafad, type: 3}
   _projectileSpeed: 10
   _dragonType: 0
@@ -27,6 +27,8 @@ MonoBehaviour:
   _additionalFeedPerTotal: 2
   _daysToHatch: 2
   _eggSprite: {fileID: 21300000, guid: c612996125e6ebc47889abe0a851fa0e, type: 3}
-  _buffRadius: 0
+  _buffRadius: 3
   _buffYieldMultiplier: 1
+  _buffTargetResources: 0
+  _constructionUnlockTerrains: 02000000
   _towerAura: {fileID: 0}

@@ -65,6 +65,7 @@ public class TowerPopulation : MonoBehaviour, IPopulationAllocationTarget, ITowe
     public bool TryAssign(int amount)
     {
         return _isInitialized &&
+            !_tower.IsSuspended &&
             _populationManager.TryAssign(_allocation, amount);
     }
 

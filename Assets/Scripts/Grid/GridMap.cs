@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine.Events;
 using UnityEngine.Tilemaps;
+using UnityEngine.Rendering;
 
 public class GridMap : MonoBehaviour
 {
@@ -33,6 +34,10 @@ public class GridMap : MonoBehaviour
     // null이면 봉인석을 어디에도 지을 수 없다(fail-closed) - 영역을 모르는 채 아무데나 짓게 두면 안 되기 때문
     // (해금 여부의 null 기본값이 fail-open인 것과 방향이 반대이며, 의도된 것이다).
     public ISealStonePlacementQuery SealStonePlacementQuery { get; set; }
+
+    //지형 기반 건설 제한을 예외적으로 해제하는 조외원 (얼음 새끼용 버프)
+    // null 이면 해제 없음 (fail-closed) 미배선 씬은 기존 도작 그대로
+    public IConstructionOverrideQuery ConstructionOverrideQuery {get; set;}
 
     // 전체 맵
     private Dictionary<Vector3Int, GridCell> _cells = new();
@@ -382,12 +387,22 @@ public class GridMap : MonoBehaviour
     // 정중앙 셀이 항상 정확히 존재한다.
     public Vector3Int GetChunkAnchorCell(Vector2Int chunkCoord) =>
         new Vector3Int(chunkCoord.x * Chunk.CHUNK_SIZE, chunkCoord.y * Chunk.CHUNK_SIZE, 0);
+
+    // 지형상 건설 불가 셀이라도 해제 조회원이 허용하면 건설 가능으로 취급한다
+    private bool IsCellConstructible(GridCell cell) =>
+        cell.CanConstruct ||
+        (ConstructionOverrideQuery != null &&
+        ConstructionOverrideQuery.IsConstructionAllowed(cell.Coord, cell.TerrainType));
+
     public bool CanConstructBuilding(Vector3Int coord) =>
-        _cells.TryGetValue(coord, out var cell) && cell.CanConstruct && cell.ExistTypeOnCell == ExistTypeOnCell.None &&
-        IsChunkConquered(coord);
+        _cells.TryGetValue(coord, out var cell) && 
+        IsCellConstructible(cell) && 
+        cell.ExistTypeOnCell == 
+        ExistTypeOnCell.None &&
+        IsChunkConquered (coord);
 
     public bool CanConstructBuilding(Vector3Int coord, Building ignoreBuilding) =>
-        _cells.TryGetValue(coord, out var cell) && cell.CanConstruct &&
+        _cells.TryGetValue(coord, out var cell) && IsCellConstructible(cell) &&
         (cell.ExistTypeOnCell == ExistTypeOnCell.None || cell.OccupantBuilding == ignoreBuilding) &&
         IsChunkConquered(coord);
 
@@ -408,6 +423,11 @@ public class GridMap : MonoBehaviour
     // 그리드 밖 좌표는 물(Default)로 취급한다 - 지형이 없는 곳이므로 어떤 지역 효과도 받지 않는다.
     public TerrainType GetTerrainType(Vector3Int coord) =>
         _cells.TryGetValue(coord, out GridCell cell) ? cell.TerrainType : TerrainType.Default;
+
+    public IEnumerable<Vector3Int> EnumerateAllCoords() => _cells.Keys;
+
+    public bool IsNaturallyConstructible (Vector3Int coord) =>
+        _cells.TryGetValue(coord, out GridCell cell) && cell.CanConstruct;
 
     // 디버그 오버레이/로그 전용 원시 지형 생산력 - 자원 종류·연구 강화와 무관한 순수 값이다.
     public int GetBaseYield(Vector3Int coord) =>

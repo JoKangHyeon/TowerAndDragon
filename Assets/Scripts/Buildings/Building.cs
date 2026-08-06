@@ -71,6 +71,12 @@ public class Building : MonoBehaviour
         _isMoveable && (!UsesMoveGrant || _moveGrantQuery == null || _moveGrantQuery.HasRemainingMoveGrant);
     public bool IsRemoveable => _isRemoveable;
 
+    // 운영 중단 상태(얼음 새끼용 버프가 사라진 화염지대 건물 등). 인구 배치만 막는다.
+    // Tower._isDisabled(체력 소진 → 부활 대기)와는 별개 개념이라 이름을 구분한다.
+    public bool IsSuspended {get; private set;} 
+
+    public void SetSuspended(bool isSuspended) => IsSuspended = isSuspended;
+
     public void SetMoveGrantQuery(IBuildingMoveGrantQuery moveGrantQuery) =>
         _moveGrantQuery = moveGrantQuery;
 
