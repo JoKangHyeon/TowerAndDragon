@@ -20,11 +20,11 @@ public class UI_TooltipPresenter : MonoBehaviour
     [Tooltip("본문 텍스트. TMP 리치텍스트를 그대로 그린다.")]
     [SerializeField] private TMP_Text _bodyText;
 
-    [Tooltip("커서에서 툴팁까지의 화면 픽셀 간격. 커서가 툴팁을 가리지 않게 띄운다.")]
+    [Tooltip("커서에서 툴팁까지의 간격(캔버스 단위). 커서가 툴팁을 가리지 않게 띄운다.")]
     [SerializeField] private Vector2 _cursorOffset = new Vector2(16f, -16f);
 
-    [Tooltip("툴팁이 화면 가장자리에서 유지할 최소 여백(픽셀).")]
-    [SerializeField] private float _screenPadding = 8f;
+    [Tooltip("툴팁이 캔버스 가장자리에서 유지할 최소 여백(캔버스 단위).")]
+    [SerializeField] private float _edgePadding = 8f;
 
     private Canvas _canvas;
     private RectTransform _parentRect;
@@ -46,8 +46,16 @@ public class UI_TooltipPresenter : MonoBehaviour
             _parentRect = _panel.parent as RectTransform;
 
             // 커서 기준으로 위치를 잡으려면 앵커가 한 점이어야 한다. 좌상단 피벗이라 커서 오른쪽 아래로 펼쳐진다.
-            _panel.anchorMin = Vector2.zero;
-            _panel.anchorMax = Vector2.zero;
+            //
+            // 앵커를 부모의 피벗에 맞추는 것이 핵심이다. ScreenPointToLocalPointInRectangle이 돌려주는 좌표는
+            // 부모의 '피벗'이 원점인 로컬 좌표인데, anchoredPosition은 '앵커 지점'에서 잰 값이다.
+            // 둘이 어긋나면(예: 앵커 (0,0) + 부모 피벗 (0.5,0.5)) 툴팁이 캔버스 절반만큼 밀려 화면 밖으로 나간다.
+            if (_parentRect != null)
+            {
+                _panel.anchorMin = _parentRect.pivot;
+                _panel.anchorMax = _parentRect.pivot;
+            }
+
             _panel.pivot = new Vector2(0f, 1f);
             _panel.gameObject.SetActive(false);
         }
@@ -121,41 +129,47 @@ public class UI_TooltipPresenter : MonoBehaviour
         }
 
         _lastScreenPosition = screenPosition;
-        Vector2 clamped = ClampToScreen(screenPosition + _cursorOffset, screenPosition);
 
-        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                _parentRect, clamped, ResolveCamera(), out Vector2 localPoint))
+        // 화면 픽셀이 아니라 부모(캔버스) 로컬 단위로 변환한 뒤에 계산한다.
+        // 캔버스 스케일이 1이 아니면 두 단위가 다르므로, 섞어 쓰면 창 크기에 따라 위치가 어긋난다.
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _parentRect, screenPosition, ResolveCamera(), out Vector2 cursorLocal))
         {
-            _panel.anchoredPosition = localPoint;
+            return;
         }
+
+        _panel.anchoredPosition = ClampInsideParent(cursorLocal);
     }
 
-    // 피벗이 좌상단이므로 패널은 (x, y-h) ~ (x+w, y)를 차지한다. 오른쪽으로 넘치면 커서 왼쪽으로 뒤집고,
-    // 그래도 넘치면 화면 안으로 밀어 넣는다.
-    private Vector2 ClampToScreen(Vector2 desired, Vector2 cursorPosition)
+    // 피벗이 좌상단이므로 패널은 (x, y-h) ~ (x+w, y)를 차지한다. 오른쪽/아래로 넘치면 커서 반대편으로
+    // 뒤집고, 그래도 넘치면 부모 사각형 안으로 밀어 넣는다.
+    private Vector2 ClampInsideParent(Vector2 cursorLocal)
     {
-        float scale = _canvas != null ? _canvas.scaleFactor : 1f;
-        float width = _panel.rect.width * scale;
-        float height = _panel.rect.height * scale;
+        Rect area = _parentRect.rect;
+        float width = _panel.rect.width;
+        float height = _panel.rect.height;
 
-        float x = desired.x;
-        float y = desired.y;
+        float x = cursorLocal.x + _cursorOffset.x;
+        float y = cursorLocal.y + _cursorOffset.y;
 
-        if (x + width > Screen.width - _screenPadding)
+        if (x + width > area.xMax - _edgePadding)
         {
-            x = cursorPosition.x - _cursorOffset.x - width;
+            x = cursorLocal.x - _cursorOffset.x - width;
         }
 
-        if (y - height < _screenPadding)
+        if (y - height < area.yMin + _edgePadding)
         {
-            y = cursorPosition.y - _cursorOffset.y + height;
+            y = cursorLocal.y - _cursorOffset.y + height;
         }
 
-        x = Mathf.Clamp(x, _screenPadding, Mathf.Max(_screenPadding, Screen.width - width - _screenPadding));
-        y = Mathf.Clamp(y, Mathf.Min(height + _screenPadding, Screen.height), Screen.height - _screenPadding);
-
-        return new Vector2(x, y);
+        return new Vector2(
+            ClampRange(x, area.xMin + _edgePadding, area.xMax - width - _edgePadding),
+            ClampRange(y, area.yMin + height + _edgePadding, area.yMax - _edgePadding));
     }
+
+    // 툴팁이 부모보다 크면 최솟값이 최댓값을 넘어선다 - 그 경우 최솟값(좌상단 붙임)을 택한다.
+    private static float ClampRange(float value, float min, float max) =>
+        min > max ? min : Mathf.Clamp(value, min, max);
 
     private void ApplyContent(in TooltipContent content)
     {

@@ -394,6 +394,13 @@ public class UI_IngameWindow : MonoBehaviour
         {
             _buttonResearchLabel.text = StringTable.GetString(ResearchLocKeys.WINDOW_HEADER);
         }
+
+        // 자원 툴팁 문구는 SetContent로 '밀어 넣는' 방식이라, 다시 그리지 않으면 언어를 바꿔도
+        // 이전 언어로 만들어 둔 문자열이 그대로 남는다(수량 표기와 달리 값이 안 바뀌면 갱신될 일이 없다).
+        if (_resourceManager != null)
+        {
+            RenderAllResources();
+        }
     }
 
     // 가용 인구 / 총(최대) 인구로 표시한다.
