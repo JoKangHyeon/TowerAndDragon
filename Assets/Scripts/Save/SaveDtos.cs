@@ -15,10 +15,19 @@ using UnityEngine;
 /// <summary>세이브 파일 포맷의 버전. 로드 시 이 값으로 호환 여부를 먼저 판정한다.</summary>
 public static class SaveSchema
 {
-    public const int CURRENT_VERSION = 1;
+    // v2: 스냅샷 시점이 "낮 시작 정산 직전"에서 "정산 이후 임의 시점"으로 바뀌었다(SaveService 계약 2).
+    //     v1 파일은 정산 전 상태를 담고 있어 새 복원 경로로는 하루치 정산이 빠지므로 읽지 않는다.
+    public const int CURRENT_VERSION = 2;
 
     /// <summary>읽을 수 있는 가장 낮은 버전. 마이그레이션을 구현하면 이 값을 낮춘다.</summary>
-    public const int MIN_SUPPORTED_VERSION = 1;
+    public const int MIN_SUPPORTED_VERSION = 2;
+
+    /// <summary>
+    /// 이 빌드가 읽을 수 있는 버전인지. 슬롯 목록의 "손상됨" 판정과 본문 읽기의 버전 검사가
+    /// 서로 다른 기준을 쓰지 않도록 판정을 여기 한곳에 모은다.
+    /// </summary>
+    public static bool IsSupportedVersion(int version) =>
+        version >= MIN_SUPPORTED_VERSION && version <= CURRENT_VERSION;
 }
 
 public sealed class SaveGameDto
@@ -31,6 +40,7 @@ public sealed class SaveGameDto
     public ProgressionStateDto DragonTree;
     public ConquestStateDto Conquest;
     public MapStateDto Map;
+    public CastleStateDto Castle;
 
     /// <summary>
     /// 복원 착수 전에 부르는 유일한 검증 지점. 한 번 복원을 시작하면 여러 매니저에 이미 쓴 뒤라
@@ -51,12 +61,21 @@ public sealed class SaveGameDto
             return false;
         }
 
+        // 밤 스냅샷은 웨이브 진행이 저장 대상이 아니라 이어서 시작할 수 없다.
+        // CanSave가 낮만 허용하므로 정상 경로에서는 걸리지 않고, 손으로 고친 파일만 여기서 막힌다.
+        if (Run.CyclePhase != (int)CycleManager.CycleState.Day)
+        {
+            Debug.LogError($"[SaveGameDto] 낮이 아닌 시점의 세이브는 복원할 수 없습니다: {Run.CyclePhase}");
+            return false;
+        }
+
         Resources ??= new ResourceStateDto();
         Population ??= new PopulationStateDto();
         Research ??= new ProgressionStateDto();
         DragonTree ??= new ProgressionStateDto();
         Conquest ??= new ConquestStateDto();
         Map ??= new MapStateDto();
+        Castle ??= new CastleStateDto();
 
         Run.Normalize();
         Resources.Normalize();
@@ -65,6 +84,7 @@ public sealed class SaveGameDto
         DragonTree.Normalize();
         Conquest.Normalize();
         Map.Normalize();
+        Castle.Normalize();
         return true;
     }
 }
@@ -107,6 +127,12 @@ public sealed class RunStateDto
     /// <summary>누적 일차. 주기·웨이브·연구 티어·포탈 개방은 전부 여기서 파생된다.</summary>
     public int CurrentCycle;
 
+    /// <summary>
+    /// 저장 당시의 낮/밤(CycleManager.CycleState). CurrentCycle(누적 일차)과 다른 값이다.
+    /// 복원은 Day만 받아들인다 - 밤 스냅샷은 웨이브 진행이 빠져 있어 이어서 시작할 수 없다.
+    /// </summary>
+    public int CyclePhase;
+
     public int DragonType;
     public List<BabyDragonDto> BabyDragons;
     public List<DragonEggDto> DragonEggs;
@@ -116,8 +142,17 @@ public sealed class RunStateDto
         BabyDragons ??= new List<BabyDragonDto>();
         DragonEggs ??= new List<DragonEggDto>();
 
+        DragonType = SaveValidation.CoerceDefinedEnum(
+            DragonType, typeof(DragonType), SaveValidation.DEFAULT_DRAGON_TYPE);
+
         SaveValidation.DropUndefinedEnums(BabyDragons, dto => dto.DragonType, typeof(DragonType));
         SaveValidation.DropUndefinedEnums(DragonEggs, dto => dto.DragonType, typeof(DragonType));
+
+        foreach (BabyDragonDto babyDragon in BabyDragons)
+        {
+            babyDragon.Mode = SaveValidation.CoerceDefinedEnum(
+                babyDragon.Mode, typeof(BabyDragonMode), SaveValidation.DEFAULT_BABY_DRAGON_MODE);
+        }
 
         foreach (DragonEggDto egg in DragonEggs)
         {
@@ -145,6 +180,17 @@ public sealed class DragonEggDto
 {
     public int DragonType;
     public int FedDayCount;
+}
+
+public sealed class CastleStateDto
+{
+    /// <summary>
+    /// 저장 당시 성의 현재 체력. 최대 체력은 프리팹·연구가 정하므로 저장하지 않고
+    /// 복원 시 살아 있는 최대치로 클램프한다. 0 이하는 "기록 없음"으로 보고 복원을 건너뛴다.
+    /// </summary>
+    public float CurrentHealth;
+
+    public void Normalize() => CurrentHealth = Mathf.Max(0f, CurrentHealth);
 }
 
 public sealed class ResourceStateDto
@@ -363,6 +409,11 @@ public static class SaveValidation
     /// <summary>게임은 1일차부터 시작한다(CycleManager.StartDay가 0에서 1로 올린다).</summary>
     public const int FIRST_DAY_NUMBER = 1;
 
+    // 대체값을 RunStateDto/BabyDragonDto 안에 두지 않는 이유: 그 DTO들의 필드명(DragonType, Mode)이
+    // enum 타입명을 가려 DragonType.Ice 같은 멤버 접근이 성립하지 않는다.
+    public static readonly int DEFAULT_DRAGON_TYPE = (int)DragonType.Ice;
+    public static readonly int DEFAULT_BABY_DRAGON_MODE = (int)BabyDragonMode.Attack;
+
     /// <summary>
     /// enum으로 정의되지 않은 정수값을 가진 항목을 버린다. 밸런싱으로 enum 멤버가 삭제된
     /// 구버전 세이브를 로드할 때 정의되지 않은 값이 그대로 흘러 들어가는 것을 막는다.
@@ -386,5 +437,22 @@ public static class SaveValidation
 
             return !isDefined;
         });
+    }
+
+    /// <summary>
+    /// enum으로 정의되지 않은 스칼라 값을 대체값으로 되돌린다. 컬렉션과 달리 버릴 수 없으므로
+    /// 항목을 제거하는 <see cref="DropUndefinedEnums{T}"/> 대신 이쪽을 쓴다.
+    /// </summary>
+    public static int CoerceDefinedEnum(int value, Type enumType, int fallbackValue)
+    {
+        if (Enum.IsDefined(enumType, value))
+        {
+            return value;
+        }
+
+        Debug.LogWarning(
+            $"[SaveValidation] 정의되지 않은 {enumType.Name} 값 {value} - {fallbackValue}로 대체합니다.");
+
+        return fallbackValue;
     }
 }

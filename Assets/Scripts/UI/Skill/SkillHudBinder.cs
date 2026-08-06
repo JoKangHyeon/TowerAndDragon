@@ -31,7 +31,7 @@ public class SkillHudBinder : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.AddListener(HandleOnDayStart);
+            _cycleManager.OnDayReady.AddListener(HandleOnDayStart);
             _cycleManager.OnNightStart.AddListener(HandleOnNightStart);
         }
     }
@@ -40,7 +40,7 @@ public class SkillHudBinder : MonoBehaviour
     {
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.RemoveListener(HandleOnDayStart);
+            _cycleManager.OnDayReady.RemoveListener(HandleOnDayStart);
             _cycleManager.OnNightStart.RemoveListener(HandleOnNightStart);
         }
 

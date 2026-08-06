@@ -64,7 +64,7 @@ public class GameSpeedManager : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.AddListener(HandleDayStart);
+            _cycleManager.OnDayReady.AddListener(HandleDayStart);
         }
 
         if (_togglePauseAction != null)
@@ -83,7 +83,7 @@ public class GameSpeedManager : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
+            _cycleManager.OnDayReady.RemoveListener(HandleDayStart);
         }
 
         // timeScale은 씬 로드를 넘어 유지되므로, 재시작(SceneManager.LoadScene) 시 정지 상태가

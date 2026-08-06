@@ -2190,13 +2190,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ae955efb1ff1d4c4096c4f2e0e471964, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CycleManager
-  OnDayAdvanced:
-    m_PersistentCalls:
-      m_Calls: []
   OnDayStart:
     m_PersistentCalls:
       m_Calls: []
   OnDayStartUpkeep:
+    m_PersistentCalls:
+      m_Calls: []
+  OnDayReady:
+    m_PersistentCalls:
+      m_Calls: []
+  OnDaySettled:
     m_PersistentCalls:
       m_Calls: []
   OnDayEnd:
@@ -2475,6 +2478,7 @@ MonoBehaviour:
   _conquestManager: {fileID: 1721790482}
   _gridMap: {fileID: 313449541}
   _waveCycleProgression: {fileID: 704850240}
+  _castle: {fileID: 1161439827}
   _thumbnailCapturer: {fileID: 914589627}
   _isAutoSaveEnabled: 1
   _debugForceContinue: 0

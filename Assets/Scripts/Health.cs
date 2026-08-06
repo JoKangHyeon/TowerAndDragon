@@ -7,6 +7,10 @@ using UnityEngine.Events;
 /// </summary>
 public class Health : MonoBehaviour
 {
+    // 복원이 살려 둘 수 있는 최소 체력. 0으로 복원하면 IsDead가 되지만 Died를 발화하지 않아
+    // "죽었는데 아무 일도 일어나지 않은" 상태가 된다.
+    private const float MIN_RESTORED_HEALTH = 1f;
+
     private float _maxHealth;
     private float _currentHealth;
 
@@ -39,6 +43,14 @@ public class Health : MonoBehaviour
         {
             Died?.Invoke();
         }
+    }
+
+    /// <summary>세이브 복원 전용. 최대 체력은 그대로 두고 현재 체력만 되돌린다.
+    /// 1 미만으로는 내리지 않는다 - 복원 중 Died가 발화하면 로드 직후 게임오버가 된다.</summary>
+    public void RestoreCurrentHealth(float currentHealth)
+    {
+        _currentHealth = Mathf.Clamp(currentHealth, MIN_RESTORED_HEALTH, _maxHealth);
+        HealthChanged?.Invoke(_currentHealth, _maxHealth);
     }
 
     public void RestoreToFull()

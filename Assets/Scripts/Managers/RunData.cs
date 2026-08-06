@@ -20,7 +20,7 @@ public class RunData
     /// 세이브 복원 전용. 어미용 속성과 새끼용·알 목록을 저장값으로 갈아 끼운다.
     /// CurrentDragon 인스턴스 자체는 교체하지 않는다 - GameManager.Awake에서 Construct로 걸어 둔
     /// CycleManager 구독(하루 1회 속성 변경 제한)이 끊기기 때문이다.
-    /// CurrentCycle은 CycleManager.RestoreDay가 담당하므로 여기서 건드리지 않는다.
+    /// CurrentCycle은 CycleManager.SeedRestoredDay가 담당하므로 여기서 건드리지 않는다.
     /// </summary>
     public void RestoreInventory(
         DragonType dragonType,

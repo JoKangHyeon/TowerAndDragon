@@ -42,7 +42,7 @@ public class WaveCycleProgression : MonoBehaviour
             return;
         }
 
-        _cycleManager.OnDayStart.AddListener(HandleDayStart);
+        _cycleManager.OnDayReady.AddListener(HandleDayStart);
         _cycleManager.OnNightEnd.AddListener(HandleNightEnd);
 
         if (_cycleManager.CurrentDayNumber >= WaveCycleRules.FIRST_CYCLE_NUMBER)
@@ -58,7 +58,7 @@ public class WaveCycleProgression : MonoBehaviour
             return;
         }
 
-        _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
+        _cycleManager.OnDayReady.RemoveListener(HandleDayStart);
         _cycleManager.OnNightEnd.RemoveListener(HandleNightEnd);
     }
 

@@ -51,8 +51,8 @@ public static class SaveSlotQuery
 
         if (TryReadMetaFile(slotIndex, out SaveMetaDto meta))
         {
-            bool isCorrupted = meta.SchemaVersion != SaveSchema.CURRENT_VERSION;
-            info = SaveSlotInfo.FromMeta(meta, isCorrupted, hasThumbnail);
+            bool isCorrupted = !SaveSchema.IsSupportedVersion(meta.SchemaVersion);
+            info = SaveSlotInfo.FromMeta(meta, slotIndex, isCorrupted, hasThumbnail);
             return true;
         }
 
@@ -61,7 +61,15 @@ public static class SaveSlotQuery
         if (TryReadSave(slotIndex, out SaveGameDto dto, out _, false))
         {
             WriteMetaFile(slotIndex, dto.Meta);
-            info = SaveSlotInfo.FromMeta(dto.Meta, false, hasThumbnail);
+
+            // TryReadSave가 통과했다는 것만으로 버전이 지원 범위임을 단정하지 않는다 -
+            // 두 판정이 갈라지지 않도록 위 분기와 같은 helper를 쓴다.
+            info = SaveSlotInfo.FromMeta(
+                dto.Meta,
+                slotIndex,
+                !SaveSchema.IsSupportedVersion(dto.Meta.SchemaVersion),
+                hasThumbnail);
+
             return true;
         }
 
@@ -193,15 +201,14 @@ public static class SaveSlotQuery
             return false;
         }
 
-        if (schemaVersion > SaveSchema.CURRENT_VERSION)
+        // 지원 여부는 helper가 판정하고(슬롯 목록의 "손상됨"과 같은 기준), 사유만 여기서 가른다 -
+        // 사용자에게 "구버전"과 "더 새 버전"은 대처가 다른 실패다.
+        if (!SaveSchema.IsSupportedVersion(schemaVersion))
         {
-            reason = SaveLoadFailureReason.SchemaTooNew;
-            return false;
-        }
+            reason = schemaVersion > SaveSchema.CURRENT_VERSION
+                ? SaveLoadFailureReason.SchemaTooNew
+                : SaveLoadFailureReason.SchemaTooOld;
 
-        if (schemaVersion < SaveSchema.MIN_SUPPORTED_VERSION)
-        {
-            reason = SaveLoadFailureReason.SchemaTooOld;
             return false;
         }
 

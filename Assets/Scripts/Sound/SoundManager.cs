@@ -135,7 +135,7 @@ public class SoundManager : MonoBehaviour
             return;
         }
 
-        _cycleManager.OnDayStart?.AddListener(HandleDayStart);
+        _cycleManager.OnDayReady?.AddListener(HandleDayStart);
         _cycleManager.OnNightStart?.AddListener(HandleNightStart);
 
         // 구독 직후 현재 주기를 한 번 반영해, 첫 발화를 놓쳐도 무음으로 남지 않게 한다.
@@ -154,7 +154,7 @@ public class SoundManager : MonoBehaviour
             return;
         }
 
-        _cycleManager.OnDayStart?.RemoveListener(HandleDayStart);
+        _cycleManager.OnDayReady?.RemoveListener(HandleDayStart);
         _cycleManager.OnNightStart?.RemoveListener(HandleNightStart);
     }
 

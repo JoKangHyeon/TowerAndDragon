@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 인게임 창 컨트롤러. 이 창에 부착해, 창 안의 UI 요소를 한곳에서 관리한다.
 /// - 낮/밤 심볼(Symbol_Day) 전환과 하단 컨트롤 표시 (CycleManager.OnCycleChanged 구독)
-/// - Panel_Label/Day 날짜 텍스트 표시 (CycleManager.OnDayStart 구독)
+/// - Panel_Label/Day 날짜 텍스트 표시 (CycleManager.OnDayReady 구독)
 /// - Panel_TopLeft 자원 보유량 표시 (ResourceManager 이벤트 구독)
 /// - People_amount 인구 표시: 가용/총 (PopulationManager 이벤트 구독)
 /// 활성화 시점의 현재 상태도 즉시 반영한다.
@@ -235,7 +235,7 @@ public class UI_IngameWindow : MonoBehaviour
             _cycleManager.OnNightEnd.AddListener(HandleWaveCleared);
             ResetWaveBar();
 
-            _cycleManager.OnDayStart.AddListener(RenderDay);
+            _cycleManager.OnDayReady.AddListener(RenderDay);
         }
 
         // 언어가 바뀌면 이 창의 로컬라이즈된 텍스트를 다시 그린다.
@@ -318,7 +318,7 @@ public class UI_IngameWindow : MonoBehaviour
         if (_cycleManager != null)
         {
             _cycleManager.OnNightEnd.RemoveListener(HandleWaveCleared);
-            _cycleManager.OnDayStart.RemoveListener(RenderDay);
+            _cycleManager.OnDayReady.RemoveListener(RenderDay);
         }
 
         StringTable.OnLanguageChanged -= RefreshLocalizedTexts;
@@ -337,7 +337,7 @@ public class UI_IngameWindow : MonoBehaviour
     // 언어 변경 시 현재 일수로 다시 그릴 수 있도록 마지막 표시 일수를 저장한다.
     private int _currentDay;
 
-    // CycleManager.OnDayStart(day)로 갱신된다.
+    // CycleManager.OnDayReady(day)로 갱신된다.
     private void RenderDay(int day)
     {
         _currentDay = day;

@@ -7,8 +7,10 @@ using UnityEngine;
 ///
 /// 호출 전제:
 ///  - dto.TryNormalize()가 이미 통과했다(컬렉션이 null이 아니고 값이 검증됐다).
-///  - 모든 오브젝트의 Start가 끝난 뒤다(특히 Castle.Start의 홈 청크 점령).
-///  - 호출자가 마지막에 CycleManager.StartDay()를 부른다. 이 클래스는 부르지 않는다.
+///  - 모든 오브젝트의 Start가 끝난 뒤다(특히 Castle.Start의 홈 청크 점령과 체력 초기화).
+///  - 호출자가 마지막에 CycleManager.ResumeDay()를 부른다. 이 클래스는 부르지 않는다.
+///    StartDay가 아니라 ResumeDay인 이유: 스냅샷은 이미 정산이 끝난 상태이므로
+///    생산·유지비·알 성장을 재생하면 안 된다(SaveService 계약 2).
 /// </summary>
 public static class SaveRestore
 {
@@ -19,11 +21,10 @@ public static class SaveRestore
     /// </summary>
     public static void Apply(SaveGameDto dto, SaveCaptureContext context)
     {
-        // 1. 일차 시드. 이후 모든 핸들러가 일관된 일차를 보게 한다.
-        //    StartDay가 +1 하므로 여기서는 N-1이 들어간다(CycleManager.RestoreDay 주석 참고).
-        context.CycleManager.RestoreDay(dto.Run.CurrentCycle);
+        // 1. 일차·페이즈 시드. 이후 모든 핸들러가 일관된 일차를 보게 한다.
+        context.CycleManager.SeedRestoredDay(dto.Run.CurrentCycle);
 
-        // 2. 자원. 마지막 StartDay가 재생할 유지비 소비가 복원된 재고에서 차감돼야 한다.
+        // 2. 자원. 복원된 재고가 곧 오늘의 재고다 - 뒤에 재생할 정산이 없다.
         RestoreResources(dto.Resources, context.ResourceManager);
 
         // 3. 총 인구. 8번(원정 인구 배치)보다 반드시 앞서야 한다 -
@@ -33,7 +34,7 @@ public static class SaveRestore
             context.PopulationManager.RestoreMaxPopulation(dto.Population.MaxPopulation);
         }
 
-        // 4. 연구. 마지막 StartDay가 재생할 정산이 연구 배율·정원을 반영해야 한다.
+        // 4. 연구.
         if (context.ResearchManager != null)
         {
             context.ResearchManager.RestoreProgress(
@@ -41,18 +42,16 @@ public static class SaveRestore
                 dto.Research.UnlockedNodeIds);
         }
 
-        // 5. 용 스킬트리.
+        // 5. 어미용 속성과 새끼용·알 인벤토리. 6번보다 앞서야 한다 -
+        //    RestoreUnlockedNodes가 재발화하는 NodeUnlocked를 CastleVisionCoordinator가 받아
+        //    시야 보너스를 계산하므로, 그때 속성이 이미 복원돼 있어야 한다.
+        //    RestoreInventory는 데이터만 세팅하므로 스킬트리에 의존하지 않는다.
+        RestoreRun(dto.Run, context.GameManager.CurrentRun);
+
+        // 6. 용 스킬트리.
         if (context.DragonTreeManager != null)
         {
             context.DragonTreeManager.RestoreUnlockedNodes(dto.DragonTree.UnlockedNodeIds);
-        }
-
-        // 6. 어미용 속성과 새끼용·알 인벤토리. 5번 뒤에 둬서 스킬트리 게이트가 복원된
-        //    속성을 보게 하고, 마지막 StartDay의 알 성장이 복원된 FedDayCount에서 출발하게 한다.
-        RestoreRun(dto.Run, context.GameManager.CurrentRun);
-
-        if (context.DragonTreeManager != null)
-        {
             context.DragonTreeManager.NotifyActiveAttributeChanged();
         }
 
@@ -69,8 +68,16 @@ public static class SaveRestore
 
         // TODO(범위 밖): 여기에 건물 배치 복원이 들어간다. MapStateDto.Buildings 주석 참고.
 
-        // 9. StartDay는 호출자(SaveService)가 부른다 - 복원 실패 시 폴백 경로와 구분하기 위해
-        //    이 클래스는 상태 적용까지만 책임진다.
+        // 9. 성 체력. 다른 복원값에 의존하지 않으므로 마지막에 둔다 -
+        //    Castle.Start의 Initialize(만피)를 여기서 덮어쓰는 편이 읽기 쉽다.
+        //    0 이하는 "기록 없음"(성이 연결되지 않은 씬에서 저장한 슬롯)이므로 만피를 유지한다.
+        if (dto.Castle.CurrentHealth > 0f)
+        {
+            context.Castle?.RestoreHealth(dto.Castle.CurrentHealth);
+        }
+
+        // 10. ResumeDay는 호출자(SaveService)가 부른다 - 복원 실패 시 폴백 경로와 구분하기 위해
+        //     이 클래스는 상태 적용까지만 책임진다.
     }
 
     private static void RestoreResources(ResourceStateDto dto, ResourceManager resourceManager)

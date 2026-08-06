@@ -122,6 +122,13 @@ public readonly struct SaveSlotInfo
 
         foreach (ResourceAmountDto amount in _resources)
         {
+            // meta.json은 손으로 고칠 수 있고 검증(TryNormalize)을 거치지 않는다 - 원소가 null이면
+            // 슬롯 목록을 그리는 도중 NRE가 나므로 여기서 건너뛴다.
+            if (amount == null)
+            {
+                continue;
+            }
+
             if (amount.Type == (int)type)
             {
                 return amount.Amount;
@@ -138,9 +145,18 @@ public readonly struct SaveSlotInfo
     public static SaveSlotInfo Corrupted(int slotIndex) =>
         new SaveSlotInfo(slotIndex, false, true, default, 0, 0, false, 0, 0, false, null);
 
-    public static SaveSlotInfo FromMeta(SaveMetaDto meta, bool isCorrupted, bool hasThumbnail) =>
+    /// <summary>
+    /// 슬롯 번호는 meta.SlotIndex가 아니라 인자로 받는다. 세이브 폴더를 다른 슬롯으로 복사하면
+    /// 파일 안의 SlotIndex는 원래 번호로 남아, 목록에 잘못된 번호가 뜨고 삭제가 엉뚱한 폴더를 지운다.
+    /// Empty/Corrupted와 같은 근거(= 조회한 폴더 번호)로 판정을 통일한다.
+    /// </summary>
+    public static SaveSlotInfo FromMeta(
+        SaveMetaDto meta,
+        int slotIndex,
+        bool isCorrupted,
+        bool hasThumbnail) =>
         new SaveSlotInfo(
-            meta.SlotIndex,
+            slotIndex,
             false,
             isCorrupted,
             meta.SavedAtUtc,

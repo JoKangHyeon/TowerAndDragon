@@ -443,7 +443,7 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
 
         if (cycleManager != null)
         {
-            cycleManager.OnDayStart.AddListener(HandleDayStart);
+            cycleManager.OnDayReady.AddListener(HandleDayStart);
         }
     }
 
@@ -451,7 +451,7 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
     {
         if (Cycle != null)
         {
-            Cycle.OnDayStart.RemoveListener(HandleDayStart);
+            Cycle.OnDayReady.RemoveListener(HandleDayStart);
         }
     }
 

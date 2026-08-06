@@ -125,7 +125,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.AddListener(HandleCycleProgressed);
+            _cycleManager.OnDayReady.AddListener(HandleCycleProgressed);
             _cycleManager.OnNightEnd.AddListener(HandleCycleProgressed);
         }
 
@@ -155,7 +155,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.RemoveListener(HandleCycleProgressed);
+            _cycleManager.OnDayReady.RemoveListener(HandleCycleProgressed);
             _cycleManager.OnNightEnd.RemoveListener(HandleCycleProgressed);
         }
 

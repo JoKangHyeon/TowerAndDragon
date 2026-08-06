@@ -10,8 +10,10 @@ using UnityEngine.SceneManagement;
 /// (싱글톤 아님 - SettingsService와 같이 [SerializeField] 주입, 항상 활성인 오브젝트에 둔다.)
 ///
 /// 계약 1: 자동저장 실패는 절대 게임 진행을 막지 않는다. 모든 예외는 결과값으로 변환된다.
-/// 계약 2: 스냅샷은 "낮 시작 정산 직전"에 찍는다(CycleManager.OnDayAdvanced). 복원은 그 지점에서
-///         다시 출발해 StartDay를 한 번 재생하므로, 생산·유지비·알 성장이 정확히 1회만 일어난다.
+/// 계약 2: 스냅샷은 "낮 시작 정산이 끝난 뒤" 임의 시점에 찍는다 - 자동저장은 그 경계
+///         (CycleManager.OnDaySettled)에서, 수동 저장은 낮 아무 때나(CanSave)다. 복원은 정산을
+///         재생하지 않고 CycleManager.ResumeDay()로 그 낮을 이어서 시작하므로, 낮에 저장→로드를
+///         반복해도 생산·유지비·알 성장·성 회복·이동권이 다시 적용되지 않는다.
 /// 계약 3: 로드는 항상 씬 재로드를 거친다. 살아 있는 몬스터·투사체·건물 GameObject를 정리할 방법이
 ///         없어 인게임 in-place 로드는 지원하지 않는다.
 ///
@@ -38,6 +40,7 @@ public sealed class SaveService : MonoBehaviour
     [SerializeField] private ConquestManager _conquestManager;
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private WaveCycleProgression _waveCycleProgression;
+    [SerializeField] private Castle _castle;
 
     [Tooltip("슬롯 목록에 띄울 점령 현황 썸네일을 찍는다. 비워 두면 썸네일 없이 저장한다.")]
     [SerializeField] private SaveThumbnailCapturer _thumbnailCapturer;
@@ -61,8 +64,8 @@ public sealed class SaveService : MonoBehaviour
     private int _consecutiveAutoSaveFailures;
     private bool _isSaving;
 
-    // 복원 중에는 저장하지 않는다. 복원 마지막의 StartDay가 같은 슬롯을 즉시 덮어써
-    // 저장 시각 메타가 무의미해지는 것과 불필요한 디스크 쓰기를 막는다.
+    // 복원 중에는 저장하지 않는다. ResumeDay는 OnDaySettled를 발화하지 않으므로 이 플래그가
+    // 없어도 자동저장이 돌지 않지만, 복원 도중 다른 경로로 저장이 시작되는 것을 막는 이중 방어로 남긴다.
     private bool _isRestoring;
 
     public UnityEvent<SaveSlotInfo> SaveCompleted => _saveCompleted;
@@ -94,7 +97,7 @@ public sealed class SaveService : MonoBehaviour
     {
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayAdvanced.AddListener(HandleDayAdvanced);
+            _cycleManager.OnDaySettled.AddListener(HandleDaySettled);
         }
     }
 
@@ -102,7 +105,7 @@ public sealed class SaveService : MonoBehaviour
     {
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayAdvanced.RemoveListener(HandleDayAdvanced);
+            _cycleManager.OnDaySettled.RemoveListener(HandleDaySettled);
         }
     }
 
@@ -166,7 +169,7 @@ public sealed class SaveService : MonoBehaviour
         try
         {
             // 캡처와 직렬화는 메인 스레드에서 동기로 한다 - GridMap 등 Unity API를 만지고,
-            // "낮 시작 정산 직전"이라는 시점을 정확히 고정해야 한다.
+            // 저장 시점의 상태를 한 프레임 안에서 원자적으로 고정해야 한다.
             SaveGameDto dto = SaveCapture.Capture(context, slotIndex, isAutoSave);
 
             if (!SaveJson.TrySerialize(dto, out string saveJson, out string serializeError) ||
@@ -216,7 +219,7 @@ public sealed class SaveService : MonoBehaviour
 
             _consecutiveAutoSaveFailures = 0;
 
-            SaveSlotInfo info = SaveSlotInfo.FromMeta(dto.Meta, false, thumbnailPng != null);
+            SaveSlotInfo info = SaveSlotInfo.FromMeta(dto.Meta, slotIndex, false, thumbnailPng != null);
             _saveCompleted.Invoke(info);
             return SaveResult.Success(info);
         }
@@ -245,7 +248,7 @@ public sealed class SaveService : MonoBehaviour
 
     /// <summary>
     /// GameManager.Start가 대기 중인 로드 요청을 발견했을 때 호출한다.
-    /// 복원이 끝나면 이 클래스가 StartDay까지 책임지고, 실패하면 새 게임으로 폴백한다 -
+    /// 복원이 끝나면 이 클래스가 ResumeDay까지 책임지고, 실패하면 새 게임으로 폴백한다 -
     /// 어느 쪽이든 게임이 시작되지 않는 상태로 남지 않는다.
     /// </summary>
     public void BeginLoadFlow(GameManager gameManager)
@@ -263,8 +266,29 @@ public sealed class SaveService : MonoBehaviour
         // (CLAUDE.md 이벤트 초기화 규칙, FogOfWarRenderer와 같은 타이밍).
         await UniTask.Yield(cancellationToken);
 
-        SaveLoadResult result = TryApplySlot(slotIndex);
+        SaveLoadResult result;
 
+        // 복원 도중 예외가 나면 자원·연구가 반쯤 적용된 상태다. 그대로 StartNewRun을 태우면
+        // 그 잔재가 새 런에 섞이므로, 씬을 클린 리로드해 메모리 상태를 버린다.
+        // SaveLoadRequest는 이미 소비돼 있어 리로드된 씬은 HasPendingLoad == false가 되고,
+        // GameManager.Start가 StartNewRun으로 간다 - 리로드는 1회뿐이라 루프가 생기지 않는다.
+        try
+        {
+            result = TryApplySlot(slotIndex);
+        }
+        catch (System.OperationCanceledException)
+        {
+            throw;
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogException(exception);
+            Debug.LogError($"[SaveService] 슬롯 {slotIndex} 복원 중 예외 - 씬을 다시 로드해 새 게임으로 시작합니다.");
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            return;
+        }
+
+        // 읽기·검증 실패는 상태를 하나도 바꾸지 않았으므로 씬 리로드 없이 새 게임으로 간다.
         if (!result.IsSuccess)
         {
             Debug.LogError($"[SaveService] 슬롯 {slotIndex} 로드 실패({result.Reason}) - 새 게임으로 시작합니다.");
@@ -272,6 +296,7 @@ public sealed class SaveService : MonoBehaviour
             return;
         }
 
+        // 복원 성공 시 1회, ResumeDay 이후에 발화한다(UI가 확정된 낮 상태를 보게 하려면 이 순서여야 한다).
         _loadCompleted.Invoke();
     }
 
@@ -294,9 +319,9 @@ public sealed class SaveService : MonoBehaviour
         {
             SaveRestore.Apply(dto, context);
 
-            // 복원된 일차를 실제로 "시작"시킨다. 조명·UI·웨이브 스냅샷·포탈 개방·연구 티어가
-            // 전부 평소 경로로 갱신되고, 하루치 정산이 정확히 한 번 실행된다.
-            _cycleManager.StartDay();
+            // 복원된 일차를 이어서 시작한다. 조명·UI·웨이브 스냅샷·포탈 개방이 평소 경로로
+            // 갱신되지만 정산은 재생되지 않는다 - 스냅샷이 이미 정산 이후 상태다(계약 2).
+            _cycleManager.ResumeDay();
         }
         finally
         {
@@ -308,7 +333,7 @@ public sealed class SaveService : MonoBehaviour
 
     // --- 내부 헬퍼 ---
 
-    private void HandleDayAdvanced(int dayNumber)
+    private void HandleDaySettled(int dayNumber)
     {
         if (!_isAutoSaveEnabled || _isRestoring)
         {
@@ -381,5 +406,6 @@ public sealed class SaveService : MonoBehaviour
         _dragonTreeManager,
         _conquestManager,
         _gridMap,
-        _waveCycleProgression);
+        _waveCycleProgression,
+        _castle);
 }

@@ -128,6 +128,12 @@ public class Castle : Building, IAttackTarget
         _health.TakeDamage(damage.Amount);
     }
 
+    /// <summary>세이브 복원 전용. Start의 Initialize가 만피로 세팅한 체력을 저장값으로 되돌린다.</summary>
+    public void RestoreHealth(float currentHealth)
+    {
+        _health.RestoreCurrentHealth(currentHealth);
+    }
+
     // convenience_castle_regen_1(매일 낮 자동 회복)과 convenience_castle_repair(자원 소모 즉시 수리)가
     // 공유하는 회복 경로. 사망 상태 가드는 Health.Heal이 담당한다.
     public void Repair(float amount)

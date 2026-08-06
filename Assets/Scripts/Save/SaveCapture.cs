@@ -17,13 +17,14 @@ public static class SaveCapture
 
         var dto = new SaveGameDto
         {
-            Run = CaptureRun(run),
+            Run = CaptureRun(run, context.CycleManager),
             Resources = CaptureResources(context.ResourceManager),
             Population = CapturePopulation(context.PopulationManager),
             Research = CaptureResearch(context.ResearchManager),
             DragonTree = CaptureDragonTree(context.DragonTreeManager),
             Conquest = CaptureConquest(context.ConquestManager),
             Map = CaptureMap(context.ConquestManager, context.GridMap),
+            Castle = CaptureCastle(context.Castle),
         };
 
         dto.Meta = CaptureMeta(context, dto.Run, dto.Resources, slotIndex, isAutoSave);
@@ -49,6 +50,10 @@ public static class SaveCapture
             SlotIndex = slotIndex,
             IsAutoSave = isAutoSave,
             DayNumber = run.CurrentCycle,
+
+            // 자동저장은 OnDaySettled(= OnDayReady 이후)에 붙으므로, 이 시점에는
+            // WaveCycleProgression이 이미 오늘의 주기 스냅샷을 확정해 둔 상태다.
+            // 정산 전 경계에서 찍던 시절에는 어제 값이 새어 나왔다.
             CycleNumber = context.WaveCycleProgression != null
                 ? context.WaveCycleProgression.CurrentCycleNumber
                 : 0,
@@ -60,11 +65,12 @@ public static class SaveCapture
         };
     }
 
-    private static RunStateDto CaptureRun(RunData run)
+    private static RunStateDto CaptureRun(RunData run, CycleManager cycleManager)
     {
         var dto = new RunStateDto
         {
             CurrentCycle = run.CurrentCycle,
+            CyclePhase = (int)cycleManager.CurrentCycle,
             DragonType = run.CurrentDragon != null ? (int)run.CurrentDragon.CurrentType : 0,
             BabyDragons = new List<BabyDragonDto>(),
             DragonEggs = new List<DragonEggDto>(),
@@ -118,6 +124,15 @@ public static class SaveCapture
         }
 
         return dto;
+    }
+
+    // 성이 연결되지 않은 씬(테스트 씬 등)에서는 0을 남긴다 - 복원이 "기록 없음"으로 보고 건너뛴다.
+    private static CastleStateDto CaptureCastle(Castle castle)
+    {
+        return new CastleStateDto
+        {
+            CurrentHealth = castle != null ? castle.CurrentHealth : 0f,
+        };
     }
 
     private static PopulationStateDto CapturePopulation(PopulationManager populationManager)
@@ -235,6 +250,9 @@ public readonly struct SaveCaptureContext
     public GridMap GridMap { get; }
     public WaveCycleProgression WaveCycleProgression { get; }
 
+    /// <summary>메인 성. 다른 매니저와 같이 선택적으로 취급한다(IsValid가 요구하지 않는다).</summary>
+    public Castle Castle { get; }
+
     public SaveCaptureContext(
         GameManager gameManager,
         CycleManager cycleManager,
@@ -244,7 +262,8 @@ public readonly struct SaveCaptureContext
         DragonTreeManager dragonTreeManager,
         ConquestManager conquestManager,
         GridMap gridMap,
-        WaveCycleProgression waveCycleProgression)
+        WaveCycleProgression waveCycleProgression,
+        Castle castle)
     {
         GameManager = gameManager;
         CycleManager = cycleManager;
@@ -255,6 +274,7 @@ public readonly struct SaveCaptureContext
         ConquestManager = conquestManager;
         GridMap = gridMap;
         WaveCycleProgression = waveCycleProgression;
+        Castle = castle;
     }
 
     public bool IsValid => GameManager != null && CycleManager != null && GameManager.CurrentRun != null;

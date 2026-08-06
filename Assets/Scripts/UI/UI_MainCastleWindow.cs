@@ -147,7 +147,7 @@ public class UI_MainCastleWindow : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.AddListener(HandleDayStart);
+            _cycleManager.OnDayReady.AddListener(HandleDayStart);
             _cycleManager.OnCycleChanged.AddListener(HandleCycleChanged);
         }
     }
@@ -161,7 +161,7 @@ public class UI_MainCastleWindow : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
+            _cycleManager.OnDayReady.RemoveListener(HandleDayStart);
             _cycleManager.OnCycleChanged.RemoveListener(HandleCycleChanged);
         }
     }
