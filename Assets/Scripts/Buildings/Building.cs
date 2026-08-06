@@ -41,6 +41,9 @@ public class Building : MonoBehaviour
     [FormerlySerializedAs("IsRemoveable")]
     private bool _isRemoveable;
 
+    //밤에도 이동 허용 여부 (기본 false)
+    public virtual bool CanMoveAtNight => false;
+    
     private bool _isOpen = false; // 해금 여부
     private SpriteRenderer _spriteRenderer;
     private Color _originalColor;

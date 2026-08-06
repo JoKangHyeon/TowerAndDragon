@@ -31,6 +31,13 @@ public class BabyDragonTower : Tower, ITowerStaffing
 
     public bool CanOperate => _isFed;
 
+    //시간 새끼용은 공격 모드일 때만 밤에도 이동 가능하다 (버프 모드일땐 밤에도 고정)
+    public override bool CanMoveAtNight =>
+        DragonData != null &&
+        DragonData.DragonType == DragonType.Time &&
+        Mode == BabyDragonMode.Attack &&
+        CanOperate;
+
     // 먹이는 가동률에 관여하지 않는다 - 먹었으면 기준 속도, 못 먹었으면 CanOperate로 정지.
     public float StaffingRatio => 1f;
 

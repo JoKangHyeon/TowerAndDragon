@@ -35,6 +35,11 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private RangeIndicator _buffRangeIndicator;
 
+    [Tooltip("버프 반경 안에서 이 지형들의 지역 페널티(생산·공속·유지비)를 전부 무효화한다. 얼음의 건설 해제와는 별개 메커니즘 - 시간=사막.")]
+    [SerializeField] private TerrainType[] _penaltyMitigationTerrains;
+    public IReadOnlyList<TerrainType> PenaltyMitigationTerrains => _penaltyMitigationTerrains;
+
+
     [Tooltip("타워를 이만큼(초) 꾹 누르고 있으면 이동 모드로 진입한다.")]
     [SerializeField]
     private float _moveHoldDuration = 1f;

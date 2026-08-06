@@ -12,13 +12,19 @@ using UnityEngine.Events;
 /// 그리고 매일 밤(OnNightEnd) 전체를 다시 계산한다 - Factory.GetCurrentYield가
 /// "다음 정산에서 실제로 들어올 양"을 상시 정확히 보여주려면 배율이 실시간으로 맞아야 한다.
 /// </summary>
-public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery
+public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, ITerrainPenaltyScaleQuery
 {
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private CycleManager _cycleManager;
 
     // 새끼용 지역형(B 슬롯) 노드 해금 시 추가되는 보너스 - 미해금이면 0을 반환해 기존 동작과 같다.
     [SerializeField] private DragonTreeManager _dragonTreeManager;
+    [SerializeField] private TerrainPenaltyScaleComposite _terrainPenaltyScaleComposite;
+    [SerializeField] private TerrainPenaltySystem _terrainPenaltySystem;
+
+    // 이번 재계산에서 지역 페널티가 완전 무효화된 (건물, 지형) 쌍 - ITerrainPenaltyScaleQuery 구현에 쓴다.
+    private readonly HashSet<(Building, TerrainType)> _penaltyMitigatedPairs = new();
+
 
     // 새끼용/생산시설 배치가 바뀌어 배율이 다시 확정될 때마다 발화 - ResourceForecast 등
     // 파생 UI가 OnBuildingAdded/OnBuildingRemoving과 같은 프레임에서 순서에 의존하지 않고
@@ -319,5 +325,10 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery
     public bool IsConstructionAllowed(Vector3Int coord, TerrainType terrain)
     {
         return _unlockedConstructionCells.Contains(coord);
+    }
+
+    public float GetPenaltyScale(Building building, TerrainType terrain, TerrainPenaltyKind kind)
+    {
+        throw new System.NotImplementedException();
     }
 }
