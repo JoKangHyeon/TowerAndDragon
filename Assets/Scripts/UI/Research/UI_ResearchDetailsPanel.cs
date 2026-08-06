@@ -145,7 +145,7 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
                 _resourceManager.GetAmount(cost.Type) >= cost.Amount;
             Color textColor = hasEnough ? _sufficientColor : _insufficientColor;
 
-            slot.Setup(icon, DragonAttributePalette.TintFor(cost.Type), cost.Amount.ToString(), textColor);
+            slot.Setup(icon, Color.white, cost.Amount.ToString(), textColor);
             _costSlots.Add(slot);
         }
     }

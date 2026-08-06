@@ -193,11 +193,20 @@ public class MouseSelectController : MonoBehaviour
     // 역방향인 여기서도 같은 양을 빼서 "하이라이트가 그려진 자리"를 기준으로 셀을 찾는다.
     // 셀 판정은 ConvertWorldToGrid가 아니라 PickCellAtWorldPoint로 해야 단차가 높은 지형에서도
     // 화면에 보이는 타일과 클릭 지점이 일치한다.
-    public Vector3Int GetHoveredCell()
+    // 포인터의 월드 좌표(Y 오프셋 미적용). 그리드 셀이 아니라 실제로 그려진 위치와 비교해야 하는
+    // 판정(예: 스프라이트 bounds 히트테스트)에 쓴다.
+    public Vector3 GetPointerWorldPoint()
     {
         EnsureRuntimeState();
         Vector3 worldPos = _cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         worldPos.z = 0f;
+
+        return worldPos;
+    }
+
+    public Vector3Int GetHoveredCell()
+    {
+        Vector3 worldPos = GetPointerWorldPoint();
         worldPos.y -= _yOffset;
 
         return _gridMap.PickCellAtWorldPoint(worldPos);

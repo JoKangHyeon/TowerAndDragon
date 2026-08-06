@@ -46,10 +46,11 @@ public class UI_DragonInventorySlot : MonoBehaviour
         button.interactable = false; // 알은 클릭 동작이 없다(부화 대기).
     }
 
+    // 속성 색 파라미터는 없다 - 용 스프라이트와 먹이 슬라임 아이콘 모두 속성별 전용 스프라이트를
+    // 쓰게 되어 틴트가 필요 없어졌다(알 모드는 여전히 공용 스프라이트라 SetupEgg만 색을 받는다).
     public void SetupDragon(
         BabyDragon dragon,
         BabyDragonData data,
-        Color attributeColor,
         int previewDailyFeed,
         bool isPlaceable,
         Action<BabyDragon> onClickPlace)
@@ -63,10 +64,10 @@ public class UI_DragonInventorySlot : MonoBehaviour
             _resourceCatalog != null &&
             _resourceCatalog.TryGet(slimeType, out ResourceData resourceData))
         {
-            // 슬라임도 공용 스프라이트 하나를 속성 색으로 틴트해서 구분한다(알 아이콘과 같은 방식) -
-            // 이 용이 먹는 슬라임은 항상 자기 자신과 같은 속성이므로 attributeColor를 그대로 쓴다.
+            // 슬라임은 속성별 전용 스프라이트를 갖고 있으므로 틴트하지 않는다
+            // (예전에는 공용 흰 스프라이트 하나를 속성 색으로 구분했다).
             _feedIcon.sprite = resourceData.Icon;
-            _feedIcon.color = attributeColor;
+            _feedIcon.color = Color.white;
         }
 
         _feedAmountText.text = string.Format(StringTable.GetString(FEED_INFO_LOC_KEY), previewDailyFeed);

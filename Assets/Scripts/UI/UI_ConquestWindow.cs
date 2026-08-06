@@ -391,7 +391,7 @@ public class UI_ConquestWindow : MonoBehaviour
             if (requiredAmount <= 0)
                 continue;
 
-            SpawnResourceCostSlot(ResolveResourceIcon(type), DragonAttributePalette.TintFor(type), heldAmount, requiredAmount);
+            SpawnResourceCostSlot(ResolveResourceIcon(type), Color.white, heldAmount, requiredAmount);
         }
     }
 
@@ -429,7 +429,7 @@ public class UI_ConquestWindow : MonoBehaviour
             if ((unlockedResources & type) == 0)
                 continue;
 
-            SpawnRewardSlot(ResolveResourceIcon(type), DragonAttributePalette.TintFor(type), ResolveResourceName(type));
+            SpawnRewardSlot(ResolveResourceIcon(type), Color.white, ResolveResourceName(type));
         }
     }
 

@@ -441,6 +441,23 @@ public class GridMap : MonoBehaviour
     public IEnumerable<Chunk> GetAllChunks() => _chunks.Values;
 
 
+    // 등록된 건물 중 T 하나를, 그 건물이 점유한 셀 하나와 함께 돌려준다. 좌표를 모르는 상태에서
+    // 좌표 기반 API(SelectExistingBuildingAt 등)를 호출해야 할 때 쓴다.
+    public T FindBuilding<T>(out Vector3Int occupiedCoord) where T : Building
+    {
+        foreach (KeyValuePair<Building, List<GridCell>> entry in _buildingFootprintCells)
+        {
+            if (entry.Key is T typedBuilding && entry.Value.Count > 0)
+            {
+                occupiedCoord = entry.Value[0].Coord;
+                return typedBuilding;
+            }
+        }
+
+        occupiedCoord = default;
+        return null;
+    }
+
     public bool HasBuilding<T>() where T : Building
     {
         foreach (Building building in _buildingFootprintCells.Keys)

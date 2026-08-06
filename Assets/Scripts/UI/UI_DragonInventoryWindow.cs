@@ -297,7 +297,7 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
             bool isPlaceable = _buildingPlacementController == null || _buildingPlacementController.IsDayForBuildActions;
 
             UI_DragonInventorySlot slot = Instantiate(_slotPrefab, _slotContainer);
-            slot.SetupDragon(dragon, data, ColorForType(dragon.DragonType), previewDailyFeed, isPlaceable, OnSlotPlaceClicked);
+            slot.SetupDragon(dragon, data, previewDailyFeed, isPlaceable, OnSlotPlaceClicked);
             _spawnedSlots.Add(slot);
         }
     }

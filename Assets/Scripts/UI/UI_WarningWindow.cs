@@ -13,6 +13,9 @@ public class UI_WarningWindow : MonoBehaviour
     [Tooltip("밤에 점령을 시도했을 때 띄우는 메시지.")]
     [SerializeField] private GameObject _messageClaim;
 
+    [Tooltip("어미용 속성을 하루 1회 제한에 걸려 바꾸지 못할 때 띄우는 메시지.")]
+    [SerializeField] private GameObject _messageMotherDragonChange;
+
     [Tooltip("페이드 인/아웃 사이 완전히 보이는 시간(초).")]
     [SerializeField] private float _showDuration = DEFAULT_SHOW_DURATION;
 
@@ -22,41 +25,70 @@ public class UI_WarningWindow : MonoBehaviour
     private CanvasGroup _messageClaimGroup;
     private Sequence _claimSequence;
 
+    private CanvasGroup _messageMotherDragonChangeGroup;
+    private Sequence _motherDragonChangeSequence;
+
     private void Awake()
     {
-        if (_messageClaim != null)
-        {
-            _messageClaimGroup = _messageClaim.GetComponent<CanvasGroup>();
-            if (_messageClaimGroup == null)
-            {
-                _messageClaimGroup = _messageClaim.AddComponent<CanvasGroup>();
-            }
-
-            _messageClaim.SetActive(false);
-        }
+        _messageClaimGroup = Prepare(_messageClaim);
+        _messageMotherDragonChangeGroup = Prepare(_messageMotherDragonChange);
     }
 
     // 밤 점령 경고를 페이드로 잠깐 띄운다.
     public void ShowClaimWarning()
     {
-        if (_messageClaim == null)
+        _claimSequence = Show(_messageClaim, _messageClaimGroup, _claimSequence);
+    }
+
+    // 어미용 속성 변경이 하루 1회 제한에 걸렸을 때 띄운다.
+    public void ShowMotherDragonChangeWarning()
+    {
+        _motherDragonChangeSequence =
+            Show(_messageMotherDragonChange, _messageMotherDragonChangeGroup, _motherDragonChangeSequence);
+    }
+
+    // 메시지를 꺼진 상태로 두고 페이드용 CanvasGroup을 확보한다.
+    private static CanvasGroup Prepare(GameObject message)
+    {
+        if (message == null)
         {
-            return;
+            return null;
+        }
+
+        CanvasGroup group = message.GetComponent<CanvasGroup>();
+
+        if (group == null)
+        {
+            group = message.AddComponent<CanvasGroup>();
+        }
+
+        message.SetActive(false);
+
+        return group;
+    }
+
+    // 페이드 인 → 유지 → 페이드 아웃. 새로 시작한 Sequence를 돌려주므로 호출부가 보관한다
+    // (메시지마다 따로 들고 있어야 서로의 연출을 끊지 않는다).
+    private Sequence Show(GameObject message, CanvasGroup group, Sequence running)
+    {
+        if (message == null || group == null)
+        {
+            return running;
         }
 
         // 진행 중이던 연출은 정리하고 처음부터 다시 띄운다(완료 콜백은 Kill로 호출되지 않아 조기 비활성화 없음).
-        _claimSequence?.Kill();
+        running?.Kill();
 
-        _messageClaim.SetActive(true);
-        _messageClaimGroup.alpha = 0f;
+        message.SetActive(true);
+        group.alpha = 0f;
 
-        _claimSequence = DOTween.Sequence()
-            .SetLink(_messageClaim)
+        return DOTween.Sequence()
+            .SetLink(message)
             // 일시정지(Time.timeScale == 0) 중에도 경고 토스트는 정상적으로 페이드 인/아웃되어야 한다.
             .SetUpdate(true)
-            .Append(_messageClaimGroup.DOFade(1f, _fadeDuration))
+            .Append(group.DOFade(1f, _fadeDuration))
             .AppendInterval(_showDuration)
-            .Append(_messageClaimGroup.DOFade(0f, _fadeDuration))
-            .OnComplete(() => _messageClaim.SetActive(false));
+            .Append(group.DOFade(0f, _fadeDuration))
+            .OnComplete(() => message.SetActive(false));
     }
 }

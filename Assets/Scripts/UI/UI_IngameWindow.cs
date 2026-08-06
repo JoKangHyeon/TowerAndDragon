@@ -110,11 +110,13 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("점령 정보 창. 버튼 클릭 시 점령 모드를 토글한다.")]
     [SerializeField] private UI_ConquestWindow _conquestWindow;
 
-    [Header("용 스킬트리 (Panel_BottomRight)")]
-    [Tooltip("용 스킬 모드 토글 버튼.")]
-    [SerializeField] private Button _buttonDragonSkill;
-    [Tooltip("용 스킬 정보 창. 버튼 클릭 시 용 스킬 모드를 토글한다.")]
-    [SerializeField] private UI_DragonSkillWindow _dragonSkillWindow;
+    [Header("용 (Panel_BottomRight)")]
+    [Tooltip("용 창 토글 버튼(Button_Dragon).")]
+    [FormerlySerializedAs("_buttonDragonSkill")]
+    [SerializeField] private Button _buttonDragon;
+    [Tooltip("용 창. 어미용(스킬트리 포함)/새끼용 탭을 토글한다 - 스킬트리는 " +
+        "UI_DragonSkillWindow 독립 창에서 이 창의 어미용 탭으로 옮겨갔다.")]
+    [SerializeField] private UI_DragonWindow _dragonWindow;
 
     [Header("연구 (Panel_BottomRight)")]
     [Tooltip("연구 창 토글 버튼.")]
@@ -199,9 +201,9 @@ public class UI_IngameWindow : MonoBehaviour
             _buttonConquest.onClick.AddListener(_conquestWindow.ToggleConquestMode);
         }
 
-        if (_buttonDragonSkill != null && _dragonSkillWindow != null)
+        if (_buttonDragon != null && _dragonWindow != null)
         {
-            _buttonDragonSkill.onClick.AddListener(_dragonSkillWindow.ToggleFromEntryPoint);
+            _buttonDragon.onClick.AddListener(_dragonWindow.ToggleFromEntryPoint);
         }
 
         if (_buttonResearch != null && _researchWindow != null)
@@ -488,8 +490,10 @@ public class UI_IngameWindow : MonoBehaviour
                 continue;
             }
 
+            // 틴트를 씌우지 않는다 - 슬라임 5종도 ResourceData에 전용 스프라이트가 들어가 있어
+            // 속성 색을 덧입히면 색이 이중으로 먹는다(예전엔 공용 흰 스프라이트라 TintFor가 필요했다).
             slot.IconImage.sprite = data.Icon;
-            slot.IconImage.color = DragonAttributePalette.TintFor(slot.Type);
+            slot.IconImage.color = Color.white;
         }
     }
 

@@ -2,7 +2,6 @@
 // 노드별 이름/설명 키는 DragonSkillNodeData가 직접 들고 있으므로 여기 포함하지 않는다.
 public static class DragonLocKeys
 {
-    public const string WINDOW_HEADER = "dragon_window_header";
     public const string UPGRADE_BUTTON = "dragon_upgrade_button";
     public const string UNKNOWN_RESOURCE = "dragon_unknown_resource";
     public const string RESOURCE_COST = "dragon_resource_cost";
@@ -38,6 +37,35 @@ public static class DragonLocKeys
             DragonType.Time => "dragon_attribute_time",
             DragonType.Stone => "dragon_attribute_stone",
             DragonType.Life => "dragon_attribute_life",
+            _ => STATE_INVALID,
+        };
+    }
+
+    // 용 창 좌측 프레임(Panel_Info)에 띄우는 속성별 설명.
+    public static string MotherInfoLocKey(DragonType attribute)
+    {
+        return attribute switch
+        {
+            DragonType.Ice => "dragon_motherDragon_info_ice",
+            DragonType.Fire => "dragon_motherDragon_info_fire",
+            DragonType.Time => "dragon_motherDragon_info_time",
+            DragonType.Stone => "dragon_motherDragon_info_stone",
+            DragonType.Life => "dragon_motherDragon_info_life",
+            _ => STATE_INVALID,
+        };
+    }
+
+    // 새끼용 탭 우측(Panel_DragonInfo)에 띄우는 속성별 설명.
+    // Life만 키 접미사가 어미용(life)과 다른 grass다 - 스트링테이블이 그렇게 등록돼 있다("초원 속성").
+    public static string BabyInfoLocKey(DragonType attribute)
+    {
+        return attribute switch
+        {
+            DragonType.Ice => "dragon_babyDragon_info_ice",
+            DragonType.Fire => "dragon_babyDragon_info_fire",
+            DragonType.Time => "dragon_babyDragon_info_time",
+            DragonType.Stone => "dragon_babyDragon_info_stone",
+            DragonType.Life => "dragon_babyDragon_info_grass",
             _ => STATE_INVALID,
         };
     }

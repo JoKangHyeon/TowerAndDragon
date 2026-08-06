@@ -93,7 +93,7 @@ public class ChunkInfoOverlayRenderer : MonoBehaviour
             if ((unlocked & type) == 0)
                 continue;
 
-            _resourceIconBuffer.Add((ResolveResourceIcon(type), DragonAttributePalette.TintFor(type)));
+            _resourceIconBuffer.Add((ResolveResourceIcon(type), Color.white));
         }
     }
 

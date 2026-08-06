@@ -24,6 +24,9 @@ public class BabyDragonData : TowerData, ITowerAuraDataProvider, IElementalAttac
     [Tooltip("부화까지 필요한 누적 일수(슬라임 소비 없이 day count만으로 증가). 0이면 즉시 부화. 수치 미확정.")]
     [SerializeField] [Min(0)] private int _daysToHatch;
 
+    [Tooltip("알 목록 UI에 표시할 속성별 알 스프라이트. 속성마다 이미지가 달라 색 틴트로 구분하지 않는다.")]
+    [SerializeField] private Sprite _eggSprite;
+
     [Header("Area Buff")]
     [Tooltip("버프가 닿는 반경(월드 좌표). Attack.Range와 무관한 별도 값 - Attack을 아예 안 붙인 버프 전용 개체도 버프 반경을 가질 수 있어야 한다. 0이면 버프 없음.")]
     [SerializeField] [Min(0f)] private float _buffRadius;
@@ -43,6 +46,7 @@ public class BabyDragonData : TowerData, ITowerAuraDataProvider, IElementalAttac
     public int AdditionalFeedPerSameType => _additionalFeedPerSameType;
     public int AdditionalFeedPerTotal => _additionalFeedPerTotal;
     public int DaysToHatch => _daysToHatch;
+    public Sprite EggSprite => _eggSprite;
     public float BuffRadius => _buffRadius;
     public float BuffYieldMultiplier => _buffYieldMultiplier;
     public ResourceType BuffTargetResources => _buffTargetResources;

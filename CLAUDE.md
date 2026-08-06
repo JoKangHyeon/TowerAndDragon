@@ -67,6 +67,34 @@ Script Execution Order를 별도로 설정하지 않으므로, 아래 규칙으�
 - 이벤트 구독자(주로 UI)는 구독 직후 **현재 값을 한 번 수동으로 반영**해 초기 발화를 놓쳐도 안전하게
   만드는 것을 권장합니다. (예: `UI_IngameWindow.RenderAllResources()`, `PopulationDebugDisplay.RefreshAll()`)
 
+### Awake에서 자기 자신을 닫는 창·팝업은 반드시 `_isOpen` 가드를 둡니다
+
+Unity는 **비활성으로 저장된 오브젝트의 Awake를 씬 로드나 부모 활성화 시점에 호출하지 않고,
+첫 `SetActive(true)` 안에서 동기 실행**합니다. 그래서 `Awake` 끝에서 무조건 자기를 닫으면,
+그 창을 처음 여는 `Open()`이 스스로를 닫아버려 **첫 클릭이 먹지 않고 두 번째부터 동작**합니다.
+
+`Open()`이 `SetActive(true)` **이전에** 플래그를 세우고, `Awake`는 그 플래그로 두 경우를 구분합니다.
+
+```csharp
+public void Open()
+{
+    _isOpen = true;              // SetActive 이전에 세운다
+    gameObject.SetActive(true);  // 첫 활성화라면 이 안에서 Awake가 돈다
+}
+
+private void Awake()
+{
+    // 인스턴스가 활성으로 저장돼 있어도 시작 시 닫힌 상태를 보장하되,
+    // 방금 Open()이 유발한 Awake라면 닫지 않는다.
+    if (!_isOpen)
+    {
+        Close();
+    }
+}
+```
+
+(`UI_DragonWindow`, `UI_DragonChangePopup`이 이 형태입니다. 이 가드를 빼먹어 같은 버그를 세 번 만들었습니다.)
+
 ## Git 커밋 규칙
 
 커밋 전 다음 사항을 확인합니다.

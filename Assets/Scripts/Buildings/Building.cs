@@ -167,4 +167,19 @@ public class Building : MonoBehaviour
 
         _spriteRenderer.sortingOrder = sortingOrder;
     }
+
+    /// <summary>월드 좌표가 이 건물의 스프라이트 안인지. 클릭 판정은 기본적으로 그리드 셀 기준이라
+    /// (GridMap.PickCellAtWorldPoint) 스프라이트가 자기 footprint보다 훨씬 높게 그려진 건물은
+    /// 몸통을 눌러도 빈 땅으로 판정된다. 그때 쓰는 보조 판정이며, SpriteHoverFade와 같은 기준이라
+    /// "반투명해진 곳 = 눌리는 곳"이 일치한다.</summary>
+    public bool ContainsWorldPoint(Vector3 worldPoint)
+    {
+        if (_spriteRenderer == null)
+            return false;
+
+        Bounds bounds = _spriteRenderer.bounds;
+        worldPoint.z = bounds.center.z;
+
+        return bounds.Contains(worldPoint);
+    }
 }

@@ -38,8 +38,9 @@ public class UI_MainCastleWindow : MonoBehaviour
     [SerializeField]
     private ResourceManager _resourceManager;
 
+    [Tooltip("용 창. 스킬트리는 이 창의 어미용 탭 안에 있다(과거 독립 스킬트리 창은 은퇴).")]
     [SerializeField]
-    private UI_DragonSkillWindow _dragonSkillWindow;
+    private UI_DragonWindow _dragonWindow;
 
     [SerializeField]
     private UIManager _uiManager;
@@ -295,21 +296,22 @@ public class UI_MainCastleWindow : MonoBehaviour
         Render();
     }
 
-    // 클릭음을 내지 않는다 - 창을 여닫는 제스처라 대상 창(UI_DragonSkillWindow)이 열림/닫힘음을 낸다.
+    // 스킬트리가 용 창의 어미용 탭으로 옮겨갔으므로 용 창을 연다.
+    // 클릭음을 내지 않는다 - 창을 여닫는 제스처라 대상 창(UI_DragonWindow)이 열림/닫힘음을 낸다.
     public void OpenDragonSkillTree()
     {
-        if (_dragonSkillWindow == null)
+        if (_dragonWindow == null)
         {
             return;
         }
 
         if (_uiManager != null)
         {
-            _uiManager.OpenExclusive(_dragonSkillWindow);
+            _uiManager.OpenExclusive(_dragonWindow);
         }
         else
         {
-            _dragonSkillWindow.ToggleFromEntryPoint();
+            _dragonWindow.ToggleFromEntryPoint();
         }
     }
 
@@ -439,7 +441,7 @@ public class UI_MainCastleWindow : MonoBehaviour
 
             row.Setup(
                 icon,
-                DragonAttributePalette.TintFor(slimeType),
+                Color.white,
                 name,
                 _resourceManager.GetAmount(slimeType).ToString());
         }
