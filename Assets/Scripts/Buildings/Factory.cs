@@ -18,8 +18,22 @@ public class Factory : Building
 
     private bool _isInitialized;
     protected FactoryPopulation _population;
-    
+
     private readonly Dictionary<ResourceType, float> _areaYieldMultiplierByResource = new();
+
+    // 지역(지형) 페널티 조회원 - 새끼용 버프(_areaYieldMultiplierByResource)와 반드시 별도 채널이어야
+    // 한다. BabyDragonBuffSystem이 SetAreaYieldMultipliers로 그 사전을 매번 통째로 덮어쓰기 때문에,
+    // 같은 곳에 지형 배율을 넣으면 새끼용이 재계산할 때마다 사라진다.
+    // TerrainPenaltyCoordinator가 주입하며, 미배선 씬에서는 null로 남아 페널티 없이 동작한다.
+    private IBuildingTerrainPenaltyQuery _terrainPenaltyQuery;
+
+    public void SetTerrainPenaltyQuery(IBuildingTerrainPenaltyQuery terrainPenaltyQuery) =>
+        _terrainPenaltyQuery = terrainPenaltyQuery;
+
+    private float TerrainYieldMultiplier =>
+        _terrainPenaltyQuery != null
+            ? _terrainPenaltyQuery.Resolve(this).YieldMultiplier
+            : NEUTRAL_YIELD_MULTIPLIER;
 
 // BabyDragonBuffSystem이 재계산할 때마다 전체를 덮어쓴다 - 부분 갱신을 허용하면 버프
 // 범위를 벗어난 뒤에도 이전 배율이 남는다.
@@ -73,7 +87,8 @@ private float GetAreaYieldMultiplier(ResourceType resourceType) =>
         // 생산량은 이 생산시설의 footprint에 속한 셀들이 보유한 자원별 생산량의 합이다(GridMap.GetFootprintYield 참고).
         int footprintYield = _gridMap.GetFootprintYield(this, resourceType);
         int produced = _data.CalculateYield(footprintYield, staffingRatio);
-        return Mathf.RoundToInt(produced * GetAreaYieldMultiplier(resourceType));
+        return Mathf.RoundToInt(
+            produced * GetAreaYieldMultiplier(resourceType) * TerrainYieldMultiplier);
     }
 
     // 현재 배치 인구 기준 생산량 - 다음 정산에서 실제로 들어올 양이다.
@@ -123,7 +138,7 @@ private float GetAreaYieldMultiplier(ResourceType resourceType) =>
         foreach (ResourceType resourceType in EnumerateProducedResourceTypes())
         {
             int produced = CalculateYield(resourceType, staffingRatio);
-            Debug.Log($"[Factory] {name} 정산 - staffingRatio: {staffingRatio:F2}, areaYieldMultiplier: {GetAreaYieldMultiplier(resourceType):F2}, produced: {produced} ({resourceType})");
+            Debug.Log($"[Factory] {name} 정산 - staffingRatio: {staffingRatio:F2}, areaYieldMultiplier: {GetAreaYieldMultiplier(resourceType):F2}, terrainYieldMultiplier: {TerrainYieldMultiplier:F2}, produced: {produced} ({resourceType})");
             _resourceManager.Add(resourceType, produced);
         }
     }

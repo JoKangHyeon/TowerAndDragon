@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7da5b579d8c0014ea9ad72cd8c1302e, type: 3}
+  m_Name: TerrainPenaltyTable
+  m_EditorClassIdentifier: Assembly-CSharp::TerrainPenaltyData
+  _entries:
+  - Terrain: 4
+    Penalty:
+      YieldReductionRatio: 0
+      TowerAttackSpeedReductionRatio: 0
+      WoodUpkeepPerPopulation: 1
+      StoneUpkeepPerPopulation: 0
+  - Terrain: 1
+    Penalty:
+      YieldReductionRatio: 0
+      TowerAttackSpeedReductionRatio: 0
+      WoodUpkeepPerPopulation: 0
+      StoneUpkeepPerPopulation: 1
+  - Terrain: 3
+    Penalty:
+      YieldReductionRatio: 0.3
+      TowerAttackSpeedReductionRatio: 0.3
+      WoodUpkeepPerPopulation: 0
+      StoneUpkeepPerPopulation: 0

@@ -18,6 +18,10 @@ public class ProductionForecast : MonoBehaviour
         "미연결이면 이 값 변동만으로는 예상치가 갱신되지 않는다(다음 건물 추가/제거·인구 변경 때 함께 반영됨).")]
     [SerializeField] private BabyDragonBuffSystem _babyDragonBuffSystem;
 
+    [Tooltip("지역(지형) 페널티가 다시 계산될 때 예상치를 갱신하기 위해 구독한다. " +
+        "미연결이면 이 값 변동만으로는 예상치가 갱신되지 않는다(다음 건물 추가/제거·인구 변경 때 함께 반영됨).")]
+    [SerializeField] private TerrainPenaltySystem _terrainPenaltySystem;
+
     /// <summary>예상 생산량이 바뀌었을 때 발화. UI가 구독해 표기를 갱신한다.</summary>
     public UnityEvent ForecastChanged;
 
@@ -41,6 +45,11 @@ public class ProductionForecast : MonoBehaviour
             _babyDragonBuffSystem.BuffsRecomputed.AddListener(HandleBuffsRecomputed);
         }
 
+        if (_terrainPenaltySystem != null)
+        {
+            _terrainPenaltySystem.PenaltiesRecomputed.AddListener(HandleBuffsRecomputed);
+        }
+
         Recompute();
     }
 
@@ -60,6 +69,11 @@ public class ProductionForecast : MonoBehaviour
         if (_babyDragonBuffSystem != null)
         {
             _babyDragonBuffSystem.BuffsRecomputed.RemoveListener(HandleBuffsRecomputed);
+        }
+
+        if (_terrainPenaltySystem != null)
+        {
+            _terrainPenaltySystem.PenaltiesRecomputed.RemoveListener(HandleBuffsRecomputed);
         }
     }
 
