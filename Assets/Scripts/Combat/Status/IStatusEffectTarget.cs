@@ -5,4 +5,7 @@ public interface IStatusEffectTarget
 {
     void ApplyStatus(StatusEffectSO status);
     void ApplyStatus(StatusEffectSO status, DragonType? attackElement);
+
+    //대상이 특정 상태를 현재 보유 중인지 - 화상 대상 추가 데미지 조건부 효과가 참조
+    bool HasStatus(string statusId);
 }

@@ -37,6 +37,8 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget
     public MonsterAttack Attack => _attack;
     public bool HasArrivedAtCastle => _movement != null && _movement.HasArrived;
     
+    public bool HasStatus(string statusId) => 
+        _statusReceiver != null && _statusReceiver.HasStatus(statusId);
 
 
     private int _animKeyMove = Animator.StringToHash("Move");
