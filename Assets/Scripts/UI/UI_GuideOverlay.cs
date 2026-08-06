@@ -1,6 +1,7 @@
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 /// <summary>
@@ -15,6 +16,7 @@ public class UI_GuideOverlay : MonoBehaviour
     private const int DIM_PANEL_COUNT = 4;
     private const int RECT_CORNER_COUNT = 4;
     private const string DIM_PANEL_NAME = "GuideDim";
+    private const string HOLE_BLOCKER_NAME = "GuideHoleBlocker";
     private const float DEFAULT_DIM_ALPHA = 0.85f;
     private const float DEFAULT_HOLE_PADDING = 8f;
     private const float DEFAULT_PULSE_DURATION = 0.6f;
@@ -34,7 +36,8 @@ public class UI_GuideOverlay : MonoBehaviour
 
     [Tooltip("말풍선을 옮길 위치 표식(빈 RectTransform). 그리드를 가리면 안 되는 단계에 쓴다. " +
              "비워두면 그 슬롯을 요구해도 기본 자리에 그대로 뜬다.")]
-    [SerializeField] private RectTransform _bubbleSlotTop;
+    [FormerlySerializedAs("_bubbleSlotTop")]
+    [SerializeField] private RectTransform _bubbleSlotCenter;
     [SerializeField] private RectTransform _bubbleSlotBottom;
 
     [Tooltip("구멍 둘레에 그릴 테두리 프레임(외곽선 이미지). 구멍 크기에 맞춰 코드가 매 프레임 맞춘다. " +
@@ -57,8 +60,20 @@ public class UI_GuideOverlay : MonoBehaviour
     private readonly Vector3[] _cornerBuffer = new Vector3[RECT_CORNER_COUNT];
     private RectTransform[] _dimPanels;
     private Image[] _dimImages;
+
+    // 구멍 자리를 덮는 투명 패널. 딤 4장 사이의 빈 칸이 곧 통로라 대상은 언제나 눌리는데,
+    // "가리키되 누르지는 못하게" 해야 하는 단계가 있다(예: 하루 1회뿐인 어미용 속성 변경 버튼을
+    // 설명만 하는 단계에서 눌러버리면 그날 기회가 사라진다). 보이지는 않고 클릭만 막는다.
+    private RectTransform _holeBlocker;
+
     private RectTransform _target;
+
+    // 이 단계가 애초에 가리킬 대상을 가지고 있었는지. "원래 대상이 없는 안내"와
+    // "가리키던 대상이 사라진 안내"는 다르게 다뤄야 한다 - 앞은 그대로 두고, 뒤는 연출을 거둔다.
+    private bool _expectsTarget;
+
     private bool _blocksInput;
+    private bool _blocksTargetInteraction;
     private bool _showConfirmButton;
     private bool _visualsActive;
     private Canvas _canvas;
@@ -184,7 +199,7 @@ public class UI_GuideOverlay : MonoBehaviour
     /// 그 행동을 건너뛰고 눌러버릴 수 있다.
     /// </summary>
     public bool Show(object owner, int priority, RectTransform target, string locKey, bool blocksInput,
-        bool showConfirmButton, GuideBubbleSlot bubbleSlot, params object[] args)
+        bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot, params object[] args)
     {
         if (owner == null)
         {
@@ -198,12 +213,13 @@ public class UI_GuideOverlay : MonoBehaviour
             return false;
         }
 
-        // 가릴 대상 없이 화면만 덮으면 아무것도 누를 수 없게 되므로 그 조합은 받지 않는다.
+        // 대상 없이 화면을 덮는 것은 빠져나갈 길이 있을 때만 받는다 - 확인 버튼은 딤 위에 있어 계속 눌린다.
+        // 그 버튼조차 없으면 아무것도 누를 수 없게 되므로 거절한다.
         // 조용히 사라지면 앵커가 여러 개인 안내에서 원인을 찾을 수 없으므로 반드시 남긴다.
-        if (_overlayRoot == null || (target == null && blocksInput))
+        if (_overlayRoot == null || (target == null && blocksInput && !showConfirmButton))
         {
             Debug.LogWarning($"[UI_GuideOverlay] {locKey} 안내를 띄울 수 없다 - " +
-                             "_overlayRoot가 비었거나, 가릴 대상 없이 입력을 막으려 했다.");
+                             "_overlayRoot가 비었거나, 빠져나갈 버튼 없이 화면 전체를 막으려 했다.");
             Release(owner);
             return false;
         }
@@ -211,7 +227,9 @@ public class UI_GuideOverlay : MonoBehaviour
         _owner = owner;
         _ownerPriority = priority;
         _target = target;
+        _expectsTarget = target != null;
         _blocksInput = blocksInput;
+        _blocksTargetInteraction = blocksTargetInteraction;
         _showConfirmButton = showConfirmButton;
         _currentLocKey = locKey;
         _currentArgs = args;
@@ -221,16 +239,53 @@ public class UI_GuideOverlay : MonoBehaviour
 
         SetVisualsActive(true);
 
-        if (_target == null)
-        {
-            SetSpotlightActive(false);
-        }
-        else
+        if (_target != null)
         {
             Layout();
         }
+        else if (_blocksInput)
+        {
+            LayoutFullCover();
+        }
+        else
+        {
+            SetSpotlightActive(false);
+        }
 
         return true;
+    }
+
+    /// <summary>
+    /// 가릴 대상이 없는 설명 단계에서 화면 전체를 덮는다. 읽는 동안 뒤쪽 버튼이 눌리지 않아야 한다 -
+    /// 특히 창의 닫기 버튼을 잘못 누르면 안내가 가리키던 창이 사라진다.
+    /// 확인 버튼은 딤 위에 올려 두었으므로 계속 눌린다.
+    /// </summary>
+    private void LayoutFullCover()
+    {
+        if (_dimPanels == null)
+        {
+            return;
+        }
+
+        Rect full = _overlayRoot.rect;
+
+        // 한 장으로 전부 덮고 나머지는 접는다 - 구멍이 없으므로 4장으로 나눌 이유가 없다.
+        for (int i = 0; i < _dimPanels.Length; i++)
+        {
+            _dimPanels[i].gameObject.SetActive(true);
+            SetPanel(_dimPanels[i], full.xMin, full.yMin, i == 0 ? full.xMax : full.xMin, i == 0 ? full.yMax : full.yMin);
+        }
+
+        // 구멍이 없으니 테두리와 구멍 차단막은 쓰지 않는다.
+        if (_holeHighlight != null)
+        {
+            _holeHighlight.gameObject.SetActive(false);
+        }
+
+        if (_holeBlocker != null)
+        {
+            _holeBlocker.gameObject.SetActive(false);
+        }
     }
 
     /// <summary>
@@ -276,7 +331,7 @@ public class UI_GuideOverlay : MonoBehaviour
 
         RectTransform marker = slot switch
         {
-            GuideBubbleSlot.Top => _bubbleSlotTop,
+            GuideBubbleSlot.Center => _bubbleSlotCenter,
             GuideBubbleSlot.Bottom => _bubbleSlotBottom,
             _ => null,
         };
@@ -324,25 +379,54 @@ public class UI_GuideOverlay : MonoBehaviour
     // 말풍선은 씬에 고정이라 여기서 손대지 않는다.
     private void LateUpdate()
     {
-        if (!HasOwner || _target == null)
+        // 원래 가리킬 대상이 없는 안내(타일을 클릭하라는 등)는 Show가 그려 둔 그대로 둔다 -
+        // 여기서 손대면 대상이 사라진 것으로 오해해 말풍선을 지워버린다.
+        if (!HasOwner || !_expectsTarget)
         {
             return;
         }
 
-        // 대상이 잠시 사라지는 경우(창을 닫았다 다시 여는 등)에는 표시권을 놓지 않고 연출만 감춘다 -
-        // 놓아버리면 대상이 돌아와도 아무도 다시 Show하지 않아 안내가 영구히 사라진다.
-        bool isTargetVisible = _target.gameObject.activeInHierarchy;
-        if (_visualsActive != isTargetVisible)
-        {
-            SetVisualsActive(isTargetVisible);
-        }
+        bool isTargetVisible = _target != null && _target.gameObject.activeInHierarchy;
 
-        if (!isTargetVisible)
+        if (isTargetVisible)
         {
+            if (!_visualsActive)
+            {
+                SetVisualsActive(true);
+            }
+
+            Layout();
             return;
         }
 
-        Layout();
+        // 대상이 사라졌다(가리키던 창을 닫았거나 슬롯이 없어졌다).
+        // 확인 버튼으로 넘기는 설명이라면 말풍선은 그대로 두어야 한다 - 같이 감추면
+        // 넘길 방법이 사라져 아무것도 누를 수 없는 상태가 된다.
+        if (_showConfirmButton)
+        {
+            if (!_visualsActive)
+            {
+                SetVisualsActive(true);
+            }
+
+            if (_blocksInput)
+            {
+                LayoutFullCover();
+            }
+            else
+            {
+                SetSpotlightActive(false);
+            }
+
+            return;
+        }
+
+        // 행동을 기다리는 단계는 연출만 감춘다 - 표시권을 놓아버리면 대상이 돌아와도
+        // 아무도 다시 Show하지 않아 안내가 영구히 사라진다. 그 행동 자체가 대상을 되살린다.
+        if (_visualsActive)
+        {
+            SetVisualsActive(false);
+        }
     }
 
     private void BuildDimPanels()
@@ -371,6 +455,28 @@ public class UI_GuideOverlay : MonoBehaviour
             _dimPanels[i] = rect;
             _dimImages[i] = image;
         }
+
+        BuildHoleBlocker();
+    }
+
+    // 딤 패널 뒤에 만든다 - 이후 SetAboveDim이 테두리와 말풍선을 그 위로 올리므로
+    // 확인 버튼은 이 패널에 막히지 않는다.
+    private void BuildHoleBlocker()
+    {
+        var blocker = new GameObject(HOLE_BLOCKER_NAME, typeof(RectTransform), typeof(Image));
+        _holeBlocker = (RectTransform)blocker.transform;
+        _holeBlocker.SetParent(_overlayRoot, false);
+        _holeBlocker.anchorMin = _overlayRoot.pivot;
+        _holeBlocker.anchorMax = _overlayRoot.pivot;
+        _holeBlocker.pivot = CENTER_PIVOT;
+
+        var image = blocker.GetComponent<Image>();
+
+        // 알파 0이어도 raycastTarget이 켜져 있으면 클릭은 막힌다.
+        image.color = Color.clear;
+        image.raycastTarget = true;
+
+        blocker.SetActive(false);
     }
 
     // 딤은 "보이는 것"과 "막는 것"이 별개다. 대상이 있으면 늘 어둡게 깔되, 막을지는 단계가 정한다 -
@@ -394,6 +500,18 @@ public class UI_GuideOverlay : MonoBehaviour
         SetSpotlightActive(true);
         LayoutDim(hole);
         LayoutHighlight(hole);
+        LayoutHoleBlocker(hole);
+    }
+
+    private void LayoutHoleBlocker(Rect hole)
+    {
+        if (_holeBlocker == null)
+        {
+            return;
+        }
+
+        _holeBlocker.anchoredPosition = hole.center;
+        _holeBlocker.sizeDelta = hole.size;
     }
 
     private void SetSpotlightActive(bool isActive)
@@ -409,6 +527,12 @@ public class UI_GuideOverlay : MonoBehaviour
         if (_holeHighlight != null)
         {
             _holeHighlight.gameObject.SetActive(isActive);
+        }
+
+        // 대상이 없으면 막을 것도 없다 - 구멍 없이 켜면 화면 한가운데를 이유 없이 가로막는다.
+        if (_holeBlocker != null)
+        {
+            _holeBlocker.gameObject.SetActive(isActive && _blocksTargetInteraction);
         }
     }
 

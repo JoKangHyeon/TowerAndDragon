@@ -303,8 +303,9 @@ public class BabyDragonGuideController : MonoBehaviour
             ? GuideBubbleSlot.Bottom
             : GuideBubbleSlot.Default;
 
+        // 새끼용 안내는 전부 눌러보게 하는 단계라 대상을 막지 않는다.
         _overlay.Show(this, GuidePriority.BABY_DRAGON_GUIDE, target, locKey, blocksInput,
-            showConfirmButton: false, slot, args);
+            blocksTargetInteraction: false, showConfirmButton: false, slot, args);
     }
 
     // 참조가 비어 있어도 문구 자체는 떠야 하므로 키 이름만 빈 문자열로 대체한다.

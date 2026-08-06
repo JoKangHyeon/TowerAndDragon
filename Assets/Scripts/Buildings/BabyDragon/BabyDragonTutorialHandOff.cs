@@ -20,6 +20,11 @@ public sealed class BabyDragonTutorialHandOff : MonoBehaviour
     [Tooltip("지급할 알의 속성.")]
     [SerializeField] private DragonType _grantedEggType = DragonType.Life;
 
+    [Tooltip("이미 며칠 자란 상태로 줄지. 부화까지의 날수(BabyDragonData.DaysToHatch)에서 이만큼 앞당겨진다 - " +
+             "튜토리얼처럼 다음 날 아침 부화를 보여줘야 할 때 쓴다.")]
+    [Min(0)]
+    [SerializeField] private int _initialFedDayCount;
+
     private bool _hasGranted;
 
     private void OnEnable()
@@ -58,6 +63,6 @@ public sealed class BabyDragonTutorialHandOff : MonoBehaviour
         }
 
         _hasGranted = true;
-        _eggInventorySystem.GrantEgg(_grantedEggType);
+        _eggInventorySystem.GrantEgg(_grantedEggType, _initialFedDayCount);
     }
 }

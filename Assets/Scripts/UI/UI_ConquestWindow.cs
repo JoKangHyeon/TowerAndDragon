@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 using DG.Tweening;
 
@@ -242,6 +243,12 @@ public class UI_ConquestWindow : MonoBehaviour
             _conquestModeController.SetConquestModeActive(false);
     }
 
+    /// <summary>
+    /// 점령지를 골라 패널이 열린 시점. 청크 클릭은 어느 경로로든 여기 하나를 지나므로
+    /// 안내가 "땅을 고르세요"를 기다릴 곳도 여기다.
+    /// </summary>
+    public UnityEvent<Vector2Int> ChunkSelected = new();
+
     // ConquestModeController가 점령 가능한 청크를 클릭했을 때 호출하는 진입점.
     public void OnChunkSelected(Vector2Int chunkCoord)
     {
@@ -249,6 +256,9 @@ public class UI_ConquestWindow : MonoBehaviour
         _conquestModeController.LockChunkSelection(chunkCoord);
         OpenPanel();
         Refresh();
+
+        // 패널이 열린 뒤에 알린다 - 구독자가 패널 안의 앵커를 잡을 수 있어야 한다.
+        ChunkSelected.Invoke(chunkCoord);
     }
 
     // 씬에 미리 세팅해 둔 위치(_homePos)에서 슬라이드 인 시킨다.

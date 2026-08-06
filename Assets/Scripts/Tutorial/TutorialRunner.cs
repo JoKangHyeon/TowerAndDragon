@@ -33,6 +33,15 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     [Tooltip("점령 파병을 기다리는 단계에 필요하다.")]
     [SerializeField] private ConquestManager _conquestManager;
 
+    [Tooltip("연구 해금을 기다리는 단계에 필요하다.")]
+    [SerializeField] private ResearchManager _researchManager;
+
+    [Tooltip("점령지 선택을 기다리는 단계에 필요하다.")]
+    [SerializeField] private UI_ConquestWindow _conquestWindow;
+
+    [Tooltip("인벤토리 슬롯을 가리키는 단계에 필요하다. 슬롯은 런타임 생성이라 앵커로 잡을 수 없다.")]
+    [SerializeField] private UI_DragonInventoryWindow _dragonInventoryWindow;
+
     [Tooltip("건설 패널 슬롯을 가리키는 단계에 필요하다. 슬롯은 런타임 생성이라 GuideAnchor로 잡을 수 없다.")]
     [SerializeField] private UI_BuildModeWindow _buildModeWindow;
 
@@ -48,6 +57,11 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     [SerializeField] private List<ResourceAmount> _startingResources = new();
 
     [SerializeField] private ResourceManager _resourceManager;
+
+    [Tooltip("끝났을 때 '튜토리얼을 봤음'으로 표시할지. 여러 챕터로 나눠 이어갈 때는 마지막 챕터만 켠다 - " +
+             "RunData.IsTutorialDismissed는 런 전체에 하나뿐이라, 중간 챕터가 표시해버리면 " +
+             "뒤 챕터가 '이미 봤음' 판정으로 아무것도 실행하지 않는다.")]
+    [SerializeField] private bool _marksScenarioDismissedOnFinish = true;
 
     private int _currentIndex;
     private bool _isRunning;
@@ -135,6 +149,34 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 안내가 이 창 안을 가리키는 동안에는 단축키로 닫지 못하게 한다 - 대상이 사라지면
+    /// 무엇을 하라는 안내인지 알 수 없다. "닫으세요" 단계에 이르면 그때 풀린다.
+    /// </summary>
+    bool IExclusiveModeOpenQuery.CanClose(MonoBehaviour mode)
+    {
+        if (!_isRunning || _activeStep == null)
+        {
+            return true;
+        }
+
+        // 닫으라고 시키는 단계면 당연히 닫을 수 있어야 한다.
+        if (_activeStep.Condition == TutorialConditionType.ExclusiveModeClosed)
+        {
+            return true;
+        }
+
+        // 인벤토리 슬롯을 가리키는 단계는 TargetMode가 비어 있다(가리키는 것이 창이 아니라 그 안의 슬롯이라서).
+        if (_activeStep.TargetsDragonInventorySlot &&
+            MatchesMode(mode, TutorialExclusiveModeKind.BabyDragonInventory))
+        {
+            return false;
+        }
+
+        // 이 창 안을 가리키는 중이 아니면 막을 이유가 없다.
+        return !MatchesMode(mode, _activeStep.TargetMode);
     }
 
     private void OnDisable()
@@ -259,6 +301,15 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
 
         CaptureConditionBaseline(_activeStep);
+
+        // 안내보다 먼저 해버린 행동은 이 자리에서 흘려보낸다 - 이벤트만 기다리면
+        // 이미 지나간 행동은 다시 오지 않아 그 단계에서 영영 멈춘다(창을 미리 닫은 경우 등).
+        if (IsConditionAlreadySatisfied(_activeStep))
+        {
+            Advance();
+            return;
+        }
+
         SubscribeCondition(_activeStep);
         Render();
 
@@ -281,9 +332,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         _activeStep = null;
         ReleaseOpenQuery();
 
-        // 끝까지 봤든 건너뛰었든 다시 뜨지 않는다.
+        // 끝까지 봤든 건너뛰었든 다시 뜨지 않는다. 다만 뒤에 이어질 챕터가 있으면 여기서 표시하지 않는다.
         RunData run = CurrentRun;
-        if (run != null)
+        if (run != null && _marksScenarioDismissedOnFinish)
         {
             run.IsTutorialDismissed = true;
         }
@@ -369,7 +420,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             GuidePriority.DAY_ONE_TUTORIAL,
             target,
             _activeStep.MessageLocKey,
-            _activeStep.BlocksInput && target != null,
+            // 대상이 없어도 확인 버튼이 있으면 화면 전체를 막을 수 있다 - 읽는 동안 뒤쪽이 눌리면 안 된다.
+            _activeStep.BlocksInput && (target != null || _activeStep.ShowsConfirmButton),
+            _activeStep.BlocksTargetInteraction,
             _activeStep.ShowsConfirmButton,
             _activeStep.BubbleSlot);
     }
@@ -377,6 +430,20 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     // 대상을 못 찾아도 단계는 진행돼야 하므로 문구만 띄우고(null), 나중에 나타나면 그때 다시 그린다.
     private RectTransform ResolveAnchor(TutorialStepSO step)
     {
+        // 인벤토리 슬롯도 런타임 생성이라 창에서 찾아온다. 어느 탭이 열려 있느냐가 곧 어느 슬롯인지다.
+        if (step.TargetsDragonInventorySlot)
+        {
+            if (_dragonInventoryWindow != null &&
+                _dragonInventoryWindow.TryGetFirstSlotRect(out RectTransform inventorySlotRect))
+            {
+                return inventorySlotRect;
+            }
+
+            // 창이 닫혀 있거나 아직 안 그려졌다 - 다시 그려질 때 조준한다.
+            SubscribeInventorySlotViewOnce();
+            return null;
+        }
+
         // 건설 패널 슬롯은 런타임 생성이라 앵커가 아니라 창에서 찾아온다. 지정돼 있으면 이쪽이 우선.
         if (step.TargetBuildingSlot != null)
         {
@@ -440,6 +507,46 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
     }
 
+    /// <summary>
+    /// 창 열기/닫기는 이벤트가 아니라 상태를 매 프레임 확인한다.
+    /// 이벤트는 "그 순간"에만 오므로, 안내보다 먼저 한 행동이나 발행 경로가 하나라도 어긋나는 창에서는
+    /// 신호를 놓쳐 그 단계에 갇힌다. 상태로 보면 어떤 경로로 여닫았든 결과가 같다.
+    /// 나머지 조건(인구 증감·건설 등)은 상태로 되돌아볼 수 없어 이벤트를 그대로 쓴다.
+    /// </summary>
+    private void Update()
+    {
+        if (_isRunning && _activeStep != null && IsConditionAlreadySatisfied(_activeStep))
+        {
+            Advance();
+        }
+    }
+
+    /// <summary>
+    /// 지금 이 조건이 충족돼 있는지. 창 열기/닫기처럼 "상태"로 확인할 수 있는 것만 본다 -
+    /// 인구 배치처럼 증가분으로 보는 조건은 진입 시점이 곧 기준이라 여기서 판정할 것이 없다.
+    /// </summary>
+    private bool IsConditionAlreadySatisfied(TutorialStepSO step)
+    {
+        if (step.Kind != TutorialStepKind.WaitForAction || _uiManager == null)
+        {
+            return false;
+        }
+
+        MonoBehaviour openMode = _uiManager.CurrentOpenExclusiveMode;
+
+        switch (step.Condition)
+        {
+            case TutorialConditionType.ExclusiveModeOpened:
+                return MatchesMode(openMode, step.TargetMode);
+
+            case TutorialConditionType.ExclusiveModeClosed:
+                return !MatchesMode(openMode, step.TargetMode);
+
+            default:
+                return false;
+        }
+    }
+
     private void SubscribeCondition(TutorialStepSO step)
     {
         if (step.Kind != TutorialStepKind.WaitForAction)
@@ -453,6 +560,13 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 if (_uiManager != null)
                 {
                     _uiManager.ExclusiveModeOpened.AddListener(HandleExclusiveModeOpened);
+                }
+                break;
+
+            case TutorialConditionType.ExclusiveModeClosed:
+                if (_uiManager != null)
+                {
+                    _uiManager.ExclusiveModeClosed.AddListener(HandleExclusiveModeClosed);
                 }
                 break;
 
@@ -514,6 +628,41 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 }
                 break;
 
+            case TutorialConditionType.BuildingRemoved:
+                if (_gridMap != null)
+                {
+                    _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoved);
+                }
+                break;
+
+            case TutorialConditionType.BuildingMoved:
+                if (_gridMap != null)
+                {
+                    _gridMap.OnBuildingMoved.AddListener(HandleBuildingMoved);
+                }
+                break;
+
+            case TutorialConditionType.ResearchNodeCompleted:
+                if (_researchManager != null)
+                {
+                    _researchManager.NodeCompleted.AddListener(HandleResearchNodeCompleted);
+                }
+                break;
+
+            case TutorialConditionType.ConquestChunkSelected:
+                if (_conquestWindow != null)
+                {
+                    _conquestWindow.ChunkSelected.AddListener(HandleChunkSelected);
+                }
+                break;
+
+            case TutorialConditionType.DragonInventoryDragonTabSelected:
+                if (_dragonInventoryWindow != null)
+                {
+                    _dragonInventoryWindow.OnTabDisplayed.AddListener(HandleDragonTabDisplayed);
+                }
+                break;
+
             default:
                 Debug.LogWarning(
                     $"[TutorialRunner] 단계 '{step.StepId}'는 행동형인데 완료 조건이 없어 스스로 넘어가지 않습니다.", this);
@@ -528,11 +677,24 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (_uiManager != null)
         {
             _uiManager.ExclusiveModeOpened.RemoveListener(HandleExclusiveModeOpened);
+            _uiManager.ExclusiveModeClosed.RemoveListener(HandleExclusiveModeClosed);
         }
 
         if (_gridMap != null)
         {
             _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingAdded);
+            _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingRemoved);
+            _gridMap.OnBuildingMoved.RemoveListener(HandleBuildingMoved);
+        }
+
+        if (_researchManager != null)
+        {
+            _researchManager.NodeCompleted.RemoveListener(HandleResearchNodeCompleted);
+        }
+
+        if (_conquestWindow != null)
+        {
+            _conquestWindow.ChunkSelected.RemoveListener(HandleChunkSelected);
         }
 
         if (_populationManager != null)
@@ -550,6 +712,12 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         {
             _buildModeWindow.OnSlotViewChanged.RemoveListener(Render);
             _buildModeWindow.OnTabSelected.RemoveListener(HandleTabSelected);
+        }
+
+        if (_dragonInventoryWindow != null)
+        {
+            _dragonInventoryWindow.OnSlotViewChanged.RemoveListener(Render);
+            _dragonInventoryWindow.OnTabDisplayed.RemoveListener(HandleDragonTabDisplayed);
         }
 
         if (_conquestManager != null)
@@ -599,6 +767,17 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         _buildModeWindow.OnSlotViewChanged.AddListener(Render);
     }
 
+    private void SubscribeInventorySlotViewOnce()
+    {
+        if (_dragonInventoryWindow == null)
+        {
+            return;
+        }
+
+        _dragonInventoryWindow.OnSlotViewChanged.RemoveListener(Render);
+        _dragonInventoryWindow.OnSlotViewChanged.AddListener(Render);
+    }
+
     // 어느 땅으로 보냈는지는 묻지 않는다 - 안내는 "파병하는 법"을 알려주는 것이지 목표를 지정하지 않는다.
     private void HandleExpeditionSent(Vector2Int _, ResourceCost __)
     {
@@ -641,9 +820,60 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
     }
 
+    private void HandleExclusiveModeClosed(MonoBehaviour mode)
+    {
+        if (_isRunning && _activeStep != null && MatchesMode(mode, _activeStep.TargetMode))
+        {
+            Advance();
+        }
+    }
+
     private void HandleBuildingAdded(Building building)
     {
         if (_isRunning && _activeStep != null && MatchesBuilding(building, _activeStep))
+        {
+            Advance();
+        }
+    }
+
+    private void HandleBuildingRemoved(Building building)
+    {
+        if (_isRunning && _activeStep != null && MatchesBuilding(building, _activeStep))
+        {
+            Advance();
+        }
+    }
+
+    private void HandleBuildingMoved(Building building)
+    {
+        if (_isRunning && _activeStep != null && MatchesBuilding(building, _activeStep))
+        {
+            Advance();
+        }
+    }
+
+    // 어느 연구를 골랐는지는 묻지 않는다 - 안내는 "연구하는 법"이지 특정 노드가 아니다.
+    private void HandleResearchNodeCompleted(ResearchNodeData _)
+    {
+        if (_isRunning && _activeStep != null)
+        {
+            Advance();
+        }
+    }
+
+    // 어느 땅을 골랐는지도 묻지 않는다 - 고르는 법을 알려주는 것이지 목표를 지정하지 않는다.
+    private void HandleChunkSelected(Vector2Int _)
+    {
+        if (_isRunning && _activeStep != null)
+        {
+            Advance();
+        }
+    }
+
+    // true가 용 탭이다. 알 탭으로 되돌아간 경우는 아직 시킨 것을 하지 않은 것이므로 넘기지 않는다.
+    private void HandleDragonTabDisplayed(bool isDragonTab)
+    {
+        if (_isRunning && _activeStep != null && isDragonTab)
         {
             Advance();
         }
@@ -735,6 +965,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 // 종류를 지정하지 않았으면 아무 생산시설이나 통과시킨다.
                 return building is Factory factory &&
                        (step.TargetFactoryData == null || factory.Data == step.TargetFactoryData);
+
+            case TutorialBuildingKind.Castle:
+                return building is Castle;
 
             default:
                 return false;

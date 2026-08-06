@@ -530,6 +530,21 @@ public sealed class ResearchManager : MonoBehaviour,
         return assignedPopulation * _balance.ResearchPointsPerPopulation;
     }
 
+    /// <summary>
+    /// 연구 점수를 직접 더한다. 튜토리얼처럼 "지금 반드시 연구가 되어야 하는" 상황에서만 쓴다 -
+    /// 평소 획득 경로는 연구소에 배치한 인구(GrantResearchPoints)뿐이다.
+    /// </summary>
+    public void AddResearchPoints(int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        _researchPoints += amount;
+        _researchPointsChanged.Invoke(_researchPoints);
+    }
+
     private void GrantResearchPoints(int currentDay)
     {
         if (ActiveLab == null || ActiveLab.Population == null)

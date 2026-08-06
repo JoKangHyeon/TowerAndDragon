@@ -58,14 +58,25 @@ public class DragonEggInventorySystem : MonoBehaviour
         GrantEgg(_startingEggType);
     }
 
-    public bool GrantEgg(DragonType dragonType)
+    public bool GrantEgg(DragonType dragonType) => GrantEgg(dragonType, 0);
+
+    /// <summary>
+    /// 이미 며칠 자란 알을 지급한다. 튜토리얼처럼 "다음 날 아침에 부화"를 보여줘야 하는 경우에 쓴다 -
+    /// 부화까지의 날수는 BabyDragonData가 정하므로, 그 값을 건드리지 않고 출발점만 앞당긴다.
+    /// </summary>
+    public bool GrantEgg(DragonType dragonType, int initialFedDayCount)
     {
         if (_gameManager == null || _gameManager.CurrentRun == null)
         {
             return false;
         }
 
-        _gameManager.CurrentRun.DragonEggs.Add(new DragonEgg { DragonType = dragonType });
+        _gameManager.CurrentRun.DragonEggs.Add(new DragonEgg
+        {
+            DragonType = dragonType,
+            FedDayCount = Mathf.Max(0, initialFedDayCount),
+        });
+
         _gameManager.CurrentRun.OnInventoryChanged.Invoke();
         OnEggGranted?.Invoke(dragonType);
         return true;

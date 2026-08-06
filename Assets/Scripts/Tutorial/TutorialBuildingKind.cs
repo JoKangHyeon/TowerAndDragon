@@ -15,4 +15,8 @@ public enum TutorialBuildingKind
 
     // 종류를 더 좁히려면 단계의 TargetFactoryData를 함께 지정한다.
     Factory,
+
+    // 메인 성. 그리드에 3x3으로 등록돼 있어 클릭하면 다른 건물과 같은 선택 경로를 지난다
+    // (BuildingPlacementController.SelectExistingBuildingAt) - 어미용 창을 여는 단계에 쓴다.
+    Castle,
 }

@@ -52,6 +52,10 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     [SerializeField]
     private CycleManager _cycleManager;
 
+    [Tooltip("밤에 건설을 시도했을 때 경고 메시지를 띄울 창.")]
+    [SerializeField]
+    private UI_WarningWindow _warningWindow;
+
     [Header("패널 열림/닫힘 연출")]
     [SerializeField]
     private float _slideDuration = 0.5f;
@@ -264,6 +268,18 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     {
         // 클릭음을 내지 않는다 - 창을 여닫는 제스처는 OpenBuildPanel/CloseBuildPanel의 창음만 낸다.
         EnsureInitialized();
+
+        // 밤에는 건설 모드를 켤 수 없다(창이 아예 열리지 않는다). 끄는 것은 항상 허용.
+        if (!_isOpen && _cycleManager != null &&
+            _cycleManager.CurrentCycle == CycleManager.CycleState.Night)
+        {
+            if (_warningWindow != null)
+            {
+                _warningWindow.ShowBuildWarning();
+            }
+
+            return;
+        }
 
         if (_isOpen)
         {

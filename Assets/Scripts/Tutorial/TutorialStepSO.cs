@@ -29,8 +29,16 @@ public sealed class TutorialStepSO : ScriptableObject
              "슬롯은 런타임 생성이라 GuideAnchor를 붙일 수 없어 창에서 직접 찾아온다.")]
     [SerializeField] private Building _targetBuildingSlot;
 
+    [Tooltip("새끼용 인벤토리에 지금 떠 있는 첫 슬롯을 가리킨다. 건설 슬롯과 같은 이유로 앵커를 쓸 수 없다 - " +
+             "어느 탭이 열려 있느냐에 따라 알 슬롯이 되기도 하고 새끼용 슬롯이 되기도 한다.")]
+    [SerializeField] private bool _targetsDragonInventorySlot;
+
     [Tooltip("대상 외 클릭을 막을지. 대상이 없으면 막을 수 없다 - 막으면 아무것도 누를 수 없게 된다.")]
     [SerializeField] private bool _blocksInput;
+
+    [Tooltip("가리키기만 하고 대상 클릭은 막을지. 눌러보게 하는 게 아니라 '이런 게 있다'만 알리는 설명형에 쓴다. " +
+             "되돌릴 수 없는 조작(하루 1회뿐인 어미용 속성 변경 등)을 설명 중에 소모하지 않게 한다.")]
+    [SerializeField] private bool _blocksTargetInteraction;
 
     [Tooltip("말풍선을 띄울 자리. 타일을 클릭해야 하는 단계는 말풍선이 그리드를 가리므로 Top/Bottom으로 옮긴다.")]
     [SerializeField] private GuideBubbleSlot _bubbleSlot = GuideBubbleSlot.Default;
@@ -65,7 +73,9 @@ public sealed class TutorialStepSO : ScriptableObject
     public string MessageLocKey => _messageLocKey;
     public GuideAnchorId AnchorId => _anchorId;
     public Building TargetBuildingSlot => _targetBuildingSlot;
+    public bool TargetsDragonInventorySlot => _targetsDragonInventorySlot;
     public bool BlocksInput => _blocksInput;
+    public bool BlocksTargetInteraction => _blocksTargetInteraction;
     public GuideBubbleSlot BubbleSlot => _bubbleSlot;
     public TutorialConditionType Condition => _condition;
     public TutorialExclusiveModeKind TargetMode => _targetMode;
@@ -91,10 +101,16 @@ public sealed class TutorialStepSO : ScriptableObject
             Debug.LogWarning($"[TutorialStepSO] {name}: 문구 키(_messageLocKey)가 비어 있습니다.", this);
         }
 
-        if (_blocksInput && _anchorId == GuideAnchorId.None)
+        bool hasTarget = _anchorId != GuideAnchorId.None ||
+                         _targetBuildingSlot != null ||
+                         _targetsDragonInventorySlot;
+
+        // 대상이 없어도 확인 버튼이 있으면 화면 전체를 막아도 된다 - 그 버튼이 빠져나갈 길이다.
+        if (_blocksInput && !hasTarget && !ShowsConfirmButton)
         {
             Debug.LogWarning(
-                $"[TutorialStepSO] {name}: 가릴 대상이 없는데 입력을 막으려 합니다 - 안내가 뜨지 않습니다.", this);
+                $"[TutorialStepSO] {name}: 빠져나갈 버튼도 가릴 대상도 없는데 입력을 막으려 합니다 - " +
+                "아무것도 누를 수 없게 됩니다.", this);
         }
 
         if (_kind == TutorialStepKind.WaitForAction && _condition == TutorialConditionType.None)
@@ -103,8 +119,10 @@ public sealed class TutorialStepSO : ScriptableObject
                 $"[TutorialStepSO] {name}: 행동형인데 완료 조건이 None이라 이 단계에서 멈춥니다.", this);
         }
 
-        if (_condition == TutorialConditionType.ExclusiveModeOpened &&
-            _targetMode == TutorialExclusiveModeKind.None)
+        bool needsTargetMode = _condition == TutorialConditionType.ExclusiveModeOpened ||
+                               _condition == TutorialConditionType.ExclusiveModeClosed;
+
+        if (needsTargetMode && _targetMode == TutorialExclusiveModeKind.None)
         {
             Debug.LogWarning($"[TutorialStepSO] {name}: 기다릴 배타 모드를 지정하지 않았습니다.", this);
         }
@@ -112,7 +130,9 @@ public sealed class TutorialStepSO : ScriptableObject
         // 선택 해제·정원 충족은 무엇이 골라져 있는지로 판정하므로 건물 종류가 필요 없다.
         bool needsBuildingKind = _condition == TutorialConditionType.BuildingConstructed ||
                                  _condition == TutorialConditionType.BuildingSelectedForPlacement ||
-                                 _condition == TutorialConditionType.BuildingSelectedOnGrid;
+                                 _condition == TutorialConditionType.BuildingSelectedOnGrid ||
+                                 _condition == TutorialConditionType.BuildingRemoved ||
+                                 _condition == TutorialConditionType.BuildingMoved;
 
         if (needsBuildingKind && _targetBuilding == TutorialBuildingKind.None)
         {

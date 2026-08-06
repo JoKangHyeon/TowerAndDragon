@@ -43,4 +43,26 @@ public enum TutorialConditionType
     // ConquestManager.OnExpeditionSent - 점령 파병을 보냈다.
     // 점령 완료는 며칠 걸려 1일차에 끝나지 않으므로 파병 시점을 조건으로 삼는다.
     ExpeditionSent,
+
+    // UIManager.ExclusiveModeClosed - 안내가 지목한 창을 닫았다(ESC·버튼 어느 쪽이든).
+    // "다 봤으면 닫으세요" 단계용. 어떤 창인지는 ExclusiveModeOpened와 같이 TargetMode로 지정한다.
+    ExclusiveModeClosed,
+
+    // GridMap.OnBuildingRemoving - 건물을 철거했다. 환급을 보여주는 단계용.
+    BuildingRemoved,
+
+    // GridMap.OnBuildingMoved - 건물을 같은 인스턴스로 옮겼다. 새끼용 재배치 단계용.
+    BuildingMoved,
+
+    // ResearchManager.NodeCompleted - 연구를 하나 해금했다. 어느 노드인지는 묻지 않는다 -
+    // 안내는 "연구하는 법"을 알려주는 것이지 특정 노드를 강요하지 않는다.
+    ResearchNodeCompleted,
+
+    // UI_ConquestWindow.ChunkSelected - 점령지를 골라 패널이 열렸다.
+    // 어느 땅인지는 묻지 않는다 - 안내는 고르는 법이지 목표를 지정하지 않는다.
+    ConquestChunkSelected,
+
+    // UI_DragonInventoryWindow.OnTabDisplayed - 새끼용 인벤토리에서 용 탭이 보이게 됐다.
+    // 알 탭은 기본값이라 "눌러서 바꾸라"고 시킬 것이 없어 용 탭만 조건으로 둔다.
+    DragonInventoryDragonTabSelected,
 }

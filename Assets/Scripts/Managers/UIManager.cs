@@ -44,12 +44,46 @@ public class UIManager : MonoBehaviour
     // IExclusiveMode 구현체는 모두 MonoBehaviour라 구독자가 구체 타입으로 판별할 수 있게 그대로 넘긴다.
     public UnityEvent<MonoBehaviour> ExclusiveModeOpened = new();
 
+    // 배타 모드가 닫혔을 때 알린다. 여는 것과 달리 닫는 데는 단일 통로가 없다 -
+    // ESC는 각 창이 자체 처리하고, 버튼도 창의 토글 메서드를 직접 부르며,
+    // 다른 모드가 열릴 때도 닫힌다. 그래서 호출 지점을 찾아 붙이는 대신 IsOpen 전이를 여기서 관측한다.
+    public UnityEvent<MonoBehaviour> ExclusiveModeClosed = new();
+
     // 튜토리얼이 배선한다 - 배선되지 않은 씬에서는 null로 남아 모든 창이 그대로 열린다(기존 동작 유지).
     // PopulationManager.CapacityModifierQuery와 같은 주입 방식.
     public IExclusiveModeOpenQuery OpenQuery { get; set; }
 
+    /// <summary>
+    /// 지금 열려 있는 배타 모드. 배타이므로 많아야 하나다. 아무것도 안 열려 있으면 null.
+    /// 안내가 "창을 닫으세요" 단계에 들어설 때 이미 닫혀 있는지 확인하는 데 쓴다 -
+    /// 이벤트만 기다리면 안내보다 먼저 닫은 플레이어는 영영 다음으로 넘어가지 못한다.
+    /// </summary>
+    public MonoBehaviour CurrentOpenExclusiveMode
+    {
+        get
+        {
+            if (_exclusiveModes == null)
+            {
+                return null;
+            }
+
+            foreach (IExclusiveMode mode in _exclusiveModes)
+            {
+                if (mode.IsOpen)
+                {
+                    return mode as MonoBehaviour;
+                }
+            }
+
+            return null;
+        }
+    }
+
     private IExclusiveMode[] _exclusiveModes;
     private (InputActionReference action, IExclusiveMode mode)[] _cachedShortcuts;
+
+    // 직전 프레임의 열림 상태. 닫힘 전이를 잡는 데만 쓴다(_exclusiveModes와 같은 인덱스).
+    private bool[] _wasExclusiveModeOpen;
 
     private void Awake()
     {
@@ -75,12 +109,36 @@ public class UIManager : MonoBehaviour
 
             if (mode.IsOpen)
             {
+                // 안내가 이 창 안을 가리키는 중이면 단축키로 닫지 못하게 막는다.
+                if (OpenQuery != null && !OpenQuery.CanClose(mode as MonoBehaviour))
+                {
+                    continue;
+                }
+
                 mode.Close();
             }
             else
             {
                 OpenExclusive(mode);
             }
+        }
+
+        DetectClosedExclusiveModes();
+    }
+
+    // 열림→닫힘으로 바뀐 모드를 알린다. 어느 경로로 닫혔든(ESC·버튼·다른 모드 열기) 여기를 지난다.
+    private void DetectClosedExclusiveModes()
+    {
+        for (int i = 0; i < _exclusiveModes.Length; i++)
+        {
+            bool isOpen = _exclusiveModes[i].IsOpen;
+
+            if (_wasExclusiveModeOpen[i] && !isOpen)
+            {
+                ExclusiveModeClosed.Invoke(_exclusiveModes[i] as MonoBehaviour);
+            }
+
+            _wasExclusiveModeOpen[i] = isOpen;
         }
     }
 
@@ -124,6 +182,7 @@ public class UIManager : MonoBehaviour
         if (_exclusiveModeBehaviours == null)
         {
             _exclusiveModes = Array.Empty<IExclusiveMode>();
+            _wasExclusiveModeOpen = Array.Empty<bool>();
             return;
         }
 
@@ -141,6 +200,7 @@ public class UIManager : MonoBehaviour
         }
 
         _exclusiveModes = modes.ToArray();
+        _wasExclusiveModeOpen = new bool[_exclusiveModes.Length];
     }
 
     // target을 제외하고 열려 있는 배타 모드를 모두 닫는다.
