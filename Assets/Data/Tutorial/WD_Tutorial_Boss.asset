@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2fb7e8e217e26540a2ac4c9cb17e354, type: 3}
+  m_Name: WD_Tutorial_Boss
+  m_EditorClassIdentifier: Assembly-CSharp::WaveDefinitionSO
+  _portalWaves:
+  - _portalDirectionId: 1
+    _startDelay: 2
+    _routeWaves:
+    - _routeIndex: 0
+      _startDelay: 0
+      _spawnGroups:
+      - _monsterPrefab: {fileID: 228593955741719960, guid: 5a14c0ac56d677948929a79bb44645d2, type: 3}
+        _monsterData: {fileID: 11400000, guid: e4c66ba0392e1cd4bb876b965e002d58, type: 2}
+        _spawnCount: 1
+        _spawnInterval: 1
+        _delayBeforeGroup: 0
