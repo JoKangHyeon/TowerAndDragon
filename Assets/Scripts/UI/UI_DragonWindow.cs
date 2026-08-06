@@ -100,6 +100,9 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("Popup_Dragon_Change - 실제 변경 로직은 이 팝업이 갖고 있다.")]
     [SerializeField] private UI_DragonChangePopup _changePopup;
 
+    [Tooltip("속성 변경이 하루 1회 제한에 걸렸을 때 토스트를 띄운다. 없으면 조용히 무시한다.")]
+    [SerializeField] private UI_WarningWindow _warningWindow;
+
     [Header("Baby Dragon / Egg 리스트 (Panel_BabyDragon)")]
     [Tooltip("Panel_Right/Panel_DragonInfo/Text (TMP). 마우스를 올린 새끼용 슬롯의 속성 설명을 표시하고, " +
         "아무 슬롯에도 올라가 있지 않으면 비운다.")]
@@ -369,6 +372,13 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         _currentTab = tab;
         bool isMother = tab == DragonTab.Mother;
 
+        // 속성 변경 팝업은 Content 바로 밑(패널 바깥)이라 탭을 바꿔도 스스로 사라지지 않는다 -
+        // 새끼용 탭 위에 어미용 팝업이 남지 않도록 여기서 닫는다.
+        if (_changePopup != null)
+        {
+            _changePopup.Close();
+        }
+
         if (_motherPanel != null)
         {
             _motherPanel.SetActive(isMother);
@@ -449,6 +459,16 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         if (_changePopup.IsOpen)
         {
             _changePopup.Close();
+            return;
+        }
+
+        // 오늘 이미 바꿨으면 팝업을 열지 않고 경고만 띄운다 - 눌러도 아무 일이 없는 카드만 늘어놓는 것보다
+        // 이유를 바로 알려주는 편이 낫다(변경 규칙 자체는 Dragon.TryChangeType이 단일 출처다).
+        Dragon dragon = CurrentRun?.CurrentDragon;
+
+        if (dragon != null && dragon.IsChangedThisDay)
+        {
+            _warningWindow?.ShowMotherDragonChangeWarning();
             return;
         }
 

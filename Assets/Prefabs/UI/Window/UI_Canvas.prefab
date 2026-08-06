@@ -38,7 +38,6 @@ RectTransform:
   - {fileID: 2477324888949151403}
   - {fileID: 6358431809230933221}
   - {fileID: 1493726937029595600}
-  - {fileID: 1138779836757610193}
   - {fileID: 4611030065519939964}
   - {fileID: 6099946960922639746}
   - {fileID: 4849225537337392257}
@@ -48,6 +47,8 @@ RectTransform:
   - {fileID: 3277417954117933488}
   - {fileID: 7148442977301984324}
   - {fileID: 5596613483302859141}
+  - {fileID: 5489621103039056836}
+  - {fileID: 1138779836757610193}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -140,7 +141,7 @@ MonoBehaviour:
   - {fileID: 7546850575924265391}
   - {fileID: 0}
   _babyDragonInventoryToggleAction: {fileID: 1961000633486905275, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _babyDragonInventoryWindow: {fileID: 9135527939180726335}
+  _exclusiveModeShortcuts: []
 --- !u!114 &6882898113726626769
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3380,6 +3381,10 @@ PrefabInstance:
       propertyPath: _uiManager
       value: 
       objectReference: {fileID: 449109871165840085}
+    - target: {fileID: 7262769113433357308, guid: 49bcbfa255efd5649b755d595000ba11, type: 3}
+      propertyPath: _warningWindow
+      value: 
+      objectReference: {fileID: 8378660529608903312}
     - target: {fileID: 7368298270920612385, guid: 49bcbfa255efd5649b755d595000ba11, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -6191,13 +6196,13 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5486410538316174616, guid: f908c939041044a459d5a135e39741fa, type: 3}
-      propertyPath: _dragonWindow
-      value: 
-      objectReference: {fileID: 2473110274389148054}
-    - target: {fileID: 5486410538316174616, guid: f908c939041044a459d5a135e39741fa, type: 3}
       propertyPath: _configWindow
       value: 
       objectReference: {fileID: 1375494519751786145}
+    - target: {fileID: 5486410538316174616, guid: f908c939041044a459d5a135e39741fa, type: 3}
+      propertyPath: _dragonWindow
+      value: 
+      objectReference: {fileID: 2473110274389148054}
     - target: {fileID: 5486410538316174616, guid: f908c939041044a459d5a135e39741fa, type: 3}
       propertyPath: _speedSetting
       value: 
