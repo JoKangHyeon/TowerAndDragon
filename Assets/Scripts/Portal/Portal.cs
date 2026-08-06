@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Splines;
 
@@ -6,10 +7,13 @@ public class Portal : MonoBehaviour
     [SerializeField] private PortalDirection _portalDirectionId;
     [SerializeField] private TerrainType _terrainType;
     [SerializeField] private Transform _spawnPoint;
-    [SerializeField] private SplineContainer _groundPath;
+
+    // 지상적이 사용할 경로(루트) 목록. 같은 포탈에서 같은 성으로 가는 대체 경로들이며,
+    // 웨이브 데이터의 RouteWaveData.RouteIndex가 이 목록의 인덱스를 가리킨다.
+    [SerializeField] private List<SplineContainer> _groundPaths;
+
     [SerializeField] private Transform _mainCastle;
     [SerializeField] private bool _isActive;
-    //[SerializeField] private bool _isConfigured;
 
     private bool _isSealed;
 
@@ -17,16 +21,29 @@ public class Portal : MonoBehaviour
     public TerrainType TerrainType => _terrainType;
     public Transform SpawnPoint => _spawnPoint;
 
-    // 지상적일 경우 사용할 경로
-    public SplineContainer GroundPath => _groundPath;
+    public IReadOnlyList<SplineContainer> GroundPaths => _groundPaths;
+    public int RouteCount => _groundPaths != null ? _groundPaths.Count : 0;
+
     public Transform MainCastle => _mainCastle;
     public bool IsActive => _isActive;
     public bool IsSealed => _isSealed;
     public bool IsConfigured =>
         _portalDirectionId != PortalDirection.None &&
         _spawnPoint != null &&
-        _groundPath != null &&
+        HasValidGroundPaths &&
         _mainCastle != null;
+
+    public bool TryGetGroundPath(int routeIndex, out SplineContainer path)
+    {
+        if (routeIndex < 0 || routeIndex >= RouteCount)
+        {
+            path = null;
+            return false;
+        }
+
+        path = _groundPaths[routeIndex];
+        return path != null;
+    }
 
     public void SetSpawnActive(bool isActive)
     {
@@ -39,5 +56,26 @@ public class Portal : MonoBehaviour
     {
         _isSealed = true;
         _isActive = false;
+    }
+
+    private bool HasValidGroundPaths
+    {
+        get
+        {
+            if (RouteCount == 0)
+            {
+                return false;
+            }
+
+            foreach (SplineContainer path in _groundPaths)
+            {
+                if (path == null)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 }

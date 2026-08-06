@@ -10,6 +10,7 @@ public readonly struct AttackContext
     public GameObject Source { get; }
     public ResolvedEnemyStatModifier AttackPowerModifier { get; }
     public LayerMask TargetLayers { get; }
+    public DragonType? AttackElement { get; }
 
     // 명중 시점에 대상에 추가로 얹을 상태이상(용 스킬트리 얼음 패시브 등).
     // 발사 시점(TowerAttack.Fire)이 아니라 명중 시점(AttackSO.Execute)에 적용해야
@@ -66,11 +67,13 @@ public readonly struct AttackContext
         GameObject source,
         ResolvedEnemyStatModifier attackPowerModifier,
         IReadOnlyList<StatusEffectSO> extraStatuses,
-        LayerMask targetLayers)
+        LayerMask targetLayers,
+        DragonType? attackElement = null)
     {
         Source = source;
         AttackPowerModifier = attackPowerModifier;
         ExtraStatuses = extraStatuses;
         TargetLayers = targetLayers;
+        AttackElement = attackElement;
     }
 }

@@ -24,7 +24,7 @@ public class BabyDragonTower : Tower, ITowerStaffing
     protected override bool UsesMoveGrant => false;
 
     public override bool RequiresPopulation => false;
-
+    public override MonsterTargetType TargetType => MonsterTargetType.Dragon;
     public override int PopulationCapacity => 0;
 
     public BabyDragonData DragonData => Data as BabyDragonData;
@@ -53,20 +53,6 @@ public class BabyDragonTower : Tower, ITowerStaffing
     private static readonly int TYPE_ANIM_KEY = Animator.StringToHash("Type");
 
     // 밤 이동 제한은 BuildingPlacementController.CanMoveNow(모든 건물 공통)가 담당한다.
-
-
-    private void OnDisable()
-    {
-        _cycleManager.OnDayStart.RemoveListener(OnDayOrNightStart);
-        _cycleManager.OnNightStart.RemoveListener(OnDayOrNightStart);
-    }
-
-    public void OnDayOrNightStart(int _)
-    {
-        Debug.Log(_isFed);
-        _animator.SetBool(BROKEN_ANIM_KEY, !_isFed);
-    }
-
     protected void Start()
     {
         var anim = GetComponent<Animator>();
@@ -77,13 +63,6 @@ public class BabyDragonTower : Tower, ITowerStaffing
     public void SetFed(bool isFed)
     {
         _isFed = isFed;
-    }
-
-    public void SetCycleManager(CycleManager cycleManager)
-    {
-        _cycleManager = cycleManager;
-        _cycleManager.OnDayStart.AddListener(OnDayOrNightStart);
-        _cycleManager.OnNightStart.AddListener(OnDayOrNightStart);
     }
 
     // BabyDragonPlacementCoordinator.HandleBuildingAdded가 배치 시 호출한다.
@@ -98,6 +77,16 @@ public class BabyDragonTower : Tower, ITowerStaffing
             record.Mode = CanUseAttackMode ? BabyDragonMode.Attack : BabyDragonMode.Buff;
             record.IsModeInitialized = true;
         }
+
+        // Record가 붙기 전의 Mode는 기본값 Attack이고, Setup()이 그 상태로 이미 공격을 켜 두었다 -
+        // 여기서 다시 확정하지 않으면 버프모드 레코드(철거 후 재설치·세이브 로드)가 공격까지 하는
+        // 이중 상태가 된다. Setup보다 먼저 호출되더라도 _isInitialized 가드로 무해하고,
+        // 그 경우는 뒤이은 Setup의 RefreshAttackEnabled가 같은 결론을 낸다.
+        RefreshAttackEnabled();
+
+        // 버프 재계산·UI도 같은 이유로 갱신이 필요하다. BabyDragonBuffSystem이 아직 이 인스턴스를
+        // 등록하지 않았다면 리스너가 없어 무해하며, 등록 직후의 RecomputeAll이 바인딩된 모드를 본다.
+        ModeChanged.Invoke();
     }
 
     // 데이터상 그 모드를 쓸 수 없으면 무시한다(버튼도 같은 조건으로 비활성화되지만 방어적으로 한 번 더 확인).

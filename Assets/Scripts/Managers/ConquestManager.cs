@@ -28,6 +28,13 @@ public class ConquestManager : MonoBehaviour
     private readonly List<ConquestExpedition> _activeExpeditions = new();
     public IReadOnlyList<ConquestExpedition> ActiveExpeditions => _activeExpeditions;
 
+    // 실제로 EnemyEnhancementManager.ApplyProfile을 태운 청크. "점령된 청크"와 다르다 -
+    // 성의 홈 청크는 Castle.SetUpInitialTerritory가 직접 Conquered로 만들 뿐 강화를 적용하지 않는다.
+    // 프로파일 목록은 append-only에 중복 제거가 없으므로, 세이브 복원 시 정확히 이 목록만
+    // 1회 재생해야 강화가 이중 적용되지 않는다.
+    private readonly List<Vector2Int> _enhancedChunkCoords = new();
+    public IReadOnlyList<Vector2Int> EnhancedChunkCoords => _enhancedChunkCoords;
+
 
     // 점령이 실제로 완료된 시점(며칠 뒤 밤 정산)에 발생 - 보상 지급 등은 이 이벤트를 구독해 처리한다.
     public UnityEvent<Vector2Int> OnConquestCompleted;
@@ -219,6 +226,7 @@ public class ConquestManager : MonoBehaviour
     {
         _gridMap.SetChunkState(targetChunkCoord, ChunkState.Conquered);
         ExpandVisibility(targetChunkCoord);
+        AnnexUnregisteredLandNeighbors(targetChunkCoord);
         ApplyEnemyEnhancement(targetChunkCoord);
         OnConquestCompleted?.Invoke(targetChunkCoord);
     }
@@ -273,6 +281,120 @@ public class ConquestManager : MonoBehaviour
         }
     }
 
+    private static readonly Vector3Int[] CELL_ORTHOGONAL_DIRECTIONS =
+    {
+        new Vector3Int(1, 0, 0),
+        new Vector3Int(-1, 0, 0),
+        new Vector3Int(0, 1, 0),
+        new Vector3Int(0, -1, 0),
+    };
+
+    // 청크 네 개가 만나는 꼭짓점에서는 육지 셀이 단 1칸만 우연히 맞닿는 경우가 있다(예: 대각선
+    // 청크는 바다로 막혀 있는데 꼭짓점 셀 한 칸만 같은 육지 타입인 경우) - 이런 우연의 일치를
+    // "연결됨"으로 치지 않도록 최소 접촉 셀 수를 요구한다.
+    private const int MINIMUM_LAND_BORDER_CONTACT_CELLS = 2;
+
+    // 코스트 테이블에 등록되지 않았지만(=독자 점령 불가) 땅이 남아있는 모서리 청크를,
+    // 인접한 실제 점령 청크가 점령 완료되는 시점에 그 영토로 편입한다.
+    // 편입은 상태 전환만 한다 - 코스트 테이블에 데이터가 없으므로 인구 보상/적강화가 애초에 없고,
+    // OnConquestCompleted도 발행하지 않아 원정 기반 리스너(인구 보상 코디네이터 등)에 부작용이 없다.
+    // 영토 테두리 렌더러는 ChunkState.Conquered 여부만 보므로 자동으로 반영된다.
+    //
+    // 청크마다 SetChunkState를 따로 부르면 OnChunkStateChanged가 그 횟수만큼 발행되고, 테두리
+    // 렌더러가 매번 맵 전체의 점령 영역을 다시 트레이싱한다 - 상태 전환은 한 번에 몰아서 처리한다.
+    private void AnnexUnregisteredLandNeighbors(Vector2Int chunkCoord)
+    {
+        CollectAnnexableNeighbors(chunkCoord, _annexBuffer);
+        _gridMap.SetChunkStatesBulk(_annexBuffer, ChunkState.Conquered);
+    }
+
+    private readonly List<Vector2Int> _annexBuffer = new();
+
+    // 이 청크를 점령했을 때 함께 편입될 짜투리 청크 좌표를 result에 채운다 - 상태를 바꾸지 않는 조회 전용.
+    // 점령 모드의 편입 미리보기 하이라이트와 실제 편입이 같은 판정을 공유하게 하기 위해 분리했다.
+    // 판정이 이웃의 Conquered 여부와 불변 데이터(LandCellCoords)만 보므로, 점령 전에 미리 계산한
+    // 결과와 점령 완료 시점에 계산한 결과가 일치한다.
+    public void CollectAnnexableNeighbors(Vector2Int chunkCoord, List<Vector2Int> result)
+    {
+        result.Clear();
+
+        Chunk sourceChunk = _gridMap.GetChunk(chunkCoord);
+        if (sourceChunk == null)
+            return;
+
+        foreach (Chunk neighbor in _gridMap.GetOrthogonalAdjacentChunks(chunkCoord))
+        {
+            if (neighbor.CurrentState == ChunkState.Conquered)
+                continue;
+
+            if (HasExpeditionCost(neighbor.ChunkCoord))
+                continue;
+
+            if (!IsPrimaryLandConnection(neighbor, sourceChunk))
+                continue;
+
+            result.Add(neighbor.ChunkCoord);
+        }
+    }
+
+    // 표시 전용 - 편입 대상 중 이미 드러난(Hidden이 아닌) 청크만 남긴다.
+    // 실제 편입은 ExpandVisibility가 먼저 돌아 이웃이 전부 Visible이 된 뒤에 일어나지만, 점령 전에
+    // 미리 그리는 선은 그 전이라 아직 Hidden인 청크가 섞일 수 있다 - 미탐색 지역을 앞당겨 드러내지
+    // 않도록 여기서 거른다. 편입 판정 자체(CollectAnnexableNeighbors)는 건드리지 않는다.
+    public void CollectRevealedAnnexableNeighbors(Vector2Int chunkCoord, List<Vector2Int> result)
+    {
+        CollectAnnexableNeighbors(chunkCoord, result);
+
+        for (int i = result.Count - 1; i >= 0; i--)
+        {
+            Chunk neighbor = _gridMap.GetChunk(result[i]);
+            if (neighbor == null || neighbor.CurrentState == ChunkState.Hidden)
+                result.RemoveAt(i);
+        }
+    }
+
+    // scrapChunk 입장에서 conqueredChunk가 "가장 많이 맞닿아 있는" 이웃일 때만 true를 반환한다.
+    // 청크 경계가 실제로는 대부분 물일 수 있으므로 셀 단위 접촉 수를 기준으로 삼고, scrapChunk의
+    // 다른 이웃(아직 미점령)이 더 넓게 맞닿아 있다면 이번 점령으로는 편입하지 않고 보류한다 -
+    // 그래야 나중에 진짜 주 접경 청크를 점령했을 때 자연스럽게 편입된다.
+    private bool IsPrimaryLandConnection(Chunk scrapChunk, Chunk conqueredChunk)
+    {
+        int conqueredContact = CountLandBorderContact(scrapChunk, conqueredChunk);
+        if (conqueredContact < MINIMUM_LAND_BORDER_CONTACT_CELLS)
+            return false;
+
+        foreach (Chunk otherNeighbor in _gridMap.GetOrthogonalAdjacentChunks(scrapChunk.ChunkCoord))
+        {
+            if (otherNeighbor.ChunkCoord == conqueredChunk.ChunkCoord)
+                continue;
+
+            if (CountLandBorderContact(scrapChunk, otherNeighbor) > conqueredContact)
+                return false;
+        }
+
+        return true;
+    }
+
+    // chunkA의 육지 셀(Chunk가 생성 시점에 캐싱해 둔 LandCellCoords) 중 chunkB의 육지 셀과
+    // 상하좌우로 맞닿아 있는 셀의 개수 - 청크 경계선이 아니라 실제 지형 경계(접촉 폭)를 기준으로 판정한다.
+    private static int CountLandBorderContact(Chunk chunkA, Chunk chunkB)
+    {
+        int contactCount = 0;
+        foreach (Vector3Int cellCoord in chunkA.LandCellCoords)
+        {
+            foreach (Vector3Int direction in CELL_ORTHOGONAL_DIRECTIONS)
+            {
+                if (chunkB.ContainsLandCell(cellCoord + direction))
+                {
+                    contactCount++;
+                    break;
+                }
+            }
+        }
+
+        return contactCount;
+    }
+
     private void ApplyEnemyEnhancement(Vector2Int chunkCoord)
     {
         EnemyEnhancementProfileSO profile =
@@ -298,6 +420,90 @@ public class ConquestManager : MonoBehaviour
         _enemyEnhancementManager.ApplyProfile(
             chunk.DominantTerrain,
             profile);
+
+        _enhancedChunkCoords.Add(chunkCoord);
     }
 
+    // --- 세이브 복원 ---
+
+    /// <summary>
+    /// 세이브 복원 전용. 청크 가시/점령 상태를 되돌리고 적 강화 프로파일을 재적용한다.
+    ///
+    /// CompleteConquest를 재사용하지 않는 이유: 그 경로는 OnConquestCompleted를 발화하고,
+    /// 구독자(ConquestPopulationCoordinator)가 TryIncreaseMaxPopulation으로 인구 보상을 지급한다.
+    /// 복원한 MaxPopulation에는 이미 그 보상이 포함돼 있으므로 인구가 이중 지급된다.
+    ///
+    /// 상태는 덮어쓰지 않고 승격만 한다. ChunkState는 코드 전체에서 Hidden -> Visible -> Conquered
+    /// 한 방향으로만 가므로, Castle.Start가 이미 만들어 둔 홈 청크/주변 가시 영역과 순서가 어긋나도
+    /// 최종 결과가 같아진다(Start끼리는 순서가 보장되지 않는다).
+    /// </summary>
+    public void RestoreTerritory(
+        IReadOnlyList<Vector2Int> visibleChunks,
+        IReadOnlyList<Vector2Int> conqueredChunks,
+        IReadOnlyList<Vector2Int> enhancedChunks)
+    {
+        PromoteChunks(visibleChunks, ChunkState.Visible);
+        PromoteChunks(conqueredChunks, ChunkState.Conquered);
+
+        foreach (Vector2Int chunkCoord in enhancedChunks)
+        {
+            ApplyEnemyEnhancement(chunkCoord);
+        }
+    }
+
+    /// <summary>
+    /// 세이브 복원 전용. 진행 중인 원정을 되돌린다.
+    ///
+    /// OnExpeditionSent를 재발화해 원정 인구 배치를 되살린다. 이 이벤트의 구독자는
+    /// ConquestPopulationCoordinator 하나뿐이고 자원 차감은 호출자(UI) 몫이라 이중 차감이 없다.
+    /// 구독자가 늘어나면 이 전제가 깨지므로, 새 구독자는 반드시 멱등해야 한다.
+    /// 인구 배치가 성공하려면 PopulationManager.RestoreMaxPopulation이 먼저 끝나 있어야 한다.
+    /// </summary>
+    public void RestoreExpeditions(IReadOnlyList<ConquestExpedition> expeditions)
+    {
+        _activeExpeditions.Clear();
+
+        foreach (ConquestExpedition expedition in expeditions)
+        {
+            _activeExpeditions.Add(expedition);
+            OnExpeditionSent?.Invoke(expedition.TargetChunkCoord, expedition.Cost);
+        }
+
+        OnExpeditionsChanged?.Invoke();
+    }
+
+    // 현재 상태가 목표보다 낮은 청크만 골라 한 번에 승격한다.
+    // 청크마다 SetChunkState를 부르면 OnChunkStateChanged 구독자(테두리·안개 렌더러)가
+    // 매번 맵 전체를 다시 계산하므로 bulk 경로를 쓴다(DebugForceConquerAllChunks와 같은 이유).
+    private void PromoteChunks(IReadOnlyList<Vector2Int> chunkCoords, ChunkState targetState)
+    {
+        var chunksToPromote = new List<Vector2Int>();
+
+        foreach (Vector2Int chunkCoord in chunkCoords)
+        {
+            Chunk chunk = _gridMap.GetChunk(chunkCoord);
+
+            if (chunk != null && StateRank(chunk.CurrentState) < StateRank(targetState))
+            {
+                chunksToPromote.Add(chunkCoord);
+            }
+        }
+
+        if (chunksToPromote.Count > 0)
+        {
+            _gridMap.SetChunkStatesBulk(chunksToPromote, targetState);
+        }
+    }
+
+    // ChunkState의 enum 값은 Conquered=0, Visible=1, Hidden=2로 "높은 등급일수록 작은 값"이다.
+    // 값을 그대로 비교하면 승격/강등이 뒤집히므로 명시적 등급으로 바꿔서 비교한다.
+    private static int StateRank(ChunkState state)
+    {
+        return state switch
+        {
+            ChunkState.Conquered => 2,
+            ChunkState.Visible => 1,
+            _ => 0,
+        };
+    }
 }

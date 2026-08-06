@@ -4,4 +4,5 @@
 public interface IStatusEffectTarget
 {
     void ApplyStatus(StatusEffectSO status);
+    void ApplyStatus(StatusEffectSO status, DragonType? attackElement);
 }

@@ -58,7 +58,7 @@ public class CycleLight : MonoBehaviour
     public void Construct(CycleManager cycleManager)
     {
         _cycleManager = cycleManager;
-        _cycleManager.OnDayStart.AddListener(OnDayStart);
+        _cycleManager.OnDayReady.AddListener(OnDayStart);
         _cycleManager.OnNightStart.AddListener(OnNightStart);
     }
 
@@ -66,7 +66,7 @@ public class CycleLight : MonoBehaviour
     {
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.RemoveListener(OnDayStart);
+            _cycleManager.OnDayReady.RemoveListener(OnDayStart);
             _cycleManager.OnNightStart.RemoveListener(OnNightStart);
         }
 

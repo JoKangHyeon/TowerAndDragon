@@ -2,6 +2,18 @@ using System;
 using UnityEngine;
 using UnityEngine.Events;
 
+/// <summary>
+/// 낮/밤 주기의 단일 소유자.
+///
+/// 낮 시작은 네 단계로 나뉜다. 앞 두 단계는 "정산"(실행할 때마다 자원이 변한다)이고,
+/// 뒤 두 단계는 "정산 이후"(몇 번 실행해도 상태가 같다)다:
+///   OnDayStart(생산) → OnDayStartUpkeep(소비) → OnDayReady(파생 상태·연출) → OnDaySettled(관측)
+///
+/// 이 경계가 이어하기 계약이다. 새 낮은 <see cref="StartDay"/>가 네 단계를 모두 태우고,
+/// 이어하기는 <see cref="SeedRestoredDay"/> + <see cref="ResumeDay"/>로 뒤 두 단계만 재생한다 -
+/// 세이브 스냅샷이 이미 정산 이후 상태이므로 정산을 재생하면 낮에 저장→로드를 반복할 때마다
+/// 순생산분이 증식한다(SaveService 계약 2).
+/// </summary>
 public class CycleManager : MonoBehaviour
 {
     public enum CycleState
@@ -9,6 +21,9 @@ public class CycleManager : MonoBehaviour
         Day,
         Night,
     }
+
+    // 게임은 1일차부터 시작한다 - StartDay가 0에서 1로 올린다.
+    private const int FIRST_DAY_NUMBER = 1;
 
     private GameManager _gameManager;
 
@@ -18,6 +33,21 @@ public class CycleManager : MonoBehaviour
     // 일어나도록 분리한 단계. 기존 씬에 직렬화된 인스턴스에는 이 필드의 YAML 항목이 없으므로,
     // 구독 시점(OnEnable/Awake)에 null이 되지 않도록 직접 초기화한다.
     public UnityEvent<int> OnDayStartUpkeep = new();
+
+    // 낮 시작 정산(OnDayStart 생산 + OnDayStartUpkeep 소비)이 모두 끝나 하루가 진행 가능해진 뒤 발화.
+    // 다시 실행해도 게임 상태가 변하지 않는 파생 상태·연출 전용이며, 이어하기 복원도 이 단계만 재생한다.
+    // 씬 YAML에 이 필드 항목이 없으므로 인라인 초기화가 필수다(OnDayStartUpkeep과 같은 이유).
+    public UnityEvent<int> OnDayReady = new();
+
+    // 낮 시작 처리 전부가 끝난 직후 1회. 상태를 관측만 하는 구독자(자동저장) 전용이며,
+    // 여기서 게임 상태를 변경하면 안 된다.
+    // 자동저장이 OnDayStart/OnDayStartUpkeep/OnDayReady에 직접 붙지 않는 이유: 같은 UnityEvent 안에서
+    // 구독자 순서는 등록순(각 오브젝트의 OnEnable 순서)이라 보장되지 않아, 씬 오브젝트 순서를
+    // 바꾸면 저장되는 내용이 조용히 달라진다. "정산이 끝난 경계"라는 시점을 여기서 명시적으로 만든다.
+    // ResumeDay에서는 발화하지 않는다 - 이어하기 직후 같은 상태를 다시 저장할 이유가 없다.
+    // 씬 YAML에 이 필드 항목이 없으므로 인라인 초기화가 필수다(OnDayStartUpkeep과 같은 이유).
+    public UnityEvent<int> OnDaySettled = new();
+
     public UnityEvent<int> OnDayEnd;
     public UnityEvent<int> OnNightStart;
     public UnityEvent<int> OnNightEnd;
@@ -40,8 +70,46 @@ public class CycleManager : MonoBehaviour
     {
         _gameManager.CurrentRun.CurrentCycle += 1;
         CurrentCycle = CycleState.Day;
-        SafeInvoke(OnDayStart, _gameManager.CurrentRun.CurrentCycle);
-        SafeInvoke(OnDayStartUpkeep, _gameManager.CurrentRun.CurrentCycle);
+
+        int day = _gameManager.CurrentRun.CurrentCycle;
+
+        SafeInvoke(OnDayStart, day);          // 생산 정산
+        SafeInvoke(OnDayStartUpkeep, day);    // 소비 정산
+        EnterDay(day);                        // 파생 상태·연출 + OnCycleChanged
+        SafeInvoke(OnDaySettled, day);        // 관측 전용(자동저장)
+    }
+
+    /// <summary>
+    /// 이어하기 1단계. 이벤트 없이 일차·페이즈만 저장값으로 맞춘다.
+    /// 복원 핸들러들이 일관된 일차를 보게 하려면 다른 복원보다 앞서야 한다.
+    /// 저장 스냅샷은 이미 정산이 끝난 상태이므로 <see cref="StartDay"/>가 아니라
+    /// <see cref="ResumeDay"/>로 이어진다 - 일차를 N-1로 시드하지 않는다.
+    /// </summary>
+    public void SeedRestoredDay(int savedDayNumber)
+    {
+        Debug.Assert(
+            savedDayNumber >= FIRST_DAY_NUMBER,
+            $"[CycleManager] 복원할 일차가 유효하지 않습니다: {savedDayNumber}");
+
+        _gameManager.CurrentRun.CurrentCycle = savedDayNumber;
+        CurrentCycle = CycleState.Day;
+    }
+
+    /// <summary>
+    /// 이어하기 2단계. 정산을 건너뛰고 저장된 낮의 파생 상태·연출만 재생한다.
+    /// 저장 시점이 이미 정산 이후이므로 생산·유지비·알 성장·성 회복·이동권을 다시 적용하면
+    /// 낮에 저장→로드를 반복할 때마다 순생산분이 증식한다.
+    /// </summary>
+    public void ResumeDay()
+    {
+        EnterDay(_gameManager.CurrentRun.CurrentCycle);
+    }
+
+    // 정산이 끝난 낮에 "들어가는" 단계. 몇 번 실행해도 게임 상태가 같아야 하며,
+    // StartDay와 ResumeDay가 공유한다.
+    private void EnterDay(int day)
+    {
+        SafeInvoke(OnDayReady, day);
         SafeInvoke(OnCycleChanged, CycleState.Day);
     }
 

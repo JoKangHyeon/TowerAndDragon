@@ -80,14 +80,23 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
             _titleText.text = StringTable.GetString(TITLE_LOC_KEY);
         }
 
+        // 클릭음은 SelectTab이 아니라 여기서 낸다 - SelectTab은 초기 탭 지정에도 호출된다.
         if (_eggTab.Button != null)
         {
-            _eggTab.Button.onClick.AddListener(() => SelectTab(InventoryTab.Egg));
+            _eggTab.Button.onClick.AddListener(() =>
+            {
+                SoundManager.Play(SoundId.UiButtonClick);
+                SelectTab(InventoryTab.Egg);
+            });
         }
 
         if (_dragonTab.Button != null)
         {
-            _dragonTab.Button.onClick.AddListener(() => SelectTab(InventoryTab.Dragon));
+            _dragonTab.Button.onClick.AddListener(() =>
+            {
+                SoundManager.Play(SoundId.UiButtonClick);
+                SelectTab(InventoryTab.Dragon);
+            });
         }
 
         SelectTab(_currentTab);
@@ -175,6 +184,8 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
 
     private void OpenPanel()
     {
+        SoundManager.Play(SoundId.UiWindowOpen);
+
         _isOpen = true;
         _panelTween?.Kill();
 
@@ -189,6 +200,8 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
 
     private void ClosePanel()
     {
+        SoundManager.Play(SoundId.UiWindowClose);
+
         _isOpen = false;
         _panelTween?.Kill();
         _panelTween = _panelRect.DOAnchorPos(_homePos + _closeToOffset, _slideDuration)

@@ -7,6 +7,7 @@ public readonly struct StarvationResult
     public int PopulationLost { get; }
     public int AvailablePopulationLost { get; }
     public int TowerPopulationLost { get; }
+    public int ResearchPopulationLost { get; }
     public int ProductionPopulationLost { get; }
     public int ConquestPopulationLost { get; }
 
@@ -14,6 +15,7 @@ public readonly struct StarvationResult
         int requestedDeaths,
         int availablePopulationLost,
         int towerPopulationLost,
+        int researchPopulationLost,
         int productionPopulationLost,
         int conquestPopulationLost
     )
@@ -21,11 +23,13 @@ public readonly struct StarvationResult
         RequestedDeaths = requestedDeaths;
         AvailablePopulationLost = availablePopulationLost;
         TowerPopulationLost = towerPopulationLost;
+        ResearchPopulationLost = researchPopulationLost;
         ProductionPopulationLost = productionPopulationLost;
         ConquestPopulationLost = conquestPopulationLost;
         PopulationLost =
             availablePopulationLost +
             towerPopulationLost +
+            researchPopulationLost +
             productionPopulationLost +
             conquestPopulationLost;
     }

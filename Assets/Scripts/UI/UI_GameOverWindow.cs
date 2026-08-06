@@ -19,8 +19,11 @@ public class UI_GameOverWindow : MonoBehaviour
     }
 
     // 현재 씬을 다시 로드해 게임을 재시작한다(현재 씬이 Build Settings에 등록돼 있어야 함).
+    // 곧바로 씬이 언로드되므로 클릭음은 거의 들리지 않지만, 무음보다는 낫다.
     private void RestartScene()
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         Scene current = SceneManager.GetActiveScene();
         SceneManager.LoadScene(current.buildIndex);
     }

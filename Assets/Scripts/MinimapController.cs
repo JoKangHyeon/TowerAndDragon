@@ -111,8 +111,17 @@ public class MinimapController : MonoBehaviour
         return Mathf.Clamp(desiredPos, mapCenterAxis - availableHalfRange, mapCenterAxis + availableHalfRange);
     }
 
-    public void ZoomIn() => SetZoom(_currentOrthoSize - _zoomStep);
-    public void ZoomOut() => SetZoom(_currentOrthoSize + _zoomStep);
+    public void ZoomIn()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        SetZoom(_currentOrthoSize - _zoomStep);
+    }
+
+    public void ZoomOut()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        SetZoom(_currentOrthoSize + _zoomStep);
+    }
 
     private void SetZoom(float size) => _currentOrthoSize = Mathf.Clamp(size, _minOrthoSize, _maxOrthoSize);
 }

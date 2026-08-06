@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 #if UNITY_EDITOR
 // --- 자원 노드 디버깅용 (에디터 전용, 빌드 미포함) ---
 // GridMap과 같은 오브젝트에 이 컴포넌트를 붙이면 Play 모드 진입 즉시 각 셀의 AvailableResourceNodes를
-// 색깔 오버레이로 게임 뷰에 표시한다(ChunkDebugger와 동일한 스프라이트 풀링 패턴).
+// 색깔 오버레이로 게임 뷰에 표시한다(ComponentPool 기반 스프라이트 풀링 패턴).
 // 셀 하나가 자원을 여러 개 동시에 가질 수 있어서, 가진 자원들의 고정 색을 평균 블렌드해 조합마다 구분한다.
 // 정확한 값(자원 노드 + 기본 생산량)이 필요하면 Play 모드에서 셀을 좌클릭 - 콘솔에 로그로 남는다.
 [RequireComponent(typeof(GridMap))]

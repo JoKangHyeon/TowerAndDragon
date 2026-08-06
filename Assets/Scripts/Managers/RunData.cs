@@ -10,10 +10,70 @@ public class RunData
     public Dragon CurrentDragon;
     public List<BabyDragon> BabyDragons = new();
     public List<DragonEgg> DragonEggs = new();
+    public List<BossDragonEggReward> BossDragonEggRewards = new();
 
     public UnityEvent OnInventoryChanged = new();
 
     public GridMap Map;
+
+    /// <summary>
+    /// 세이브 복원 전용. 어미용 속성과 새끼용·알 목록을 저장값으로 갈아 끼운다.
+    /// CurrentDragon 인스턴스 자체는 교체하지 않는다 - GameManager.Awake에서 Construct로 걸어 둔
+    /// CycleManager 구독(하루 1회 속성 변경 제한)이 끊기기 때문이다.
+    /// CurrentCycle은 CycleManager.SeedRestoredDay가 담당하므로 여기서 건드리지 않는다.
+    /// </summary>
+    public void RestoreInventory(
+        DragonType dragonType,
+        List<BabyDragon> babyDragons,
+        List<DragonEgg> dragonEggs)
+    {
+        if (CurrentDragon != null)
+        {
+            CurrentDragon.CurrentType = dragonType;
+        }
+
+        BabyDragons.Clear();
+        BabyDragons.AddRange(babyDragons);
+
+        DragonEggs.Clear();
+        DragonEggs.AddRange(dragonEggs);
+
+        OnInventoryChanged?.Invoke();
+    }
+    
+    public bool HasClaimedBossDragonEggReward(int cycleNumber)
+    {
+        if (BossDragonEggRewards == null)
+        {
+            return false;
+        }
+
+        foreach (BossDragonEggReward reward in BossDragonEggRewards)
+        {
+            if (reward != null && reward.CycleNumber == cycleNumber)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public bool TryRecordBossDragonEggReward(int cycleNumber, DragonType dragonType)
+    {
+        if (HasClaimedBossDragonEggReward(cycleNumber))
+        {
+            return false;
+        }
+
+        BossDragonEggRewards ??= new List<BossDragonEggReward>();
+        BossDragonEggRewards.Add(new BossDragonEggReward
+        {
+            CycleNumber = cycleNumber,
+            DragonType = dragonType,
+        });
+        return true;
+    }
 }
 
 
@@ -78,4 +138,11 @@ public class DragonEgg
 {
     public DragonType DragonType;
     public int FedDayCount; 
+}
+
+[Serializable]
+public sealed class BossDragonEggReward
+{
+    public int CycleNumber;
+    public DragonType DragonType;
 }

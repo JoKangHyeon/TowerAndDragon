@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 // 지정한 자원들의 보유량을 아이콘 + 수량(+하루 생산량)으로 표시하는 독립 패널.
 // 용 창의 슬라임 현황(Panel_elementalResourceAmount)처럼, 창 스크립트와 분리된 패널에 붙여 쓴다.
@@ -12,7 +13,8 @@ public class UI_ResourceAmountPanel : MonoBehaviour
     [SerializeField] private ResourceManager _resourceManager;
 
     [Tooltip("하루 예상 생산량 표기용. 각 자원 보유량 옆에 (+생산량)으로 노출한다.")]
-    [SerializeField] private ProductionForecast _productionForecast;
+    [FormerlySerializedAs("_productionForecast")]
+    [SerializeField] private ResourceForecast _resourceForecast;
 
     [Tooltip("하루 생산량 글씨 색(연두색).")]
     [SerializeField] private Color _productionColor = ResourceAmountView.PRODUCTION_COLOR_DEFAULT;
@@ -24,7 +26,7 @@ public class UI_ResourceAmountPanel : MonoBehaviour
 
     private void OnEnable()
     {
-        _view ??= new ResourceAmountView(_resourceManager, _productionForecast, _productionColor, _slots);
+        _view ??= new ResourceAmountView(_resourceManager, _resourceForecast, _productionColor, _slots);
         _view.Subscribe();
         _view.RefreshLayoutNextFrame(this.GetCancellationTokenOnDestroy()).Forget();
     }

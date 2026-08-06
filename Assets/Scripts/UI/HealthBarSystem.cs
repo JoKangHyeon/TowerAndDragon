@@ -102,7 +102,8 @@ public class HealthBarSystem : MonoBehaviour
         }
 
         IReviveProgress reviveSource = entity.GetComponent<IReviveProgress>();
+        IShieldInfo shieldSource = entity.GetComponent<IShieldInfo>();
         SpriteRenderer ownerRenderer = entity.GetComponentInChildren<SpriteRenderer>();
-        bar.Bind(health, reviveSource, ownerRenderer);
+        bar.Bind(health, reviveSource, shieldSource, ownerRenderer);
     }
 }

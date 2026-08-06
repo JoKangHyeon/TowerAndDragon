@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 7726058995466557488}
   - component: {fileID: 3537244527304665564}
   - component: {fileID: 6134282670238042591}
+  - component: {fileID: 3428742967488257856}
   m_Layer: 7
   m_Name: MP_Ground_Healer
   m_TagString: Untagged
@@ -236,3 +237,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterSpriteFlipper
   _isSourceSpriteFacingRight: 1
+--- !u!114 &3428742967488257856
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 345408234635242302}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db75ff8c9dbadb64a8a816c48ac674ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterShield
+  ShieldChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  ShieldBroken:
+    m_PersistentCalls:
+      m_Calls: []

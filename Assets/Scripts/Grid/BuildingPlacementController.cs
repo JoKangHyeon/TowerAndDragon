@@ -39,6 +39,10 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private float _moveHoldDuration = 1f;
 
+    [Tooltip("누른 뒤 이 픽셀 이상 포인터가 움직이면 클릭이 아니라 드래그(카메라 패닝)로 간주해 배치/선택을 무시한다.")]
+    [SerializeField]
+    private float _dragThreshold = 10f;
+
     // 건물 철거 시 건설 비용 중 돌려주는 비율 - 낮밤 사이클이 한 번도 돌지 않은 당일 철거는 전액, 그 외엔 일부만 환급.
     private const float DEMOLISH_REFUND_RATIO_SAME_DAY = 1f;
     private const float DEMOLISH_REFUND_RATIO_LATE = 0.7f;
@@ -50,6 +54,13 @@ public class BuildingPlacementController : MonoBehaviour
 
     private float _holdTimer;
     private Vector3Int? _holdCoord;
+
+    private Vector2 _pressScreenPosition;
+    // 이 누름이 이 컨트롤러의 것으로 유효한가. UI 위에서 시작했거나, 억제 중이라 누름 프레임을
+    // 아예 보지 못한 누름은 뗄 때 확정되지 않아야 한다.
+    private bool _isPressValid;
+    // 롱프레스가 이 누름을 이동 모드 진입으로 이미 소비했다. 뗄 때 확정을 한 번 더 하지 않도록 막는다.
+    private bool _longPressConsumedPress;
 
     // 클릭으로 선택이 확정될 때마다 발화한다(선택 해제면 null). 같은 건물을 다시 눌러도 발화하므로
     // SelectedBuilding 폴링과 달리 "재클릭"을 놓치지 않는다.
@@ -137,14 +148,22 @@ public class BuildingPlacementController : MonoBehaviour
     {
         RefreshSelectedRangeIndicator();
 
-        // 다른 모드(점령 등)가 클릭을 점유 중이면 건물 배치/선택 입력을 처리하지 않는다.
+        // 다른 모드(점령·스킬 타겟팅 등)가 클릭을 점유 중이면 건물 배치/선택 입력을 처리하지 않는다.
         if (InputSuppressed)
+        {
+            // 억제 중에 진행된 누름은 이 컨트롤러의 것이 아니다 - 억제가 풀린 뒤 뗄 때
+            // 남은 상태로 확정되지 않도록 여기서 지운다.
+            _isPressValid = false;
+            _holdCoord = null;
             return;
+        }
 
+        // HandleLongPressMove가 먼저다 - 누름 프레임에 _longPressConsumedPress를 초기화해야
+        // 뗄 때 HandlePlacementInput이 이번 누름의 값을 읽는다.
+        HandleLongPressMove();
         HandlePlacementInput();
         HandleBuildCancelInput();
         HandleCancelInput();
-        HandleLongPressMove();
         HandleRotateInput();
     }
 
@@ -308,8 +327,16 @@ public class BuildingPlacementController : MonoBehaviour
     // (짧게 누르고 떼면 기존 클릭-선택 동작으로 처리되므로 서로 방해하지 않는다.)
     private void HandleLongPressMove()
     {
+        if (_placeAction == null)
+            return;
+
+        // 새 누름이 시작되면 직전 누름의 소비 표시를 지운다. 아래 조기 반환보다 앞이어야
+        // 배치 미리보기 중에 시작된 누름도 정상적으로 초기화된다.
+        if (_placeAction.action.WasPressedThisFrame())
+            _longPressConsumedPress = false;
+
         // 이미 배치/이동 중이면 롱프레스를 추적하지 않는다.
-        if (_selectedBuilding != null || _moveSourceCoord.HasValue || _placeAction == null)
+        if (_selectedBuilding != null || _moveSourceCoord.HasValue)
         {
             _holdCoord = null;
             return;
@@ -361,12 +388,38 @@ public class BuildingPlacementController : MonoBehaviour
             SelectExistingBuildingAt(_holdCoord.Value);
             EnterMoveMode();
             _holdCoord = null;
+
+            // 이 누름은 여기서 소비했다 - 손을 뗄 때 배치 확정까지 일어나면 이동이 곧바로 확정된다.
+            _longPressConsumedPress = true;
         }
     }
 
+    // 판정은 뗄 때 한다(점령·인구 모드와 같은 형태) - 누를 때 확정하면 좌드래그 카메라 패닝이
+    // 항상 배치를 먼저 확정시키고, 같은 누름을 롱프레스가 이중으로 처리한다.
     private void HandlePlacementInput()
     {
-        if (_placeAction == null || !_placeAction.action.WasPerformedThisFrame())
+        if (_placeAction == null)
+            return;
+
+        // 누른 순간의 포인터 위치와, 그 누름이 이 컨트롤러 것인지를 기록해 둔다.
+        if (_placeAction.action.WasPressedThisFrame())
+        {
+            _pressScreenPosition = PointerScreenPosition();
+            _isPressValid = EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject();
+        }
+
+        if (!_placeAction.action.WasReleasedThisFrame())
+            return;
+
+        bool wasPressValid = _isPressValid;
+        _isPressValid = false;
+
+        // 롱프레스가 이미 이동 모드 진입으로 소비한 누름은 확정하지 않는다.
+        if (!wasPressValid || _longPressConsumedPress)
+            return;
+
+        // 누른 지점에서 임계값 이상 움직였으면 클릭이 아니라 카메라 패닝으로 보고 무시한다.
+        if (Vector2.Distance(_pressScreenPosition, PointerScreenPosition()) > _dragThreshold)
             return;
 
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
@@ -374,6 +427,9 @@ public class BuildingPlacementController : MonoBehaviour
 
         ConfirmAtPointer();
     }
+
+    private static Vector2 PointerScreenPosition() =>
+        Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
 
     public void ConfirmAtPointer()
     {
@@ -442,6 +498,8 @@ public class BuildingPlacementController : MonoBehaviour
         if (_resourceManager != null)
             _resourceManager.Spend(cost);
 
+        SoundManager.Play(SoundId.BuildPlace);
+
         CancelBuildMode();
         return true;
     }
@@ -467,6 +525,11 @@ public class BuildingPlacementController : MonoBehaviour
         Vector3Int prevCoord = _moveSourceCoord.Value;
         Building building = _gridMap.GetBuildingAt(prevCoord);
         if (building == null)
+            return false;
+
+        // 낮에 이동 모드로 들어간 뒤 밤이 되어도 확정은 막는다 - 진입 시점(EnterMoveMode)에만
+        // 검사하면 모드를 켠 채 밤을 맞아 이동을 확정할 수 있다. TryConstructAt과 같은 기준.
+        if (!CanMoveNow(building))
             return false;
 
         if (!_gridMap.MoveBuilding(prevCoord, anchor, _mouseSelectController.PreviewRotationSteps))

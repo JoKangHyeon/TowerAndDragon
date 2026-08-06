@@ -118,6 +118,12 @@ public class UI_MainCastleWindow : MonoBehaviour
     private Vector2 _homePos;
     private Tween _panelTween;
 
+    // 창이 열려 있는지(또는 열리는 중인지). _windowRoot.activeSelf로 판정하면 닫힘 트윈이
+    // OnComplete에서야 SetActive(false)를 하므로 닫히는 중에도 "열려 있다"로 읽혀,
+    // 그 사이의 재선택이 OpenPanel()(= 닫힘 트윈 Kill)을 건너뛰고 창이 꺼진 채 고착된다.
+    // UI_BabyDragonManageWindow와 같은 방식으로 상태를 직접 들고 있는다.
+    private bool _isOpen;
+
     private Castle _selectedCastle;
     private bool _wasInputSuppressed;
 
@@ -148,7 +154,7 @@ public class UI_MainCastleWindow : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.AddListener(HandleDayStart);
+            _cycleManager.OnDayReady.AddListener(HandleDayStart);
             _cycleManager.OnCycleChanged.AddListener(HandleCycleChanged);
         }
     }
@@ -162,7 +168,7 @@ public class UI_MainCastleWindow : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
+            _cycleManager.OnDayReady.RemoveListener(HandleDayStart);
             _cycleManager.OnCycleChanged.RemoveListener(HandleCycleChanged);
         }
     }
@@ -205,7 +211,7 @@ public class UI_MainCastleWindow : MonoBehaviour
             CurrentDragon != null &&
             !_wasInputSuppressed;
 
-        bool isOpen = _windowRoot.activeSelf;
+        bool isOpen = _isOpen;
 
         if (shouldOpen && !isOpen)
         {
@@ -226,6 +232,7 @@ public class UI_MainCastleWindow : MonoBehaviour
     // 씬에 미리 세팅해 둔 위치(_homePos)에서 슬라이드 인 시킨다(UI_ConquestWindow.OpenPanel과 동일 패턴).
     private void OpenPanel()
     {
+        _isOpen = true;
         _panelTween?.Kill();
 
         _windowRoot.SetActive(true);
@@ -237,6 +244,7 @@ public class UI_MainCastleWindow : MonoBehaviour
 
     private void Close()
     {
+        _isOpen = false;
         _panelTween?.Kill();
         _panelTween = _panelRect.DOAnchorPos(_homePos + _closeToOffset, _slideDuration)
             .SetEase(Ease.InCubic)
@@ -248,17 +256,22 @@ public class UI_MainCastleWindow : MonoBehaviour
     // (UI_PopulationAllocationWindow.CloseWindow와 동일).
     private void CloseWindow()
     {
+        SoundManager.Play(SoundId.UiWindowClose);
         _buildingPlacementController?.Deselect();
     }
 
     public void SelectDragonType(DragonType dragonType)
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         _currentSelectedType = dragonType;
         Render();
     }
 
     public void ApplyDragonType()
     {
+        SoundManager.Play(SoundId.UiButtonClick);
+
         Dragon dragon = CurrentDragon;
         if (dragon == null)
         {
@@ -284,6 +297,7 @@ public class UI_MainCastleWindow : MonoBehaviour
     }
 
     // 스킬트리가 용 창의 어미용 탭으로 옮겨갔으므로 용 창을 연다.
+    // 클릭음을 내지 않는다 - 창을 여닫는 제스처라 대상 창(UI_DragonWindow)이 열림/닫힘음을 낸다.
     public void OpenDragonSkillTree()
     {
         if (_dragonWindow == null)

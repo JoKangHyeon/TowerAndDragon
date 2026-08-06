@@ -42,6 +42,9 @@ public static class StringTable
         }
     }
 
+    // 선택 가능한 언어 코드 목록(Localization 폴더의 csv 파일 이름). 설정 창의 언어 드롭다운이 읽는다.
+    public static IReadOnlyList<string> AvailableLanguages => LocalizationList;
+
     public const string c_TableLocation = "";
     public const string c_DefaultLanguage = "en_us";
     public const string c_LanguageFolder = "Localization";
@@ -98,8 +101,6 @@ public static class StringTable
             Debug.LogError("LANG LOAD FAILED : " + path);
             return;
         }
-
-        Debug.Log(result);
 
         var list = LoadCsv<Data>(result);
         foreach (var item in list)

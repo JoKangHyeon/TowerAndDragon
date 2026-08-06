@@ -46,7 +46,10 @@ public class GameSpeedManager : MonoBehaviour
     // 배속 버튼이 꺼져 있을 때(x1) 라벨에 보여줄 "다음에 진입할" 배율. 배속 버튼 라벨은 항상
     // 순환 배열의 첫 배율을 정적으로 보여주는 게 아니라, 현재 진행 중이면 그 배율을, 아니면
     // 첫 배율을 보여준다(UI_SpeedSettingWindow.Render 참고).
-    public float FirstFastScale => _fastScales.Length > 0 ? _fastScales[0] : NORMAL_SCALE;
+    public float FirstFastScale => HasFastScales ? _fastScales[0] : NORMAL_SCALE;
+
+    // 배속 배열이 인스펙터에서 비워지면(씬 구성 실수) 배속 기능 자체를 쓸 수 없다.
+    private bool HasFastScales => _fastScales != null && _fastScales.Length > 0;
 
     private void Awake()
     {
@@ -64,7 +67,7 @@ public class GameSpeedManager : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.AddListener(HandleDayStart);
+            _cycleManager.OnDayReady.AddListener(HandleDayStart);
         }
 
         if (_togglePauseAction != null)
@@ -83,7 +86,7 @@ public class GameSpeedManager : MonoBehaviour
 
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
+            _cycleManager.OnDayReady.RemoveListener(HandleDayStart);
         }
 
         // timeScale은 씬 로드를 넘어 유지되므로, 재시작(SceneManager.LoadScene) 시 정지 상태가
@@ -140,6 +143,12 @@ public class GameSpeedManager : MonoBehaviour
     {
         if (_isSpeedLocked)
         {
+            return;
+        }
+
+        if (!HasFastScales)
+        {
+            Debug.LogError("[GameSpeedManager] FastScales가 비어 있어 배속을 사용할 수 없습니다.", this);
             return;
         }
 

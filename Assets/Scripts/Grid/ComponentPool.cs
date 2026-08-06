@@ -3,7 +3,7 @@ using UnityEngine;
 
 // 인덱스 기반으로 자라나는 컴포넌트 풀 - 필요한 만큼 Instantiate하고,
 // 이번 갱신에서 쓰지 않은 뒷부분은 비활성화한다.
-// MouseSelectController(하이라이트 스프라이트), ChunkDebugger(청크 색상 오버레이),
+// MouseSelectController(하이라이트 스프라이트)와
 // ConqueredChunkBorderRenderer(점령 테두리 LineRenderer)가 각자 구현하던 풀링 로직을 통합했다.
 public class ComponentPool<T> where T : Component
 {

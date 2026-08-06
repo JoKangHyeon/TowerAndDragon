@@ -15,6 +15,7 @@ using UnityEngine.UI;
 public class UI_DragonSkillWindow : MonoBehaviour
 {
     [Header("Dependencies")]
+    [SerializeField] private GameManager _gameManager;
     [SerializeField] private DragonTreeManager _dragonTreeManager;
     [SerializeField] private ResourceManager _resourceManager;
 
@@ -48,6 +49,11 @@ public class UI_DragonSkillWindow : MonoBehaviour
 
     private bool _built;
 
+    // 낮/밤 이벤트용. 별도 SerializeField를 두지 않고 이미 배선된 _gameManager에서 받아 캐시한다
+    // (GameManager.CycleManager는 SerializeField 기반 접근자라 Awake 시점부터 유효하다).
+    // 구독과 해제가 반드시 같은 인스턴스를 보게 하려고 필드로 들고 있는다.
+    private CycleManager _cycleManager;
+
     private struct EdgeView
     {
         public RectTransform Transform;
@@ -57,6 +63,13 @@ public class UI_DragonSkillWindow : MonoBehaviour
 
     private void Awake()
     {
+        if (_gameManager != null)
+        {
+            _cycleManager = _gameManager.CycleManager;
+        }
+
+        // ExitButton/blocker/헤더는 독립 창이던 시절의 것이라 제거했다 - 여닫기는 UI_DragonWindow 담당.
+
         if (_detailsPanel != null)
         {
             _detailsPanel.Construct(_dragonTreeManager, _resourceManager, RefreshAll);
@@ -68,6 +81,25 @@ public class UI_DragonSkillWindow : MonoBehaviour
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.NodeUnlocked.AddListener(HandleNodeUnlocked);
+        }
+
+        if (_gameManager != null && _gameManager.CurrentRun != null)
+        {
+            _gameManager.CurrentRun.OnInventoryChanged.AddListener(HandleInventoryChanged);
+        }
+
+        // 노드 상태는 자원 보유량과 낮/밤에도 걸리므로(코스트 부족 → 해금 버튼 비활성, 밤 → 해금 불가)
+        // 창이 열려 있는 동안 그 변화도 반영해야 한다 - UI_ResearchWindow.OnEnable과 같은 구성이다.
+        // OnInventoryChanged는 알·새끼용 인벤토리 전용 이벤트라 이 둘을 대신하지 못한다.
+        if (_resourceManager != null)
+        {
+            _resourceManager.ResourceChanged.AddListener(HandleResourceChanged);
+        }
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnDayReady.AddListener(HandleCycleProgressed);
+            _cycleManager.OnNightEnd.AddListener(HandleCycleProgressed);
         }
 
         // 어미용 탭이 켜질 때(부모 Panel_MotherDragon의 SetActive) 여기가 진입점이 된다 -
@@ -82,6 +114,22 @@ public class UI_DragonSkillWindow : MonoBehaviour
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.NodeUnlocked.RemoveListener(HandleNodeUnlocked);
+        }
+
+        if (_gameManager != null && _gameManager.CurrentRun != null)
+        {
+            _gameManager.CurrentRun.OnInventoryChanged.RemoveListener(HandleInventoryChanged);
+        }
+
+        if (_resourceManager != null)
+        {
+            _resourceManager.ResourceChanged.RemoveListener(HandleResourceChanged);
+        }
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnDayReady.RemoveListener(HandleCycleProgressed);
+            _cycleManager.OnNightEnd.RemoveListener(HandleCycleProgressed);
         }
 
         // 상세 팝업(Popup_SkillDetailsPanel)은 이 스크롤뷰가 아니라 Dragon_window 루트의 자식이라
@@ -240,6 +288,11 @@ public class UI_DragonSkillWindow : MonoBehaviour
     }
 
     private void HandleNodeUnlocked(ProgressionNodeData node) => RefreshAll();
+    // 속성 링(_activeAttributeRing)은 제거했다 - 노드 상태가 ActiveAttribute에 걸리지 않아
+    // 이 창이 속성 변경을 구독할 이유가 없다(속성 표시는 UI_DragonWindow 좌측 프레임 담당).
+    private void HandleInventoryChanged() => RefreshAll();
+    private void HandleResourceChanged(ResourceType type, int amount) => RefreshAll();
+    private void HandleCycleProgressed(int value) => RefreshAll();
 
     private void RefreshAll()
     {

@@ -11,6 +11,11 @@ public class TowerAttack : MonoBehaviour
     private ITowerStaffing _staffing;
     private ITowerStatMultiplierQuery _statMultiplierQuery;
     private ITowerHitStatusQuery _hitStatusQuery;
+
+    // 지역(지형) 페널티 조회원. ITowerStatMultiplierQuery는 TowerData만 받아 타워 종류 단위로만
+    // 판정하므로, 같은 종류라도 서 있는 지역에 따라 달라지는 이 페널티는 담을 수 없다.
+    // TerrainPenaltyCoordinator가 주입하며, 미배선 씬에서는 null로 남아 페널티 없이 동작한다.
+    private IBuildingTerrainPenaltyQuery _terrainPenaltyQuery;
     private Tower _ownerTower;
     private TowerAuraSystem _auraSystem;
     private float _nextAttackTime;
@@ -53,7 +58,8 @@ public class TowerAttack : MonoBehaviour
                 : 1f;
 
             return globalMultiplier *
-                ResolveAuraModifiers().AttackSpeedMultiplier;
+                ResolveAuraModifiers().AttackSpeedMultiplier *
+                ResolveTerrainModifiers().AttackSpeedMultiplier;
         }
     }
 
@@ -99,6 +105,12 @@ public class TowerAttack : MonoBehaviour
     public void SetHitStatusQuery(ITowerHitStatusQuery hitStatusQuery)
     {
         _hitStatusQuery = hitStatusQuery;
+    }
+
+    public void SetTerrainPenaltyQuery(
+        IBuildingTerrainPenaltyQuery terrainPenaltyQuery)
+    {
+        _terrainPenaltyQuery = terrainPenaltyQuery;
     }
 
     private void Update()
@@ -220,6 +232,16 @@ public class TowerAttack : MonoBehaviour
         return _auraSystem.ResolveModifiers(_ownerTower);
     }
 
+    private TerrainPenaltyModifiers ResolveTerrainModifiers()
+    {
+        if (_terrainPenaltyQuery == null || _ownerTower == null)
+        {
+            return TerrainPenaltyModifiers.Neutral;
+        }
+
+        return _terrainPenaltyQuery.Resolve(_ownerTower);
+    }
+
     /// <summary>
     /// 사거리 내 대상에 공격을 적용한다.
     /// 투사체가 설정된 경우 투사체가 피해를 운반해 명중 시점에 적용하고,
@@ -231,6 +253,8 @@ public class TowerAttack : MonoBehaviour
         {
             Debug.Log($"[TowerAttack] {name} → {_target.name} 공격 발사!", this);
         }
+
+        SoundManager.Play(SoundId.TowerFire);
 
         float globalDamageMultiplier = _statMultiplierQuery != null
             ? _statMultiplierQuery.GetDamageMultiplier(_towerData)
@@ -250,11 +274,17 @@ public class TowerAttack : MonoBehaviour
             ? new[] { hitStatus }
             : null;
 
+        DragonType? attackElement =
+            _towerData is IElementalAttackData elementalAttackData
+                ? elementalAttackData.DragonType
+                : null;
+
         AttackContext context = new AttackContext(
-            gameObject, 
-            damageModifier, 
+            gameObject,
+            damageModifier,
             extraStatuses,
-            _targetLayers);
+            _targetLayers,
+            attackElement);
 
         if(_animator != null)
         {

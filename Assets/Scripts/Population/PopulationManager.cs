@@ -126,6 +126,18 @@ public class PopulationManager : MonoBehaviour
         PopulationChanged?.Invoke(CurrentState);
     }
 
+    /// <summary>
+    /// 세이브 복원 전용. 총 인구를 저장된 절대값으로 덮어쓴다.
+    /// TryIncreaseMaxPopulation은 증분이라 인스펙터 초기값이 0이 아닌 경우 절대값을 만들 수 없다.
+    /// _allocations는 건드리지 않는다 - 배치는 건물 인스턴스에 종속돼 있고, 원정 인구 배치는
+    /// ConquestManager.RestoreExpeditions가 OnExpeditionSent를 재발화해 되살린다.
+    /// </summary>
+    public void RestoreMaxPopulation(int maxPopulation)
+    {
+        _maxPopulation = Math.Max(0, maxPopulation);
+        NotifyPopulationChanged();
+    }
+
     public bool TryIncreaseMaxPopulation (int amount)
     {
         if (amount <= 0)
@@ -139,7 +151,7 @@ public class PopulationManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 기아 사망을 가용, 타워, 생산, 점령 인구 순서로 적용한다.
+    /// 기아 사망을 가용, 타워, 연구, 생산, 점령 인구 순서로 적용한다.
     /// 각 분류 안에서는 등록된 할당 순서대로 한 명씩 순환하여 감소시킨다.
     /// </summary>
     public bool TryApplyStarvation(
@@ -167,6 +179,12 @@ public class PopulationManager : MonoBehaviour
         );
         remainingDeaths -= towerPopulationLost;
 
+        int researchPopulationLost = ReduceAssignedPopulation(
+            PopulationAssignmentType.Research,
+            remainingDeaths
+        );
+        remainingDeaths -= researchPopulationLost;
+
         int productionPopulationLost = ReduceAssignedPopulation(
             PopulationAssignmentType.Production,
             remainingDeaths
@@ -182,6 +200,7 @@ public class PopulationManager : MonoBehaviour
             requestedDeaths,
             availablePopulationLost,
             towerPopulationLost,
+            researchPopulationLost,
             productionPopulationLost,
             conquestPopulationLost
         );

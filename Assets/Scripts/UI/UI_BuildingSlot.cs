@@ -50,7 +50,11 @@ public class UI_BuildingSlot : MonoBehaviour
 
         _button = GetComponent<Button>();
         _button.onClick.RemoveAllListeners();
-        _button.onClick.AddListener(() => _onSelected?.Invoke(_prefab));
+        _button.onClick.AddListener(() =>
+        {
+            SoundManager.Play(SoundId.UiButtonClick);
+            _onSelected?.Invoke(_prefab);
+        });
 
         string displayName = ResolveName(prefab);
         if (_nameText != null && !string.IsNullOrEmpty(displayName))

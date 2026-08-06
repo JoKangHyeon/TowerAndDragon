@@ -116,7 +116,7 @@ public class AttackSO : ScriptableObject
         {
             if (status != null)
             {
-                statusTarget.ApplyStatus(status);
+                statusTarget.ApplyStatus(status, context.AttackElement);
             }
         }
     }

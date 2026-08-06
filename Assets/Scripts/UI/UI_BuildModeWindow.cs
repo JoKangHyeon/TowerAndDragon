@@ -96,6 +96,8 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         {
             _activeButtons.Remove.onClick.AddListener(() =>
             {
+                SoundManager.Play(SoundId.UiButtonClick);
+
                 if (_buildingPlacementController != null)
                 {
                     _buildingPlacementController.RemoveSelectedBuilding();
@@ -107,6 +109,8 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         {
             _activeButtons.Move.onClick.AddListener(() =>
             {
+                SoundManager.Play(SoundId.UiButtonClick);
+
                 if (_buildingPlacementController != null)
                 {
                     _buildingPlacementController.EnterMoveMode();
@@ -119,7 +123,12 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
             int index = i;
             if (_filterTabs[i].Button != null)
             {
-                _filterTabs[i].Button.onClick.AddListener(() => SelectFilter(index));
+                // 클릭음은 SelectFilter가 아니라 여기서 낸다 - SelectFilter는 초기 탭 지정에도 호출된다.
+                _filterTabs[i].Button.onClick.AddListener(() =>
+                {
+                    SoundManager.Play(SoundId.UiButtonClick);
+                    SelectFilter(index);
+                });
             }
         }
 
@@ -208,6 +217,7 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     // BuildMode 버튼 토글. 열 때는 UIManager를 거쳐 다른 배타 모드(점령 등)를 정리한다.
     public void ToggleFromEntryPoint()
     {
+        // 클릭음을 내지 않는다 - 창을 여닫는 제스처는 OpenBuildPanel/CloseBuildPanel의 창음만 낸다.
         EnsureInitialized();
 
         if (_isOpen)
@@ -227,6 +237,8 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     private void OpenBuildPanel()
     {
         EnsureInitialized();
+
+        SoundManager.Play(SoundId.UiWindowOpen);
 
         _isOpen = true;
         _panelTween?.Kill();
@@ -264,6 +276,8 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     private void CloseBuildPanel()
     {
         EnsureInitialized();
+
+        SoundManager.Play(SoundId.UiWindowClose);
 
         _isOpen = false;
         if (_buildingPlacementController != null)

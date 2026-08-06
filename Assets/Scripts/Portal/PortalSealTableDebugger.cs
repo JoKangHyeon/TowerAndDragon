@@ -27,7 +27,7 @@ public class PortalSealTableDebugger : MonoBehaviour
     private readonly Dictionary<Vector3Int, PortalDirection> _lookup = new();
 
     // 개발용 디버그 기즈모 - 방향별 저작 셀을 아이소메트릭 타일 모양(마름모)의 색 오버레이 + 좌표 라벨로 표시
-    // (ChunkDebugger.OnDrawGizmos와 동일한 패턴, 다만 축 정렬 큐브 대신 실제 타일 모양을 그린다).
+    // (축 정렬 큐브가 아니라 실제 타일 모양을 그린다).
     private void OnDrawGizmos()
     {
         GridMap gridMap = GetComponent<GridMap>();

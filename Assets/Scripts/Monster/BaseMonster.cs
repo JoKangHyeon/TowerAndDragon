@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.Splines;
 
@@ -57,6 +56,16 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget
     public void ApplyStatus(StatusEffectSO status)
     {
         _statusReceiver?.Apply(status);
+    }
+
+    public void ApplyStatus(StatusEffectSO status, DragonType? attackElement)
+    {
+        if (_data != null && !_data.AcceptsElement(attackElement))
+        {
+            return;
+        }
+
+        _statusReceiver?.Apply(status, attackElement);
     }
 
     // MonsterStatusReceiver가 슬로우 상태 변화 시 호출한다 - 상태이상 배율은 기준 속도에만 곱한다.
@@ -132,6 +141,11 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget
             return;
         }
 
+        if (_data != null && !_data.AcceptsElement(damage.Element))
+        {
+            return;
+        }
+
         Debug.Log(
             $"[BaseMonster] {name}이 공격받았습니다. 피해량: {damage.Amount}. 체력 : {_health.CurrentHealth}",
             this);
@@ -159,6 +173,22 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget
         }
 
         _health.Heal(amount);
+    }
+
+    public bool GrantShield (float amount)
+    {
+        if (IsDead || _shield == null || _shield.HasShield)
+        {
+            return false;
+        }
+
+        _shield.Initialize(amount);
+        return true;
+    }
+
+    public void RevokeGrantedShield()
+    {
+        _shield?.Clear();
     }
 
     public void HaltMovement()

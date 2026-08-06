@@ -13,7 +13,7 @@ public sealed class StatusAttackEffectSO : AttackEffectSO
     {
         if (_status != null && target is IStatusEffectTarget statusTarget)
         {
-            statusTarget.ApplyStatus(_status);
+            statusTarget.ApplyStatus(_status, context.AttackElement);
         }
     }
 }

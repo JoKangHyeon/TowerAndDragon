@@ -5,28 +5,26 @@ using UnityEngine;
 // GridMap.YieldMultiplierQuery 슬롯 하나로 합성한다. 소스 간 곱연산.
 public sealed class ChunkYieldMultiplierComposite : MonoBehaviour, IChunkYieldMultiplierQuery
 {
-    private readonly List<IChunkYieldMultiplierQuery> _sources = new();
+    private readonly RefCountedSourceSet<IChunkYieldMultiplierQuery> _sources = new();
 
     public void Register(IChunkYieldMultiplierQuery source)
     {
-        if (source != null && !_sources.Contains(source))
-        {
-            _sources.Add(source);
-        }
+        _sources.Register(source);
     }
 
     public void Unregister(IChunkYieldMultiplierQuery source)
     {
-        _sources.Remove(source);
+        _sources.Unregister(source);
     }
 
     public float GetYieldMultiplier(Vector2Int chunkCoord, ResourceType resourceType)
     {
         float multiplier = 1f;
+        IReadOnlyList<IChunkYieldMultiplierQuery> sources = _sources.Sources;
 
-        foreach (IChunkYieldMultiplierQuery source in _sources)
+        for (int i = 0; i < sources.Count; i++)
         {
-            multiplier *= source.GetYieldMultiplier(chunkCoord, resourceType);
+            multiplier *= sources[i].GetYieldMultiplier(chunkCoord, resourceType);
         }
 
         return multiplier;

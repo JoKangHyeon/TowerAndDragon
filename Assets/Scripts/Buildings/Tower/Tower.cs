@@ -31,7 +31,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     public TowerData Data => _towerData;
     public override IReadOnlyList<ResourceAmount> BuildCost => _towerData != null ? _towerData.BuildCost : base.BuildCost;
     public override int PopulationCapacity => _towerData != null ? _towerData.PopulationCapacity : base.PopulationCapacity;
-    public MonsterTargetType TargetType => MonsterTargetType.Tower;
+    public virtual MonsterTargetType TargetType => MonsterTargetType.Tower;
 
     // 인구로 가동하지 않는 타워(새끼용 등)는 false로 override한다.
     public virtual bool RequiresPopulation => true;
@@ -112,6 +112,18 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         {
             _animator.SetTrigger(HIT_ANIM_KEY);
         }
+    }
+
+
+    // 타워의 회복
+    public void Heal (float amount)
+    {
+        if (!_isInitialized || IsDead || IsReviving)
+        {
+            return;
+        }
+
+        _health.Heal(amount);
     }
 
     private void HandleDisabled()

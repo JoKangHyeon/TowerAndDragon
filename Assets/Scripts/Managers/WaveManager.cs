@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Splines;
 using Cysharp.Threading.Tasks;
 
 /// <summary>
@@ -57,7 +58,7 @@ public class WaveManager : MonoBehaviour
                 this);
         }
 
-        List<RuntimePortalWave> runtimeWaves = new();
+        List<PortalRoutePlan> portalPlans = new();
 
         foreach (PortalWaveData portalWave in waveDefinition.PortalWaves)
         {
@@ -77,10 +78,18 @@ public class WaveManager : MonoBehaviour
                 continue;
             }
 
-            runtimeWaves.Add(BuildRuntimePortalWave(portalWave, portal));
+            PortalRoutePlan portalPlan = WaveRoutePlanner.BuildPortalPlan(
+                portalWave,
+                portal,
+                _enemyEnhancementManager);
+
+            if (portalPlan.HasSpawns)
+            {
+                portalPlans.Add(portalPlan);
+            }
         }
 
-        LogWaveComposition(waveDefinition, runtimeWaves);
+        LogWaveComposition(waveDefinition, portalPlans);
         _spawnedMonsters.Clear();
 
         _waveCancellation = CancellationTokenSource.CreateLinkedTokenSource(
@@ -93,16 +102,21 @@ public class WaveManager : MonoBehaviour
 
         try
         {
-            List<UniTask> portalTasks = new();
+            List<UniTask> routeTasks = new();
 
-            foreach (RuntimePortalWave runtimeWave in runtimeWaves)
+            // 루트마다 독립적으로 진행한다. 포탈 지연 위에 루트 지연이 더해진다.
+            foreach (PortalRoutePlan portalPlan in portalPlans)
             {
-                portalTasks.Add(SpawnPortalWaveAsync(
-                    runtimeWave,
-                    currentCancellation.Token));
+                foreach (RouteSpawnPlan routePlan in portalPlan.Routes)
+                {
+                    routeTasks.Add(SpawnRouteAsync(
+                        portalPlan,
+                        routePlan,
+                        currentCancellation.Token));
+                }
             }
 
-            await UniTask.WhenAll(portalTasks);
+            await UniTask.WhenAll(routeTasks);
             _allSpawnCompleted?.Invoke();
 
             await UniTask.WaitUntil(
@@ -219,74 +233,38 @@ public class WaveManager : MonoBehaviour
         return false;
     }
 
-    private RuntimePortalWave BuildRuntimePortalWave(
-        PortalWaveData portalWave,
-        Portal portal)
-    {
-        IReadOnlyList<EnemyEnhancementProfileSO> profiles =
-            _enemyEnhancementManager != null
-                ? _enemyEnhancementManager.GetProfiles(portal.TerrainType)
-                : Array.Empty<EnemyEnhancementProfileSO>();
-
-        List<RuntimeSpawnGroup> runtimeGroups = new();
-        HashSet<MonsterData> monstersWithAllocatedSpawnBonus = new();
-
-        foreach (SpawnGroupData spawnGroup in portalWave.SpawnGroups)
-        {
-            EnemyEnhancementSnapshot enhancement =
-                EnemyEnhancementResolver.Resolve(profiles, spawnGroup.MonsterData);
-
-            int spawnCountBonus = monstersWithAllocatedSpawnBonus.Add(
-                spawnGroup.MonsterData)
-                    ? enhancement.SpawnCountBonus
-                    : 0;
-
-            int spawnCount = Mathf.Max(
-                0,
-                spawnGroup.SpawnCount + spawnCountBonus);
-
-            float spawnInterval = Mathf.Max(
-                0f,
-                enhancement.SpawnInterval.Apply(spawnGroup.SpawnInterval));
-
-            runtimeGroups.Add(new RuntimeSpawnGroup(
-                spawnGroup,
-                enhancement,
-                spawnCount,
-                spawnInterval));
-        }
-
-        return new RuntimePortalWave(portalWave, portal, runtimeGroups);
-    }
-
-    private async UniTask SpawnPortalWaveAsync(
-        RuntimePortalWave runtimeWave,
+    private async UniTask SpawnRouteAsync(
+        PortalRoutePlan portalPlan,
+        RouteSpawnPlan routePlan,
         CancellationToken token)
     {
-        if (runtimeWave.Source.StartDelay > 0f)
+        float startDelay = portalPlan.Source.StartDelay + routePlan.StartDelay;
+
+        if (startDelay > 0f)
         {
             await UniTask.Delay(
-                TimeSpan.FromSeconds(runtimeWave.Source.StartDelay),
+                TimeSpan.FromSeconds(startDelay),
                 cancellationToken: token);
         }
 
-        foreach (RuntimeSpawnGroup spawnGroup in runtimeWave.SpawnGroups)
+        foreach (RuntimeSpawnGroup spawnGroup in routePlan.SpawnGroups)
         {
             token.ThrowIfCancellationRequested();
 
-            await SpawnGroupAsync(spawnGroup, runtimeWave.Portal, token);
+            await SpawnGroupAsync(spawnGroup, portalPlan.Portal, routePlan.Path, token);
         }
     }
 
     private async UniTask SpawnGroupAsync(
         RuntimeSpawnGroup runtimeGroup,
         Portal portal,
+        SplineContainer path,
         CancellationToken token)
     {
-        if (runtimeGroup.Source.DelayBeforeGroup > 0f)
+        if (runtimeGroup.DelayBeforeGroup > 0f)
         {
             await UniTask.Delay(
-                TimeSpan.FromSeconds(runtimeGroup.Source.DelayBeforeGroup),
+                TimeSpan.FromSeconds(runtimeGroup.DelayBeforeGroup),
                 cancellationToken: token);
         }
 
@@ -294,7 +272,7 @@ public class WaveManager : MonoBehaviour
         {
             token.ThrowIfCancellationRequested();
 
-            SpawnMonster(runtimeGroup, portal);
+            SpawnMonster(runtimeGroup, portal, path);
 
             bool hasNextMonster = i + 1 < runtimeGroup.SpawnCount;
 
@@ -309,7 +287,8 @@ public class WaveManager : MonoBehaviour
 
     private BaseMonster SpawnMonster(
         RuntimeSpawnGroup runtimeGroup,
-        Portal portal)
+        Portal portal,
+        SplineContainer path)
     {
         BaseMonster monster = Instantiate(
             runtimeGroup.Source.MonsterPrefab,
@@ -319,7 +298,7 @@ public class WaveManager : MonoBehaviour
 
         monster.Setup(
             runtimeGroup.Source.MonsterData,
-            portal.GroundPath,
+            path,
             portal.MainCastle,
             runtimeGroup.Enhancement);
 
@@ -337,68 +316,39 @@ public class WaveManager : MonoBehaviour
         return _spawnedMonsters.Count == 0;
     }
 
-    // 점령 페널티 적용 후 실제 실행되는 웨이브 편성 로그
+    // 점령 페널티와 루트 배정이 적용된 후 실제 실행되는 웨이브 편성 로그
     private void LogWaveComposition(
         WaveDefinitionSO waveDefinition,
-        IReadOnlyList<RuntimePortalWave> portalWaves)
+        IReadOnlyList<PortalRoutePlan> portalPlans)
     {
         int totalSpawnCount = 0;
 
-        foreach (RuntimePortalWave portalWave in portalWaves)
+        foreach (PortalRoutePlan portalPlan in portalPlans)
         {
-            foreach (RuntimeSpawnGroup spawnGroup in portalWave.SpawnGroups)
+            foreach (RouteSpawnPlan routePlan in portalPlan.Routes)
             {
-                totalSpawnCount += spawnGroup.SpawnCount;
+                totalSpawnCount += routePlan.TotalSpawnCount;
 
-                Debug.Log(
-                    $"[WaveManager] Wave={waveDefinition.name}, Portal={portalWave.Portal.name}, " +
-                    $"Terrain={portalWave.Portal.TerrainType}, Monster={spawnGroup.Source.MonsterData.name}, " +
-                    $"Base={spawnGroup.Source.SpawnCount}, Bonus={spawnGroup.SpawnCountBonus}, " +
-                    $"Final={spawnGroup.SpawnCount}, Interval={spawnGroup.SpawnInterval}",
-                    this);
+                foreach (RuntimeSpawnGroup spawnGroup in routePlan.SpawnGroups)
+                {
+                    Debug.Log(
+                        $"[WaveManager] Wave={waveDefinition.name}, Portal={portalPlan.Portal.name}, " +
+                        $"Route={routePlan.RouteIndex}, Terrain={portalPlan.Portal.TerrainType}, " +
+                        $"Monster={spawnGroup.Source.MonsterData.name}, " +
+                        $"Bonus={spawnGroup.SpawnCountBonus}, Final={spawnGroup.SpawnCount}, " +
+                        $"Interval={spawnGroup.SpawnInterval}",
+                        this);
+                }
             }
+
+            Debug.Log(
+                $"[WaveManager] Portal={portalPlan.Portal.name}, " +
+                $"ActiveRoutes={portalPlan.Routes.Count}",
+                this);
         }
 
         Debug.Log(
             $"[WaveManager] Wave={waveDefinition.name}, TotalSpawnCount={totalSpawnCount}",
             this);
-    }
-
-    private sealed class RuntimePortalWave
-    {
-        public PortalWaveData Source { get; }
-        public Portal Portal { get; }
-        public IReadOnlyList<RuntimeSpawnGroup> SpawnGroups { get; }
-
-        public RuntimePortalWave(
-            PortalWaveData source,
-            Portal portal,
-            IReadOnlyList<RuntimeSpawnGroup> spawnGroups)
-        {
-            Source = source;
-            Portal = portal;
-            SpawnGroups = spawnGroups;
-        }
-    }
-
-    private sealed class RuntimeSpawnGroup
-    {
-        public SpawnGroupData Source { get; }
-        public EnemyEnhancementSnapshot Enhancement { get; }
-        public int SpawnCount { get; }
-        public float SpawnInterval { get; }
-        public int SpawnCountBonus => SpawnCount - Source.SpawnCount;
-
-        public RuntimeSpawnGroup(
-            SpawnGroupData source,
-            EnemyEnhancementSnapshot enhancement,
-            int spawnCount,
-            float spawnInterval)
-        {
-            Source = source;
-            Enhancement = enhancement;
-            SpawnCount = spawnCount;
-            SpawnInterval = spawnInterval;
-        }
     }
 }

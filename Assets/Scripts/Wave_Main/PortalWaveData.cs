@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 한 포탈에서 실행할 시작 지연과 적 생성 그룹 목록을 정의한다.
+/// 한 포탈에서 실행할 시작 지연과 루트별 적 편성을 정의한다.
 /// </summary>
 [Serializable]
 public class PortalWaveData
@@ -14,10 +14,10 @@ public class PortalWaveData
     [Tooltip("웨이브 시작 후 이 포탈의 편성을 시작하기까지 기다릴 시간(초)입니다.")]
     [SerializeField] private float _startDelay;
 
-    [Tooltip("이 포탈에서 목록 순서대로 실행할 적 생성 그룹입니다.")]
-    [SerializeField] private List<SpawnGroupData> _spawnGroups;
+    [Tooltip("이 포탈에서 실행할 루트별 편성입니다. 루트마다 병렬로 진행됩니다.")]
+    [SerializeField] private List<RouteWaveData> _routeWaves;
 
     public PortalDirection PortalDirectionId => _portalDirectionId;
     public float StartDelay => _startDelay;
-    public IReadOnlyList<SpawnGroupData> SpawnGroups => _spawnGroups;
+    public IReadOnlyList<RouteWaveData> RouteWaves => _routeWaves;
 }

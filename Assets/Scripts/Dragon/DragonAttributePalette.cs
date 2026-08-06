@@ -19,4 +19,16 @@ public static class DragonAttributePalette
 
     public static Color ColorOf(DragonType attribute) =>
         COLOR_BY_ATTRIBUTE.TryGetValue(attribute, out Color color) ? color : Color.white;
+
+    /// <summary>
+    /// 공용 흰 슬라임 스프라이트 하나를 속성 색으로 구분해야 하는 곳에 씌울 틴트.
+    /// 슬라임이 아닌 자원은 흰색(틴트 없음)을 돌려준다.
+    ///
+    /// 자원 '아이콘'에는 쓰지 말 것 - 슬라임 5종은 ResourceData에 전용 스프라이트가 들어가 있어
+    /// 틴트를 얹으면 색이 이중으로 먹는다. 지금 쓰는 곳은 SlimeFactory가 찍어내는 슬라임 오브젝트뿐이다.
+    /// </summary>
+    public static Color TintFor(ResourceType resourceType) =>
+        DragonSlimeTable.TryGetAttribute(resourceType, out DragonType attribute)
+            ? ColorOf(attribute)
+            : Color.white;
 }

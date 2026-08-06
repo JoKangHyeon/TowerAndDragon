@@ -19,18 +19,18 @@ public class ResourceAmountView
     public static readonly Color PRODUCTION_COLOR_DEFAULT = new Color(0.62f, 1f, 0.42f);
 
     private readonly ResourceManager _resourceManager;
-    private readonly ProductionForecast _productionForecast;
+    private readonly ResourceForecast _resourceForecast;
     private readonly Color _productionColor;
     private readonly IReadOnlyList<ResourceAmountSlot> _slots;
 
     public ResourceAmountView(
         ResourceManager resourceManager,
-        ProductionForecast productionForecast,
+        ResourceForecast resourceForecast,
         Color productionColor,
         IReadOnlyList<ResourceAmountSlot> slots)
     {
         _resourceManager = resourceManager;
-        _productionForecast = productionForecast;
+        _resourceForecast = resourceForecast;
         _productionColor = productionColor;
         _slots = slots;
     }
@@ -47,9 +47,9 @@ public class ResourceAmountView
         _resourceManager.ResourceChanged.AddListener(RenderOne);
 
         // 생산량 예측이 바뀌면(건물/인구 변경) 보유량 옆 (+생산량) 표기를 다시 그린다.
-        if (_productionForecast != null)
+        if (_resourceForecast != null)
         {
-            _productionForecast.ForecastChanged.AddListener(RenderAll);
+            _resourceForecast.ForecastChanged.AddListener(RenderAll);
         }
 
         ApplyIcons();
@@ -65,9 +65,9 @@ public class ResourceAmountView
 
         _resourceManager.ResourceChanged.RemoveListener(RenderOne);
 
-        if (_productionForecast != null)
+        if (_resourceForecast != null)
         {
-            _productionForecast.ForecastChanged.RemoveListener(RenderAll);
+            _resourceForecast.ForecastChanged.RemoveListener(RenderAll);
         }
     }
 
@@ -152,7 +152,7 @@ public class ResourceAmountView
     // "보유량" 또는 하루 예상 생산량이 있으면 "보유량(+생산량)"(생산량만 색 지정)으로 만든다.
     private string Format(ResourceType type, int amount)
     {
-        int production = _productionForecast != null ? _productionForecast.GetDailyProduction(type) : 0;
+        int production = _resourceForecast != null ? _resourceForecast.GetDailyProduction(type) : 0;
         if (production <= 0)
         {
             return amount.ToString();

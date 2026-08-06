@@ -17,10 +17,14 @@ public class UI_ConquestRewardSlot : MonoBehaviour
     // iconColor는 슬라임처럼 공용 스프라이트를 쓰는 자원을 구분하기 위한 틴트다.
     public void Setup(Sprite icon, Color iconColor, string label)
     {
-        if (_iconImage != null && icon != null)
+        if (_iconImage != null)
         {
+            // 이 슬롯은 ComponentPool로 재사용되므로 icon이 null일 때 대입을 건너뛰면 직전 항목의
+            // 아이콘이 그대로 남아 잘못된 내용을 예고한다(스프라이트 없는 몬스터 프리팹 등).
+            // 대입은 항상 하고, 표시할 스프라이트가 없으면 빈 사각형이 남지 않도록 그리지 않는다.
             _iconImage.sprite = icon;
             _iconImage.color = iconColor;
+            _iconImage.enabled = icon != null;
         }
 
         if (_resourceNameText != null)

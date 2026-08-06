@@ -404,6 +404,11 @@ public class GridMap : MonoBehaviour
     public ResourceType GetAvailableResourceNodes(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.AvailableResourceNodes : ResourceType.None;
 
+    // 셀 하나의 지형. 지역 페널티(TerrainPenaltySystem)가 건물 풋프린트를 지형별로 세는 데 쓴다.
+    // 그리드 밖 좌표는 물(Default)로 취급한다 - 지형이 없는 곳이므로 어떤 지역 효과도 받지 않는다.
+    public TerrainType GetTerrainType(Vector3Int coord) =>
+        _cells.TryGetValue(coord, out GridCell cell) ? cell.TerrainType : TerrainType.Default;
+
     // 디버그 오버레이/로그 전용 원시 지형 생산력 - 자원 종류·연구 강화와 무관한 순수 값이다.
     public int GetBaseYield(Vector3Int coord) =>
         _cells.TryGetValue(coord, out GridCell cell) ? cell.BaseYield : 0;

@@ -26,21 +26,54 @@ public class ResourceManager : MonoBehaviour
 
     public void Construct(GameManager gameManager)
     {
-        // 카탈로그의 전 종류를 0으로 시드해 GetAmount가 항상 유효한 값을 반환하게 한다.
-        if (_catalog != null)
-        {
-            foreach (ResourceData resource in _catalog.All)
-            {
-                if (resource != null)
-                {
-                    _amounts[resource.Type] = 0;
-                }
-            }
-        }
+        SeedCatalog();
 
         foreach (ResourceAmount initial in _initialResources)
         {
             AddInitial(initial.Type, initial.Amount);
+        }
+    }
+
+    /// <summary>
+    /// 세이브 복원 전용. 보유량을 저장된 절대값으로 통째로 덮어쓴다.
+    /// Construct는 시드와 초기 자원 지급이 붙어 있어 재사용할 수 없고, Add는 증분이라 절대값을
+    /// 넣을 수 없어 별도 경로가 필요하다. 이어하기 경로에서는 Construct를 부르지 않으므로
+    /// 여기서 카탈로그 시드까지 함께 한다.
+    /// 카탈로그 전 종류에 대해 ResourceChanged를 발화해, 세이브에 없던 자원 행이 UI에 낡은 값으로
+    /// 남지 않게 한다.
+    /// </summary>
+    public void RestoreAmounts(IReadOnlyList<ResourceAmount> amounts)
+    {
+        SeedCatalog();
+
+        foreach (ResourceAmount entry in amounts)
+        {
+            if (IsSingleType(entry.Type))
+            {
+                _amounts[entry.Type] = Math.Max(0, entry.Amount);
+            }
+        }
+
+        foreach (ResourceType type in new List<ResourceType>(_amounts.Keys))
+        {
+            ResourceChanged?.Invoke(type, _amounts[type]);
+        }
+    }
+
+    /// <summary>카탈로그의 전 종류를 0으로 시드해 GetAmount가 항상 유효한 값을 반환하게 한다.</summary>
+    private void SeedCatalog()
+    {
+        if (_catalog == null)
+        {
+            return;
+        }
+
+        foreach (ResourceData resource in _catalog.All)
+        {
+            if (resource != null)
+            {
+                _amounts[resource.Type] = 0;
+            }
         }
     }
 

@@ -13,6 +13,10 @@ public class MonsterData : ScriptableObject
     [Tooltip("스트링테이블 key. 코드에 직접 이름 문자열을 넣지 않는다.")]
     [SerializeField] private string _nameLocKey;
 
+    [Header("Monster Type")]
+    [Tooltip("몬스터 종류")]
+    [SerializeField] private MonsterType _monsterType;
+
     [Header("Stats")]
     [SerializeField] private float _maxHealth;
     [SerializeField] private float _moveSpeed;
@@ -21,6 +25,10 @@ public class MonsterData : ScriptableObject
     [Header("Shield (optional)")]
     [SerializeField] private bool _hasShield;
     [SerializeField] private float _shieldAmount;
+
+    [Header("Elemental Defense")]
+    [SerializeField] private MonsterElementRule _elementRule;
+    [SerializeField] private DragonType _element;
 
     [Header("Attack")]
     [SerializeField] private AttackSO _attack;
@@ -36,12 +44,16 @@ public class MonsterData : ScriptableObject
     [SerializeField] private float _projectileSpeed;
 
     public string NameLocKey => _nameLocKey;
+    public MonsterType MonsterType => _monsterType;
     public float MaxHealth => _maxHealth;
     public float MoveSpeed => _moveSpeed;
     public MonsterMovementType MovementType => _movementType;
 
     public bool HasShield => _hasShield;
     public float ShieldAmount => _shieldAmount;
+
+    public MonsterElementRule ElementRule => _elementRule;
+    public DragonType Element => _element;
 
     public AttackSO Attack => _attack;
     public MonsterTargetType EnRouteTargetTypes => _enRouteTargetTypes;
@@ -51,4 +63,22 @@ public class MonsterData : ScriptableObject
     public GameObject ProjectilePrefab => _projectilePrefab;
     public float ProjectileSpeed => _projectileSpeed;
     public bool HasProjectile => _projectilePrefab != null && _projectileSpeed > 0;
+
+    public bool AcceptsElement(DragonType? attackElement)
+    {
+        return _elementRule switch
+        {
+            MonsterElementRule.Normal => true,
+
+            MonsterElementRule.OnlyMatchingElement =>
+                attackElement.HasValue &&
+                attackElement.Value == _element,
+
+            MonsterElementRule.ImmuneToMatchingElement =>
+                !attackElement.HasValue ||
+                attackElement.Value != _element,
+
+            _ => true,
+        };
+    }
 }

@@ -1,0 +1,13 @@
+// 지역 페널티를 건물 단위로 증감·무효화하는 외부 훅. 새끼용이 이 인터페이스로 붙는다.
+//
+// 반환값은 페널티 "크기"에 곱하는 배율이다(감소율이나 유지비 자체에 곱한다):
+//   1   = 중립(페널티 원래대로)
+//   0   = 완전 무효화
+//   0.5 = 절반으로 완화
+//   1보다 큰 값 = 페널티 심화
+// 배율에 곱하는 게 아니라 페널티 크기에 곱하므로, 완화 소스가 없을 때(중립 1)의 결과가
+// 테이블 원본 값과 정확히 같다.
+public interface ITerrainPenaltyScaleQuery
+{
+    float GetPenaltyScale(Building building, TerrainType terrain, TerrainPenaltyKind kind);
+}
