@@ -29,6 +29,12 @@ public class UI_DragonChangePopup : MonoBehaviour
 
     private bool _isOpen;
 
+    /// <summary>팝업이 떠 있는지. Button_change가 열지 닫을지 판단하는 데 쓴다.
+    /// _isOpen이 아니라 실제 활성 상태를 보는 이유: 용 창 전체가 닫힐 때는 부모(Content)가 꺼지면서
+    /// 이 팝업도 같이 사라지는데 Close()를 거치지 않아 _isOpen이 true로 남는다.
+    /// 그 값을 믿으면 다음에 Button_change를 눌렀을 때 "닫기"로 잘못 판정해 아무 일도 일어나지 않는다.</summary>
+    public bool IsOpen => gameObject.activeSelf;
+
     private void Awake()
     {
         if (_attributeButtons != null)

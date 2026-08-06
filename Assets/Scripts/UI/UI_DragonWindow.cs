@@ -5,16 +5,18 @@ using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 // 용 창 - 어미용/새끼용 탭을 전환하고, 좌측 프레임(Left_Panel_frame)에 현재 어미용의
-// 아이콘과 속성명을 표시한다. blocker 루트에 부착되어 바깥 클릭 닫기와
-// IExclusiveMode(UIManager.OpenExclusive) 조정을 겸한다 - UI_ResearchWindow / UI_DragonSkillWindow와
-// 동일한 구조(Assets/Scripts/UI/Research/UI_ResearchWindow.cs, Assets/Scripts/UI/Dragon/UI_DragonSkillWindow.cs).
+// 아이콘과 속성명을 표시한다. IExclusiveMode(UIManager.OpenExclusive) 조정을 겸한다.
+//
+// 닫을 때 이 오브젝트가 아니라 자식 _windowRoot만 끈다 - 스크립트 호스트가 계속 활성이어야
+// Update가 돌아 성(Castle) 클릭을 감지할 수 있기 때문이다.
+// UI_MainCastleWindow / UI_PopulationAllocationWindow / UI_BabyDragonManageWindow와 같은 구조다
+// (HUD 버튼으로만 여는 UI_ResearchWindow 계열은 반대로 자기 자신을 끈다).
 // 속성 변경 규칙·속성 색·아이콘 원본은 여기서 재구현하지 않는다
 // - DragonTreeManager / DragonAttributePalette / BabyDragonDataCatalog에 위임한다.
 // Button_change는 UI_DragonChangePopup을 열기만 하고, 실제 변경 로직은 그 팝업이 갖고 있다.
-// Panel_Info는 이번 범위가 아니다(배선하지 않는다).
 public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 {
-    // 탭 - Panel_MomDragon / Panel_BabyDragon 중 하나만 활성이 된다.
+    // 탭 - Panel_MotherDragon / Panel_BabyDragon 중 하나만 활성이 된다.
     private enum DragonTab
     {
         Mother,
@@ -43,6 +45,11 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private UIManager _uiManager;
 
     [Header("Window")]
+    [Tooltip("창 콘텐츠 전체를 담은 자식(Content). 닫을 때 이것만 끈다 - " +
+        "이 스크립트가 붙은 오브젝트는 계속 활성이어야 성 클릭 구독이 살아 있어 창을 다시 열 수 있다.")]
+    [SerializeField] private GameObject _windowRoot;
+    [Tooltip("성(Castle) 클릭 감지용. 없으면 성을 눌러도 창이 열리지 않는다.")]
+    [SerializeField] private BuildingPlacementController _buildingPlacementController;
     [SerializeField] private Button _exitButton;
     [Tooltip("창 바깥 클릭 닫기용 전용 blocker Button. 반드시 창 콘텐츠와 별개의(자손이 아닌) 오브젝트여야 한다 - " +
         "콘텐츠의 조상에 붙은 Button을 넣으면 EventSystem이 자손 클릭을 부모로 버블링시켜 창 안을 클릭할 때마다 닫힌다. " +
@@ -55,7 +62,7 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private GameObject _motherPanel;
     [SerializeField] private GameObject _babyPanel;
 
-    [Header("Tab - Mother (TabMenu/Button_MomDragon)")]
+    [Header("Tab - Mother (TabMenu/Button_MotherDragon)")]
     [SerializeField] private Button _motherTabButton;
     [SerializeField] private GameObject _motherTabSelectFocus;
     [SerializeField] private GameObject _motherTabSelectDefault;
@@ -80,6 +87,8 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private Image _motherIcon;
     [Tooltip("Panel_name/Text (TMP). 어미용에는 고유 이름이 없어 속성명을 표시한다.")]
     [SerializeField] private TextMeshProUGUI _motherNameText;
+    [Tooltip("Panel_Info/Text (TMP). 현재 속성에 대한 설명 문구를 표시한다.")]
+    [SerializeField] private TextMeshProUGUI _motherInfoText;
     [Tooltip("어미용 속성별 스프라이트 - DragonType 선언 순서(Ice, Fire, Time, Stone, Life). 빈 칸은 새끼용 카탈로그 스프라이트로 대체한다.")]
     [SerializeField] private Sprite[] _motherSprites;
     [Tooltip("_motherSprites 칸이 비었을 때 대신 쓸 새끼용 스프라이트 카탈로그. 새끼용/알 리스트의 데이터 조회에도 쓴다.")]
@@ -92,6 +101,10 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private UI_DragonChangePopup _changePopup;
 
     [Header("Baby Dragon / Egg 리스트 (Panel_BabyDragon)")]
+    [Tooltip("Panel_Right/Panel_DragonInfo/Text (TMP). 마우스를 올린 새끼용 슬롯의 속성 설명을 표시하고, " +
+        "아무 슬롯에도 올라가 있지 않으면 비운다.")]
+    [SerializeField] private TextMeshProUGUI _babyInfoText;
+
     [Tooltip("보유 새끼용·알 목록의 출처(RunData). 없으면 두 리스트를 비운다.")]
     [SerializeField] private GameManager _gameManager;
 
@@ -120,6 +133,9 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 
     private DragonTab _currentTab = DragonTab.Mother;
     private bool _isOpen;
+
+    // 마우스가 올라가 있는 새끼용 슬롯의 개체. Panel_DragonInfo에 띄울 설명을 결정한다.
+    private BabyDragon _hoveredBabyDragon;
 
     // 미리 배치된 슬롯을 0번으로 물려받는 풀 - 그래야 디자인 타임 미리보기가 남으면서
     // 런타임에 쓰이지 않는 유령 슬롯이 생기지 않는다.
@@ -150,7 +166,7 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 
         if (_changeButton != null && _changePopup != null)
         {
-            _changeButton.onClick.AddListener(_changePopup.Open);
+            _changeButton.onClick.AddListener(ToggleChangePopup);
         }
 
         CreateSlotPools();
@@ -159,21 +175,44 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         // 이 호출이 그 상태를 정상화하는 유일한 지점이므로 Awake에서 한 번 확정한다.
         SelectTab(_currentTab);
 
-        // UI_Canvas 인스턴스가 활성(m_IsActive:1)으로 저장돼 있어도 시작 시 닫힌 상태를 보장한다
-        // (UI_DragonInventoryWindow.Awake의 _panel.SetActive(false)와 같은 방어).
+        // 시작 시 콘텐츠만 끈다. 스크립트 호스트는 계속 활성이라 Update가 돌고,
+        // 그래야 창이 닫혀 있는 동안에도 성 클릭을 감지할 수 있다.
         //
-        // _isOpen 가드가 필요한 이유: 인스턴스가 비활성으로 저장된 경우 Unity는 씬 로드 때 Awake를
-        // 호출하지 않고, 첫 Open()의 SetActive(true) 안에서 비로소 이 Awake가 동기 실행된다.
-        // 그때 무조건 Close()하면 방금 연 창을 스스로 닫아 첫 클릭이 먹지 않는다.
-        // Open()은 SetActive(true) 전에 _isOpen을 세우므로, 이 값으로 두 경우를 구분한다.
+        // _isOpen 가드는 방어용이다 - 인스턴스가 비활성으로 저장돼 Awake가 첫 Open()의
+        // SetActive(true) 안에서 실행되는 경우, 무조건 닫으면 방금 연 창을 스스로 닫아버린다
+        // (CLAUDE.md 이벤트 초기화 규칙 참고).
         if (!_isOpen)
         {
             Close();
         }
     }
 
+    // 성을 클릭할 때마다 열린다. SelectedBuilding 폴링이 아니라 이벤트를 쓰는 이유는, 창을 닫은 뒤
+    // 성이 계속 선택된 상태에서 성을 다시 눌러도 열려야 하기 때문이다 - 그 경우 SelectedBuilding은
+    // 계속 Castle이라 폴링으로는 변화가 관측되지 않는다.
+    private void HandleBuildingSelected(Building building)
+    {
+        if (building is not Castle)
+        {
+            return;
+        }
+
+        // 점령·건설 모드 등이 클릭을 점유한 동안에는 그쪽 창이 같은 자리를 쓰므로 열지 않는다.
+        if (_buildingPlacementController.InputSuppressed)
+        {
+            return;
+        }
+
+        OpenAtMotherTab();
+    }
+
     private void OnEnable()
     {
+        if (_buildingPlacementController != null)
+        {
+            _buildingPlacementController.BuildingSelected.AddListener(HandleBuildingSelected);
+        }
+
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleActiveAttributeChanged);
@@ -200,6 +239,11 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 
     private void OnDisable()
     {
+        if (_buildingPlacementController != null)
+        {
+            _buildingPlacementController.BuildingSelected.RemoveListener(HandleBuildingSelected);
+        }
+
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleActiveAttributeChanged);
@@ -219,6 +263,14 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 
     public void OnCloseActionPerformed(InputAction.CallbackContext context)
     {
+        // _isOpen 가드가 필요한 이유: 스크립트 호스트가 항상 활성이라 이 구독은 씬 로드부터 계속 유지된다
+        // (창이 열려 있는 동안만 구독하던 예전 구조와 다르다). 가드가 없으면 창이 닫혀 있을 때 누른 ESC도
+        // Close()를 호출한다 - 지금은 무해하지만 Close()에 연출이 붙으면 문제가 된다.
+        if (!_isOpen)
+        {
+            return;
+        }
+
         Close();
     }
 
@@ -230,17 +282,40 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     public void Open()
     {
         _isOpen = true;
-        gameObject.SetActive(true); // 비활성이었다면 이 안에서 OnEnable(구독 + 1회 반영)이 돈다
 
-        // 이미 활성인 상태로 다시 열린 경우(OnEnable 미발화)를 위해 시각 상태를 한 번 더 확정한다.
+        // 스크립트 호스트가 비활성으로 저장돼 있으면 되살린다 - 그래야 Update가 돌아 성 클릭을 받는다
+        // (UI_BuildModeWindow.OpenBuildPanel과 같은 방어).
+        if (!gameObject.activeSelf)
+        {
+            gameObject.SetActive(true);
+        }
+
+        if (_windowRoot != null)
+        {
+            _windowRoot.SetActive(true);
+        }
+
+        // OnEnable은 이제 씬 로드 때 한 번만 돌므로(호스트가 늘 활성), 열 때마다 여기서 직접 갱신한다.
         SelectTab(_currentTab);
         RenderMotherDragon();
+        RebuildLists();
     }
 
     public void Close()
     {
         _isOpen = false;
-        gameObject.SetActive(false);
+
+        // 팝업은 _windowRoot의 자손이라 창을 끄면 같이 사라지지만, activeSelf는 true로 남는다 -
+        // 그대로 두면 창을 다시 열었을 때 팝업이 딸려 나온다. 명시적으로 닫아 다음 열기를 깨끗하게 만든다.
+        if (_changePopup != null)
+        {
+            _changePopup.Close();
+        }
+
+        if (_windowRoot != null)
+        {
+            _windowRoot.SetActive(false);
+        }
     }
 
     bool IExclusiveMode.IsOpen => _isOpen;
@@ -256,6 +331,28 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             Close();
         }
         else if (_uiManager != null)
+        {
+            _uiManager.OpenExclusive(this);
+        }
+        else
+        {
+            Open();
+        }
+    }
+
+    // 성(Castle) 클릭처럼 "어미용 화면을 보여달라"는 진입점.
+    // ToggleFromEntryPoint와 달리 토글하지 않는다 - 이미 열려 있는데 닫아버리면
+    // 성을 클릭했는데 창이 사라지는 셈이라, 그때는 탭만 어미용으로 맞춘다.
+    public void OpenAtMotherTab()
+    {
+        SelectTab(DragonTab.Mother);
+
+        if (_isOpen)
+        {
+            return;
+        }
+
+        if (_uiManager != null)
         {
             _uiManager.OpenExclusive(this);
         }
@@ -291,6 +388,10 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         }
         else
         {
+            // 탭을 막 열었으면 마우스는 아직 어떤 슬롯 위에도 없다 - 이전 호버 흔적을 지운다.
+            // (RunData가 없어 RebuildLists가 조기 반환하는 경우까지 덮으려면 여기서 비워야 한다.)
+            _hoveredBabyDragon = null;
+            RenderBabyInfo();
             RebuildLists();
         }
     }
@@ -340,6 +441,53 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
+    // Button_change 하나로 속성 변경 팝업을 열고 닫는다.
+    // 팝업에는 바깥 클릭 blocker가 없어, 카드를 고르지 않고 무르려면 이 버튼이 유일한 수단이다.
+    // (팝업은 버튼을 가리지 않는 위치에 떠서 두 번째 클릭이 버튼에 닿는다.)
+    private void ToggleChangePopup()
+    {
+        if (_changePopup.IsOpen)
+        {
+            _changePopup.Close();
+            return;
+        }
+
+        _changePopup.Open();
+    }
+
+    // 새끼용 탭 우측 설명(Panel_DragonInfo) - 마우스를 올린 슬롯의 속성을 표시한다.
+    // 아무 슬롯에도 올라가 있지 않으면 비운다(프리팹 자리표시 문구 노출 방지).
+    private void RenderBabyInfo()
+    {
+        if (_babyInfoText == null)
+        {
+            return;
+        }
+
+        _babyInfoText.text = _hoveredBabyDragon != null
+            ? StringTable.GetString(DragonLocKeys.BabyInfoLocKey(_hoveredBabyDragon.DragonType))
+            : string.Empty;
+    }
+
+    private void HandleBabyDragonHoverChanged(BabyDragon dragon, bool isHovered)
+    {
+        if (isHovered)
+        {
+            _hoveredBabyDragon = dragon;
+        }
+        else if (_hoveredBabyDragon != dragon)
+        {
+            // 이미 다른 슬롯으로 옮겨간 뒤 뒤늦게 도착한 exit - 새 슬롯의 설명을 지우면 안 된다.
+            return;
+        }
+        else
+        {
+            _hoveredBabyDragon = null;
+        }
+
+        RenderBabyInfo();
+    }
+
     // 좌측 프레임에 현재 어미용을 반영한다.
     // 어미용에는 고유 이름 데이터가 없으므로(RunData.Dragon은 CurrentType만 들고 있다)
     // 표시 이름 = 로컬라이즈된 속성명이다(UI_MainCastleWindow.RenderPortrait와 동일 규칙).
@@ -356,6 +504,11 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
                 _motherNameText.text = string.Empty;
             }
 
+            if (_motherInfoText != null)
+            {
+                _motherInfoText.text = string.Empty;
+            }
+
             if (_motherIcon != null)
             {
                 _motherIcon.enabled = false;
@@ -369,6 +522,11 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         if (_motherNameText != null)
         {
             _motherNameText.text = StringTable.GetString(DragonLocKeys.AttributeLocKey(type));
+        }
+
+        if (_motherInfoText != null)
+        {
+            _motherInfoText.text = StringTable.GetString(DragonLocKeys.MotherInfoLocKey(type));
         }
 
         if (_motherIcon == null)
@@ -436,6 +594,7 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         }
 
         int used = 0;
+        bool isHoveredStillListed = false;
 
         // 설치 중인 용도 함께 표시한다 - 슬롯의 Icon_Focus가 미배치(배치 시작)/배치(카메라 이동)로
         // 갈리므로 목록에서 빼면 배치된 개체를 찾아갈 방법이 없어진다.
@@ -447,11 +606,25 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
                 continue;
             }
 
-            _babyDragonSlotPool.Get(used).Setup(dragon, data, HandleBabyDragonFocusClicked);
+            _babyDragonSlotPool
+                .Get(used)
+                .Setup(dragon, data, HandleBabyDragonFocusClicked, HandleBabyDragonHoverChanged);
             used++;
+
+            isHoveredStillListed |= dragon == _hoveredBabyDragon;
         }
 
         _babyDragonSlotPool.DeactivateFrom(used);
+
+        // 슬롯이 풀에서 재사용되거나 비활성화될 때는 OnPointerExit가 오지 않는다.
+        // 호버 중이던 용이 목록에서 사라졌을 때만 설명을 비우고, 남아 있으면 그대로 유지한다
+        // (마우스를 올려둔 채 알이 부화하는 등으로 목록이 갱신돼도 설명이 깜빡이지 않게).
+        if (!isHoveredStillListed)
+        {
+            _hoveredBabyDragon = null;
+        }
+
+        RenderBabyInfo();
     }
 
     // Icon_Focus 클릭 - 어느 쪽이든 창을 먼저 닫는다(그리드를 봐야 하는 동작이라 창이 방해된다).

@@ -722,6 +722,50 @@ RectTransform:
   m_AnchoredPosition: {x: 0.000061035156, y: 0.00012207031}
   m_SizeDelta: {x: -20, y: -20}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &1510164587422861529
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5990575076411492065}
+  m_Layer: 0
+  m_Name: Content
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &5990575076411492065
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1510164587422861529}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2241706928227984831}
+  - {fileID: 553385529801167674}
+  - {fileID: 3161260476736999408}
+  - {fileID: 8880210515188538845}
+  - {fileID: 7456567638944565360}
+  - {fileID: 7929112227164256150}
+  - {fileID: 2329117695703787120}
+  - {fileID: 4558548643279635461}
+  - {fileID: 5024975024851041690}
+  m_Father: {fileID: 2088407782798473978}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1573030963516728043
 GameObject:
   m_ObjectHideFlags: 0
@@ -872,7 +916,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73a1ebc4639051d48add1612dddd2737, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
-  _locKey: dragon_momDragon_button_change
+  _locKey: dragon_motherDragon_button_change
 --- !u!1 &1851387180839470454
 GameObject:
   m_ObjectHideFlags: 0
@@ -1192,15 +1236,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2241706928227984831}
-  - {fileID: 553385529801167674}
-  - {fileID: 3161260476736999408}
-  - {fileID: 8880210515188538845}
-  - {fileID: 7456567638944565360}
-  - {fileID: 7929112227164256150}
-  - {fileID: 2329117695703787120}
-  - {fileID: 4558548643279635461}
-  - {fileID: 5024975024851041690}
+  - {fileID: 5990575076411492065}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -1274,9 +1310,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UI_DragonWindow
   _dragonTreeManager: {fileID: 0}
   _uiManager: {fileID: 0}
+  _windowRoot: {fileID: 1510164587422861529}
+  _buildingPlacementController: {fileID: 0}
   _exitButton: {fileID: 901404134098351377}
   _blockerButton: {fileID: 1364931905057772105}
-  _closeAction: {fileID: 0}
+  _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _motherPanel: {fileID: 4283637562623793164}
   _babyPanel: {fileID: 6455644801123924452}
   _motherTabButton: {fileID: 5145524242385854491}
@@ -1295,6 +1333,7 @@ MonoBehaviour:
   _tabLabelNormalColor: {r: 0.74509805, g: 0.70980394, b: 0.7137255, a: 1}
   _motherIcon: {fileID: 2596790650145491083}
   _motherNameText: {fileID: 5247512709621394747}
+  _motherInfoText: {fileID: 8626466652259656581}
   _motherSprites:
   - {fileID: 21300000, guid: ed652104aacfc23468e236f1f9c0c7a4, type: 3}
   - {fileID: 21300000, guid: 352474b51075b264ea9be29bb96a1ae4, type: 3}
@@ -1304,6 +1343,7 @@ MonoBehaviour:
   _babyDragonDataCatalog: {fileID: 11400000, guid: 3493e5ed7926f4147ae5f74da9cbd871, type: 2}
   _changeButton: {fileID: 7509725361758365473}
   _changePopup: {fileID: 2753781442562276533}
+  _babyInfoText: {fileID: 5158916524419757815}
   _gameManager: {fileID: 0}
   _placementCoordinator: {fileID: 0}
   _cameraController: {fileID: 0}
@@ -1720,10 +1760,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 8652292156515309142}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 900, y: 900}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2371084394708254737
 GameObject:
@@ -1937,7 +1977,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4645277329243338371}
-  m_Father: {fileID: 2088407782798473978}
+  m_Father: {fileID: 5990575076411492065}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -3004,7 +3044,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 031c3f7cdd9375a45b8064e273da5509, type: 3}
+  m_Sprite: {fileID: 21300000, guid: a0e26eb53ee8d0248923229cecd4f169, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -3102,7 +3142,7 @@ GameObject:
   - component: {fileID: 3984474066634730388}
   - component: {fileID: 323976747290354150}
   m_Layer: 5
-  m_Name: Panel_MomDragon
+  m_Name: Panel_MotherDragon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3122,7 +3162,7 @@ RectTransform:
   m_Children:
   - {fileID: 8557226074836844451}
   - {fileID: 3029729482705697725}
-  m_Father: {fileID: 2088407782798473978}
+  m_Father: {fileID: 5990575076411492065}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -3333,7 +3373,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 122b9543fe4f76b4283868eafc3eb906, type: 3}
+  m_Sprite: {fileID: 21300000, guid: af2400ecd8f7d014fa20e8d2d8ddd5c2, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -3896,7 +3936,7 @@ RectTransform:
   m_Children:
   - {fileID: 4609995878836516399}
   - {fileID: 7979134918472382305}
-  m_Father: {fileID: 2088407782798473978}
+  m_Father: {fileID: 5990575076411492065}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
@@ -4573,7 +4613,7 @@ MonoBehaviour:
   m_Content: {fileID: 926967523853811762}
   m_Horizontal: 1
   m_Vertical: 1
-  m_MovementType: 1
+  m_MovementType: 2
   m_Elasticity: 0.1
   m_Inertia: 1
   m_DecelerationRate: 0.135
@@ -4651,7 +4691,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2088407782798473978}
+  m_Father: {fileID: 5990575076411492065}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -4848,7 +4888,7 @@ RectTransform:
   m_Children:
   - {fileID: 2843882647755197483}
   - {fileID: 7880672932804990784}
-  m_Father: {fileID: 2088407782798473978}
+  m_Father: {fileID: 5990575076411492065}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -5182,7 +5222,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 415, y: -60}
-  m_SizeDelta: {x: 300, y: 65}
+  m_SizeDelta: {x: 170, y: 45}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &867418843427389635
 CanvasRenderer:
@@ -5441,12 +5481,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 35
+  m_fontSize: 20
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
-  m_fontSizeMin: 18
-  m_fontSizeMax: 35
+  m_fontSizeMin: 15
+  m_fontSizeMax: 20
   m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 4096
@@ -5498,7 +5538,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73a1ebc4639051d48add1612dddd2737, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
-  _locKey: dragon_momDragon_header_skillTree
+  _locKey: dragon_motherDragon_header_skillTree
 --- !u!1 &7675250297537316313
 GameObject:
   m_ObjectHideFlags: 0
@@ -6961,7 +7001,7 @@ GameObject:
   - component: {fileID: 7929112226826062281}
   - component: {fileID: 5145524242385854491}
   m_Layer: 5
-  m_Name: Button_MomDragon
+  m_Name: Button_MotherDragon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7176,7 +7216,7 @@ RectTransform:
   - {fileID: 7929112225343443663}
   - {fileID: 7929112226826062294}
   - {fileID: 7929112226041806377}
-  m_Father: {fileID: 2088407782798473978}
+  m_Father: {fileID: 5990575076411492065}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
@@ -7291,7 +7331,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 919631260212160064}
-  m_Father: {fileID: 2088407782798473978}
+  m_Father: {fileID: 5990575076411492065}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
@@ -7909,7 +7949,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 2088407782798473978}
+    m_TransformParent: {fileID: 5990575076411492065}
     m_Modifications:
     - target: {fileID: 152659683657278631, guid: 1115fa9f0b5d14f4cb3a00296e754a14, type: 3}
       propertyPath: m_AnchorMax.y
@@ -8051,6 +8091,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -2.5
       objectReference: {fileID: 0}
+    - target: {fileID: 3666057252010378801, guid: 1115fa9f0b5d14f4cb3a00296e754a14, type: 3}
+      propertyPath: _locKey
+      value: dragon_motherDragon_button_change
+      objectReference: {fileID: 0}
     - target: {fileID: 3813755279450435089, guid: 1115fa9f0b5d14f4cb3a00296e754a14, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -8103,6 +8147,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -80
       objectReference: {fileID: 0}
+    - target: {fileID: 5203043154688086979, guid: 1115fa9f0b5d14f4cb3a00296e754a14, type: 3}
+      propertyPath: _locKey
+      value: dragon_motherDragon_button_change
+      objectReference: {fileID: 0}
     - target: {fileID: 5941671932549377349, guid: 1115fa9f0b5d14f4cb3a00296e754a14, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -8162,6 +8210,18 @@ PrefabInstance:
     - target: {fileID: 6299722480891841454, guid: 1115fa9f0b5d14f4cb3a00296e754a14, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6709966642905349885, guid: 1115fa9f0b5d14f4cb3a00296e754a14, type: 3}
+      propertyPath: _locKey
+      value: dragon_motherDragon_button_change
+      objectReference: {fileID: 0}
+    - target: {fileID: 7162299909108605282, guid: 1115fa9f0b5d14f4cb3a00296e754a14, type: 3}
+      propertyPath: _locKey
+      value: dragon_motherDragon_button_change
+      objectReference: {fileID: 0}
+    - target: {fileID: 7301104952025985468, guid: 1115fa9f0b5d14f4cb3a00296e754a14, type: 3}
+      propertyPath: _locKey
+      value: dragon_motherDragon_button_change
       objectReference: {fileID: 0}
     - target: {fileID: 8098215127743603424, guid: 1115fa9f0b5d14f4cb3a00296e754a14, type: 3}
       propertyPath: m_AnchorMax.y
@@ -8306,7 +8366,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 2088407782798473978}
+    m_TransformParent: {fileID: 5990575076411492065}
     m_Modifications:
     - target: {fileID: 153979583855963872, guid: 506bf3a7b71a6894fb34f8716fc872a5, type: 3}
       propertyPath: m_AnchorMax.y

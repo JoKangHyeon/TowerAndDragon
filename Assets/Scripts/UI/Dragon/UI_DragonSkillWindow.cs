@@ -8,7 +8,7 @@ using UnityEngine.UI;
 // 클릭 시 상세 패널에 바인딩한다. 해금/속성 변경 규칙은 여기서 재구현하지 않는다
 // - 전부 DragonTreeManager에 위임.
 //
-// Dragon_window의 Panel_MomDragon/Right_Scroll View_skillTree에 부착해 쓰는 '심는 패널'이다.
+// Dragon_window의 Panel_MotherDragon/Right_Scroll View_skillTree에 부착해 쓰는 '심는 패널'이다.
 // 독립 창(blocker + ExitButton + IExclusiveMode)이었던 시절의 여닫기 기능은 제거했다 -
 // 이제 창 자체를 여닫는 건 UI_DragonWindow가 하고, 이 컴포넌트는 부모 패널이 켜질 때 도는
 // OnEnable에서 트리를 빌드·갱신한다.
@@ -70,7 +70,7 @@ public class UI_DragonSkillWindow : MonoBehaviour
             _dragonTreeManager.NodeUnlocked.AddListener(HandleNodeUnlocked);
         }
 
-        // 어미용 탭이 켜질 때(부모 Panel_MomDragon의 SetActive) 여기가 진입점이 된다 -
+        // 어미용 탭이 켜질 때(부모 Panel_MotherDragon의 SetActive) 여기가 진입점이 된다 -
         // 창을 여는 주체가 UI_DragonWindow로 옮겨가 Open()이 없어졌기 때문이다.
         // _built 플래그가 트리 재생성을 막고 RefreshAll은 멱등하므로 탭을 여러 번 오가도 안전하다.
         BuildTreeIfNeeded();

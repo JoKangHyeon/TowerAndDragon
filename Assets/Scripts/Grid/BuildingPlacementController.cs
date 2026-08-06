@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework.Constraints;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
@@ -49,6 +50,11 @@ public class BuildingPlacementController : MonoBehaviour
 
     private float _holdTimer;
     private Vector3Int? _holdCoord;
+
+    // 클릭으로 선택이 확정될 때마다 발화한다(선택 해제면 null). 같은 건물을 다시 눌러도 발화하므로
+    // SelectedBuilding 폴링과 달리 "재클릭"을 놓치지 않는다.
+    // 필드 초기화 시점에 생성하므로 구독자의 Awake/OnEnable 순서와 무관하게 안전하다.
+    public UnityEvent<Building> BuildingSelected = new();
 
     public bool IsMoving => _moveSourceCoord.HasValue;
 
@@ -386,7 +392,26 @@ public class BuildingPlacementController : MonoBehaviour
             return;
         }
 
-        SelectExistingBuildingAt(_mouseSelectController.GetHoveredCell());
+        SelectExistingBuildingAt(ResolveClickedCell());
+    }
+
+    // 성은 그리드 정중앙에 3x3만 점유하는데(Castle.RegisterCenterFootprint) 스프라이트는 그보다
+    // 훨씬 높게 그려져 있어, 탑 몸통을 눌러도 셀 판정으로는 빈 땅이 나온다. 그 경우에 한해 성
+    // 스프라이트 안인지 한 번 더 보고 성의 셀로 돌린다.
+    // 셀에 건물이 있으면 그대로 두므로, 성 앞을 가리는 타워를 못 고르게 되는 일은 없다.
+    private Vector3Int ResolveClickedCell()
+    {
+        Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
+
+        if (_gridMap.GetBuildingAt(hoveredCell) != null)
+            return hoveredCell;
+
+        Castle castle = _gridMap.FindBuilding<Castle>(out Vector3Int castleCoord);
+
+        if (castle == null || !castle.ContainsWorldPoint(_mouseSelectController.GetPointerWorldPoint()))
+            return hoveredCell;
+
+        return castleCoord;
     }
 
     public bool TryConstructAt(Vector3Int anchor)
@@ -463,13 +488,19 @@ public class BuildingPlacementController : MonoBehaviour
         CancelMove();
         Deselect();
 
-        if (building == null)
-            return;
+        if (building != null)
+        {
+            _selectedExistingBuildingCoord = coord;
+            _mouseSelectController.HighlightSelection(_gridMap.GetOccupiedCoords(coord));
+            building.SetHighlighted(true, _mouseSelectController.SelectionHighlightColor);
+            ShowRangeIndicatorFor(building);
+        }
 
-        _selectedExistingBuildingCoord = coord;
-        _mouseSelectController.HighlightSelection(_gridMap.GetOccupiedCoords(coord));
-        building.SetHighlighted(true, _mouseSelectController.SelectionHighlightColor);
-        ShowRangeIndicatorFor(building);
+        // 이미 선택된 건물을 다시 눌러도 매번 발화한다. SelectedBuilding은 파생 getter라
+        // 폴링으로는 재클릭을 관측할 수 없다 - 위에서 Deselect() 후 같은 프레임에 다시 선택되므로
+        // 구독자 입장에선 값이 바뀐 적이 없는 것으로 보인다.
+        // 선택 해제(building == null)도 알려야 하므로 early return 하지 않는다.
+        BuildingSelected.Invoke(building);
     }
 
     private void ShowRangeIndicatorFor(Building building)
