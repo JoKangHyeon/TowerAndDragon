@@ -12,7 +12,7 @@ using UnityEngine.Events;
 /// 그리고 매일 밤(OnNightEnd) 전체를 다시 계산한다 - Factory.GetCurrentYield가
 /// "다음 정산에서 실제로 들어올 양"을 상시 정확히 보여주려면 배율이 실시간으로 맞아야 한다.
 /// </summary>
-public class BabyDragonBuffSystem : MonoBehaviour
+public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery
 {
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private CycleManager _cycleManager;
@@ -28,6 +28,10 @@ public class BabyDragonBuffSystem : MonoBehaviour
     private readonly List<BabyDragonTower> _babyDragons = new();
     private readonly List<Factory> _factories = new();
 
+    // 이번 재계산에서 건설 제한이 해제된 셀들 - IConstructionOverrideQuery 구현에 쓴다.
+    private readonly HashSet<Vector3Int> _unlockedConstructionCells = new();
+
+
     // (생산시설, 자원) 단위로 배율을 누적한다 - 슬라임 농장처럼 한 시설이 여러 자원을
     // 생산할 때 버프 대상 자원만 골라 곱해야 하기 때문이다.
     private readonly Dictionary<(Factory, ResourceType), float> _multiplierByFactoryResource = new();
@@ -40,6 +44,7 @@ public class BabyDragonBuffSystem : MonoBehaviour
     {
         if (_gridMap != null)
         {
+            _gridMap.ConstructionOverrideQuery = this;
             _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
             _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoving);
             _gridMap.OnBuildingMoved.AddListener(HandleBuildingMoved);
@@ -57,11 +62,9 @@ public class BabyDragonBuffSystem : MonoBehaviour
 
     private void OnDisable()
     {
-        if (_gridMap != null)
+        if (_gridMap != null && ReferenceEquals(_gridMap.ConstructionOverrideQuery, this))
         {
-            _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingAdded);
-            _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingRemoving);
-            _gridMap.OnBuildingMoved.RemoveListener(HandleBuildingMoved);
+            _gridMap.ConstructionOverrideQuery = null;
         }
 
         if (_cycleManager != null)
@@ -154,8 +157,116 @@ public class BabyDragonBuffSystem : MonoBehaviour
             factory.SetAreaYieldMultipliers(_pushBuffer);
         }
 
+        RecomputeConstructionUnlocks();
+
         BuffsRecomputed?.Invoke();
     }
+
+    private void RecomputeConstructionUnlocks()
+    {
+        _unlockedConstructionCells.Clear();
+
+        foreach(BabyDragonTower babyDragon in _babyDragons)
+        {
+            if (!babyDragon.CanOperate ||
+                babyDragon.DragonData == null ||
+                babyDragon.Mode != BabyDragonMode.Buff)
+            {
+                continue;
+            }
+
+            CollectUnlockedCells (babyDragon);
+        }
+
+        SuspendBuildingsOutsideUnlock();
+    }
+
+    private void CollectUnlockedCells(BabyDragonTower babyDragon)
+    {
+        float radius = babyDragon.DragonData.BuffRadius;
+        IReadOnlyList<TerrainType> unlockTerrains = babyDragon.DragonData.ConstructionUnlockTerrains;
+
+        if (radius <= 0f || unlockTerrains == null || unlockTerrains.Count == 0)
+        {
+            return;
+        }
+
+        float radiusY = radius * IsometricMath.RADIUS_Y_RATIO;
+        Vector3 center = babyDragon.transform.position;
+
+        foreach (Vector3Int coord in _gridMap.EnumerateAllCoords())
+        {
+            TerrainType terrain = _gridMap.GetTerrainType(coord);
+            bool isTargetTerrain = false;
+
+            for (int i = 0; i < unlockTerrains.Count; i++)
+            {
+                if (unlockTerrains[i] == terrain)
+                {
+                    isTargetTerrain = true;
+                    break;
+                }
+            }
+
+            if (!isTargetTerrain)
+            {
+                continue;
+            }
+
+            Vector3 cellWorldPos = _gridMap.ConvertGridToWorld(coord); // 실제로는 _gridMap.ConvertGridToWorld(coord)
+
+            if (IsometricMath.IsWithinEllipse(cellWorldPos, center, radius, radiusY))
+            {
+                _unlockedConstructionCells.Add(coord);
+            }
+        }
+    }
+
+    // 화산 지대에 지어진 건물 중 지금 해제 범위를 벗어난 것을 전부 정지시키고 인구를 회수한다.
+    // 매번 전체를 다시 판정한다(diff가 아님) - 새끼용이 철거·이동·모드전환 등 어떤 경로로 사라져도
+    // 같은 로직 한 곳으로 처리되고, 세이브 로드 직후에도 그대로 맞는 상태가 나온다.
+    private void SuspendBuildingsOutsideUnlock()
+    {
+        foreach (Building building in _gridMap.Buildings)
+        {
+            IReadOnlyList<Vector3Int> footprint = _gridMap.GetFootprintCoords(building);
+
+            if (footprint.Count == 0)
+            {
+                continue;
+            }
+
+            bool needsUnlock = false;
+            bool stillUnlocked = true;
+
+            foreach (Vector3Int coord in footprint)
+            {
+                if (!_gridMap.IsNaturallyConstructible(coord))
+                {
+                    needsUnlock = true;
+
+                    if (!_unlockedConstructionCells.Contains(coord))
+                    {
+                        stillUnlocked = false;
+                    }
+                }
+            }
+
+            if (!needsUnlock)
+            {
+                continue;
+            }
+
+            building.SetSuspended(!stillUnlocked);
+
+            if (!stillUnlocked)
+            {
+                IPopulationAllocationTarget population = building.GetComponent<IPopulationAllocationTarget>();
+                population?.TryUnassign(population.AssignedPopulation);
+            }
+        }
+    }
+
 
     private void ApplyBuffFrom(
         BabyDragonTower babyDragon,
@@ -203,5 +314,10 @@ public class BabyDragonBuffSystem : MonoBehaviour
                 Debug.Log($"[BabyDragonBuffSystem] {factory.name} ({resourceType}): 범위 안 → ×{before} → ×{multiplierByFactoryResource[key]} (새끼용 배율 ×{babyDragonMultiplier})");
             }
         }
+    }
+
+    public bool IsConstructionAllowed(Vector3Int coord, TerrainType terrain)
+    {
+        return _unlockedConstructionCells.Contains(coord);
     }
 }

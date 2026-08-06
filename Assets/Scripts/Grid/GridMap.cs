@@ -426,7 +426,7 @@ public class GridMap : MonoBehaviour
 
     public IEnumerable<Vector3Int> EnumerateAllCoords() => _cells.Keys;
 
-    public bool IsNatuallyConstructible (Vector3Int coord) =>
+    public bool IsNaturallyConstructible (Vector3Int coord) =>
         _cells.TryGetValue(coord, out GridCell cell) && cell.CanConstruct;
 
     // 디버그 오버레이/로그 전용 원시 지형 생산력 - 자원 종류·연구 강화와 무관한 순수 값이다.

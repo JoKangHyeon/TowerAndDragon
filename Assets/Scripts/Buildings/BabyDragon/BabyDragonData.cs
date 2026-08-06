@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "TowerAndDragon/Baby Dragon Data", fileName = "BabyDragonData")]
@@ -36,6 +37,12 @@ public class BabyDragonData : TowerData, ITowerAuraDataProvider, IElementalAttac
 
     [Tooltip("생산량 버프가 적용될 자원 종류 (복수 선택). None이면 어떤 자원도 버프하지 않는다.")]
     [SerializeField] private ResourceType _buffTargetResources;
+
+    [Tooltip("버프 반경 안에서 지형 건설 제한을 해제할 지형 목록. 비어 있으면 해제 없음 - 얼음=화산 지대.")]
+    [SerializeField] private TerrainType[] _constructionUnlockTerrains;
+
+    public IReadOnlyList<TerrainType> ConstructionUnlockTerrains => _constructionUnlockTerrains;
+
 
     [Header("Tower Aura")]
     [SerializeField] private TowerAuraDataSO _towerAura;
