@@ -27,9 +27,18 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         public float RemainingSeconds;
         public float TickTimer;
     }
+    // 다른 두 Entry와 달리 Source/Element를 보관하지 않는다 - 스택은 임계치에 도달하는 순간
+    // 그 자리에서 곧바로 TriggerStatus를  부여하므로, 나중에 되읽을 값이 없다.
+    private struct StackEntry
+    {
+        public bool IsInfinite;
+        public float RemainingSeconds;
+        public int Stacks;
+    }
 
     private readonly Dictionary<string, MoveSpeedEntry> _moveSpeedStatuses = new();
     private readonly Dictionary<string, DotEntry> _dotStatuses = new();
+    private readonly Dictionary<string, StackEntry> _stackStatuses = new();
     private readonly List<string> _keysBuffer = new();
 
     private BaseMonster _monster;
@@ -72,6 +81,9 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             case DamageOverTimeStatusSO dot:
                 ApplyDot(dot, element);
                 break;
+            case StackingStatusEffectSO stacking:
+                ApplyStack(stacking, element);
+                break;
         }
     }
 
@@ -80,6 +92,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         _moveSpeedStatuses.Clear();
         _dotStatuses.Clear();
         _monster?.RefreshMoveSpeed();
+        _stackStatuses.Clear();
     }
 
     private void ApplyMoveSpeed(MoveSpeedStatusSO status)
@@ -110,6 +123,38 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         };
     }
 
+    private void ApplyStack (StackingStatusEffectSO status, DragonType? element)
+    {
+        string key = ResolveKey(status);
+        int stacks = _stackStatuses.TryGetValue(key, out StackEntry existing)
+            ? existing.Stacks + 1 
+            : 1;
+        
+        if (stacks >= status.StacksToTrigger)
+        {
+            _stackStatuses.Remove(key);
+            TriggerStack(status, element);
+            return;
+        }
+        
+        _stackStatuses[key] = new StackEntry
+        {
+            IsInfinite = status.IsInfinite,
+            RemainingSeconds = status.DurationSeconds,
+            Stacks = stacks,
+        };
+    }
+
+    // 부여할 상태가 도 스택 상태이면 무시한다 - 서로를 가리키는 애셋 설정이 무한 재귀가 되는 것을 막는다.
+    private void TriggerStack (StackingStatusEffectSO status, DragonType? element)
+    {
+        if (status.TriggeredStatus is null or StackingStatusEffectSO)
+        {
+            return;
+        }
+        Apply(status.TriggeredStatus, element);
+    }
+
     private void Update()
     {
         float deltaTime = Time.deltaTime;
@@ -120,6 +165,42 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         }
 
         TickDotStatuses(deltaTime);
+        TickStackStatuses(deltaTime);
+    }
+
+    private void TickStackStatuses (float deltaTime)
+    {
+        if (_stackStatuses.Count == 0)
+        {
+            return;
+        }
+
+        _keysBuffer.Clear();
+        _keysBuffer.AddRange(_stackStatuses.Keys);
+
+        foreach (string key in _keysBuffer)
+        {
+            StackEntry entry = _stackStatuses[key];
+
+            if (entry.IsInfinite)
+            {
+                continue;
+            }
+
+            entry.RemainingSeconds -= deltaTime;
+
+            // 유지 시간이 지나면 쌓인 스택을 통째로 비운다 (1개씩 감소가 아님)
+            // 마지막 타격 이휴 5초안에 3번을 채워야 빙결
+            if (entry.RemainingSeconds <= 0f)
+            {
+                _stackStatuses.Remove(key);
+
+            }
+            else
+            {
+                _stackStatuses[key] = entry;
+            }
+        }
     }
 
     // 딕셔너리를 순회하며 값을 갱신/제거하면 열거자가 깨질 수 있어, 키 스냅샷을 먼저 뜬 뒤
