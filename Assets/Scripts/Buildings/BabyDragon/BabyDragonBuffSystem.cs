@@ -28,9 +28,13 @@ public class BabyDragonBuffSystem : MonoBehaviour
     private readonly List<BabyDragonTower> _babyDragons = new();
     private readonly List<Factory> _factories = new();
 
-    // 매 재계산마다 새로 할당하지 않도록 재사용한다 - 재계산 빈도가 하루 1회(OnNightEnd)에서
-    // 배치/철거 조작마다로 늘어났기 때문이다(GridMap._chunkYieldBuffer와 같은 관례).
-    private readonly Dictionary<Factory, float> _multiplierByFactory = new();
+    // (생산시설, 자원) 단위로 배율을 누적한다 - 슬라임 농장처럼 한 시설이 여러 자원을
+    // 생산할 때 버프 대상 자원만 골라 곱해야 하기 때문이다.
+    private readonly Dictionary<(Factory, ResourceType), float> _multiplierByFactoryResource = new();
+
+    // Factory에 넘길 자원별 배율을 담는 재사용 버퍼 - 시설마다 새로 할당하지 않는다.
+    private readonly Dictionary<ResourceType, float> _pushBuffer = new();
+
 
     private void OnEnable()
     {
@@ -114,11 +118,14 @@ public class BabyDragonBuffSystem : MonoBehaviour
 
     private void RecomputeAll()
     {
-        _multiplierByFactory.Clear();
+        _multiplierByFactoryResource.Clear();
 
         foreach (Factory factory in _factories)
         {
-            _multiplierByFactory[factory] = Factory.NEUTRAL_YIELD_MULTIPLIER;
+            foreach (ResourceType resourceType in factory.EnumerateProducedResourceTypes())
+            {
+                _multiplierByFactoryResource[(factory, resourceType)] = Factory.NEUTRAL_YIELD_MULTIPLIER;
+            }
         }
 
         foreach (BabyDragonTower babyDragon in _babyDragons)
@@ -130,24 +137,36 @@ public class BabyDragonBuffSystem : MonoBehaviour
                 continue;
             }
 
-            ApplyBuffFrom(babyDragon, _multiplierByFactory);
+            ApplyBuffFrom(babyDragon, _multiplierByFactoryResource);
         }
 
-        foreach (KeyValuePair<Factory, float> entry in _multiplierByFactory)
+        foreach (Factory factory in _factories)
         {
-            Debug.Log($"[BabyDragonBuffSystem] 최종 배율 → {entry.Key.name}: ×{entry.Value}");
-            entry.Key.SetAreaYieldMultiplier(entry.Value);
+            _pushBuffer.Clear();
+
+            foreach (ResourceType resourceType in factory.EnumerateProducedResourceTypes())
+            {
+                float multiplier = _multiplierByFactoryResource[(factory, resourceType)];
+                _pushBuffer[resourceType] = multiplier;
+                Debug.Log($"[BabyDragonBuffSystem] 최종 배율 → {factory.name} ({resourceType}): ×{multiplier}");
+            }
+
+            factory.SetAreaYieldMultipliers(_pushBuffer);
         }
 
         BuffsRecomputed?.Invoke();
     }
 
-    private void ApplyBuffFrom(BabyDragonTower babyDragon, Dictionary<Factory, float> multiplierByFactory)
+    private void ApplyBuffFrom(
+        BabyDragonTower babyDragon,
+        Dictionary<(Factory, ResourceType), float> multiplierByFactoryResource)
     {
         float radius = babyDragon.DragonData.BuffRadius;
+        ResourceType targetResources = babyDragon.DragonData.BuffTargetResources;
 
-        // 0이면 버프 없는 속성(예: 얼음/불/시간 - 생산량 버프가 아닌 별개 지역 효과를 쓴다) - 계산을 건너뛴다.
-        if (radius <= 0f)
+        // 반경이 없거나(예: 얼음/불/시간 - 생산량 버프가 아닌 별개 지역 효과를 쓴다) 대상 자원이
+        // 지정되지 않았으면 계산을 건너뛴다.
+        if (radius <= 0f || targetResources == ResourceType.None)
         {
             return;
         }
@@ -168,9 +187,21 @@ public class BabyDragonBuffSystem : MonoBehaviour
                 : 0f;
             float babyDragonMultiplier = babyDragon.DragonData.BuffYieldMultiplier * (1f + kinBonus);
 
-            float before = multiplierByFactory[factory];
-            multiplierByFactory[factory] *= babyDragonMultiplier;
-            Debug.Log($"[BabyDragonBuffSystem] {factory.name}: 범위 안 → ×{before} → ×{multiplierByFactory[factory]} (새끼용 배율 ×{babyDragonMultiplier})");
+            foreach (ResourceType resourceType in factory.EnumerateProducedResourceTypes())
+            {
+                // EnumerateProducedResourceTypes는 단일 비트만 내놓으므로 마스크 교집합 검사로
+                // 이 새끼용이 버프하는 자원인지 판정한다(슬라임 농장처럼 여러 자원을 생산해도
+                // 대상 자원만 골라 곱한다).
+                if ((targetResources & resourceType) == 0)
+                {
+                    continue;
+                }
+
+                var key = (factory, resourceType);
+                float before = multiplierByFactoryResource[key];
+                multiplierByFactoryResource[key] *= babyDragonMultiplier;
+                Debug.Log($"[BabyDragonBuffSystem] {factory.name} ({resourceType}): 범위 안 → ×{before} → ×{multiplierByFactoryResource[key]} (새끼용 배율 ×{babyDragonMultiplier})");
+            }
         }
     }
 }
