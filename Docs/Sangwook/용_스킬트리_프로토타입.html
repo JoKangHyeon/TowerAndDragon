@@ -72,15 +72,15 @@ const rad = d => (d-90) * Math.PI/180;
 // 속성 ↔ 바이옴 ↔ 재화(슬라임+특화) 매핑 + 효과(기획 §10)
 const ATTRS = [
   {key:"생명", ang:0,   color:"#7fd14f", slime:"초원슬라임", spec:"기초자원",
-   passive:"농장 생산량↑", active:"바리케이드", kinTower:"[미정]", kinArea:"주변 농장↑", kinTbd:true},
+   passive:"당일 식량·목재·슬라임 생산↑ / 타워 최대 체력↑", active:"메인 성 체력 약 20 회복(예상)", kinTower:"[미정]", kinArea:"주변 농장↑", kinTbd:true},
   {key:"얼음", ang:72,  color:"#5bc0e0", slime:"설원슬라임", spec:"눈결정",
-   passive:"타워 공격 슬로우", active:"모든 적 빙결", kinTower:"슬로우 타워", kinArea:"강 결빙→건물배치", kinTbd:false},
+   passive:"모든 기본 타워 공격에 둔화", active:"모든 적 5초 빙결", kinTower:"슬로우 타워", kinArea:"강 결빙→건물배치", kinTbd:false},
   {key:"불",   ang:144, color:"#e0603c", slime:"용암슬라임", spec:"불꽃심장",
-   passive:"모든 적 화상", active:"화상 가속·전역뎀", kinTower:"화상 타워", kinArea:"시야 범위 증가", kinTbd:false},
+   passive:"모든 타워 화상/대미지↑ [선택 미정]", active:"모든 경로 강한 화염 피해", kinTower:"화상 타워", kinArea:"시야 범위 증가", kinTbd:false},
   {key:"시간", ang:216, color:"#b07de0", slime:"사막슬라임", spec:"시간모래",
-   passive:"타워 공격속도↑", active:"파괴 타워 즉시 수리", kinTower:"[미정]", kinArea:"점령 공격대 포함", kinTbd:true},
+   passive:"모든 타워 공격속도↑·재활성화 시간↓", active:"모든 타워 즉시 재활성화", kinTower:"[미정]", kinArea:"점령 공격대 포함", kinTbd:true},
   {key:"암석", ang:288, color:"#c9a24a", slime:"암석슬라임", spec:"현자돌",
-   passive:"광산 생산량↑", active:"메테오", kinTower:"[미정]", kinArea:"주변 광산↑", kinTbd:true},
+   passive:"석재·특화·RP 생산↑ / 성 보호막", active:"야간 성벽 생성·모든 타워 보호막", kinTower:"[미정]", kinArea:"주변 광산↑", kinTbd:true},
 ];
 const ATTR_BY_KEY = Object.fromEntries(ATTRS.map(a=>[a.key,a]));
 
