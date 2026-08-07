@@ -25,7 +25,8 @@ public class BabyDragonGuideController : MonoBehaviour
 
     [SerializeField] private GameManager _gameManager;
     [SerializeField] private DragonEggInventorySystem _eggInventorySystem;
-    [SerializeField] private UI_DragonInventoryWindow _inventoryWindow;
+    [Tooltip("알·새끼용 목록이 있는 용 창. 통합 전에는 별도 창(UI_DragonInventoryWindow)이었다.")]
+    [SerializeField] private UI_DragonWindow _inventoryWindow;
     [SerializeField] private GridMap _gridMap;
 
     [Tooltip("새끼용을 골라 배치 대기 상태가 됐는지 판정하는 데 쓴다. 골랐으면 딤을 걷어 그리드를 그대로 보여준다.")]
@@ -263,7 +264,7 @@ public class BabyDragonGuideController : MonoBehaviour
                 }
 
                 // 알 슬롯은 눌러도 반응이 없으므로 "창을 닫고 하루를 보내라"까지 같이 알려준다.
-                ShowSlotGuide(wantDragonTab: false, WAIT_HATCH_LOC_KEY, ResolveToggleKeyLabel());
+                ShowSlotGuide(wantDragonSlot: false, WAIT_HATCH_LOC_KEY, ResolveToggleKeyLabel());
                 break;
 
             case BabyDragonGuideStep.PlaceDragon:
@@ -284,7 +285,7 @@ public class BabyDragonGuideController : MonoBehaviour
                 }
 
                 // 배치는 슬롯을 누른 뒤 그리드를 눌러야 끝나므로 화면을 막으면 배치 자체가 불가능해진다.
-                ShowSlotGuide(wantDragonTab: true, PLACE_DRAGON_LOC_KEY);
+                ShowSlotGuide(wantDragonSlot: true, PLACE_DRAGON_LOC_KEY);
                 break;
 
             default:
@@ -318,8 +319,8 @@ public class BabyDragonGuideController : MonoBehaviour
 
     private bool IsInventoryOpen => _inventoryWindow != null && _inventoryWindow.IsOpen;
 
-    // 새끼용 고스트가 커서를 따라다니는 중. ESC로 인벤토리를 닫아도 고스트는 살아있으므로
-    // (UI_DragonInventoryWindow는 창만 닫고 배치를 취소하지 않는다) 창 열림 여부보다 이 판정이 먼저다.
+    // 새끼용 고스트가 커서를 따라다니는 중. ESC로 창을 닫아도 고스트는 살아있으므로
+    // (용 창은 창만 닫고 배치를 취소하지 않는다) 창 열림 여부보다 이 판정이 먼저다.
     private bool IsPlacingBabyDragon =>
         _placementController != null && _placementController.BuildingToPlace is BabyDragonTower;
 
@@ -327,7 +328,11 @@ public class BabyDragonGuideController : MonoBehaviour
 
     // 창이 열려 있는 동안 그 안의 대상을 강조한다. 창이 닫힌 동안 무엇을 할지는 단계마다 다르므로
     // 여기서 정하지 않고 호출부(Render)가 미리 걸러낸다.
-    private void ShowSlotGuide(bool wantDragonTab, string slotLocKey, params object[] slotArgs)
+    //
+    // 알 탭과 용 탭이 따로였을 때는 "원하는 탭으로 바꾸게 한 뒤 그 탭의 첫 슬롯"이었다.
+    // 지금은 둘이 새끼용 탭 한 패널에 함께 있으므로, 탭 유도는 한 번뿐이고 그 뒤에는
+    // 어느 목록의 슬롯을 가리킬지 단계가 직접 고른다.
+    private void ShowSlotGuide(bool wantDragonSlot, string slotLocKey, params object[] slotArgs)
     {
         if (!IsInventoryOpen)
         {
@@ -337,14 +342,17 @@ public class BabyDragonGuideController : MonoBehaviour
 
         // 딤은 켜되 막지는 않는다 - 알 슬롯은 눌러도 반응이 없고(SetupEgg에서 interactable=false),
         // 용 슬롯은 누른 뒤 그리드까지 눌러야 배치가 끝나므로 막으면 진행 자체가 불가능해진다.
-        if (_inventoryWindow.IsDragonTabShown != wantDragonTab)
+        if (!_inventoryWindow.IsBabyTabShown)
         {
-            RectTransform tabRect = wantDragonTab ? _inventoryWindow.DragonTabRect : _inventoryWindow.EggTabRect;
-            ShowGuide(tabRect, SWITCH_TAB_LOC_KEY, blocksInput: false);
+            ShowGuide(_inventoryWindow.BabyTabRect, SWITCH_TAB_LOC_KEY, blocksInput: false);
             return;
         }
 
-        if (_inventoryWindow.TryGetFirstSlotRect(out RectTransform slotRect))
+        bool hasSlot = wantDragonSlot
+            ? _inventoryWindow.TryGetFirstBabyDragonSlotRect(out RectTransform slotRect)
+            : _inventoryWindow.TryGetFirstEggSlotRect(out slotRect);
+
+        if (hasSlot)
         {
             ShowGuide(slotRect, slotLocKey, blocksInput: false, slotArgs);
             return;

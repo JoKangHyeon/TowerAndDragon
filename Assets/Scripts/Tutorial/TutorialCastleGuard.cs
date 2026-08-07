@@ -29,11 +29,22 @@ public sealed class TutorialCastleGuard : MonoBehaviour, ICastleDamageBlockQuery
     [SerializeField] private WaveManager _waveManager;
 
     private bool _isDefeatAllowed;
+    private bool _isRescueSuspended;
 
     /// <summary>마지막 밤의 연출된 패배 직전에 호출한다. 한 번 풀면 되돌리지 않는다.</summary>
     public void AllowDefeat()
     {
         _isDefeatAllowed = true;
+    }
+
+    /// <summary>
+    /// 성은 계속 지키되 구제(남은 웨이브 정리)만 멈춘다. 마지막 밤에 쓴다 -
+    /// 보스는 느리게 걸어오는데 앞서 온 잡몹이 성을 위태롭게 만들면 구제가 웨이브를 치워
+    /// 보스가 도착하기도 전에 밤이 끝난다. 정작 싸워야 할 상대를 못 만나는 셈이다.
+    /// </summary>
+    public void SuspendRescue()
+    {
+        _isRescueSuspended = true;
     }
 
     bool ICastleDamageBlockQuery.CanTakeDamage(float amount)
@@ -77,7 +88,7 @@ public sealed class TutorialCastleGuard : MonoBehaviour, ICastleDamageBlockQuery
 
     private void HandleHealthChanged(float current, float max)
     {
-        if (_isDefeatAllowed || _waveManager == null || !_waveManager.IsRunning || max <= 0f)
+        if (_isDefeatAllowed || _isRescueSuspended || _waveManager == null || !_waveManager.IsRunning || max <= 0f)
         {
             return;
         }

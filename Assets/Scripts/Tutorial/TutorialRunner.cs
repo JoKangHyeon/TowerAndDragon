@@ -13,9 +13,11 @@ using UnityEngine.Events;
 /// 새끼용 가이드보다 우선순위가 높아 표시권을 빼앗기지 않으므로, 오버레이의 DisplayReleased는 구독하지 않는다 -
 /// 구독하면 스스로 Release한 직후 다시 그리려 들어 끝난 안내가 되살아난다.
 /// </summary>
-public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDayEndBlockQuery
+public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDayEndBlockQuery,
+    IHudControlBlockQuery
 {
     private const float DEFAULT_HAND_OVER_DELAY = 1.5f;
+    private const float DEFAULT_STALL_ESCAPE_SECONDS = 45f;
 
     [SerializeField] private TutorialSequenceSO _sequence;
     [SerializeField] private GameManager _gameManager;
@@ -39,15 +41,27 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     [Tooltip("점령지 선택을 기다리는 단계에 필요하다.")]
     [SerializeField] private UI_ConquestWindow _conquestWindow;
 
-    [Tooltip("인벤토리 슬롯을 가리키는 단계에 필요하다. 슬롯은 런타임 생성이라 앵커로 잡을 수 없다.")]
-    [SerializeField] private UI_DragonInventoryWindow _dragonInventoryWindow;
+    [Tooltip("알·새끼용 슬롯을 가리키는 단계와 새끼용 탭 선택을 기다리는 단계에 필요하다. " +
+             "슬롯은 런타임 생성이라 앵커로 잡을 수 없다.")]
+    [SerializeField] private UI_DragonWindow _dragonWindow;
 
     [Tooltip("건설 패널 슬롯을 가리키는 단계에 필요하다. 슬롯은 런타임 생성이라 GuideAnchor로 잡을 수 없다.")]
     [SerializeField] private UI_BuildModeWindow _buildModeWindow;
 
+    [Header("안내 중 막을 HUD 조작")]
+    [Tooltip("배타 창도 밤 시작도 아니라 기존 관문에 걸리지 않는 것들. 비우면 막지 않는다.")]
+    [SerializeField] private UI_SpeedSettingWindow _speedSettingWindow;
+
+    [SerializeField] private MinimapController _minimapController;
+
     [Tooltip("마지막 안내가 끝나고 다음 가이드에 넘기기까지 쉬는 시간(초). 0이면 곧바로 이어져 숨 돌릴 틈이 없다.")]
     [Min(0f)]
     [SerializeField] private float _handOverDelaySeconds = DEFAULT_HAND_OVER_DELAY;
+
+    [Tooltip("행동형 단계가 이 시간(초) 동안 진행되지 않으면 확인 버튼을 띄워 넘어갈 수 있게 한다. " +
+             "0이면 쓰지 않는다 - 배선이 잘못됐을 때 플레이어가 갇히는 것을 막는 마지막 장치다.")]
+    [Min(0f)]
+    [SerializeField] private float _stallEscapeSeconds = DEFAULT_STALL_ESCAPE_SECONDS;
 
     [Header("시작 자원 지급")]
     [Tooltip("행동형 단계는 그 행동이 실제로 가능해야 성립한다. 자원이 모자라면 안내해도 못 하고 단계가 영영 안 넘어간다.")]
@@ -72,6 +86,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
     // 인구 조건은 절대값이 아니라 진입 시점부터의 증가분으로 본다.
     private int _populationBaseline;
+
+    // 지금 단계가 오래 진행되지 않아 확인 버튼을 내준 상태. 단계를 넘길 때마다 풀린다.
+    private bool _isStalled;
 
     // 안내가 지나간 창만 열 수 있다. 지금 단계의 것만 허용하면 플레이어가 그 창을 닫았을 때 다시 열 수 없어 갇힌다.
     private readonly HashSet<TutorialExclusiveModeKind> _unlockedModes = new();
@@ -102,6 +119,16 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             _cycleManager.DayEndBlockQuery = this;
         }
 
+        if (_speedSettingWindow != null)
+        {
+            _speedSettingWindow.BlockQuery = this;
+        }
+
+        if (_minimapController != null)
+        {
+            _minimapController.BlockQuery = this;
+        }
+
         if (_overlay != null)
         {
             _overlay.ConfirmClicked += HandleConfirmClicked;
@@ -129,6 +156,16 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// 아직 준비가 안 된 플레이어가 잘못 눌러 밤을 맞이하는 쪽이 더 큰 손해라 끝까지 막는다.
     /// </summary>
     bool IDayEndBlockQuery.CanEndDay()
+    {
+        return !_isRunning;
+    }
+
+    /// <summary>
+    /// 안내가 도는 동안에는 지금 유도하는 것 외의 HUD 조작을 받지 않는다 - 속도를 바꾸거나
+    /// 미니맵을 만지는 것이 진행을 망치지는 않지만, 무엇을 하라는 안내인지 흐려진다.
+    /// 창 열기와 밤 시작은 각각 전용 관문이 따로 막는다.
+    /// </summary>
+    bool IHudControlBlockQuery.CanUseHudControl()
     {
         return !_isRunning;
     }
@@ -168,8 +205,8 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             return true;
         }
 
-        // 인벤토리 슬롯을 가리키는 단계는 TargetMode가 비어 있다(가리키는 것이 창이 아니라 그 안의 슬롯이라서).
-        if (_activeStep.TargetsDragonInventorySlot &&
+        // 슬롯을 가리키는 단계는 TargetMode가 비어 있다(가리키는 것이 창이 아니라 그 안의 슬롯이라서).
+        if (_activeStep.DynamicTarget != TutorialDynamicTargetKind.None &&
             MatchesMode(mode, TutorialExclusiveModeKind.BabyDragonInventory))
         {
             return false;
@@ -196,11 +233,18 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
     }
 
-    // 확인 버튼은 오버레이가 공용이라 남의 단계에서도 눌릴 수 있다 - 지금 내 설명형 단계일 때만 받는다.
+    // 확인 버튼은 오버레이가 공용이라 남의 단계에서도 눌릴 수 있다 - 지금 내 단계일 때만 받는다.
+    // 설명형은 원래 확인 버튼으로 넘기고, 행동형은 막혀서 버튼을 내준 경우에만 받는다.
     private void HandleConfirmClicked()
     {
-        if (_isRunning && _activeStep != null &&
-            _activeStep.Kind == TutorialStepKind.Acknowledge && _activeStep.WaitForConfirm)
+        if (!_isRunning || _activeStep == null)
+        {
+            return;
+        }
+
+        bool isAcknowledged = _activeStep.Kind == TutorialStepKind.Acknowledge && _activeStep.WaitForConfirm;
+
+        if (isAcknowledged || _isStalled)
         {
             Advance();
         }
@@ -275,6 +319,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     {
         UnsubscribeConditions();
 
+        // 새 단계는 막히지 않은 상태에서 시작한다 - 앞 단계에서 내준 확인 버튼이 따라오면
+        // 행동형 단계를 눌러서 건너뛸 수 있게 된다.
+        _isStalled = false;
+
         if (index >= _sequence.Steps.Count)
         {
             Finish();
@@ -293,6 +341,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
 
         CurrentRun?.TryEnterTutorialStep(_activeStep.StepId);
+
+        // 어떤 순서로 안내가 나갔는지는 화면만 봐서는 되짚을 수 없다 - 같은 문구가 두 번 나오거나
+        // 한 단계를 건너뛴 것을 이 로그로 구분한다(TutorialScenarioController의 챕터 로그와 같은 이유).
+        Debug.Log($"[TutorialRunner] {name} 단계 {index}: {_activeStep.StepId} ({_activeStep.MessageLocKey})", this);
 
         // 이 단계가 열라고 시키는 창은 이제부터 열 수 있다(그 뒤로도 계속).
         if (_activeStep.TargetMode != TutorialExclusiveModeKind.None)
@@ -317,6 +369,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (_activeStep.Kind == TutorialStepKind.Acknowledge && !_activeStep.WaitForConfirm)
         {
             AutoAdvanceAsync(_activeStep).Forget();
+        }
+        else if (_activeStep.Kind == TutorialStepKind.WaitForAction && _stallEscapeSeconds > 0f)
+        {
+            WatchStallAsync(_activeStep).Forget();
         }
     }
 
@@ -388,6 +444,16 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         {
             _cycleManager.DayEndBlockQuery = null;
         }
+
+        if (_speedSettingWindow != null && ReferenceEquals(_speedSettingWindow.BlockQuery, this))
+        {
+            _speedSettingWindow.BlockQuery = null;
+        }
+
+        if (_minimapController != null && ReferenceEquals(_minimapController.BlockQuery, this))
+        {
+            _minimapController.BlockQuery = null;
+        }
     }
 
     private async UniTaskVoid AutoAdvanceAsync(TutorialStepSO step)
@@ -414,6 +480,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
         RectTransform target = ResolveAnchor(_activeStep);
 
+        // 갇힌 단계에서는 행동형에도 확인 버튼을 띄운다 - 그것이 유일한 빠져나갈 길이다.
+        bool showsConfirmButton = _activeStep.ShowsConfirmButton || _isStalled;
+
         // 대상을 못 찾았을 때 입력까지 막으면 오버레이가 아무것도 그리지 않는다 - 문구만이라도 띄운다.
         _overlay.Show(
             this,
@@ -421,22 +490,50 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             target,
             _activeStep.MessageLocKey,
             // 대상이 없어도 확인 버튼이 있으면 화면 전체를 막을 수 있다 - 읽는 동안 뒤쪽이 눌리면 안 된다.
-            _activeStep.BlocksInput && (target != null || _activeStep.ShowsConfirmButton),
+            _activeStep.BlocksInput && (target != null || showsConfirmButton),
             _activeStep.BlocksTargetInteraction,
-            _activeStep.ShowsConfirmButton,
+            showsConfirmButton,
             _activeStep.BubbleSlot);
+    }
+
+    /// <summary>
+    /// 행동형 단계가 오래 진행되지 않으면 확인 버튼을 띄워 넘어갈 길을 만든다.
+    ///
+    /// 자동으로 넘기지 않는 이유: 천천히 하는 플레이어의 단계를 멋대로 건너뛰면 안내가 어긋난다.
+    /// 게이트를 여는 방식도 쓰지 않는다 - 아직 설명하지 않은 창이 열리거나 밤으로 넘어가면
+    /// 무엇을 하라는 안내인지 알 수 없게 되고, 그건 갇히는 것보다 나쁘다.
+    /// 버튼만 내주면 플레이어가 고를 수 있고, 어느 단계에서 막혔는지는 로그로 남는다.
+    /// </summary>
+    private async UniTaskVoid WatchStallAsync(TutorialStepSO step)
+    {
+        await UniTask.WaitForSeconds(
+            _stallEscapeSeconds,
+            ignoreTimeScale: true,
+            cancellationToken: this.GetCancellationTokenOnDestroy());
+
+        // 그 사이 넘어갔으면(다른 단계이거나 끝났으면) 할 일이 없다.
+        if (!_isRunning || _activeStep != step)
+        {
+            return;
+        }
+
+        _isStalled = true;
+        Debug.LogError(
+            $"[TutorialRunner] '{step.StepId}' 단계가 {_stallEscapeSeconds}초 동안 진행되지 않아 " +
+            "확인 버튼으로 넘어갈 수 있게 합니다. 완료 조건 배선을 확인하세요.", this);
+
+        Render();
     }
 
     // 대상을 못 찾아도 단계는 진행돼야 하므로 문구만 띄우고(null), 나중에 나타나면 그때 다시 그린다.
     private RectTransform ResolveAnchor(TutorialStepSO step)
     {
-        // 인벤토리 슬롯도 런타임 생성이라 창에서 찾아온다. 어느 탭이 열려 있느냐가 곧 어느 슬롯인지다.
-        if (step.TargetsDragonInventorySlot)
+        // 알·새끼용 슬롯도 런타임 생성이라 창에서 찾아온다. 둘이 한 패널에 있으므로 단계가 어느 쪽인지 지정한다.
+        if (step.DynamicTarget != TutorialDynamicTargetKind.None)
         {
-            if (_dragonInventoryWindow != null &&
-                _dragonInventoryWindow.TryGetFirstSlotRect(out RectTransform inventorySlotRect))
+            if (TryResolveDynamicTarget(step.DynamicTarget, out RectTransform slotRect))
             {
-                return inventorySlotRect;
+                return slotRect;
             }
 
             // 창이 닫혀 있거나 아직 안 그려졌다 - 다시 그려질 때 조준한다.
@@ -472,6 +569,28 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         GuideAnchorRegistry.AnchorRegistered -= HandleAnchorRegistered;
         GuideAnchorRegistry.AnchorRegistered += HandleAnchorRegistered;
         return null;
+    }
+
+    private bool TryResolveDynamicTarget(TutorialDynamicTargetKind kind, out RectTransform slotRect)
+    {
+        slotRect = null;
+
+        if (_dragonWindow == null)
+        {
+            return false;
+        }
+
+        switch (kind)
+        {
+            case TutorialDynamicTargetKind.DragonEggSlot:
+                return _dragonWindow.TryGetFirstEggSlotRect(out slotRect);
+
+            case TutorialDynamicTargetKind.BabyDragonSlot:
+                return _dragonWindow.TryGetFirstBabyDragonSlotRect(out slotRect);
+
+            default:
+                return false;
+        }
     }
 
     private void GrantStartingResources()
@@ -522,8 +641,14 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     }
 
     /// <summary>
-    /// 지금 이 조건이 충족돼 있는지. 창 열기/닫기처럼 "상태"로 확인할 수 있는 것만 본다 -
-    /// 인구 배치처럼 증가분으로 보는 조건은 진입 시점이 곧 기준이라 여기서 판정할 것이 없다.
+    /// 지금 이 조건이 충족돼 있는지. "상태"로 확인할 수 있는 것만 본다.
+    ///
+    /// 이벤트만 듣는 조건은 안내가 뜨기 전에 플레이어가 이미 그 행동을 해버리면 영영 감지하지 못하고
+    /// 그 단계에 갇힌다. 그리고 갇히면 창 열기·밤 시작 관문이 계속 거절해 게임 전체가 잠긴다.
+    /// 그래서 상태로 되돌아볼 수 있는 것은 전부 여기서 본다.
+    ///
+    /// <b>조건을 새로 추가하면 반드시 이 switch에 넣을 것.</b> 빠뜨리면 조용히 이벤트 전용이 되고,
+    /// 그게 이 계열 버그가 반복된 이유다. 상태로 볼 수 없는 조건도 아래에 명시적으로 적어 둔다.
     /// </summary>
     private bool IsConditionAlreadySatisfied(TutorialStepSO step)
     {
@@ -532,15 +657,54 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             return false;
         }
 
-        MonoBehaviour openMode = _uiManager.CurrentOpenExclusiveMode;
-
         switch (step.Condition)
         {
             case TutorialConditionType.ExclusiveModeOpened:
-                return MatchesMode(openMode, step.TargetMode);
+                return MatchesMode(_uiManager.CurrentOpenExclusiveMode, step.TargetMode);
 
             case TutorialConditionType.ExclusiveModeClosed:
-                return !MatchesMode(openMode, step.TargetMode);
+                return !MatchesMode(_uiManager.CurrentOpenExclusiveMode, step.TargetMode);
+
+            case TutorialConditionType.BuildingSelectedForPlacement:
+                return _placementController != null &&
+                       MatchesBuilding(_placementController.BuildingToPlace, step);
+
+            case TutorialConditionType.BuildingSelectedOnGrid:
+                return _placementController != null &&
+                       MatchesBuilding(_placementController.SelectedBuilding, step);
+
+            case TutorialConditionType.BuildingDeselectedOnGrid:
+                return _placementController != null && _placementController.SelectedBuilding == null;
+
+            case TutorialConditionType.SelectedBuildingFullyStaffed:
+                return IsSelectedBuildingFullyStaffed();
+
+            case TutorialConditionType.ConquestChunkSelected:
+                return _conquestWindow != null && _conquestWindow.HasSelectedChunk;
+
+            case TutorialConditionType.DragonInventoryDragonTabSelected:
+                return _dragonWindow != null && _dragonWindow.IsBabyTabShown;
+
+            // --- 여기부터는 상태로 판정할 수 없다. 이벤트 구독으로만 넘어간다. ---
+            // 진입 시점 대비 증감이거나(인구), 흔적이 남지 않는 1회성 입력이다.
+            case TutorialConditionType.None:
+            case TutorialConditionType.PopulationAssigned:
+            case TutorialConditionType.PopulationUnassigned:
+                return false;
+
+            // 이미 같은 종류의 건물이 서 있으면 진입 즉시 통과해버린다(두 번째 타워를 짓게 하는 단계).
+            case TutorialConditionType.BuildingConstructed:
+            case TutorialConditionType.BuildingRemoved:
+            case TutorialConditionType.BuildingMoved:
+                return false;
+
+            // 건설 패널은 열 때 기본 탭이 이미 골라져 있어, 상태로 보면 안내가 화면에 뜨지도 못하고 지나간다.
+            case TutorialConditionType.BuildPanelTabSelected:
+                return false;
+
+            case TutorialConditionType.ResearchNodeCompleted:
+            case TutorialConditionType.ExpeditionSent:
+                return false;
 
             default:
                 return false;
@@ -657,9 +821,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 break;
 
             case TutorialConditionType.DragonInventoryDragonTabSelected:
-                if (_dragonInventoryWindow != null)
+                if (_dragonWindow != null)
                 {
-                    _dragonInventoryWindow.OnTabDisplayed.AddListener(HandleDragonTabDisplayed);
+                    _dragonWindow.OnTabDisplayed.AddListener(HandleDragonTabDisplayed);
                 }
                 break;
 
@@ -714,10 +878,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             _buildModeWindow.OnTabSelected.RemoveListener(HandleTabSelected);
         }
 
-        if (_dragonInventoryWindow != null)
+        if (_dragonWindow != null)
         {
-            _dragonInventoryWindow.OnSlotViewChanged.RemoveListener(Render);
-            _dragonInventoryWindow.OnTabDisplayed.RemoveListener(HandleDragonTabDisplayed);
+            _dragonWindow.OnSlotViewChanged.RemoveListener(Render);
+            _dragonWindow.OnTabDisplayed.RemoveListener(HandleDragonTabDisplayed);
         }
 
         if (_conquestManager != null)
@@ -769,13 +933,13 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
     private void SubscribeInventorySlotViewOnce()
     {
-        if (_dragonInventoryWindow == null)
+        if (_dragonWindow == null)
         {
             return;
         }
 
-        _dragonInventoryWindow.OnSlotViewChanged.RemoveListener(Render);
-        _dragonInventoryWindow.OnSlotViewChanged.AddListener(Render);
+        _dragonWindow.OnSlotViewChanged.RemoveListener(Render);
+        _dragonWindow.OnSlotViewChanged.AddListener(Render);
     }
 
     // 어느 땅으로 보냈는지는 묻지 않는다 - 안내는 "파병하는 법"을 알려주는 것이지 목표를 지정하지 않는다.
@@ -932,6 +1096,11 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                target.AssignedPopulation >= target.Capacity;
     }
 
+    // BabyDragonInventory와 DragonSkill이 같은 창을 가리키는 이유: 새끼용 인벤토리와 어미용 스킬트리가
+    // UI_DragonWindow의 두 탭으로 합쳐졌다. 둘 다 UI_DragonWindow가 배타 모드로 열고 닫으므로,
+    // "그 창이 열렸는가"로는 구분되지 않는다(구분이 필요하면 탭까지 봐야 한다).
+    // 통합 전 타입(UI_DragonInventoryWindow·UI_DragonSkillWindow)을 그대로 두면 어느 씬에서도 일치하지 않아
+    // 열기 단계는 영영 통과하지 못하고 닫기 단계는 진입 즉시 통과한다 - 실제로 그래서 갇혔다.
     private static bool MatchesMode(MonoBehaviour mode, TutorialExclusiveModeKind kind)
     {
         switch (kind)
@@ -940,8 +1109,8 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             case TutorialExclusiveModeKind.WorkerMode: return mode is WorkerModeController;
             case TutorialExclusiveModeKind.Conquest: return mode is ConquestModeController;
             case TutorialExclusiveModeKind.Research: return mode is UI_ResearchWindow;
-            case TutorialExclusiveModeKind.BabyDragonInventory: return mode is UI_DragonInventoryWindow;
-            case TutorialExclusiveModeKind.DragonSkill: return mode is UI_DragonSkillWindow;
+            case TutorialExclusiveModeKind.BabyDragonInventory: return mode is UI_DragonWindow;
+            case TutorialExclusiveModeKind.DragonSkill: return mode is UI_DragonWindow;
             default: return false;
         }
     }

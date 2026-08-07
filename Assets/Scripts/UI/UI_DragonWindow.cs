@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
@@ -133,6 +134,24 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 
     [Tooltip("알 슬롯이 들어갈 부모 - Scroll View_EggInventory/Viewport/Content.")]
     [SerializeField] private Transform _eggSlotContainer;
+
+    // --- 안내(튜토리얼·새끼용 가이드)용 관측 지점 ---
+    // 이 창은 안내를 모른다. 무엇이 그려졌는지만 알리고, 무엇을 가리킬지는 듣는 쪽이 정한다.
+    // 통합 전 UI_DragonInventoryWindow가 갖고 있던 것과 같은 이름·같은 의미다.
+
+    [Tooltip("새끼용 탭이 보이게 됐는지(true) 어미용 탭인지(false). 탭을 바꿀 때마다 발화한다.")]
+    public UnityEvent<bool> OnTabDisplayed = new();
+
+    [Tooltip("알·새끼용 슬롯을 다시 그렸다. 슬롯은 런타임 생성이라 안내가 이걸 듣고 다시 조준한다.")]
+    public UnityEvent OnSlotViewChanged = new();
+
+    public bool IsBabyTabShown => _isOpen && _currentTab == DragonTab.Baby;
+
+    public bool IsOpen => _isOpen;
+
+    /// <summary>새끼용 탭 버튼. 알·새끼용 목록이 이 탭 안에 함께 있다.</summary>
+    public RectTransform BabyTabRect =>
+        _babyTabButton == null ? null : (RectTransform)_babyTabButton.transform;
 
     private DragonTab _currentTab = DragonTab.Mother;
     private bool _isOpen;
@@ -404,6 +423,41 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             RenderBabyInfo();
             RebuildLists();
         }
+
+        // 그리기가 끝난 뒤에 알린다 - 듣는 쪽(안내)이 곧바로 슬롯을 조회하기 때문이다.
+        OnTabDisplayed?.Invoke(!isMother);
+    }
+
+    /// <summary>
+    /// 새끼용 탭에 그려진 첫 알 슬롯. 슬롯은 런타임 생성이라 GuideAnchor로는 가리킬 수 없어
+    /// 창이 직접 돌려준다(UI_BuildModeWindow.TryGetSlotRect와 같은 방식).
+    /// </summary>
+    public bool TryGetFirstEggSlotRect(out RectTransform slotRect) =>
+        TryGetFirstActiveChildRect(_eggSlotContainer, out slotRect);
+
+    /// <summary>새끼용 탭에 그려진 첫 새끼용 슬롯.</summary>
+    public bool TryGetFirstBabyDragonSlotRect(out RectTransform slotRect) =>
+        TryGetFirstActiveChildRect(_babyDragonSlotContainer, out slotRect);
+
+    // 풀은 쓰지 않은 슬롯을 비활성으로 남겨두므로, 활성인 것 중 첫 번째를 골라야 한다.
+    // activeSelf가 아니라 activeInHierarchy를 보는 이유: 어미용 탭일 때 Panel_BabyDragon이 꺼져도
+    // 그 안의 슬롯은 activeSelf가 켜진 채다. 그대로 돌려주면 안내가 보이지도 않는 자리에 구멍을 뚫는다.
+    private static bool TryGetFirstActiveChildRect(Transform container, out RectTransform slotRect)
+    {
+        if (container != null)
+        {
+            foreach (Transform child in container)
+            {
+                if (child.gameObject.activeInHierarchy && child is RectTransform rect)
+                {
+                    slotRect = rect;
+                    return true;
+                }
+            }
+        }
+
+        slotRect = null;
+        return false;
     }
 
     // 평면 필드를 ApplyTabVisual이 다루기 쉬운 묶음으로 모은다(직렬화 대상은 아니다).
@@ -599,11 +653,14 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         {
             _babyDragonSlotPool?.DeactivateAll();
             _eggSlotPool?.DeactivateAll();
+            OnSlotViewChanged?.Invoke();
             return;
         }
 
         BuildBabyDragonSlots(run);
         BuildEggSlots(run);
+
+        OnSlotViewChanged?.Invoke();
     }
 
     private void BuildBabyDragonSlots(RunData run)

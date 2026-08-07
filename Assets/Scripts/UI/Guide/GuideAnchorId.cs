@@ -69,4 +69,10 @@ public enum GuideAnchorId
     BabyDragonBuffRadiusRow,
     BabyDragonBuffMultiplierRow,
     BabyDragonStatusRow,
+
+    // 용 창 새끼용 탭 안의 두 목록 (UI_DragonWindow / Panel_BabyDragon)
+    // 슬롯 하나가 아니라 목록 영역을 가리킨다 - 알이 없거나 아직 안 그려진 순간에도 가리킬 곳이 있고,
+    // "여기가 알 인벤토리다"라는 설명에는 슬롯보다 영역이 맞다.
+    DragonEggInventoryList,
+    BabyDragonInventoryList,
 }

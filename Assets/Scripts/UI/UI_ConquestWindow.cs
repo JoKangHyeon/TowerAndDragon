@@ -249,6 +249,12 @@ public class UI_ConquestWindow : MonoBehaviour
     /// </summary>
     public UnityEvent<Vector2Int> ChunkSelected = new();
 
+    /// <summary>
+    /// 지금 고른 점령지가 있는지. 안내가 "땅을 고르세요"를 이벤트가 아니라 상태로도 확인할 수 있어야
+    /// 안내보다 먼저 고른 경우에 그 단계에 갇히지 않는다.
+    /// </summary>
+    public bool HasSelectedChunk => _selectedChunkCoord.HasValue;
+
     // ConquestModeController가 점령 가능한 청크를 클릭했을 때 호출하는 진입점.
     public void OnChunkSelected(Vector2Int chunkCoord)
     {

@@ -35,7 +35,7 @@ public sealed class TutorialDayLoopController : MonoBehaviour
         }
 
         _cycleManager.OnNightStart.AddListener(HandleNightStart);
-        _cycleManager.OnDayAdvanced.AddListener(HandleDayAdvanced);
+        _cycleManager.OnDayReady.AddListener(HandleDayReady);
     }
 
     private void OnDisable()
@@ -46,12 +46,15 @@ public sealed class TutorialDayLoopController : MonoBehaviour
         }
 
         _cycleManager.OnNightStart.RemoveListener(HandleNightStart);
-        _cycleManager.OnDayAdvanced.RemoveListener(HandleDayAdvanced);
+        _cycleManager.OnDayReady.RemoveListener(HandleDayReady);
     }
 
     // 마지막 날 밤에서 엔딩으로 빠지므로 그 다음 날은 정상 흐름에 존재하지 않는다.
     // 도달했다면 엔딩 배선이 끊긴 것이므로, 조용히 4일차를 진행하지 말고 알린다.
-    private void HandleDayAdvanced(int dayNumber)
+    //
+    // 낮 시작 4단계 중 OnDayReady에 붙는 이유: 관측만 하는 진단이라 정산 이후 단계가 맞고,
+    // OnDayStart는 인라인 초기화가 없어 이 필드가 없는 씬 인스턴스에서 null이 될 수 있다.
+    private void HandleDayReady(int dayNumber)
     {
         if (dayNumber > TUTORIAL_TOTAL_DAYS)
         {

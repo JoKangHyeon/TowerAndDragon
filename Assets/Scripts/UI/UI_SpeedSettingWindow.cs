@@ -26,6 +26,11 @@ public class UI_SpeedSettingWindow : MonoBehaviour
     [Tooltip("배속 버튼의 배율 라벨(Text (TMP)). x2 / x3로 갱신된다.")]
     [SerializeField] private TMP_Text _speedUpLabel;
 
+    /// <summary>
+    /// 안내가 도는 동안 속도 조작을 막는 관문. 배선되지 않으면 null로 남아 늘 허용된다.
+    /// </summary>
+    public IHudControlBlockQuery BlockQuery { get; set; }
+
     private void Awake()
     {
         if (_buttonPause != null && _speedManager != null)
@@ -48,21 +53,39 @@ public class UI_SpeedSettingWindow : MonoBehaviour
     // 호출되므로, 클릭음은 버튼을 물리는 이쪽에서만 내야 한다.
     private void Pause()
     {
+        if (IsBlocked)
+        {
+            return;
+        }
+
         SoundManager.Play(SoundId.UiButtonClick);
         _speedManager.Pause();
     }
 
     private void ResumeNormal()
     {
+        if (IsBlocked)
+        {
+            return;
+        }
+
         SoundManager.Play(SoundId.UiButtonClick);
         _speedManager.ResumeNormal();
     }
 
     private void CycleFastForward()
     {
+        if (IsBlocked)
+        {
+            return;
+        }
+
         SoundManager.Play(SoundId.UiButtonClick);
         _speedManager.CycleFastForward();
     }
+
+    // 막혔으면 클릭음도 내지 않는다 - 소리가 나면 눌린 줄 알고 다시 누르게 된다.
+    private bool IsBlocked => BlockQuery != null && !BlockQuery.CanUseHudControl();
 
     private void OnEnable()
     {

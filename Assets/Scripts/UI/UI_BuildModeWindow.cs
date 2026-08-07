@@ -52,10 +52,6 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     [SerializeField]
     private CycleManager _cycleManager;
 
-    [Tooltip("밤에 건설을 시도했을 때 경고 메시지를 띄울 창.")]
-    [SerializeField]
-    private UI_WarningWindow _warningWindow;
-
     [Header("패널 열림/닫힘 연출")]
     [SerializeField]
     private float _slideDuration = 0.5f;
@@ -95,28 +91,21 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     {
         slotRect = null;
 
-        if (prefab == null || _filterTabs == null ||
-            _currentFilterIndex < 0 || _currentFilterIndex >= _filterTabs.Length)
+        if (prefab == null)
         {
             return false;
         }
 
-        // RebuildSlots가 Buildings를 순서대로 순회해 생성하므로 인덱스가 1:1로 대응한다.
-        Building[] buildings = _filterTabs[_currentFilterIndex].Buildings;
-        if (buildings == null)
+        // 슬롯에게 직접 물어본다 - Buildings 배열과 인덱스를 맞추는 방식은 끊긴 항목을 건너뛰는 순간
+        // 어긋나고, 어긋났다는 사실이 드러나지 않은 채 엉뚱한 슬롯을 가리킨다.
+        foreach (UI_BuildingSlot slot in _spawnedSlots)
         {
-            return false;
-        }
-
-        int count = Mathf.Min(buildings.Length, _spawnedSlots.Count);
-        for (int i = 0; i < count; i++)
-        {
-            if (buildings[i] != prefab || _spawnedSlots[i] == null)
+            if (slot == null || slot.Prefab != prefab)
             {
                 continue;
             }
 
-            slotRect = (RectTransform)_spawnedSlots[i].transform;
+            slotRect = (RectTransform)slot.transform;
             return true;
         }
 
@@ -270,14 +259,10 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         EnsureInitialized();
 
         // 밤에는 건설 모드를 켤 수 없다(창이 아예 열리지 않는다). 끄는 것은 항상 허용.
+        // 경고 메시지는 띄우지 않는다 - Warning_window에 건설용 메시지 오브젝트가 없다.
         if (!_isOpen && _cycleManager != null &&
             _cycleManager.CurrentCycle == CycleManager.CycleState.Night)
         {
-            if (_warningWindow != null)
-            {
-                _warningWindow.ShowBuildWarning();
-            }
-
             return;
         }
 
@@ -412,6 +397,15 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
 
         foreach (Building building in buildings)
         {
+            // 참조가 끊긴 항목(프리팹에서 컴포넌트를 다시 만든 경우 등)은 건너뛴다.
+            // 그대로 넘기면 아이콘을 읽다 예외가 나면서 뒤따르는 슬롯까지 통째로 만들어지지 않는다.
+            if (building == null)
+            {
+                Debug.LogError($"[UI_BuildModeWindow] 건물 목록에 끊긴 참조가 있어 슬롯을 건너뜁니다 " +
+                               $"(탭의 {buildings.Length}개 중 하나). 인스펙터에서 다시 지정해야 합니다.", this);
+                continue;
+            }
+
             UI_BuildingSlot slot = Instantiate(slotPrefab, _slotContainer);
             slot.Setup(building, OnSlotSelected);
             slot.SetInteractable(isPlaceable);

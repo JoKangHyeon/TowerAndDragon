@@ -224,11 +224,24 @@ public class UIManager : MonoBehaviour
     // target을 제외한 나머지 배타 모드가 열려 있으면 닫고, target을 연다.
     public void OpenExclusive(IExclusiveMode target)
     {
+        // 거절당하면 열지 않는다. CloseAllExcept 안에도 같은 판정이 있지만 그것만으로는
+        // "남을 닫지 않는다"까지만 지켜지고 정작 target은 열려버린다 - 여기서 한 번 더 막아야
+        // 안내가 아직 설명하지 않은 창이 실제로 안 열린다.
+        if (!CanOpen(target))
+        {
+            return;
+        }
+
         CloseAllExcept(target);
         target.Open();
 
         // 열린 뒤에 알린다 - 구독자가 IsOpen을 읽을 수 있어야 한다.
         ExclusiveModeOpened.Invoke(target as MonoBehaviour);
+    }
+
+    private bool CanOpen(IExclusiveMode target)
+    {
+        return OpenQuery == null || OpenQuery.CanOpen(target as MonoBehaviour);
     }
 
     private void OnEnable()
