@@ -172,6 +172,11 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
     public void OnCloseActionPerformed(InputAction.CallbackContext context)
     {
+        if (_uiManager != null && !_uiManager.CanCloseExclusive(this))
+        {
+            return;
+        }
+
         Close();
     }
 

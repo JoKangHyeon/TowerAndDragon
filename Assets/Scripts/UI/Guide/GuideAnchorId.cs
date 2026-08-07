@@ -75,4 +75,9 @@ public enum GuideAnchorId
     // "여기가 알 인벤토리다"라는 설명에는 슬롯보다 영역이 맞다.
     DragonEggInventoryList,
     BabyDragonInventoryList,
+
+    // 용 창 어미용 탭 버튼 (UI_DragonWindow / TabMenu/Button_MotherDragon)
+    // 새끼용 관리 패널의 SKILL TREE 버튼은 용 창을 열 뿐이고 탭은 마지막에 본 것이 유지되므로,
+    // 스킬 트리를 보여주려면 이 탭을 직접 누르게 해야 한다.
+    DragonWindowMotherTab,
 }

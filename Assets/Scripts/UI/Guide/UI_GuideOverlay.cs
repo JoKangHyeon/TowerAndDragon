@@ -365,6 +365,13 @@ public class UI_GuideOverlay : MonoBehaviour
             _overlayRoot.gameObject.SetActive(isActive);
         }
 
+        // 문구와 확인 버튼의 활성 상태를 같은 프레임에 말풍선 높이에 반영한다.
+        // ContentSizeFitter의 일반 갱신을 기다리면 버튼이 바뀌는 순간 배경이 한 프레임 늦게 따라온다.
+        if (isActive && _bubbleRoot != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_bubbleRoot);
+        }
+
         if (isActive)
         {
             PlayPulses();

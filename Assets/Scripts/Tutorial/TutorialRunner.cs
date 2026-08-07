@@ -90,6 +90,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     // 지금 단계가 오래 진행되지 않아 확인 버튼을 내준 상태. 단계를 넘길 때마다 풀린다.
     private bool _isStalled;
 
+    // 마지막 단계를 확인 버튼으로 넘겼는지. 눌러서 "다 읽었다"고 답한 뒤에도 인계를 기다리게 하면
+    // 버튼이 먹지 않은 것처럼 보이므로, 그때는 HandOverAsync의 읽을 틈을 건너뛴다.
+    private bool _isConfirmedByClick;
+
     // 안내가 지나간 창만 열 수 있다. 지금 단계의 것만 허용하면 플레이어가 그 창을 닫았을 때 다시 열 수 없어 갇힌다.
     private readonly HashSet<TutorialExclusiveModeKind> _unlockedModes = new();
 
@@ -189,8 +193,23 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     }
 
     /// <summary>
-    /// 안내가 이 창 안을 가리키는 동안에는 단축키로 닫지 못하게 한다 - 대상이 사라지면
-    /// 무엇을 하라는 안내인지 알 수 없다. "닫으세요" 단계에 이르면 그때 풀린다.
+    /// 패널 토글 단축키는 버튼 유도를 건너뛰므로 튜토리얼 중에는 막는다. 닫기 안내에서는
+    /// ESC뿐 아니라 해당 패널의 토글 키로도 닫을 수 있다는 문구에 맞춰 다시 허용한다.
+    /// </summary>
+    bool IExclusiveModeOpenQuery.CanUseShortcut(MonoBehaviour mode)
+    {
+        if (!_isRunning || _activeStep == null)
+        {
+            return true;
+        }
+
+        return _activeStep.Condition == TutorialConditionType.ExclusiveModeClosed &&
+               MatchesMode(mode, _activeStep.TargetMode);
+    }
+
+    /// <summary>
+    /// 키보드 단축키는 오버레이의 입력 차단을 통과하므로, 안내가 정확히 이 창을 닫으라고
+    /// 요구하는 단계가 아니면 막는다. 버튼은 오버레이가 현재 유도 대상만 통과시킨다.
     /// </summary>
     bool IExclusiveModeOpenQuery.CanClose(MonoBehaviour mode)
     {
@@ -199,21 +218,8 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             return true;
         }
 
-        // 닫으라고 시키는 단계면 당연히 닫을 수 있어야 한다.
-        if (_activeStep.Condition == TutorialConditionType.ExclusiveModeClosed)
-        {
-            return true;
-        }
-
-        // 슬롯을 가리키는 단계는 TargetMode가 비어 있다(가리키는 것이 창이 아니라 그 안의 슬롯이라서).
-        if (_activeStep.DynamicTarget != TutorialDynamicTargetKind.None &&
-            MatchesMode(mode, TutorialExclusiveModeKind.BabyDragonInventory))
-        {
-            return false;
-        }
-
-        // 이 창 안을 가리키는 중이 아니면 막을 이유가 없다.
-        return !MatchesMode(mode, _activeStep.TargetMode);
+        return _activeStep.Condition == TutorialConditionType.ExclusiveModeClosed &&
+               MatchesMode(mode, _activeStep.TargetMode);
     }
 
     private void OnDisable()
@@ -246,6 +252,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
         if (isAcknowledged || _isStalled)
         {
+            _isConfirmedByClick = true;
             Advance();
         }
     }
@@ -323,11 +330,14 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         // 행동형 단계를 눌러서 건너뛸 수 있게 된다.
         _isStalled = false;
 
+        // 마지막 단계인지는 아래에서 갈리므로, 여기서 지우면 확인 버튼으로 끝낸 것을 Finish가 알 수 없다.
         if (index >= _sequence.Steps.Count)
         {
             Finish();
             return;
         }
+
+        _isConfirmedByClick = false;
 
         _currentIndex = index;
         _activeStep = _sequence.Steps[index];
@@ -407,12 +417,14 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
     /// <summary>
     /// 마지막 안내를 읽을 틈을 두고 표시권을 넘긴다. 화면은 Finish에서 이미 걷었으므로 이 동안은 비어 있다.
+    /// 다만 확인 버튼으로 넘긴 경우엔 기다리지 않는다 - 다 읽었다고 답한 뒤에 또 멈춰 있으면
+    /// 버튼이 먹지 않은 것처럼 보이고, 뒤늦게 다음 안내가 떠 같은 문구가 다시 나온 것처럼 읽힌다.
     /// </summary>
     private async UniTaskVoid HandOverAsync()
     {
         CancellationToken token = this.GetCancellationTokenOnDestroy();
 
-        if (_handOverDelaySeconds > 0f)
+        if (_handOverDelaySeconds > 0f && !_isConfirmedByClick)
         {
             await UniTask.WaitForSeconds(_handOverDelaySeconds, ignoreTimeScale: true, cancellationToken: token);
         }
@@ -588,6 +600,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             case TutorialDynamicTargetKind.BabyDragonSlot:
                 return _dragonWindow.TryGetFirstBabyDragonSlotRect(out slotRect);
 
+            case TutorialDynamicTargetKind.BabyDragonFocusButton:
+                return _dragonWindow.TryGetFirstBabyDragonFocusButtonRect(out slotRect);
+
             default:
                 return false;
         }
@@ -684,6 +699,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
             case TutorialConditionType.DragonInventoryDragonTabSelected:
                 return _dragonWindow != null && _dragonWindow.IsBabyTabShown;
+
+            case TutorialConditionType.DragonWindowMotherTabSelected:
+                return _dragonWindow != null && _dragonWindow.IsMotherTabShown;
 
             // --- 여기부터는 상태로 판정할 수 없다. 이벤트 구독으로만 넘어간다. ---
             // 진입 시점 대비 증감이거나(인구), 흔적이 남지 않는 1회성 입력이다.
@@ -821,6 +839,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 break;
 
             case TutorialConditionType.DragonInventoryDragonTabSelected:
+            case TutorialConditionType.DragonWindowMotherTabSelected:
                 if (_dragonWindow != null)
                 {
                     _dragonWindow.OnTabDisplayed.AddListener(HandleDragonTabDisplayed);
@@ -1034,10 +1053,20 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
     }
 
-    // true가 용 탭이다. 알 탭으로 되돌아간 경우는 아직 시킨 것을 하지 않은 것이므로 넘기지 않는다.
-    private void HandleDragonTabDisplayed(bool isDragonTab)
+    // true가 새끼용 탭이다. 어느 쪽을 기다리는지는 단계의 조건이 정하므로, 반대 탭으로 간 경우는
+    // 아직 시킨 것을 하지 않은 것이라 넘기지 않는다.
+    private void HandleDragonTabDisplayed(bool isBabyTab)
     {
-        if (_isRunning && _activeStep != null && isDragonTab)
+        if (!_isRunning || _activeStep == null)
+        {
+            return;
+        }
+
+        bool isExpectedTab = _activeStep.Condition == TutorialConditionType.DragonWindowMotherTabSelected
+            ? !isBabyTab
+            : isBabyTab;
+
+        if (isExpectedTab)
         {
             Advance();
         }

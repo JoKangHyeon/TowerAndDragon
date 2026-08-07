@@ -147,6 +147,9 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 
     public bool IsBabyTabShown => _isOpen && _currentTab == DragonTab.Baby;
 
+    /// <summary>어미용 탭(스킬 트리가 있는 쪽)이 지금 보이는지.</summary>
+    public bool IsMotherTabShown => _isOpen && _currentTab == DragonTab.Mother;
+
     public bool IsOpen => _isOpen;
 
     /// <summary>새끼용 탭 버튼. 알·새끼용 목록이 이 탭 안에 함께 있다.</summary>
@@ -289,6 +292,11 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         // (창이 열려 있는 동안만 구독하던 예전 구조와 다르다). 가드가 없으면 창이 닫혀 있을 때 누른 ESC도
         // Close()를 호출한다 - 지금은 무해하지만 Close()에 연출이 붙으면 문제가 된다.
         if (!_isOpen)
+        {
+            return;
+        }
+
+        if (_uiManager != null && !_uiManager.CanCloseExclusive(this))
         {
             return;
         }
@@ -438,6 +446,29 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     /// <summary>새끼용 탭에 그려진 첫 새끼용 슬롯.</summary>
     public bool TryGetFirstBabyDragonSlotRect(out RectTransform slotRect) =>
         TryGetFirstActiveChildRect(_babyDragonSlotContainer, out slotRect);
+
+    /// <summary>첫 새끼용 슬롯의 위치 표시/신발 버튼. 배치 상태에 따라 그림과 동작이 바뀐다.</summary>
+    public bool TryGetFirstBabyDragonFocusButtonRect(out RectTransform buttonRect)
+    {
+        buttonRect = null;
+
+        if (_babyDragonSlotContainer == null)
+        {
+            return false;
+        }
+
+        foreach (Transform child in _babyDragonSlotContainer)
+        {
+            if (child.gameObject.activeInHierarchy &&
+                child.TryGetComponent(out UI_BabyDragonListSlot slot) &&
+                slot.TryGetFocusButtonRect(out buttonRect))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     // 풀은 쓰지 않은 슬롯을 비활성으로 남겨두므로, 활성인 것 중 첫 번째를 골라야 한다.
     // activeSelf가 아니라 activeInHierarchy를 보는 이유: 어미용 탭일 때 Panel_BabyDragon이 꺼져도

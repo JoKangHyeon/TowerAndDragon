@@ -107,10 +107,17 @@ public class UIManager : MonoBehaviour
                 continue;
             }
 
+            // 튜토리얼의 버튼 유도를 단축키로 건너뛰지 못하게 한다. 실제 HUD 버튼은
+            // OpenExclusive를 직접 호출하므로 이 관문과 무관하게 현재 안내대로 작동한다.
+            if (OpenQuery != null && !OpenQuery.CanUseShortcut(mode as MonoBehaviour))
+            {
+                continue;
+            }
+
             if (mode.IsOpen)
             {
                 // 안내가 이 창 안을 가리키는 중이면 단축키로 닫지 못하게 막는다.
-                if (OpenQuery != null && !OpenQuery.CanClose(mode as MonoBehaviour))
+                if (!CanCloseExclusive(mode))
                 {
                     continue;
                 }
@@ -242,6 +249,15 @@ public class UIManager : MonoBehaviour
     private bool CanOpen(IExclusiveMode target)
     {
         return OpenQuery == null || OpenQuery.CanOpen(target as MonoBehaviour);
+    }
+
+    /// <summary>
+    /// ESC처럼 각 모드가 직접 받는 닫기 입력도 UIManager의 튜토리얼 관문을 공유하게 한다.
+    /// 질의가 없는 일반 씬에서는 기존처럼 항상 허용한다.
+    /// </summary>
+    public bool CanCloseExclusive(IExclusiveMode target)
+    {
+        return target == null || OpenQuery == null || OpenQuery.CanClose(target as MonoBehaviour);
     }
 
     private void OnEnable()

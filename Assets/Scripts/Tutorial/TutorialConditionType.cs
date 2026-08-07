@@ -65,4 +65,8 @@ public enum TutorialConditionType
     // UI_DragonInventoryWindow.OnTabDisplayed - 새끼용 인벤토리에서 용 탭이 보이게 됐다.
     // 알 탭은 기본값이라 "눌러서 바꾸라"고 시킬 것이 없어 용 탭만 조건으로 둔다.
     DragonInventoryDragonTabSelected,
+
+    // 같은 OnTabDisplayed의 반대쪽 - 어미용 탭이 보이게 됐다.
+    // 탭 선택은 창을 닫아도 유지되므로, 새끼용 탭을 본 뒤 스킬 트리로 보내려면 이 조건이 필요하다.
+    DragonWindowMotherTabSelected,
 }

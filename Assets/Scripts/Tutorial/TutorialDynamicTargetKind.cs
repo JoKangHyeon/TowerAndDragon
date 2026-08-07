@@ -15,4 +15,7 @@ public enum TutorialDynamicTargetKind
 
     /// <summary>용 창 새끼용 탭의 첫 새끼용 슬롯.</summary>
     BabyDragonSlot,
+
+    /// <summary>첫 새끼용 슬롯의 위치 표시/신발 버튼.</summary>
+    BabyDragonFocusButton,
 }

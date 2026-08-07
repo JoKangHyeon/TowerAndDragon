@@ -243,6 +243,12 @@ public class UI_ConquestWindow : MonoBehaviour
             _conquestModeController.SetConquestModeActive(false);
     }
 
+    /// <summary>점령 컨트롤러가 직접 받는 ESC도 튜토리얼 닫기 관문을 거치게 한다.</summary>
+    public bool CanCloseFromShortcut()
+    {
+        return _uiManager == null || _uiManager.CanCloseExclusive(_conquestModeController);
+    }
+
     /// <summary>
     /// 점령지를 골라 패널이 열린 시점. 청크 클릭은 어느 경로로든 여기 하나를 지나므로
     /// 안내가 "땅을 고르세요"를 기다릴 곳도 여기다.

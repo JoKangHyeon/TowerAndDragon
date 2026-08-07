@@ -9,9 +9,14 @@ public interface IExclusiveModeOpenQuery
     bool CanOpen(MonoBehaviour mode);
 
     /// <summary>
-    /// 단축키로 이 창을 닫아도 되는지. 안내가 그 창 안을 가리키는 동안 닫아버리면
-    /// 가리킬 대상이 사라져 무엇을 하라는 것인지 알 수 없게 된다 - 닫으라고 할 때까지 막는다.
-    /// 창의 자체 닫기 버튼·ESC까지는 막지 않는다(그쪽은 딤이 이미 가린다).
+    /// B/V/C/Tab처럼 패널을 직접 토글하는 단축키를 받아도 되는지. 버튼 클릭은 이 질의를
+    /// 거치지 않아 튜토리얼이 가리키는 버튼만 정상적으로 사용할 수 있다.
+    /// </summary>
+    bool CanUseShortcut(MonoBehaviour mode);
+
+    /// <summary>
+    /// 단축키로 이 창을 닫아도 되는지. 키보드 입력은 딤을 통과하므로, 안내가 명시적으로
+    /// 창 닫기를 요구하는 단계에 이를 때까지 막는다.
     /// </summary>
     bool CanClose(MonoBehaviour mode);
 }

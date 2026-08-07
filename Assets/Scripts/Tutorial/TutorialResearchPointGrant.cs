@@ -10,7 +10,11 @@ using UnityEngine;
 /// </summary>
 public sealed class TutorialResearchPointGrant : MonoBehaviour
 {
+    private const string RESEARCH_POINTS_GRANTED_LOC_KEY = "tutorial_day2_research_points_granted";
+
     [SerializeField] private ResearchManager _researchManager;
+
+    [SerializeField] private UI_NotificationToast _toast;
 
     [Tooltip("이 챕터를 시작할 때 최소한 갖고 있어야 할 연구 점수. 1티어 노드 비용 이상으로 둔다.")]
     [Min(0)]
@@ -25,6 +29,18 @@ public sealed class TutorialResearchPointGrant : MonoBehaviour
         }
 
         int missing = _minimumResearchPoints - _researchManager.ResearchPoints;
+        if (missing <= 0)
+        {
+            return;
+        }
+
         _researchManager.AddResearchPoints(missing);
+
+        // 이 컴포넌트는 Tutorial System 프리팹 안에 있고 토스트는 씬 UI라 프리팹 기본 참조로
+        // 연결할 수 없다. 씬 오버라이드가 없거나 풀렸을 때만 한 번 찾아 안내가 사라지지 않게 한다.
+        UI_NotificationToast toast = _toast != null
+            ? _toast
+            : FindFirstObjectByType<UI_NotificationToast>();
+        toast?.Show(RESEARCH_POINTS_GRANTED_LOC_KEY, missing);
     }
 }

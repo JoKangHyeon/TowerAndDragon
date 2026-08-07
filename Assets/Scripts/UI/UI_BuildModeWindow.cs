@@ -248,8 +248,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         if (!_isOpen)
             return;
 
-        if (_closeAction != null && _closeAction.action.WasPerformedThisFrame())
+        if (_closeAction != null && _closeAction.action.WasPerformedThisFrame() &&
+            (_uiManager == null || _uiManager.CanCloseExclusive(this)))
+        {
             CloseBuildPanel();
+        }
     }
 
     // BuildMode 버튼 토글. 열 때는 UIManager를 거쳐 다른 배타 모드(점령 등)를 정리한다.

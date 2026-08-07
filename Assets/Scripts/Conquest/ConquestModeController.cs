@@ -118,6 +118,9 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
         if (_closeAction == null || !_closeAction.action.WasPerformedThisFrame())
             return;
 
+        if (_conquestUI != null && !_conquestUI.CanCloseFromShortcut())
+            return;
+
         if (_isSelectionLocked)
             _conquestUI.Close();
         else

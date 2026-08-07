@@ -145,4 +145,25 @@ public sealed class TutorialScenarioController : MonoBehaviour
         runner = index >= 0 && index < _chapters.Count ? _chapters[index].Runner : null;
         return runner != null;
     }
+
+    /// <summary>[테스트 전용] 지금 돌고 있는 챕터. 대기 중(그 일차가 오지 않음)이면 null.</summary>
+    public TutorialRunner DebugCurrentRunner =>
+        TryGetRunner(_currentIndex, out TutorialRunner runner) ? runner : null;
+
+    /// <summary>[테스트 전용] 지금 챕터의 시작 일차. 챕터가 없으면 0.</summary>
+    public int DebugCurrentChapterStartDay =>
+        _currentIndex >= 0 && _currentIndex < _chapters.Count ? _chapters[_currentIndex].StartDay : 0;
+
+    /// <summary>[테스트 전용] 다음 챕터의 시작 일차. 남은 챕터가 없으면 0.</summary>
+    public int DebugNextChapterStartDay
+    {
+        get
+        {
+            int next = _currentIndex + 1;
+            return next >= 0 && next < _chapters.Count ? _chapters[next].StartDay : 0;
+        }
+    }
+
+    /// <summary>[테스트 전용] 아직 열지 못하고 대기 중인 챕터가 있는지. 밤을 넘겨야 열린다.</summary>
+    public bool DebugHasPendingChapter => _pendingIndex >= 0;
 }

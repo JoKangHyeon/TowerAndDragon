@@ -109,6 +109,8 @@ MonoBehaviour:
   _gridMap: {fileID: 0}
   _cycleManager: {fileID: 0}
   _dragonTreeManager: {fileID: 0}
+  _terrainPenaltyScaleComposite: {fileID: 0}
+  _terrainPenaltySystem: {fileID: 0}
   BuffsRecomputed:
     m_PersistentCalls:
       m_Calls: []
@@ -135,7 +137,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2852514381633709213}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e4a0d98b7cdb494f8becb40efdea2d1, type: 3}
   m_Name: 
@@ -166,7 +168,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2852514381633709213}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c6cd896ac8edb984fa5caa238e64269d, type: 3}
   m_Name: 
@@ -181,3 +183,6 @@ MonoBehaviour:
   _inventoryButton: {fileID: 0}
   _inventoryToggleAction: {fileID: 1961000633486905275, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _guideStartDelay: 0.5
+  StepEntered:
+    m_PersistentCalls:
+      m_Calls: []
