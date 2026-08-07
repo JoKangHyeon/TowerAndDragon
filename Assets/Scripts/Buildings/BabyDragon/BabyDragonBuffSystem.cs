@@ -12,13 +12,19 @@ using UnityEngine.Events;
 /// 그리고 매일 밤(OnNightEnd) 전체를 다시 계산한다 - Factory.GetCurrentYield가
 /// "다음 정산에서 실제로 들어올 양"을 상시 정확히 보여주려면 배율이 실시간으로 맞아야 한다.
 /// </summary>
-public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery
+public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, ITerrainPenaltyScaleQuery
 {
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private CycleManager _cycleManager;
 
     // 새끼용 지역형(B 슬롯) 노드 해금 시 추가되는 보너스 - 미해금이면 0을 반환해 기존 동작과 같다.
     [SerializeField] private DragonTreeManager _dragonTreeManager;
+    [SerializeField] private TerrainPenaltyScaleComposite _terrainPenaltyScaleComposite;
+    [SerializeField] private TerrainPenaltySystem _terrainPenaltySystem;
+
+    // 이번 재계산에서 지역 페널티가 완전 무효화된 (건물, 지형) 쌍 - ITerrainPenaltyScaleQuery 구현에 쓴다.
+    private readonly HashSet<(Building, TerrainType)> _penaltyMitigatedPairs = new();
+
 
     // 새끼용/생산시설 배치가 바뀌어 배율이 다시 확정될 때마다 발화 - ResourceForecast 등
     // 파생 UI가 OnBuildingAdded/OnBuildingRemoving과 같은 프레임에서 순서에 의존하지 않고
@@ -50,6 +56,11 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery
             _gridMap.OnBuildingMoved.AddListener(HandleBuildingMoved);
         }
 
+        if (_terrainPenaltyScaleComposite != null)
+        {
+            _terrainPenaltyScaleComposite.Register(this);
+        }
+
         if (_cycleManager != null)
         {
             // 생산 정산(Factory.OnSettlement)은 OnDayStart, 먹이 지불은 그 뒤 단계인
@@ -65,6 +76,11 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery
         if (_gridMap != null && ReferenceEquals(_gridMap.ConstructionOverrideQuery, this))
         {
             _gridMap.ConstructionOverrideQuery = null;
+        }
+
+        if (_terrainPenaltyScaleComposite != null)
+        {
+            _terrainPenaltyScaleComposite.Unregister(this);
         }
 
         if (_cycleManager != null)
@@ -158,6 +174,7 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery
         }
 
         RecomputeConstructionUnlocks();
+        RecomputePenaltyMitigation();
 
         BuffsRecomputed?.Invoke();
     }
@@ -218,6 +235,55 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery
             if (IsometricMath.IsWithinEllipse(cellWorldPos, center, radius, radiusY))
             {
                 _unlockedConstructionCells.Add(coord);
+            }
+        }
+    }
+
+    // 완화 소스(이 새끼용의 버프 상태·위치)가 바뀔 때마다 TerrainPenaltySystem의 캐시를 버려야
+    // 한다 - 그 시스템은 건물 배치/철거/이동만 구독하고, 완화 배율 자체의 변화는 스스로 감지하지
+    // 못하기 때문이다(TerrainPenaltySystem.NotifyScaleChanged 주석 참고).
+    private void RecomputePenaltyMitigation()
+    {
+        _penaltyMitigatedPairs.Clear();
+
+        foreach (BabyDragonTower babyDragon in _babyDragons)
+        {
+            if (!babyDragon.CanOperate ||
+                babyDragon.DragonData == null ||
+                babyDragon.Mode != BabyDragonMode.Buff)
+            {
+                continue;
+            }
+
+            CollectPenaltyMitigation(babyDragon);
+        }
+
+        _terrainPenaltySystem?.NotifyScaleChanged();
+    }
+
+    private void CollectPenaltyMitigation(BabyDragonTower babyDragon)
+    {
+        float radius = babyDragon.DragonData.BuffRadius;
+        IReadOnlyList<TerrainType> mitigationTerrains = babyDragon.DragonData.PenaltyMitigationTerrains;
+
+        if (radius <= 0f || mitigationTerrains == null || mitigationTerrains.Count == 0)
+        {
+            return;
+        }
+
+        float radiusY = radius * IsometricMath.RADIUS_Y_RATIO;
+        Vector3 center = babyDragon.transform.position;
+
+        foreach (Building building in _gridMap.Buildings)
+        {
+            if (!IsometricMath.IsWithinEllipse(building.transform.position, center, radius, radiusY))
+            {
+                continue;
+            }
+
+            for (int i = 0; i < mitigationTerrains.Count; i++)
+            {
+                _penaltyMitigatedPairs.Add((building, mitigationTerrains[i]));
             }
         }
     }
@@ -320,4 +386,9 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery
     {
         return _unlockedConstructionCells.Contains(coord);
     }
+
+    // kind는 구분하지 않는다 - (건물,지형) 쌍이 완화 대상이면 4종 페널티를 전부 0으로 만든다.
+    // 사막은 어차피 Yield·TowerAttackSpeed만 값이 있어(WoodUpkeep·StoneUpkeep은 원래 0) 결과는 같다.
+    public float GetPenaltyScale(Building building, TerrainType terrain, TerrainPenaltyKind kind) =>
+        _penaltyMitigatedPairs.Contains((building, terrain)) ? 0f : 1f;
 }

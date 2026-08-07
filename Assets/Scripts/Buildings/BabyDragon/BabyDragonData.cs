@@ -43,6 +43,11 @@ public class BabyDragonData : TowerData, ITowerAuraDataProvider, IElementalAttac
 
     public IReadOnlyList<TerrainType> ConstructionUnlockTerrains => _constructionUnlockTerrains;
 
+    [Tooltip("버프 반경 안에서 이 지형들의 지역 페널티(생산·공속·유지비)를 전부 무효화한다. 건설 해제(_constructionUnlockTerrains)와는 별개 메커니즘 - 시간=사막.")]
+    [SerializeField] private TerrainType[] _penaltyMitigationTerrains;
+
+    public IReadOnlyList<TerrainType> PenaltyMitigationTerrains => _penaltyMitigationTerrains;
+
 
     [Header("Tower Aura")]
     [SerializeField] private TowerAuraDataSO _towerAura;

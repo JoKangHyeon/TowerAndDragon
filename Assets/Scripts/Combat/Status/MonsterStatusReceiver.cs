@@ -287,4 +287,16 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
 
     private static string ResolveKey(StatusEffectSO status) =>
         string.IsNullOrEmpty(status.StatusId) ? status.GetInstanceID().ToString() : status.StatusId;
+
+    public bool HasStatus (string statusId)
+    {
+        if (string.IsNullOrEmpty(statusId))
+        {
+            return false;
+        }
+
+        return _moveSpeedStatuses.ContainsKey(statusId) ||
+            _dotStatuses.ContainsKey(statusId) ||
+            _stackStatuses.ContainsKey(statusId);
+    }
 }
