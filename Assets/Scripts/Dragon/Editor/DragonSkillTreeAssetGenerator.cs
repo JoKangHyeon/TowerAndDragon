@@ -54,6 +54,8 @@ public static class DragonSkillTreeAssetGenerator
     // 상태이상 예시 수치(밸런싱 대상) - 스트링테이블과 마찬가지로 팀 확정 전 값.
     private const float ICE_SLOW_MULTIPLIER = 0.5f;
     private const float ICE_SLOW_DURATION = 3f;
+    private const float ICE_FREEZE_MULTIPLIER = 0f;
+    private const float ICE_FREEZE_DURATION = 3f;
     private const float FIRE_BURN_DAMAGE_PER_TICK = 2f;
     private const float FIRE_BURN_TICK_INTERVAL = 1f;
     private const float FIRE_BURN_DURATION_INFINITE = 0f; // 상시 화상 - 몬스터가 죽을 때까지 유지.
@@ -220,6 +222,14 @@ public static class DragonSkillTreeAssetGenerator
                 so.FindProperty("_speedMultiplier").floatValue = ICE_SLOW_MULTIPLIER;
             });
 
+        MoveSpeedStatusSO iceFreezeStatus = CreateOrReplace<MoveSpeedStatusSO>(
+            $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/DS_IceFreeze.asset",
+            so =>
+            {
+                so.FindProperty("_statusId").stringValue = "dragon_ice_freeze";
+                so.FindProperty("_durationSeconds").floatValue = ICE_FREEZE_DURATION;
+                so.FindProperty("_speedMultiplier").floatValue = ICE_FREEZE_MULTIPLIER; });
+
         DamageOverTimeStatusSO fireBurnStatus = CreateOrReplace<DamageOverTimeStatusSO>(
             $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/DS_FireBurn.asset",
             so =>
@@ -243,7 +253,7 @@ public static class DragonSkillTreeAssetGenerator
                 so.FindProperty("DescriptionStringKey").stringValue = "dragon_skill_freeze_all_desc";
                 so.FindProperty("DefaultCooltime").floatValue = SKILL_DEFAULT_COOLTIME;
                 so.FindProperty("DefaultUsePerDay").intValue = SKILL_UNLIMITED_USE_PER_DAY;
-                so.FindProperty("AppliedStatus").objectReferenceValue = iceSlowStatus;
+                so.FindProperty("AppliedStatus").objectReferenceValue = iceFreezeStatus;
             });
 
         skillByAttribute[DragonType.Fire] = CreateOrReplace<SkillSO>(

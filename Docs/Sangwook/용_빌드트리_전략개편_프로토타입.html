@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tower and Dragons — 전략적 용 빌드 트리 프로토타입 (개편안)</title>
+<style>
+  :root {
+    --bg-dark: #090c15;
+    --panel-bg: #121826;
+    --panel-border: #222d42;
+    --text-main: #e2e8f0;
+    --text-muted: #8493a8;
+    --accent-gold: #fbbf24;
+    --accent-glow: rgba(251, 191, 36, 0.25);
+    
+    /* 속성별 메인 컬러 */
+    --color-life: #10b981;
+    --color-ice: #38bdf8;
+    --color-fire: #ef4444;
+    --color-time: #a855f7;
+    --color-stone: #f59e0b;
+    
+    --node-locked: #2a3447;
+    --node-locked-border: #40506b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg-dark);
+    color: var(--text-main);
+    font-family: 'Pretendard', 'Segoe UI', 'Malgun Gothic', sans-serif;
+    padding: 20px;
+    line-height: 1.5;
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  /* 헤더 영역 */
+  header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .sub-tag {
+    color: var(--accent-gold);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header-desc {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 6px;
+  }
+
+  /* 툴바 & 상태 바 */
+  .control-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 12px 20px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .stat-group {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+  }
+  .stat-item {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .stat-item b {
+    color: #fff;
+    font-size: 15px;
+  }
+
+  .attr-selector {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .attr-chip {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1.5px solid var(--panel-border);
+    background: #0d121d;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-muted);
+  }
+  .attr-chip.active {
+    color: #000 !important;
+    font-weight: 800;
+    box-shadow: 0 0 12px currentColor;
+  }
+
+  .action-btn {
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    color: #f1f5f9;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .action-btn:hover {
+    background: #334155;
+    border-color: var(--accent-gold);
+  }
+
+  /* 보유 새끼용 토글 칩 */
+  .kin-ownership-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #0f1523;
+    border: 1px dashed var(--panel-border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .kin-chip {
+    padding: 4px 10px;
+    border-radius: 16px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+    cursor: pointer;
+    font-size: 11px;
+    transition: 0.15s;
+  }
+  .kin-chip.owned {
+    font-weight: 700;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  /* 메인 메쉬 / 방사형 스테이지 */
+  .tree-stage {
+    position: relative;
+    background: radial-gradient(circle at 50% 50%, #151d2f 0%, #090c15 75%);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* 하단 패널: 빌드 레이아웃 및 노드 상세 정보 */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .info-panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 180px;
+  }
+  .info-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .info-desc {
+    color: var(--text-muted);
+  }
+  .node-tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .build-summary-panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .build-summary-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--accent-gold);
+  }
+  .summary-list {
+    list-style: none;
+    font-size: 12px;
+  }
+  .summary-list li {
+    margin-bottom: 6px;
+    padding-left: 12px;
+    position: relative;
+    color: #cbd5e1;
+  }
+  .summary-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--accent-gold);
+  }
+
+  /* SVG 렌더링 스타일 */
+  .node-circle {
+    cursor: pointer;
+    transition: transform 0.2s, filter 0.2s;
+  }
+  .node-circle:hover {
+    filter: brightness(1.3);
+  }
+  .node-text {
+    pointer-events: none;
+    user-select: none;
+    font-family: sans-serif;
+    font-weight: 700;
+  }
+
+  .edge-line {
+    stroke-linecap: round;
+    transition: stroke 0.3s, stroke-width 0.3s;
+  }
+
+  .badge-icon {
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="sub-tag">Tower and Dragons · Dragon Skill Tree Redesign</div>
+    <h1>전략적 용 빌드 트리 (선택적 분기 &amp; 크로스 시너지)</h1>
+    <div class="header-desc">
+      단순 일직선 성장이 아닌 <b>[전투/타워 특화] vs [운영/지형 특화]</b> 선택형 분기 및 <b>[스킬 모디파이어] &amp; [크로스 속성 시너지]</b> 시스템 프로토타입
+    </div>
+  </header>
+
+  <!-- 툴바 -->
+  <div class="control-bar">
+    <div class="stat-group">
+      <div class="stat-item">어미용 활성 속성: <b id="activeAttrLabel">얼음 (Ice)</b></div>
+      <div class="stat-item">해금 노드: <b id="unlockedCount">0</b> 개</div>
+      <div class="stat-item">해금 새끼용 슬롯: <b id="kinUnlockedCount">0</b> / 10</div>
+    </div>
+    
+    <div class="attr-selector" id="attrSelector">
+      <span style="font-size: 12px; color: var(--text-muted); margin-right: 4px;">어미용 속성 변경:</span>
+      <!-- JS dynamic chips -->
+    </div>
+
+    <button class="action-btn" id="resetBtn">빌드 전체 초기화</button>
+  </div>
+
+  <!-- 새끼용 보유 상태 -->
+  <div class="kin-ownership-bar" id="kinOwnershipBar">
+    <span style="font-weight: 600; color: #f8fafc;">새끼용 알 부화/보유 토글:</span>
+    <!-- JS dynamic kin chips -->
+  </div>
+
+  <!-- SVG 방사형 그래프 스테이지 -->
+  <div class="tree-stage">
+    <svg id="treeSvg" viewBox="0 0 1000 900" role="img" aria-label="전략적 용 빌드 트리 메쉬 다이어그램"></svg>
+  </div>
+
+  <!-- 하단 정보 및 실시간 빌드 요약 -->
+  <div class="bottom-grid">
+    <!-- 선택 노드 상세 정보 -->
+    <div class="info-panel" id="infoPanel">
+      <div class="info-title">
+        <span id="nodeName">노드를 선택하세요</span>
+        <span id="nodeKindTag" class="node-tag" style="background:#334155; color:#94a3b8;">INFO</span>
+      </div>
+      <div class="info-desc" id="nodeDesc">
+        스킬트리의 노드를 클릭하면 요구 조건 및 코스트를 확인하고 해금/해제할 수 있습니다.<br>
+        분기 노드(Branch A/B)는 전략에 맞춰 원하는 플레이 스타일을 선택하는 구간입니다.
+      </div>
+      <div id="nodeCost" style="margin-top: 12px; font-size: 12px; color: var(--accent-gold); font-weight: 600;"></div>
+    </div>
+
+    <!-- 활성화된 현재 빌드 총총 요약 -->
+    <div class="build-summary-panel">
+      <div class="build-summary-title">⚡ 현재 용 빌드 조합 효과 요약</div>
+      <ul class="summary-list" id="summaryList">
+        <li>현재 어미용 패시브 및 스킬 빌드 효과가 여기에 실시간 집계됩니다.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+// 메인 계산 상수
+const CX = 500, CY = 450;
+const NS = "http://www.w3.org/2000/svg";
+const rad = deg => (deg - 90) * Math.PI / 180;
+
+// 5속성 정의
+const ATTRS = [
+  { key: "생명", type: "Life", angle: 0, color: "#10b981", slime: "초원슬라임", spec: "생명의정수" },
+  { key: "얼음", type: "Ice", angle: 72, color: "#38bdf8", slime: "설원슬라임", spec: "눈결정" },
+  { key: "불", type: "Fire", angle: 144, color: "#ef4444", slime: "용암슬라임", spec: "불꽃심장" },
+  { key: "시간", type: "Time", angle: 216, color: "#a855f7", slime: "사막슬라임", spec: "시간모래" },
+  { key: "암석", type: "Stone", angle: 288, color: "#f59e0b", slime: "암석슬라임", spec: "현자돌" }
+];
+
+// 오각형 반지름 정의 (각 단계별 분기 및 시너지 레이어 확장)
+const R_CENTER = 65;
+const R_T1_AWAKEN = 140;      // Tier 1: 각성 (루트)
+const R_T2_BRANCH = 215;      // Tier 2: 선택적 분기 A / B (전투 vs 내정)
+const BRANCH_ANGLE_OFF = 16;  // 분기 각도 오프셋
+const R_T3_ACTIVE = 295;      // Tier 3: 액티브 스킬 & 모디파이어 선택
+const R_KIN_SLOT = 250;       // 새끼용 슬롯 (속성 가치 오프셋)
+const KIN_ANGLE_OFF = 32;
+const R_T4_ULTIMATE = 380;    // Tier 4: 속성 궁극
+const R_CROSS = 425;          // 속성 간 크로스 시너지 링 (외곽 연결)
+
+// 노드 데이터 구조 정의
+const nodes = {};
+const edges = [];
+
+function addNode(n) { nodes[n.id] = n; return n; }
+
+// 속성별 세분화된 전략 노드 맵 구축
+ATTRS.forEach(a => {
+  const k = a.key;
+  const color = a.color;
+  const baseAng = a.angle;
+
+  const getPos = (r, ang) => ({
+    x: CX + r * Math.cos(rad(ang)),
+    y: CY + r * Math.sin(rad(ang))
+  });
+
+  // 1. Tier 1: 각성 (Awaken - 패시브 베이스)
+  const p1 = getPos(R_T1_AWAKEN, baseAng);
+  let awakenDesc = "";
+  if(k==="생명") awakenDesc = "활성 시: 식량·초원슬라임 생산량 +20% & 타워 최대체력 +25%";
+  if(k==="얼음") awakenDesc = "활성 시: 모든 타워 공격에 적 이동속도 40% 둔화 부여";
+  if(k==="불") awakenDesc = "활성 시: 맵 상에 스폰되는 모든 적에게 상시 화상(지속피해) 부여";
+  if(k==="시간") awakenDesc = "활성 시: 모든 타워의 공격속도 +15% 및 재가동 쿨다운 -20%";
+  if(k==="암석") awakenDesc = "활성 시: 석재·특화 자원 생산량 +20% & 성 보호막 +500 생성";
+
+  addNode({
+    id: `${k}_t1`, attr: k, kind: "awaken", tier: 1, name: `${k} 각성`,
+    desc: awakenDesc, x: p1.x, y: p1.y, color: color, prereq: [],
+    cost: `${a.slime} 5`
+  });
+  edges.push({ from: "CENTER", to: `${k}_t1`, attr: k });
+
+  // 2. Tier 2: 선택적 전략 분기 (Branch A: 전투/타워 vs Branch B: 내정/지형)
+  const p2A = getPos(R_T2_BRANCH, baseAng - BRANCH_ANGLE_OFF);
+  const p2B = getPos(R_T2_BRANCH, baseAng + BRANCH_ANGLE_OFF);
+
+  let branchADesc = "", branchBDesc = "";
+  if(k==="생명") {
+    branchADesc = "[전투/치유] 생명 오라: 타워 체력 회복 속도 +50% & 파괴 시 자동 수리 확률 30%";
+    branchBDesc = "[내정/풍요] 대지의 과실: 낮 정산 시 추가 식량 +30% & 주민 기아 발생 유예 +1일";
+  } else if(k==="얼음") {
+    branchADesc = "[전투/빙결] 동결 충격: 둔화된 적 타격 시 추가 냉기 피해 +25%";
+    branchBDesc = "[지형/결빙] 서리 길: 강 지형 결빙 범위를 넓혀 주변 지형에 타워배치 해제";
+  } else if(k==="불") {
+    branchADesc = "[전투/폭발] 화염 폭쇄: 화상 상태의 적이 사망 시 주변에 광역 화염 폭발";
+    branchBDesc = "[내정/열기] 열기 제련: 불꽃심장 자원 채굴 속도 +40% 및 대장간 생산 증가";
+  } else if(k==="시간") {
+    branchADesc = "[전투/가속] 시간 가속: 타워 공격 시 5% 확률로 3초간 공격속도 3배 증폭";
+    branchBDesc = "[지형/원정] 시공 도약: 영역 점령에 필요한 원정 일수를 1일 감소";
+  } else if(k==="암석") {
+    branchADesc = "[전투/방벽] 바위 가디언: 타워 파괴 방지막 부여 및 적 물리 피해 20% 감소";
+    branchBDesc = "[내정/채굴] 자원 맥석: 채석장/광산의 채집량 +30% & 희귀 자원 드롭률 상승";
+  }
+
+  addNode({
+    id: `${k}_t2a`, attr: k, kind: "branch", branchType: "A", tier: 2, name: `${k} 분기A [전투]`,
+    desc: branchADesc, x: p2A.x, y: p2A.y, color: color, prereq: [`${k}_t1`], exclusiveGroup: `${k}_t2`,
+    cost: `${a.slime} 10 · ${a.spec} 2`
+  });
+
+  addNode({
+    id: `${k}_t2b`, attr: k, kind: "branch", branchType: "B", tier: 2, name: `${k} 분기B [내정]`,
+    desc: branchBDesc, x: p2B.x, y: p2B.y, color: color, prereq: [`${k}_t1`], exclusiveGroup: `${k}_t2`,
+    cost: `${a.slime} 10 · ${a.spec} 2`
+  });
+
+  edges.push({ from: `${k}_t1`, to: `${k}_t2a`, attr: k });
+  edges.push({ from: `${k}_t1`, to: `${k}_t2b`, attr: k });
+
+  // 3. 새끼용 슬롯 (Kin Slots)
+  const pKin1 = getPos(R_KIN_SLOT, baseAng - KIN_ANGLE_OFF);
+  const pKin2 = getPos(R_KIN_SLOT, baseAng + KIN_ANGLE_OFF);
+
+  addNode({
+    id: `${k}_kin_attack`, attr: k, kind: "kin", subKind: "attack", tier: 2, name: `${k} 새끼용 [공격모드]`,
+    desc: `공격 모드 특화: ${k} 속성 고유 타워 공격 및 스택 효과 강화`, x: pKin1.x, y: pKin1.y, color: color,
+    prereq: [`${k}_t1`], needOwn: true, cost: `${a.slime} 8 · ${a.spec} 3`
+  });
+  addNode({
+    id: `${k}_kin_buff`, attr: k, kind: "kin", subKind: "buff", tier: 2, name: `${k} 새끼용 [버프모드]`,
+    desc: `버프 모드 특화: 주변 생산시설 생산량 버프 및 특수 지형 효과 부여`, x: pKin2.x, y: pKin2.y, color: color,
+    prereq: [`${k}_t1`], needOwn: true, cost: `${a.slime} 8 · ${a.spec} 3`
+  });
+
+  edges.push({ from: `${k}_t1`, to: `${k}_kin_attack`, attr: k });
+  edges.push({ from: `${k}_t1`, to: `${k}_kin_buff`, attr: k });
+
+  // 4. Tier 3: 액티브 스킬 & 스킬 모디파이어 (Active & Modifiers)
+  const p3 = getPos(R_T3_ACTIVE, baseAng);
+  let activeDesc = "";
+  if(k==="생명") activeDesc = "액티브 [성벽 재생]: 메인 성 체력 50 즉시 회복 및 성 방어막 300 생성";
+  if(k==="얼음") activeDesc = "액티브 [전역 빙결]: 필드의 모든 적을 3초간 완전히 멈추는 빙결 상태 부여";
+  if(k==="불") activeDesc = "액티브 [화상 폭발]: 전역 모든 적에게 현재체력 30% 피해 및 화상 재부여";
+  if(k==="시간") activeDesc = "액티브 [즉시 수리]: 비활성화(파괴)된 모든 타워를 즉시 100% 복구";
+  if(k==="암석") activeDesc = "액티브 [메테오 낙하]: 지정 지역에 메테오를 떨궈 2.0 범위 현재체력 30% 피해";
+
+  addNode({
+    id: `${k}_t3`, attr: k, kind: "active", tier: 3, name: `${k} 액티브 스킬`,
+    desc: activeDesc, x: p3.x, y: p3.y, color: color, prereqAny: [`${k}_t2a`, `${k}_t2b`],
+    cost: `${a.slime} 20 · ${a.spec} 5`
+  });
+
+  edges.push({ from: `${k}_t2a`, to: `${k}_t3`, attr: k });
+  edges.push({ from: `${k}_t2b`, to: `${k}_t3`, attr: k });
+
+  // 5. Tier 4: 궁극 & 하이브리드 결합 (Ultimate)
+  const p4 = getPos(R_T4_ULTIMATE, baseAng);
+  addNode({
+    id: `${k}_t4`, attr: k, kind: "ultimate", tier: 4, name: `${k} 속성 궁극`,
+    desc: `[속성 마스터] ${k} 속성의 모든 패시브·액티브 성능 +50% 증폭 및 쿨다운 -25%`, x: p4.x, y: p4.y, color: color,
+    prereq: [`${k}_t3`], gateKin: 3, cost: `${a.slime} 40 · ${a.spec} 15`
+  });
+
+  edges.push({ from: `${k}_t3`, to: `${k}_t4`, attr: k });
+});
+
+// 6. 외곽 속성 간 크로스 시너지 (Cross-Attribute Synergy Nodes)
+const CROSS_NODES = [
+  { id: "syn_fire_stone", attr1: "불", attr2: "암석", name: "융암지대 [불×암석]", desc: "메테오 낙하 지점에 10초간 용암 장판이 남아 지나가는 적에게 불 타격 지속피해" },
+  { id: "syn_ice_time", attr1: "얼음", attr2: "시간", name: "절대영도 [얼음×시간]", desc: "빙결된 적의 빙결 유지시간이 2초 연장되며 타워 공격 쿨다운이 정지됨" },
+  { id: "syn_life_stone", attr1: "생명", attr2: "암석", name: "대지 요새 [생명×암석]", desc: "메인 성 주변에 강력한 바리케이드 요새가 자동 생성되어 적 진격을 차단" }
+];
+
+// 방사 외곽 시너지 좌표 배치
+CROSS_NODES.forEach((syn, idx) => {
+  const a1 = ATTRS.find(a => a.key === syn.attr1);
+  const a2 = ATTRS.find(a => a.key === syn.attr2);
+  const midAng = (a1.angle + a2.angle) / 2;
+  const pos = {
+    x: CX + R_CROSS * Math.cos(rad(midAng)),
+    y: CY + R_CROSS * Math.sin(rad(midAng))
+  };
+
+  addNode({
+    id: syn.id, attr: "Cross", kind: "synergy", tier: 5, name: syn.name,
+    desc: `[속성 융합 시너지] ${syn.desc}`, x: pos.x, y: pos.y, color: "#f43f5e",
+    prereq: [`${syn.attr1}_t4`, `${syn.attr2}_t4`], cost: "특화자원 20"
+  });
+
+  edges.push({ from: `${syn.attr1}_t4`, to: syn.id, attr: "Cross" });
+  edges.push({ from: `${syn.attr2}_t4`, to: syn.id, attr: "Cross" });
+});
+
+// 런타임 진행 상태
+let unlocked = new Set();
+let ownedKin = new Set(["얼음"]); // 기본 1개 보유
+let activeAttrKey = "얼음";
+
+const getKinCount = () => [...unlocked].filter(id => nodes[id].kind === "kin").length;
+
+function isEligible(n) {
+  // 선행 노드 검사 (AND / OR)
+  if (n.prereq && n.prereq.length > 0) {
+    if (!n.prereq.every(p => unlocked.has(p))) return false;
+  }
+  if (n.prereqAny && n.prereqAny.length > 0) {
+    if (!n.prereqAny.some(p => unlocked.has(p))) return false;
+  }
+  // 독점 선택 노드 그룹 검사 (Tier 2 분기 A/B 중 1개만 선택)
+  if (n.exclusiveGroup) {
+    const siblingId = n.id.endsWith('a') ? n.id.replace('a', 'b') : n.id.replace('b', 'a');
+    if (unlocked.has(siblingId)) return false;
+  }
+  // 새끼용 보유 검사
+  if (n.needOwn && !ownedKin.has(n.attr)) return false;
+  // 게이트 게이트 검사 (해금 새끼용 수)
+  if (n.gateKin && getKinCount() < n.gateKin) return false;
+
+  return true;
+}
+
+function resolveState() {
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const id of [...unlocked]) {
+      const n = nodes[id];
+      // 이미 해금된 상태라도 조건이 깨지면 취소
+      if (n.prereq && !n.prereq.every(p => unlocked.has(p))) {
+        unlocked.delete(id); changed = true;
+      }
+      if (n.prereqAny && !n.prereqAny.some(p => unlocked.has(p))) {
+        unlocked.delete(id); changed = true;
+      }
+      if (n.needOwn && !ownedKin.has(n.attr)) {
+        unlocked.delete(id); changed = true;
+      }
+    }
+  }
+}
+
+// SVG 다이어그램 렌더링
+function renderTree() {
+  const svg = document.getElementById("treeSvg");
+  svg.innerHTML = "";
+
+  // 1. 외곽 링 가이드라인
+  [R_T1_AWAKEN, R_T2_BRANCH, R_T3_ACTIVE, R_T4_ULTIMATE, R_CROSS].forEach((r, i) => {
+    const circle = document.createElementNS(NS, "circle");
+    circle.setAttribute("cx", CX); circle.setAttribute("cy", CY);
+    circle.setAttribute("r", r);
+    circle.setAttribute("fill", "none");
+    circle.setAttribute("stroke", i === 4 ? "rgba(244,63,94,0.15)" : "#1e293b");
+    circle.setAttribute("stroke-dasharray", "4 4");
+    svg.appendChild(circle);
+  });
+
+  // 2. 엣지 연결선 렌더링
+  edges.forEach(e => {
+    let p1 = { x: CX, y: CY };
+    if (e.from !== "CENTER") {
+      p1 = { x: nodes[e.from].x, y: nodes[e.from].y };
+    }
+    const p2 = { x: nodes[e.to].x, y: nodes[e.to].y };
+
+    const isLit = (e.from === "CENTER" || unlocked.has(e.from)) && unlocked.has(e.to);
+    const isAvail = (e.from === "CENTER" || unlocked.has(e.from)) && isEligible(nodes[e.to]);
+
+    const line = document.createElementNS(NS, "line");
+    line.setAttribute("x1", p1.x); line.setAttribute("y1", p1.y);
+    line.setAttribute("x2", p2.x); line.setAttribute("y2", p2.y);
+    line.setAttribute("class", "edge-line");
+    line.setAttribute("stroke-width", isLit ? "3.5" : "1.5");
+    line.setAttribute("stroke", isLit ? (nodes[e.to].color || "#fbbf24") : isAvail ? "#475569" : "#1e293b");
+    if (isLit) {
+      line.setAttribute("filter", "drop-shadow(0 0 4px " + (nodes[e.to].color || "#fbbf24") + ")");
+    }
+    svg.appendChild(line);
+  });
+
+  // 3. 중앙 코어 둥지 렌더링
+  const centerG = document.createElementNS(NS, "g");
+  const cCircle = document.createElementNS(NS, "circle");
+  cCircle.setAttribute("cx", CX); cCircle.setAttribute("cy", CY);
+  cCircle.setAttribute("r", R_CENTER);
+  const activeObj = ATTRS.find(a => a.key === activeAttrKey);
+  cCircle.setAttribute("fill", activeObj ? activeObj.color : "#334155");
+  cCircle.setAttribute("stroke", "#ffffff");
+  cCircle.setAttribute("stroke-width", "3");
+  cCircle.setAttribute("style", "filter: drop-shadow(0 0 15px " + (activeObj ? activeObj.color : "#fff") + ");");
+  centerG.appendChild(cCircle);
+
+  const cText = document.createElementNS(NS, "text");
+  cText.setAttribute("x", CX); cText.setAttribute("y", CY - 4);
+  cText.setAttribute("text-anchor", "middle");
+  cText.setAttribute("fill", "#000");
+  cText.setAttribute("font-size", "14px");
+  cText.setAttribute("font-weight", "800");
+  cText.textContent = "어미용 코어";
+  centerG.appendChild(cText);
+
+  const cSubText = document.createElementNS(NS, "text");
+  cSubText.setAttribute("x", CX); cSubText.setAttribute("y", CY + 14);
+  cSubText.setAttribute("text-anchor", "middle");
+  cSubText.setAttribute("fill", "#000");
+  cSubText.setAttribute("font-size", "11px");
+  cSubText.setAttribute("font-weight", "700");
+  cSubSubText = activeAttrKey + " (Active)";
+  cSubText.textContent = cSubSubText;
+  centerG.appendChild(cSubText);
+
+  svg.appendChild(centerG);
+
+  // 4. 노드 렌더링
+  Object.values(nodes).forEach(n => {
+    const isUnlocked = unlocked.has(n.id);
+    const isAvail = isEligible(n);
+
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("class", "node-circle");
+    g.onclick = () => toggleNode(n.id);
+    g.onmouseenter = () => showNodeInfo(n.id);
+
+    const radius = n.kind === "root" ? 22 : n.kind === "active" ? 24 : n.kind === "ultimate" ? 26 : n.kind === "synergy" ? 26 : 18;
+
+    const circle = document.createElementNS(NS, "circle");
+    circle.setAttribute("cx", n.x); circle.setAttribute("cy", n.y);
+    circle.setAttribute("r", radius);
+
+    let fillColor = "#1e293b";
+    let strokeColor = "#334155";
+    let strokeWidth = "2";
+
+    if (isUnlocked) {
+      fillColor = n.color;
+      strokeColor = "#ffffff";
+      strokeWidth = "3";
+    } else if (isAvail) {
+      fillColor = "#0f172a";
+      strokeColor = n.color;
+      strokeWidth = "2.5";
+    }
+
+    circle.setAttribute("fill", fillColor);
+    circle.setAttribute("stroke", strokeColor);
+    circle.setAttribute("stroke-width", strokeWidth);
+    if (isUnlocked) {
+      circle.setAttribute("style", "filter: drop-shadow(0 0 8px " + n.color + ");");
+    }
+    g.appendChild(circle);
+
+    // 노드 라벨 텍스트
+    const text = document.createElementNS(NS, "text");
+    text.setAttribute("x", n.x);
+    text.setAttribute("y", n.y + 4);
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("class", "node-text");
+    text.setAttribute("font-size", radius > 20 ? "11px" : "9.5px");
+    text.setAttribute("fill", isUnlocked ? "#000000" : isAvail ? "#f8fafc" : "#64748b");
+    text.textContent = n.name.split(' ')[0];
+    g.appendChild(text);
+
+    // 잠금 상태 아이콘 표시
+    if (!isUnlocked && !isAvail) {
+      const lock = document.createElementNS(NS, "text");
+      lock.setAttribute("x", n.x); lock.setAttribute("y", n.y - radius - 4);
+      lock.setAttribute("text-anchor", "middle");
+      lock.setAttribute("font-size", "10px");
+      lock.setAttribute("fill", "#64748b");
+      lock.textContent = "🔒";
+      g.appendChild(lock);
+    }
+
+    svg.appendChild(g);
+  });
+
+  updateStatsAndSummary();
+}
+
+// 노드 해금 / 해제 토글
+function toggleNode(id) {
+  const n = nodes[id];
+  if (unlocked.has(id)) {
+    unlocked.delete(id);
+    resolveState();
+  } else {
+    if (isEligible(n)) {
+      unlocked.add(id);
+    } else {
+      showNodeInfo(id);
+      return;
+    }
+  }
+  renderTree();
+  showNodeInfo(id);
+}
+
+// 노드 클릭/호버 시 정보 렌더링
+function showNodeInfo(id) {
+  const n = nodes[id];
+  const isUnlocked = unlocked.has(id);
+  const isAvail = isEligible(n);
+
+  document.getElementById("nodeName").textContent = n.name;
+  document.getElementById("nodeDesc").textContent = n.desc;
+
+  const tag = document.getElementById("nodeKindTag");
+  tag.textContent = isUnlocked ? "UNLOCKED" : isAvail ? "AVAILABLE" : "LOCKED";
+  tag.style.background = isUnlocked ? n.color : isAvail ? "#0284c7" : "#334155";
+  tag.style.color = isUnlocked ? "#000" : "#fff";
+
+  let costText = `소모 자원: ${n.cost || '없음'}`;
+  if (n.gateKin) costText += ` | 🔒 필요 해금 새끼용: ${n.gateKin}개 이상`;
+  if (n.needOwn) costText += ` | 🔒 해당 속성 알 부화 보유 필요`;
+  if (n.exclusiveGroup) costText += ` | ⚡ 분기 A/B 상호 배타적 선택`;
+
+  document.getElementById("nodeCost").textContent = costText;
+}
+
+// 빌드 요약 및 통계 UI 업데이트
+function updateStatsAndSummary() {
+  document.getElementById("unlockedCount").textContent = unlocked.size;
+  document.getElementById("kinUnlockedCount").textContent = getKinCount();
+  document.getElementById("activeAttrLabel").textContent = `${activeAttrKey} (${ATTRS.find(a=>a.key===activeAttrKey).type})`;
+
+  const list = document.getElementById("summaryList");
+  list.innerHTML = "";
+
+  const items = [];
+
+  // 어미용 활성 속성 기본 패시브
+  const activeAwakenId = `${activeAttrKey}_t1`;
+  if (unlocked.has(activeAwakenId)) {
+    items.push(`<b>[어미용 패시브 활성화]</b> ${nodes[activeAwakenId].desc}`);
+  } else {
+    items.push(`<i>어미용 ${activeAttrKey} 각성 노드가 미해금 상태입니다. (패시브 비활성)</i>`);
+  }
+
+  // 선택된 분기 노드
+  const activeBranchA = `${activeAttrKey}_t2a`;
+  const activeBranchB = `${activeAttrKey}_t2b`;
+  if (unlocked.has(activeBranchA)) items.push(`<b>[전략 분기A]</b> ${nodes[activeBranchA].desc}`);
+  if (unlocked.has(activeBranchB)) items.push(`<b>[전략 분기B]</b> ${nodes[activeBranchB].desc}`);
+
+  // 액티브 스킬
+  const activeSkillId = `${activeAttrKey}_t3`;
+  if (unlocked.has(activeSkillId)) items.push(`<b>[액티브 스킬 해금]</b> ${nodes[activeSkillId].desc}`);
+
+  // 궁극 효과
+  const activeUltId = `${activeAttrKey}_t4`;
+  if (unlocked.has(activeUltId)) items.push(`<b>[속성 궁극 마스터]</b> ${nodes[activeUltId].desc}`);
+
+  // 크로스 시너지
+  CROSS_NODES.forEach(syn => {
+    if (unlocked.has(syn.id)) {
+      items.push(`🔥 <b>[크로스 융합 시너지] ${syn.name}:</b> ${syn.desc}`);
+    }
+  });
+
+  items.forEach(it => {
+    const li = document.createElement("li");
+    li.innerHTML = it;
+    list.appendChild(li);
+  });
+}
+
+// 컨트롤바 및 칩 초기화
+function initUI() {
+  const attrSelector = document.getElementById("attrSelector");
+  ATTRS.forEach(a => {
+    const chip = document.createElement("div");
+    chip.className = `attr-chip ${a.key === activeAttrKey ? 'active' : ''}`;
+    chip.textContent = a.key;
+    chip.style.borderColor = a.color;
+    if (a.key === activeAttrKey) {
+      chip.style.backgroundColor = a.color;
+    }
+    chip.onclick = () => {
+      activeAttrKey = a.key;
+      document.querySelectorAll('.attr-chip').forEach(c => {
+        c.classList.remove('active');
+        c.style.backgroundColor = '#0d121d';
+      });
+      chip.classList.add('active');
+      chip.style.backgroundColor = a.color;
+      renderTree();
+    };
+    attrSelector.appendChild(chip);
+  });
+
+  const kinBar = document.getElementById("kinOwnershipBar");
+  ATTRS.forEach(a => {
+    const chip = document.createElement("div");
+    chip.className = `kin-chip ${ownedKin.has(a.key) ? 'owned' : ''}`;
+    chip.textContent = `${a.key} 새끼용 보유`;
+    chip.onclick = () => {
+      if (ownedKin.has(a.key)) ownedKin.delete(a.key);
+      else ownedKin.add(a.key);
+      chip.classList.toggle('owned', ownedKin.has(a.key));
+      resolveState();
+      renderTree();
+    };
+    kinBar.appendChild(chip);
+  });
+
+  document.getElementById("resetBtn").onclick = () => {
+    unlocked.clear();
+    renderTree();
+  };
+
+  renderTree();
+}
+
+window.onload = initUI;
+</script>
+</body>
+</html>
