@@ -19,4 +19,9 @@ public enum TutorialBuildingKind
     // 메인 성. 그리드에 3x3으로 등록돼 있어 클릭하면 다른 건물과 같은 선택 경로를 지난다
     // (BuildingPlacementController.SelectExistingBuildingAt) - 어미용 창을 여는 단계에 쓴다.
     Castle,
+
+    // 슬라임 농장. Factory를 상속하므로 위 Factory로도 통과한다 - 둘을 구분해야 하는 쪽(슬라임 농장만
+    // 세는 목표)이 이 값을 쓴다. Factory 쪽을 좁히지 않는 이유는 기존 단계 에셋의 판정을 바꾸지 않기 위해서다.
+    // 정수로 저장되므로 새 값은 반드시 끝에 추가한다 - 중간에 끼우면 기존 에셋이 다른 종류를 가리킨다.
+    SlimeFactory,
 }

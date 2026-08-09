@@ -69,4 +69,14 @@ public enum TutorialConditionType
     // 같은 OnTabDisplayed의 반대쪽 - 어미용 탭이 보이게 됐다.
     // 탭 선택은 창을 닫아도 유지되므로, 새끼용 탭을 본 뒤 스킬 트리로 보내려면 이 조건이 필요하다.
     DragonWindowMotherTabSelected,
+
+    // 아래 둘은 자유 목표(TutorialObjectiveSO) 전용이다. 선형 단계는 "진입 시점 대비"로 재는데
+    // 목표는 시작 시점이 없어 절대값·사건으로 봐야 하기 때문이다.
+    // 정수로 저장되므로 새 값은 반드시 끝에 추가한다.
+
+    // PopulationManager.AssignedPopulation이 1 이상이다 - 증가분이 아니라 총량으로 본다.
+    AnyPopulationAssigned,
+
+    // CycleManager.OnNightEnd - 밤을 넘겼다.
+    NightSurvived,
 }

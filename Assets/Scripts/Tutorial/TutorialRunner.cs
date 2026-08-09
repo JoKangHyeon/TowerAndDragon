@@ -505,7 +505,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             _activeStep.BlocksInput && (target != null || showsConfirmButton),
             _activeStep.BlocksTargetInteraction,
             showsConfirmButton,
-            _activeStep.BubbleSlot);
+            _activeStep.BubbleSlot,
+            // 1일차 강제 안내는 지금까지처럼 배경을 어둡게 깐다 - 읽어야 할 것에 시선을 모은다.
+            dimsBackground: true);
     }
 
     /// <summary>
@@ -1125,50 +1127,11 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                target.AssignedPopulation >= target.Capacity;
     }
 
-    // BabyDragonInventory와 DragonSkill이 같은 창을 가리키는 이유: 새끼용 인벤토리와 어미용 스킬트리가
-    // UI_DragonWindow의 두 탭으로 합쳐졌다. 둘 다 UI_DragonWindow가 배타 모드로 열고 닫으므로,
-    // "그 창이 열렸는가"로는 구분되지 않는다(구분이 필요하면 탭까지 봐야 한다).
-    // 통합 전 타입(UI_DragonInventoryWindow·UI_DragonSkillWindow)을 그대로 두면 어느 씬에서도 일치하지 않아
-    // 열기 단계는 영영 통과하지 못하고 닫기 단계는 진입 즉시 통과한다 - 실제로 그래서 갇혔다.
-    private static bool MatchesMode(MonoBehaviour mode, TutorialExclusiveModeKind kind)
-    {
-        switch (kind)
-        {
-            case TutorialExclusiveModeKind.BuildMode: return mode is UI_BuildModeWindow;
-            case TutorialExclusiveModeKind.WorkerMode: return mode is WorkerModeController;
-            case TutorialExclusiveModeKind.Conquest: return mode is ConquestModeController;
-            case TutorialExclusiveModeKind.Research: return mode is UI_ResearchWindow;
-            case TutorialExclusiveModeKind.BabyDragonInventory: return mode is UI_DragonWindow;
-            case TutorialExclusiveModeKind.DragonSkill: return mode is UI_DragonWindow;
-            default: return false;
-        }
-    }
+    // 판정 본문은 TutorialTargetMatcher에 있다 - 자유 목표(TutorialObjectiveController)가 같은 판정을
+    // 써야 하는데, 복제하면 한쪽만 고쳐져 갈라진다. 여기 남은 두 함수는 호출부를 그대로 두기 위한 위임이다.
+    private static bool MatchesMode(MonoBehaviour mode, TutorialExclusiveModeKind kind) =>
+        TutorialTargetMatcher.MatchesMode(mode, kind);
 
-    // 성은 게임 시작 시 RegisterFootprint로 같은 이벤트를 발행하므로(GridMap의 사전 배치 경로),
-    // 종류를 반드시 확인해야 시작 즉시 오발화하지 않는다.
-    private static bool MatchesBuilding(Building building, TutorialStepSO step)
-    {
-        switch (step.TargetBuilding)
-        {
-            case TutorialBuildingKind.AnyTower:
-                return building is Tower && !(building is BabyDragonTower);
-
-            case TutorialBuildingKind.BabyDragonTower:
-                return building is BabyDragonTower;
-
-            case TutorialBuildingKind.ResearchLab:
-                return building is ResearchLab;
-
-            case TutorialBuildingKind.Factory:
-                // 종류를 지정하지 않았으면 아무 생산시설이나 통과시킨다.
-                return building is Factory factory &&
-                       (step.TargetFactoryData == null || factory.Data == step.TargetFactoryData);
-
-            case TutorialBuildingKind.Castle:
-                return building is Castle;
-
-            default:
-                return false;
-        }
-    }
+    private static bool MatchesBuilding(Building building, TutorialStepSO step) =>
+        TutorialTargetMatcher.MatchesBuilding(building, step.TargetBuilding, step.TargetFactoryData);
 }

@@ -23,6 +23,10 @@ public class RunData
     // 끝까지 봤거나 건너뛴 경우. 둘을 구분하지 않는 이유는 어느 쪽이든 다시 뜨면 안 되기 때문이다.
     public bool IsTutorialDismissed;
 
+    // 자유 목표는 위 EnteredTutorialStepIds와 따로 둔다 - 저쪽은 "진입", 이쪽은 "완료"라 의미가 다르다.
+    // 하나로 합치면 목록에 띄우기만 한 목표가 완료로 기록된다.
+    public List<string> CompletedTutorialObjectiveIds = new();
+
     public UnityEvent OnInventoryChanged = new();
 
     public GridMap Map;
@@ -123,6 +127,24 @@ public class RunData
 
         EnteredTutorialStepIds ??= new List<string>();
         EnteredTutorialStepIds.Add(stepId);
+        return true;
+    }
+
+    public bool HasCompletedObjective(string objectiveId)
+    {
+        return CompletedTutorialObjectiveIds != null && CompletedTutorialObjectiveIds.Contains(objectiveId);
+    }
+
+    /// <summary>이미 완료한 목표면 false - 완료 알림이 두 번 뜨지 않게 호출부가 이 반환값으로 거른다.</summary>
+    public bool TryCompleteObjective(string objectiveId)
+    {
+        if (string.IsNullOrWhiteSpace(objectiveId) || HasCompletedObjective(objectiveId))
+        {
+            return false;
+        }
+
+        CompletedTutorialObjectiveIds ??= new List<string>();
+        CompletedTutorialObjectiveIds.Add(objectiveId);
         return true;
     }
 }

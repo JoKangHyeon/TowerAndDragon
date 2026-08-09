@@ -75,6 +75,9 @@ public class UI_GuideOverlay : MonoBehaviour
     private bool _blocksInput;
     private bool _blocksTargetInteraction;
     private bool _showConfirmButton;
+
+    // 딤 패널을 실제로 어둡게 칠할지. 꺼도 패널은 남으므로 blocksInput은 그대로 동작한다.
+    private bool _dimsBackground = true;
     private bool _visualsActive;
     private Canvas _canvas;
 
@@ -204,8 +207,16 @@ public class UI_GuideOverlay : MonoBehaviour
     /// showConfirmButton은 읽고 넘기는 설명에서만 켠다 - 행동을 기다리는 단계에 버튼이 있으면
     /// 그 행동을 건너뛰고 눌러버릴 수 있다.
     /// </summary>
+    /// <param name="dimsBackground">
+    /// 배경을 어둡게 깔지. 끄면 말풍선과 대상 테두리만 남고 화면은 그대로 보인다 -
+    /// X 버튼처럼 누구나 아는 대상이나, 흐름을 끊지 않고 한 줄만 알리고 싶을 때 쓴다.
+    /// 어둡게 하지 않는 것과 클릭을 막는 것은 별개다(blocksInput이 따로 정한다).
+    /// </param>
+    // 기본값을 두지 않는다 - params 배열 앞의 선택 인자는 호출부가 인자를 빠뜨렸을 때 조용히
+    // 엉뚱한 자리에 묶일 수 있다. 호출부가 매번 밝히게 한다.
     public bool Show(object owner, int priority, RectTransform target, string locKey, bool blocksInput,
-        bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot, params object[] args)
+        bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot,
+        bool dimsBackground, params object[] args)
     {
         if (owner == null)
         {
@@ -239,9 +250,11 @@ public class UI_GuideOverlay : MonoBehaviour
         _blocksInput = blocksInput;
         _blocksTargetInteraction = blocksTargetInteraction;
         _showConfirmButton = showConfirmButton;
+        _dimsBackground = dimsBackground;
         _currentLocKey = locKey;
         _currentArgs = args;
         ApplyText();
+        ApplyDimColor();
         ApplyDimRaycast();
         ApplyBubbleSlot(bubbleSlot);
 
@@ -492,6 +505,22 @@ public class UI_GuideOverlay : MonoBehaviour
         image.raycastTarget = true;
 
         blocker.SetActive(false);
+    }
+
+    // 어둡게 깔지 여부. 투명하게만 만들고 패널 자체는 남긴다 - blocksInput이 켜져 있으면
+    // 보이지 않아도 클릭은 계속 막아야 하기 때문이다(막는 것은 ApplyDimRaycast가 정한다).
+    private void ApplyDimColor()
+    {
+        if (_dimImages == null)
+        {
+            return;
+        }
+
+        Color color = _dimsBackground ? _dimColor : Color.clear;
+        foreach (Image image in _dimImages)
+        {
+            image.color = color;
+        }
     }
 
     // 딤은 "보이는 것"과 "막는 것"이 별개다. 대상이 있으면 늘 어둡게 깔되, 막을지는 단계가 정한다 -

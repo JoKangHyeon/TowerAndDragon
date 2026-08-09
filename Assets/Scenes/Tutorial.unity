@@ -405,10 +405,6 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3762981336321848850, guid: dad51a6b52c923b4fbffc16b83280cce, type: 3}
-      propertyPath: _effectRoot
-      value: 
-      objectReference: {fileID: 708936499}
     - target: {fileID: 6221351297464254219, guid: dad51a6b52c923b4fbffc16b83280cce, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -508,10 +504,6 @@ PrefabInstance:
     - target: {fileID: 6501699348729090896, guid: dad51a6b52c923b4fbffc16b83280cce, type: 3}
       propertyPath: m_Name
       value: Tutorial_EndingPanel
-      objectReference: {fileID: 0}
-    - target: {fileID: 6501699348729090896, guid: dad51a6b52c923b4fbffc16b83280cce, type: 3}
-      propertyPath: m_IsActive
-      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1400,11 +1392,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8012866731018233354, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
   m_PrefabInstance: {fileID: 3978445959314823611}
   m_PrefabAsset: {fileID: 0}
---- !u!224 &708936499 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 1621402729377154581, guid: dad51a6b52c923b4fbffc16b83280cce, type: 3}
-  m_PrefabInstance: {fileID: 302415539}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &725960322
 GameObject:
   m_ObjectHideFlags: 0
@@ -1842,6 +1829,11 @@ LineRenderer:
   m_UseWorldSpace: 1
   m_Loop: 1
   m_ApplyActiveColorSpace: 1
+--- !u!1 &886455397 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4771535429783859096, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
+  m_PrefabInstance: {fileID: 2355964141347222073}
+  m_PrefabAsset: {fileID: 0}
 --- !u!224 &897977401 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 9042762893703209766, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -2785,6 +2777,7 @@ MonoBehaviour:
     EnteredGuideSteps: 
     EnteredTutorialStepIds: []
     IsTutorialDismissed: 0
+    CompletedTutorialObjectiveIds: []
     OnInventoryChanged:
       m_PersistentCalls:
         m_Calls: []
@@ -6015,7 +6008,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6864070389072513261, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -50.00177
+      value: -50.00171
       objectReference: {fileID: 0}
     - target: {fileID: 6874002290473965843, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
@@ -8270,6 +8263,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2129059597 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8136472155423758398, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+  m_PrefabInstance: {fileID: 3978445959314823611}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aebd74854ffca42b7a401212b6d9a2d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialObjectiveController
 --- !u!1001 &633893532485663776
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -8306,6 +8310,10 @@ PrefabInstance:
       propertyPath: _toast
       value: 
       objectReference: {fileID: 479604230}
+    - target: {fileID: 2814068480602122315, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2852514381633709213, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
       propertyPath: m_Name
       value: BabyDragon System
@@ -8313,7 +8321,7 @@ PrefabInstance:
     - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
       propertyPath: _toast
       value: 
-      objectReference: {fileID: 479604230}
+      objectReference: {fileID: 0}
     - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
       propertyPath: _gridMap
       value: 
@@ -8323,9 +8331,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 111705553}
     - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
       propertyPath: _gameManager
       value: 
       objectReference: {fileID: 1632594320}
+    - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
+      propertyPath: _inventoryButton
+      value: 
+      objectReference: {fileID: 94955978}
     - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
       propertyPath: _inventoryWindow
       value: 
@@ -8427,6 +8443,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1677085713}
     m_Modifications:
+    - target: {fileID: 578824439335777630, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
+      propertyPath: _controller
+      value: 
+      objectReference: {fileID: 2129059597}
     - target: {fileID: 1564024741083662064, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -8463,10 +8483,6 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3679711389802623113, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
-      propertyPath: m_VerticalFit
-      value: 2
-      objectReference: {fileID: 0}
     - target: {fileID: 4033716861951851219, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -8492,15 +8508,7 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4892720993636029079, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
-      propertyPath: m_AnchorMax.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4892720993636029079, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4892720993636029079, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
-      propertyPath: m_AnchorMin.x
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4892720993636029079, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
@@ -8526,18 +8534,6 @@ PrefabInstance:
     - target: {fileID: 5610654168718475275, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
       propertyPath: m_Name
       value: TutorialGuide_overlay
-      objectReference: {fileID: 0}
-    - target: {fileID: 6649776384800616756, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
-      propertyPath: m_Spacing
-      value: 10
-      objectReference: {fileID: 0}
-    - target: {fileID: 6649776384800616756, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
-      propertyPath: m_Padding.m_Top
-      value: 20
-      objectReference: {fileID: 0}
-    - target: {fileID: 6649776384800616756, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
-      propertyPath: m_Padding.m_Bottom
-      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 6666049023709900567, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
       propertyPath: m_Pivot.x
@@ -9088,6 +9084,18 @@ PrefabInstance:
       propertyPath: _placementController
       value: 
       objectReference: {fileID: 668391600}
+    - target: {fileID: 7651892599846822379, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _toast
+      value: 
+      objectReference: {fileID: 479604230}
+    - target: {fileID: 7651892599846822379, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _cycleManager
+      value: 
+      objectReference: {fileID: 1632594319}
+    - target: {fileID: 7651892599846822379, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _researchManager
+      value: 
+      objectReference: {fileID: 1632594323}
     - target: {fileID: 7968921123668102461, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
       propertyPath: _gridMap
       value: 
@@ -9256,10 +9264,106 @@ PrefabInstance:
       propertyPath: _cycleManager
       value: 
       objectReference: {fileID: 1632594319}
-    - target: {fileID: 8790000952241345423, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
-      propertyPath: _castle
+    - target: {fileID: 8136472155423758398, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _toast
       value: 
-      objectReference: {fileID: 168384012}
+      objectReference: {fileID: 479604230}
+    - target: {fileID: 8136472155423758398, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _gridMap
+      value: 
+      objectReference: {fileID: 168384008}
+    - target: {fileID: 8136472155423758398, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _uiManager
+      value: 
+      objectReference: {fileID: 1677085709}
+    - target: {fileID: 8136472155423758398, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _gameManager
+      value: 
+      objectReference: {fileID: 1632594320}
+    - target: {fileID: 8136472155423758398, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _cycleManager
+      value: 
+      objectReference: {fileID: 1632594319}
+    - target: {fileID: 8136472155423758398, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _dragonWindow
+      value: 
+      objectReference: {fileID: 819624967}
+    - target: {fileID: 8136472155423758398, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _conquestManager
+      value: 
+      objectReference: {fileID: 168384013}
+    - target: {fileID: 8136472155423758398, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _researchManager
+      value: 
+      objectReference: {fileID: 1632594323}
+    - target: {fileID: 8136472155423758398, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _populationManager
+      value: 
+      objectReference: {fileID: 1632594324}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _gridMap
+      value: 
+      objectReference: {fileID: 168384008}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _overlay
+      value: 
+      objectReference: {fileID: 111705553}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _uiManager
+      value: 
+      objectReference: {fileID: 1677085709}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _gameManager
+      value: 
+      objectReference: {fileID: 1632594320}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _cycleManager
+      value: 
+      objectReference: {fileID: 1632594319}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _dragonWindow
+      value: 
+      objectReference: {fileID: 819624967}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _conquestWindow
+      value: 
+      objectReference: {fileID: 1677085710}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _buildModeWindow
+      value: 
+      objectReference: {fileID: 1616815092}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _conquestManager
+      value: 
+      objectReference: {fileID: 168384013}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _researchManager
+      value: 
+      objectReference: {fileID: 1632594323}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _resourceManager
+      value: 
+      objectReference: {fileID: 1632594327}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _minimapController
+      value: 
+      objectReference: {fileID: 557582059}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _populationManager
+      value: 
+      objectReference: {fileID: 1632594324}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _speedSettingWindow
+      value: 
+      objectReference: {fileID: 1993573505}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _placementController
+      value: 
+      objectReference: {fileID: 668391600}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: TutorialEnded.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 886455397}
     - target: {fileID: 8790000952241345423, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
       propertyPath: _waveManager
       value: 

@@ -13,7 +13,8 @@ using UnityEngine;
 ///   1. 성이 위태로워지면 남은 웨이브를 정리해 그 밤을 끝낸다 - 교착을 푸는 쪽.
 ///   2. 그래도 들어온 치명타는 거절한다 - 한 방에 무너지는 경우까지 막는 마지막 방어선.
 ///
-/// 마지막 밤의 연출된 패배만 예외다 - TutorialBossDefeatController가 AllowDefeat로 잠금을 푼다.
+/// 마지막 밤만 예외다 - TutorialBossDefeatController가 AllowDefeat로 잠금을 풀고, 그때부터는
+/// 보호도 구제도 없이 실제 전투로 결판이 난다.
 /// </summary>
 public sealed class TutorialCastleGuard : MonoBehaviour, ICastleDamageBlockQuery
 {
@@ -29,22 +30,14 @@ public sealed class TutorialCastleGuard : MonoBehaviour, ICastleDamageBlockQuery
     [SerializeField] private WaveManager _waveManager;
 
     private bool _isDefeatAllowed;
-    private bool _isRescueSuspended;
 
-    /// <summary>마지막 밤의 연출된 패배 직전에 호출한다. 한 번 풀면 되돌리지 않는다.</summary>
+    /// <summary>
+    /// 마지막 밤에 호출한다. 치명타 거절과 구제를 한꺼번에 풀어 성이 평범하게 죽게 만든다.
+    /// 한 번 풀면 되돌리지 않는다.
+    /// </summary>
     public void AllowDefeat()
     {
         _isDefeatAllowed = true;
-    }
-
-    /// <summary>
-    /// 성은 계속 지키되 구제(남은 웨이브 정리)만 멈춘다. 마지막 밤에 쓴다 -
-    /// 보스는 느리게 걸어오는데 앞서 온 잡몹이 성을 위태롭게 만들면 구제가 웨이브를 치워
-    /// 보스가 도착하기도 전에 밤이 끝난다. 정작 싸워야 할 상대를 못 만나는 셈이다.
-    /// </summary>
-    public void SuspendRescue()
-    {
-        _isRescueSuspended = true;
     }
 
     bool ICastleDamageBlockQuery.CanTakeDamage(float amount)
@@ -88,7 +81,7 @@ public sealed class TutorialCastleGuard : MonoBehaviour, ICastleDamageBlockQuery
 
     private void HandleHealthChanged(float current, float max)
     {
-        if (_isDefeatAllowed || _isRescueSuspended || _waveManager == null || !_waveManager.IsRunning || max <= 0f)
+        if (_isDefeatAllowed || _waveManager == null || !_waveManager.IsRunning || max <= 0f)
         {
             return;
         }

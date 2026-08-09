@@ -44,9 +44,14 @@ public sealed class BabyDragonTutorialHandOff : MonoBehaviour
     }
 
     // 튜토리얼 자체가 없거나 꺼져 있으면 종료 신호도 오지 않는다 - 그때는 평소처럼 바로 지급한다.
+    //
+    // isActiveAndEnabled로 보면 안 된다. 튜토리얼이 여러 챕터로 나뉘면 뒤 챕터는 제 차례가 올 때까지
+    // 오브젝트가 꺼진 채 기다리는데, 그것을 "튜토리얼이 없다"로 읽어 시작하자마자 알을 줘 버린다
+    // (실제로 1일차를 두 챕터로 나눈 순간 그렇게 됐다). 기다리는 중인지 정말 꺼진 것인지는
+    // 컴포넌트의 enabled로 가른다 - 차례를 기다리는 챕터는 컴포넌트가 켜져 있다.
     private void Start()
     {
-        if (_runner == null || !_runner.isActiveAndEnabled)
+        if (_runner == null || !_runner.enabled)
         {
             GrantOnce();
         }

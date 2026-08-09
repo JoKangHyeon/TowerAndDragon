@@ -21,6 +21,9 @@ public class BabyDragonGuideController : MonoBehaviour
     private const string COMPLETED_LOC_KEY = "baby_dragon_guide_completed";
     private const string MANAGE_HINT_LOC_KEY = "baby_dragon_guide_manage_hint";
 
+    // 배치가 끝난 뒤 순서대로 보여줄 마무리 문구. 확인 버튼으로 한 컷씩 넘긴다.
+    private static readonly string[] COMPLETION_LOC_KEYS = { COMPLETED_LOC_KEY, MANAGE_HINT_LOC_KEY };
+
     private const float DEFAULT_GUIDE_START_DELAY = 0.5f;
 
     [SerializeField] private GameManager _gameManager;
@@ -56,6 +59,9 @@ public class BabyDragonGuideController : MonoBehaviour
     // 아직 시작 전이면 값이 없다 - 첫 알을 얻는 순간 OpenInventory로 들어간다.
     private BabyDragonGuideStep? _currentStep;
 
+    // 마무리 문구 중 지금 보여줄 컷. 길이를 넘어서면 안내를 놓는다.
+    private int _completionIndex;
+
     private RunData CurrentRun => _gameManager == null ? null : _gameManager.CurrentRun;
 
     private void OnEnable()
@@ -87,6 +93,7 @@ public class BabyDragonGuideController : MonoBehaviour
         if (_overlay != null)
         {
             _overlay.DisplayReleased += Render;
+            _overlay.ConfirmClicked += HandleConfirmClicked;
         }
 
         // 이 컴포넌트의 활성 체크박스가 곧 가이드 on/off 스위치다. 플레이 중 다시 켜면 현재 단계 안내를
@@ -123,6 +130,7 @@ public class BabyDragonGuideController : MonoBehaviour
         if (_overlay != null)
         {
             _overlay.DisplayReleased -= Render;
+            _overlay.ConfirmClicked -= HandleConfirmClicked;
             _overlay.Release(this);
         }
     }
@@ -164,7 +172,24 @@ public class BabyDragonGuideController : MonoBehaviour
         AdvanceAfterToastAsync(BabyDragonGuideStep.PlaceDragon).Forget();
 
     // 사용자가 방금 누른 결과라 즉시 반응해야 한다 - 지연시키면 조작이 먹지 않은 것처럼 보인다.
-    private void HandleTabDisplayed(bool _) => Advance(BabyDragonGuideStep.WaitHatch);
+    //
+    // 여기서 기다리는 것은 "새끼용 탭을 눌렀다"가 아니라 "창을 열었다"이다. 창은 마지막에 보던 탭으로
+    // 열리므로(기본값은 어미용) 탭 종류로 판정하면 안 된다 - 그렇게 막았더니 창을 열어도 단계가
+    // 그대로라, 입력을 차단한 채 HUD 버튼만 가리키는 상태로 갇혔다. 어느 탭이든 창이 열렸으면
+    // WaitHatch로 넘어가고, 새끼용 탭으로 옮기는 유도는 그 단계의 ShowSlotGuide가 맡는다.
+    //
+    // 다만 UI_DragonWindow는 Awake에서 탭 시각 상태를 맞추려고 SelectTab을 한 번 부르고 그것도
+    // 발화한다 - 창이 열리기도 전이다. 그것까지 받으면 게임 시작 시점에 안내가 건너뛰어
+    // 첫 안내(인벤토리를 열어라)가 통째로 사라진다. 그래서 창이 열려 있는지를 본다.
+    private void HandleTabDisplayed(bool _)
+    {
+        if (!IsInventoryOpen)
+        {
+            return;
+        }
+
+        Advance(BabyDragonGuideStep.WaitHatch);
+    }
 
     /// <summary>
     /// 알 획득·부화는 토스트가 먼저 뜨는 이벤트다. 둘이 겹치면 어느 쪽을 봐야 할지 알 수 없으므로
@@ -223,16 +248,22 @@ public class BabyDragonGuideController : MonoBehaviour
         StepEntered.Invoke(step);
     }
 
+    // 완료 안내도 오버레이로 낸다 - 강제 안내인데 토스트로 흘려보내면 말풍선과 겹쳐 둘 다 읽히지 않는다.
+    // 가리킬 대상이 없으므로 딤 없이 말풍선만 띄우고, 확인 버튼으로 두 컷을 순서대로 넘긴다.
     private void AnnounceCompletion()
     {
-        if (_toast == null)
+        _completionIndex = 0;
+    }
+
+    private void HandleConfirmClicked()
+    {
+        if (_currentStep != BabyDragonGuideStep.Completed || _completionIndex >= COMPLETION_LOC_KEYS.Length)
         {
             return;
         }
 
-        // 가리킬 대상이 없는 안내라 화살표가 아니라 토스트로 보낸다. 토스트가 큐를 갖고 있어 순차로 뜬다.
-        _toast.Show(COMPLETED_LOC_KEY);
-        _toast.Show(MANAGE_HINT_LOC_KEY);
+        _completionIndex++;
+        Render();
     }
 
     private void Render()
@@ -252,7 +283,8 @@ public class BabyDragonGuideController : MonoBehaviour
         {
             case BabyDragonGuideStep.OpenInventory:
                 // 유일하게 입력을 막는 단계 - 버튼 한 번 누르면 끝나는 행동이라 막아도 갇히지 않는다.
-                ShowGuide(_inventoryButton, OPEN_INVENTORY_LOC_KEY, blocksInput: true, ResolveToggleKeyLabel());
+                ShowGuide(_inventoryButton, OPEN_INVENTORY_LOC_KEY, blocksInput: true,
+                    dimsBackground: true, showConfirmButton: false, ResolveToggleKeyLabel());
                 break;
 
             case BabyDragonGuideStep.WaitHatch:
@@ -264,7 +296,10 @@ public class BabyDragonGuideController : MonoBehaviour
                 }
 
                 // 알 슬롯은 눌러도 반응이 없으므로 "창을 닫고 하루를 보내라"까지 같이 알려준다.
-                ShowSlotGuide(wantDragonSlot: false, WAIT_HATCH_LOC_KEY, ResolveToggleKeyLabel());
+                // 닫기는 창의 X 버튼으로 한다 - 토글 키로 닫는 경로가 없어서 키 이름을 알려주면 헛짚는다.
+                // 여기서는 배경을 어둡게 하지 않는다. X는 누구나 아는 표시라 가려서 몰아갈 이유가 없고,
+                // 알 슬롯 테두리만으로 "이게 네 알이다"는 충분히 전달된다.
+                ShowSlotGuide(wantDragonSlot: false, WAIT_HATCH_LOC_KEY, dimsBackground: false);
                 break;
 
             case BabyDragonGuideStep.PlaceDragon:
@@ -280,12 +315,25 @@ public class BabyDragonGuideController : MonoBehaviour
                 // 이미 하루를 굴려본 시점이라 입력까지 막지는 않는다.
                 if (!IsInventoryOpen)
                 {
-                    ShowGuide(_inventoryButton, REOPEN_INVENTORY_LOC_KEY, blocksInput: false, ResolveToggleKeyLabel());
+                    ShowGuide(_inventoryButton, REOPEN_INVENTORY_LOC_KEY, blocksInput: false,
+                        dimsBackground: true, showConfirmButton: false, ResolveToggleKeyLabel());
                     break;
                 }
 
-                // 배치는 슬롯을 누른 뒤 그리드를 눌러야 끝나므로 화면을 막으면 배치 자체가 불가능해진다.
-                ShowSlotGuide(wantDragonSlot: true, PLACE_DRAGON_LOC_KEY);
+                // 배치는 슬롯의 위치 버튼을 누른 뒤 그리드를 눌러야 끝나므로 화면을 막으면 진행이 막힌다.
+                ShowSlotGuide(wantDragonSlot: true, PLACE_DRAGON_LOC_KEY, dimsBackground: true);
+                break;
+
+            case BabyDragonGuideStep.Completed:
+                // 가리킬 대상이 없다 - 딤 없이 말풍선만 띄우고 확인 버튼으로 넘긴다.
+                if (_completionIndex < COMPLETION_LOC_KEYS.Length)
+                {
+                    ShowGuide(null, COMPLETION_LOC_KEYS[_completionIndex],
+                        blocksInput: false, dimsBackground: false, showConfirmButton: true);
+                    break;
+                }
+
+                _overlay.Release(this);
                 break;
 
             default:
@@ -296,9 +344,9 @@ public class BabyDragonGuideController : MonoBehaviour
 
     // 표시권을 못 잡으면(1일차 튜토리얼이 화면을 쓰는 중) 그냥 넘어간다 - 단계는 이미 전진해 있고,
     // 튜토리얼이 놓을 때 DisplayReleased로 Render가 다시 돌아 그 시점의 단계부터 유도한다.
-    private void ShowGuide(RectTransform target, string locKey, bool blocksInput, params object[] args)
+    private void ShowGuide(RectTransform target, string locKey, bool blocksInput,
+        bool dimsBackground = true, bool showConfirmButton = false, params object[] args)
     {
-        // 새끼용 안내는 전부 행동형이라 확인 버튼을 쓰지 않는다.
         // 용을 배치할 때만 그리드를 가리지 않게 말풍선을 아래로 내린다.
         GuideBubbleSlot slot = locKey == PLACE_DRAGON_TILE_LOC_KEY
             ? GuideBubbleSlot.Bottom
@@ -306,7 +354,7 @@ public class BabyDragonGuideController : MonoBehaviour
 
         // 새끼용 안내는 전부 눌러보게 하는 단계라 대상을 막지 않는다.
         _overlay.Show(this, GuidePriority.BABY_DRAGON_GUIDE, target, locKey, blocksInput,
-            blocksTargetInteraction: false, showConfirmButton: false, slot, args);
+            blocksTargetInteraction: false, showConfirmButton, slot, dimsBackground, args);
     }
 
     // 참조가 비어 있어도 문구 자체는 떠야 하므로 키 이름만 빈 문자열로 대체한다.
@@ -332,7 +380,7 @@ public class BabyDragonGuideController : MonoBehaviour
     // 알 탭과 용 탭이 따로였을 때는 "원하는 탭으로 바꾸게 한 뒤 그 탭의 첫 슬롯"이었다.
     // 지금은 둘이 새끼용 탭 한 패널에 함께 있으므로, 탭 유도는 한 번뿐이고 그 뒤에는
     // 어느 목록의 슬롯을 가리킬지 단계가 직접 고른다.
-    private void ShowSlotGuide(bool wantDragonSlot, string slotLocKey, params object[] slotArgs)
+    private void ShowSlotGuide(bool wantDragonSlot, string slotLocKey, bool dimsBackground)
     {
         if (!IsInventoryOpen)
         {
@@ -340,21 +388,25 @@ public class BabyDragonGuideController : MonoBehaviour
             return;
         }
 
-        // 딤은 켜되 막지는 않는다 - 알 슬롯은 눌러도 반응이 없고(SetupEgg에서 interactable=false),
-        // 용 슬롯은 누른 뒤 그리드까지 눌러야 배치가 끝나므로 막으면 진행 자체가 불가능해진다.
+        // 막지는 않는다 - 알 슬롯은 눌러도 반응이 없고(SetupEgg에서 interactable=false),
+        // 새끼용 쪽은 버튼을 누른 뒤 그리드까지 눌러야 배치가 끝나므로 막으면 진행 자체가 불가능해진다.
         if (!_inventoryWindow.IsBabyTabShown)
         {
-            ShowGuide(_inventoryWindow.BabyTabRect, SWITCH_TAB_LOC_KEY, blocksInput: false);
+            ShowGuide(_inventoryWindow.BabyTabRect, SWITCH_TAB_LOC_KEY, blocksInput: false, dimsBackground);
             return;
         }
 
+        // 새끼용은 슬롯 전체가 아니라 슬롯 안의 위치 표시 버튼을 눌러야 배치가 시작된다 -
+        // 슬롯을 통째로 가리키면 어디를 눌러야 하는지 알 수 없다(폐기한 27단계 챕터의 day2_select_dragon이
+        // 가리키던 대상이 이 버튼이다). 아직 안 그려졌으면 슬롯으로 물러난다.
         bool hasSlot = wantDragonSlot
-            ? _inventoryWindow.TryGetFirstBabyDragonSlotRect(out RectTransform slotRect)
+            ? _inventoryWindow.TryGetFirstBabyDragonFocusButtonRect(out RectTransform slotRect) ||
+              _inventoryWindow.TryGetFirstBabyDragonSlotRect(out slotRect)
             : _inventoryWindow.TryGetFirstEggSlotRect(out slotRect);
 
         if (hasSlot)
         {
-            ShowGuide(slotRect, slotLocKey, blocksInput: false, slotArgs);
+            ShowGuide(slotRect, slotLocKey, blocksInput: false, dimsBackground);
             return;
         }
 
