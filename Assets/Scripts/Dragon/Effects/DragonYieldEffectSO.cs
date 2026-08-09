@@ -20,6 +20,6 @@ public sealed class DragonYieldEffectSO : DragonSkillEffectSO
             resourceType != ResourceType.None &&
             (_targetResources & resourceType) == resourceType;
 
-        return IsActive(activeAttribute) && isTargetResource ? _bonusRatio : 0f;
+        return isTargetResource ? _bonusRatio * Scale(activeAttribute) : 0f;
     }
 }

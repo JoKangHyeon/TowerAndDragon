@@ -179,6 +179,20 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         BuffsRecomputed?.Invoke();
     }
 
+    // 새끼용 지역형 노드(KinBuffRadiusEffectSO)의 반경 보너스를 반영한 실효 버프 반경.
+    // BuffRadius를 직접 읽는 곳이 셋(생산 버프·건설 해제·지형 페널티 완화)이라 반드시 여기로 모은다 -
+    // 하나만 늘리면 생산 범위와 건설 해제 범위가 눈에 보이게 어긋난다.
+    private float GetEffectiveBuffRadius(BabyDragonTower babyDragon)
+    {
+        float baseRadius = babyDragon.DragonData.BuffRadius;
+
+        float bonus = _dragonTreeManager != null
+            ? _dragonTreeManager.GetKinBuffRadiusBonusRatio(babyDragon.DragonData.DragonType)
+            : 0f;
+
+        return baseRadius * (1f + bonus);
+    }
+
     private void RecomputeConstructionUnlocks()
     {
         _unlockedConstructionCells.Clear();
@@ -200,7 +214,7 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
 
     private void CollectUnlockedCells(BabyDragonTower babyDragon)
     {
-        float radius = babyDragon.DragonData.BuffRadius;
+        float radius = GetEffectiveBuffRadius(babyDragon);
         IReadOnlyList<TerrainType> unlockTerrains = babyDragon.DragonData.ConstructionUnlockTerrains;
 
         if (radius <= 0f || unlockTerrains == null || unlockTerrains.Count == 0)
@@ -263,7 +277,7 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
 
     private void CollectPenaltyMitigation(BabyDragonTower babyDragon)
     {
-        float radius = babyDragon.DragonData.BuffRadius;
+        float radius = GetEffectiveBuffRadius(babyDragon);
         IReadOnlyList<TerrainType> mitigationTerrains = babyDragon.DragonData.PenaltyMitigationTerrains;
 
         if (radius <= 0f || mitigationTerrains == null || mitigationTerrains.Count == 0)
@@ -338,7 +352,7 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         BabyDragonTower babyDragon,
         Dictionary<(Factory, ResourceType), float> multiplierByFactoryResource)
     {
-        float radius = babyDragon.DragonData.BuffRadius;
+        float radius = GetEffectiveBuffRadius(babyDragon);
         ResourceType targetResources = babyDragon.DragonData.BuffTargetResources;
 
         // 반경이 없거나(예: 얼음/불/시간 - 생산량 버프가 아닌 별개 지역 효과를 쓴다) 대상 자원이

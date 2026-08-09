@@ -96,6 +96,24 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         RefreshAttackEnabled();
     }
 
+    // 용 스킬트리의 최대체력 보너스를 다시 적용한다. 공격력·공속과 달리 매 프레임 pull할 수 없는
+    // 유일한 스탯이라(Health가 최대치를 값으로 들고 있다) TowerMaxHealthApplier가 밤 시작마다 부른다.
+    // 현재 체력은 비율로 보존한다 - 그러지 않으면 최대치가 오를 때마다 만피로 회복돼 버린다.
+    public void ApplyMaxHealthMultiplier(float multiplier)
+    {
+        // 파괴(비활성)된 타워는 건너뛴다 - Initialize가 현재 체력을 최대치로 되돌려
+        // 아침 복구를 기다리던 타워가 밤 시작과 함께 되살아나 버린다.
+        if (!_isInitialized || _towerData == null || _health == null || IsDead)
+        {
+            return;
+        }
+
+        float ratio = _health.MaxHealth > 0f ? _health.CurrentHealth / _health.MaxHealth : 1f;
+
+        _health.Initialize(_towerData.MaxHealth * multiplier);
+        _health.RestoreCurrentHealth(_health.MaxHealth * ratio);
+    }
+
     public void TakeDamage(DamageInfo damage)
     {
         if (IsDead)

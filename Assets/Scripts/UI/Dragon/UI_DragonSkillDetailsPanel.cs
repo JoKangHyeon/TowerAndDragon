@@ -55,6 +55,10 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
     private Tween _scaleTween;
     private bool _isOpen;
 
+    // 트리 창이 "지금 열려 있는 패널만 다른 노드로 다시 바인딩"할 때 쓴다 -
+    // 닫힌 패널에 Show를 부르면 사용자가 닫은 패널이 갱신 때마다 되살아난다.
+    public bool IsOpen => _isOpen;
+
     public void Construct(DragonTreeManager dragonTreeManager, ResourceManager resourceManager, Action onChanged)
     {
         _dragonTreeManager = dragonTreeManager;

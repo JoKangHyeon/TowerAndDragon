@@ -23,6 +23,11 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
     private const float BASE_RANGE_MULTIPLIER = 1f;
     private const float BASE_ATTACK_SPEED_MULTIPLIER = 1f;
     private const float BASE_YIELD_MULTIPLIER = 1f;
+    private const float BASE_MAX_HEALTH_MULTIPLIER = 1f;
+    private const float BASE_BARRICADE_HEALTH_MULTIPLIER = 1f;
+
+    // 랭크 비교의 초기값 - 실제 노드 랭크는 1부터라 어떤 노드든 이 값보다 크다.
+    private const int NO_RANK = 0;
 
     [SerializeField] private DragonSkillTreeData _tree;
     [SerializeField] private UnityEvent<DragonType> _activeAttributeChanged = new();
@@ -263,8 +268,13 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
         return ratio;
     }
 
+    // 랭크가 높은 노드의 상태이상을 우선한다 - 랭크마다 다른 상태 에셋(화상 틱뎀 강화 등)을
+    // 쓰는데 첫 매치를 반환하면 UnlockedIds(HashSet)의 순회 순서에 따라 약한 쪽이 걸린다.
     public StatusEffectSO GetSpawnStatus(DragonType activeAttribute)
     {
+        StatusEffectSO best = null;
+        int bestRank = NO_RANK;
+
         foreach (string nodeId in UnlockedIds)
         {
             if (!TryGetNode(nodeId, out ProgressionNodeData node) || !(node is DragonSkillNodeData dragonNode))
@@ -276,14 +286,116 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
             {
                 StatusEffectSO status = effect != null ? effect.GetSpawnStatus(activeAttribute) : null;
 
-                if (status != null)
+                if (status != null && dragonNode.Rank > bestRank)
                 {
-                    return status;
+                    best = status;
+                    bestRank = dragonNode.Rank;
                 }
             }
         }
 
-        return null;
+        return best;
+    }
+
+    // 액티브 스킬의 일일 사용 횟수 추가분(암석 궁극). Skill.UsePerDay/Reset이 읽는다.
+    public int GetSkillExtraUsePerDay(SkillSO skill)
+    {
+        int extra = 0;
+
+        foreach (string nodeId in UnlockedIds)
+        {
+            if (!TryGetNode(nodeId, out ProgressionNodeData node) || !(node is DragonSkillNodeData dragonNode))
+            {
+                continue;
+            }
+
+            foreach (DragonSkillEffectSO effect in dragonNode.Effects)
+            {
+                if (effect != null)
+                {
+                    extra += effect.GetSkillExtraUsePerDay(ActiveAttribute, skill);
+                }
+            }
+        }
+
+        return extra;
+    }
+
+    // 액티브 스킬이 실제로 부여할 상태이상. 랭크가 높은 노드의 것을 우선한다 -
+    // 없으면 null을 돌려주고, Skill.AppliedStatus가 SkillSO의 기본값으로 되돌아간다.
+    public StatusEffectSO GetSkillStatusOverride(SkillSO skill)
+    {
+        StatusEffectSO best = null;
+        int bestRank = NO_RANK;
+
+        foreach (string nodeId in UnlockedIds)
+        {
+            if (!TryGetNode(nodeId, out ProgressionNodeData node) || !(node is DragonSkillNodeData dragonNode))
+            {
+                continue;
+            }
+
+            foreach (DragonSkillEffectSO effect in dragonNode.Effects)
+            {
+                StatusEffectSO status = effect != null ? effect.GetSkillStatusOverride(ActiveAttribute, skill) : null;
+
+                if (status != null && dragonNode.Rank > bestRank)
+                {
+                    best = status;
+                    bestRank = dragonNode.Rank;
+                }
+            }
+        }
+
+        return best;
+    }
+
+    // 암석 액티브가 설치하는 방벽의 최대체력 배율. MeteorBarricadeSkill이 설치 직후 읽는다.
+    public float GetBarricadeHealthMultiplier()
+    {
+        float bonus = 0f;
+
+        foreach (string nodeId in UnlockedIds)
+        {
+            if (!TryGetNode(nodeId, out ProgressionNodeData node) || !(node is DragonSkillNodeData dragonNode))
+            {
+                continue;
+            }
+
+            foreach (DragonSkillEffectSO effect in dragonNode.Effects)
+            {
+                if (effect != null)
+                {
+                    bonus += effect.GetBarricadeHealthBonusRatio(ActiveAttribute);
+                }
+            }
+        }
+
+        return BASE_BARRICADE_HEALTH_MULTIPLIER + bonus;
+    }
+
+    // 새끼용 버프모드의 반경 증가분. BabyDragonBuffSystem.GetEffectiveBuffRadius가 유일한 소비자다.
+    public float GetKinBuffRadiusBonusRatio(DragonType dragonType)
+    {
+        float bonus = 0f;
+
+        foreach (string nodeId in UnlockedIds)
+        {
+            if (!TryGetNode(nodeId, out ProgressionNodeData node) || !(node is DragonSkillNodeData dragonNode))
+            {
+                continue;
+            }
+
+            foreach (DragonSkillEffectSO effect in dragonNode.Effects)
+            {
+                if (effect != null)
+                {
+                    bonus += effect.GetKinBuffRadiusBonusRatio(dragonType);
+                }
+            }
+        }
+
+        return bonus;
     }
 
     public float GetKinAreaYieldBonusRatio(DragonType dragonType)
@@ -314,8 +426,14 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
     public float GetDamageMultiplier(TowerData towerData) =>
         BASE_DAMAGE_MULTIPLIER + Aggregate((effect, active) => effect.GetTowerDamageMultiplierBonus(active, towerData));
 
-    // 어떤 용 노드도 사거리를 다루지 않는다(로드맵 §10 노드 표) - 중립값 고정.
-    public float GetRangeMultiplier(TowerData towerData) => BASE_RANGE_MULTIPLIER;
+    // 새끼용 타워형(KinTowerStatEffectSO)이 사거리를 다루므로 더 이상 중립값 고정이 아니다.
+    public float GetRangeMultiplier(TowerData towerData) =>
+        BASE_RANGE_MULTIPLIER + Aggregate((effect, active) => effect.GetTowerRangeMultiplierBonus(active, towerData));
+
+    // 타워 최대체력 배율. 다른 스탯과 달리 매 프레임 pull되지 않는다 - Health가 최대치를 값으로
+    // 들고 있어서, TowerMaxHealthApplier가 밤 시작 시점에 한 번 읽어 적용한다.
+    public float GetMaxHealthMultiplier(TowerData towerData) =>
+        BASE_MAX_HEALTH_MULTIPLIER + Aggregate((effect, active) => effect.GetTowerMaxHealthMultiplierBonus(active, towerData));
 
     public float GetAttackSpeedMultiplier(TowerData towerData) =>
         BASE_ATTACK_SPEED_MULTIPLIER + Aggregate((effect, active) => effect.GetTowerAttackSpeedMultiplierBonus(active, towerData));
@@ -410,9 +528,12 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
         return kinMatch != null ? kinMatch : FindTowerHitStatus(towerData, requireBabyDragonTarget: false);
     }
 
+    // GetSpawnStatus와 같은 이유로 랭크가 높은 쪽을 고른다(첫 매치 반환 금지).
     private StatusEffectSO FindTowerHitStatus(TowerData towerData, bool requireBabyDragonTarget)
     {
         DragonType? active = ActiveAttribute;
+        StatusEffectSO best = null;
+        int bestRank = NO_RANK;
 
         foreach (string nodeId in UnlockedIds)
         {
@@ -432,14 +553,15 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
             {
                 StatusEffectSO status = effect != null ? effect.GetTowerHitStatus(active, towerData) : null;
 
-                if (status != null)
+                if (status != null && dragonNode.Rank > bestRank)
                 {
-                    return status;
+                    best = status;
+                    bestRank = dragonNode.Rank;
                 }
             }
         }
 
-        return null;
+        return best;
     }
 
     // 완료 노드 → 효과 순회를 공유하는 헬퍼. 활성 속성이 없으면(RunData 초기화 전) 0을 반환한다 -

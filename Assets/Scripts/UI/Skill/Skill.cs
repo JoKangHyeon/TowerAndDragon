@@ -17,6 +17,7 @@ public enum SkillType
     // 생명 액티브(로드맵 §6-1) 임시 대체 - 바리케이드는 설치 대상 프리팹이 없어
     // 기획 확정 전까지 성 즉시 회복으로 대신한다(팀 확인 대기, DragonSkillTreeAssetGenerator 참고).
     HEAL_CASTLE,
+    METEOR_BARRICADE,
 }
 
 /// <summary>스킬 발동 시 무엇을 지정해야 하는지 - UI/입력 쪽에서 이 값에 따라 지정 방식을 분기한다.</summary>
@@ -139,7 +140,25 @@ public abstract class Skill
     public float CooltimeLeft => _cooltimeLeft;
     public float CooltimeRatio => Cooltime > 0f ? Mathf.Min(_cooltimeLeft / Cooltime, 1f) : 0f;
     public int UsePerDayLeft => _usePerDayLeft;
-    public int UsePerDay => _skillData.DefaultUsePerDay;
+
+    // 궁극 노드(DragonSkillPowerEffectSO._extraUsePerDay)의 추가 횟수를 반영한다.
+    // 무제한(-1) 스킬에 더하면 -1이 깨져 IsUnlimitedUse가 false가 되므로 먼저 걸러낸다.
+    public int UsePerDay
+    {
+        get
+        {
+            if (_skillData.DefaultUsePerDay == UNLIMITED_USE_PER_DAY)
+            {
+                return UNLIMITED_USE_PER_DAY;
+            }
+
+            int extra = _dragonTreeManager != null
+                ? _dragonTreeManager.GetSkillExtraUsePerDay(_skillData)
+                : 0;
+
+            return _skillData.DefaultUsePerDay + extra;
+        }
+    }
     public bool IsUnlimitedUse => UsePerDay == UNLIMITED_USE_PER_DAY;
     public bool CanUse => IsUsePerDayLeft && _cooltimeLeft <= 0;
     public bool IsUsePerDayLeft => IsUnlimitedUse || UsePerDayLeft > 0;
@@ -152,22 +171,35 @@ public abstract class Skill
 
     // 강화·궁극 노드의 위력 보너스를 반영한다 - Meteor/GlobalDamage처럼 체력비례 데미지를 쓰는
     // 스킬만 실질적으로 영향을 받는다(빙결·타워수리는 값을 읽지 않음).
-    protected float DamagePercent
+    protected float DamagePercent => _skillData.DamagePercentOfCurrentHealth * (1f + PowerBonus);
+
+    // 체력 비례가 아닌 고정 피해량(메테오). DamagePercent와 같은 위력 보너스를 받는다.
+    protected float FlatDamage => _skillData.FlatDamage * (1f + PowerBonus);
+
+    // 강화 노드가 더 강한 상태이상(지속시간이 긴 빙결 등)으로 교체할 수 있다 -
+    // 교체분이 없으면 SkillSO의 기본값을 그대로 쓴다.
+    protected StatusEffectSO AppliedStatus
     {
         get
         {
-            float bonus = _dragonTreeManager != null
-                ? _dragonTreeManager.GetSkillPowerMultiplierBonus(_skillData)
-                : 0f;
+            StatusEffectSO overridden = _dragonTreeManager != null
+                ? _dragonTreeManager.GetSkillStatusOverride(_skillData)
+                : null;
 
-            return _skillData.DamagePercentOfCurrentHealth * (1f + bonus);
+            return overridden != null ? overridden : _skillData.AppliedStatus;
         }
     }
 
-    protected StatusEffectSO AppliedStatus => _skillData.AppliedStatus;
+    // 생명 액티브(성 즉시 회복) 전용 회복량. 위력 보너스를 반영하지 않으면
+    // 생명 갈래의 "회복량 증가" 노드가 아무 효과도 내지 못한다.
+    protected float HealAmount => _skillData.HealAmount * (1f + PowerBonus);
 
-    // 생명 액티브(성 즉시 회복) 전용 회복량.
-    protected float HealAmount => _skillData.HealAmount;
+    // 설치형 스킬(방벽)처럼 SkillSO 수치가 아닌 값을 강화해야 하는 스킬이 매니저를 직접 조회한다.
+    protected DragonTreeManager DragonTree => _dragonTreeManager;
+
+    private float PowerBonus => _dragonTreeManager != null
+        ? _dragonTreeManager.GetSkillPowerMultiplierBonus(_skillData)
+        : 0f;
 
     // 타겟팅 컨트롤러가 시전 범위 미리보기(원형 인디케이터) 크기를 결정하는 데도 필요하므로 public으로 노출한다.
     public float AreaRadius => _skillData.AreaRadius;
@@ -208,7 +240,9 @@ public abstract class Skill
     public void Reset()
     {
         _cooltimeLeft = 0f;
-        _usePerDayLeft = _skillData.DefaultUsePerDay;
+
+        // DefaultUsePerDay를 직접 읽으면 궁극 노드의 추가 횟수가 매일 아침 사라진다.
+        _usePerDayLeft = UsePerDay;
     }
 }
 
@@ -372,5 +406,86 @@ public class HealCastleSkill : Skill
     protected override void ApplyEffect(in SkillCastContext context)
     {
         context.TargetCastle?.Repair(HealAmount);
+    }
+}
+
+/// <summary>용 스킬트리 암석 액티브 - 지정 위치에 광역 데미지를 주고 방벽을 설치합니다.</summary>
+public class MeteorBarricadeSkill : Skill
+{
+    // 찍은 칸이 경로가 아닐 때 경로 칸을 찾아볼 최대 거리(셀). 메테오의 피해 반경과 비슷한 수준으로
+    // 두어, 피해가 닿는 범위 안에서만 방벽이 자리를 잡도록 한다.
+    private const int BARRICADE_SNAP_DISTANCE = 2;
+
+    public MeteorBarricadeSkill(SkillSO skillData) : base(skillData) { }
+
+    public override SkillTargeting Targeting => SkillTargeting.GroundPoint;
+
+    protected override void ApplyEffect(in SkillCastContext context)
+    {
+        float radiusX = AreaRadius;
+        float radiusY = AreaRadius * IsometricMath.RADIUS_Y_RATIO;
+        LayerMask layers = TargetLayers != 0 ? TargetLayers : LayerMask.GetMask("Enemy");
+
+        // 1. [데미지 파트] 브로드페이즈 + 아이소메트릭 타원 방정식 검사
+        Collider2D[] hitColliders = Physics2D.OverlapCircleAll(context.TargetPoint, radiusX, layers);
+        HashSet<BaseMonster> targets = new HashSet<BaseMonster>();
+
+        foreach (var hit in hitColliders)
+        {
+            BaseMonster monster = hit.GetComponentInParent<BaseMonster>();
+            if (monster != null && !monster.IsDead && IsometricMath.IsWithinEllipse(monster.transform.position, context.TargetPoint, radiusX, radiusY))
+            {
+                targets.Add(monster);
+            }
+        }
+
+        // 체력 비례가 아니라 고정 데미지다 - 체력 비례로 두면 체력이 높은 보스에게 과하게 강하고
+        // 잡몹은 절대 못 잡는 형태가 되어, 방벽과 조합하는 지연 플레이와 맞지 않는다.
+        foreach (BaseMonster monster in targets)
+        {
+            monster.TakeDamage(new DamageInfo(FlatDamage));
+        }
+
+        // 2. [설치 파트] 해당 위치 그리드에 방벽 설치
+        GridMap gridMap = Object.FindFirstObjectByType<GridMap>();
+        if (gridMap == null || Data.BarricadePrefab == null) return;
+
+        // TargetPoint는 ScreenToWorldPoint 결과, 즉 고저차가 이미 반영된 "렌더된" 좌표다.
+        // 평면 역변환(ConvertWorldToGrid)을 쓰면 그 Y 오프셋을 되돌리지 못해 단차가 있는 곳에서
+        // 눈에 보이는 타일과 몇 칸씩 어긋난 셀이 나온다 - MouseSelectController와 동일하게
+        // 그 점을 실제로 덮고 있는 타일을 고르는 PickCellAtWorldPoint를 써야 한다.
+        Vector3Int gridPos = gridMap.PickCellAtWorldPoint(context.TargetPoint);
+        Building buildingPrefab = Data.BarricadePrefab.GetComponent<Building>();
+
+        if (buildingPrefab == null)
+            return;
+
+        // 일반 건설 판정이 아니라 임시 장애물 판정을 쓴다 - 일반 판정은 "건설 가능한 지형 +
+        // 점령 완료 청크"를 요구하는데, 방벽은 몬스터가 오는 길목에 세우는 물건이라 그 조건이
+        // 성립하지 않는다(GridMap.CanPlaceTemporaryObstacle 주석 참고).
+        // 정확히 찍은 칸이 경로가 아니면 가까운 경로 칸으로 스냅한다 - 경로는 폭이 1칸이라
+        // 조준으로 맞히기를 요구할 수 없다(GridMap.TryResolveTemporaryObstacleAnchor 주석 참고).
+        if (!gridMap.TryResolveTemporaryObstacleAnchor(
+                gridPos, buildingPrefab.BaseFootprintShape, BARRICADE_SNAP_DISTANCE, out Vector3Int anchor))
+        {
+            string reason = gridMap.MonsterPathQuery == null
+                ? "씬에 MonsterPathMap이 없습니다(조회원 미등록)"
+                : $"주변 {BARRICADE_SNAP_DISTANCE}칸 안에 설치 가능한 몬스터 경로 칸이 없습니다";
+
+            Debug.LogWarning($"[MeteorBarricadeSkill] 방벽 설치 실패 - 셀 {gridPos}: {reason}");
+            return;
+        }
+
+        gridMap.ConstructBuilding(buildingPrefab, anchor, 0);
+
+        Building spawned = gridMap.GetBuildingAt(anchor);
+        if (spawned is StoneBarricade barricade)
+        {
+            // Initialize를 빠뜨리면 MaxHealth가 0이라 설치되자마자 죽은 것으로 취급된다.
+            float healthMultiplier = DragonTree != null ? DragonTree.GetBarricadeHealthMultiplier() : 1f;
+            barricade.Initialize(healthMultiplier);
+
+            barricade.RegisterAutoDestroy(Object.FindFirstObjectByType<CycleManager>());
+        }
     }
 }

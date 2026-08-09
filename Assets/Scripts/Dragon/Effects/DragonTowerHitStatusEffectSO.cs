@@ -9,5 +9,5 @@ public sealed class DragonTowerHitStatusEffectSO : DragonSkillEffectSO
     [SerializeField] private StatusEffectSO _status;
 
     public override StatusEffectSO GetTowerHitStatus(DragonType? activeAttribute, TowerData towerData) =>
-        IsActive(activeAttribute) ? _status : null;
+        IsEffective(activeAttribute) ? _status : null;
 }

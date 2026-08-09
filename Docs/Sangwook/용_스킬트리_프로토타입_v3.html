@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>용 스킬트리 v3 — 구현 범위 재설계 (분기+랭크, 기존 EffectSO 재사용)</title>
+<style>
+  :root{
+    --bg:#0e0a0a; --panel:#1a1414; --panel2:#221a19; --line:#3a2f2b; --ink:#e6ddd4; --muted:#8f8175;
+    --kin:#8fd14f; --lock:#4a3f39; --ok:#8fd14f; --warn:#e0603c; --gold:#e08a3c; --impl:#5aa0d0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Segoe UI","Malgun Gothic",sans-serif;padding:16px}
+  h1{font-size:19px;font-weight:600;text-align:center;letter-spacing:1px;color:#f3e9de}
+  .sub{text-align:center;color:var(--muted);font-size:12px;margin:4px 0 4px}
+  .sub2{text-align:center;color:var(--impl);font-size:11.5px;margin:0 0 12px}
+  .wrap{max-width:1500px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px}
+  @media(max-width:1180px){.wrap{grid-template-columns:1fr}}
+
+  .stage{position:relative;border:1px solid var(--line);border-radius:12px;
+         background:radial-gradient(circle at 50% 44%,#1a1310,#0b0807 72%);overflow:hidden}
+  svg{display:block;width:100%;height:auto}
+  .node-g{cursor:pointer}
+  .attr-label{cursor:pointer}
+  .node-g text,.attr-label text{pointer-events:none;user-select:none}
+
+  .side{display:flex;flex-direction:column;gap:12px}
+  .card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:12px 13px}
+  .card h2{font-size:13px;color:#f3e9de;font-weight:600;margin-bottom:8px;letter-spacing:.5px}
+  .card h2 .hint{font-weight:400;color:var(--muted);font-size:10.5px;margin-left:6px}
+
+  .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;font-size:12px}
+  .btn{padding:6px 12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);
+       border-radius:6px;cursor:pointer;font-size:12px}
+  .btn:hover{border-color:var(--gold)}
+  .btn.primary{border-color:var(--gold);color:var(--gold)}
+  .btn.small{padding:3px 8px;font-size:11px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .chip{padding:3px 10px;border:1px solid var(--line);border-radius:13px;cursor:pointer;background:var(--panel2);font-size:11px;transition:.12s}
+  .chip.owned{color:#0e0a0a;font-weight:700}
+
+  .info{min-height:64px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+        background:var(--panel2);font-size:12px;line-height:1.55;color:var(--muted)}
+  .info b{color:#f3e9de}
+  .info .cost{color:var(--kin);font-weight:600}
+  .info .impl-tag{display:block;margin-top:4px;color:var(--impl);font-size:10.5px;font-family:Consolas,monospace}
+
+  /* 자원 예산 바 */
+  .pool{margin:7px 0}
+  .pool .lab{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+  .pool .lab .amt{color:var(--muted)}
+  .pool .lab .amt.over{color:var(--warn);font-weight:700}
+  .bar{height:8px;border-radius:5px;background:#120d0c;overflow:hidden;border:1px solid #2a221f}
+  .bar>span{display:block;height:100%;transition:width .15s}
+  .pool input{width:52px;background:#120d0c;border:1px solid var(--line);color:var(--ink);
+        border-radius:4px;font-size:11px;padding:2px 4px;text-align:right}
+
+  .summary{font-size:12px;line-height:1.7}
+  .summary .tag{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;margin:2px 3px 2px 0;color:#0e0a0a;font-weight:600}
+  .summary .empty{color:var(--muted)}
+  .summary-block{margin-bottom:9px}
+  .summary-block:last-child{margin-bottom:0}
+  .summary-nodes{list-style:none;margin:4px 0 0 4px;padding-left:9px;border-left:2px solid var(--line)}
+  .summary-nodes li{font-size:11px;color:var(--muted);margin:2px 0}
+  .summary-nodes li b{color:#f3e9de;font-weight:600}
+  .summary-nodes li .lv{font-weight:700}
+  .legend{color:var(--muted);font-size:11px;line-height:1.7;margin-top:6px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin:0 3px 0 8px}
+  .warnbox{color:var(--warn);font-size:11.5px;margin-top:6px;line-height:1.5}
+  .kbd{background:#120d0c;border:1px solid var(--line);border-radius:3px;padding:0 5px;font-size:10.5px;color:var(--muted)}
+  .notebox{border:1px dashed var(--impl);border-radius:8px;padding:9px 11px;font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:10px}
+  .notebox b{color:var(--impl)}
+  .notebox code{background:#120d0c;padding:0 3px;border-radius:3px;font-family:Consolas,monospace;color:#c8bcae}
+  .impl-tag.new{color:var(--warn)}
+</style>
+</head>
+<body>
+  <h1>용 스킬트리 v3 — 구현 범위 재설계</h1>
+  <div class="sub">구조는 v2(루트 → <b style="color:#e08a3c">2갈래 분기</b> + 노드별 <b style="color:#e08a3c">랭크</b>)를 유지하되, 루트가 "각성(패시브 해금)"에서 <b style="color:#e08a3c">"액티브 스킬 해금"</b>으로 바뀜 — 기본 패시브는 노드 자체가 아예 없어지고 5속성 모두 처음부터 무료·자동으로 켜져 있습니다.</div>
+  <div class="sub2">노드 효과는 전부 <b>이미 구현된 DragonSkillEffectSO 클래스·기존 액티브 스킬 애셋</b>을 재사용합니다 — 전역 빙결·전역 화염 피해·메테오+방벽 3종 액티브는 전부 구현 완료 상태였습니다(코드 재확인 완료). "타워 최대체력 증가"만 🔧 소규모 신규 확장이 필요합니다. 새 새끼용 행동은 여전히 없음 — "빌드가 심화될수록 기존 수치의 %가 오른다"가 원칙입니다.</div>
+
+<div class="wrap">
+  <!-- 좌: 트리 -->
+  <div>
+    <div class="stage"><svg id="tree" viewBox="0 0 1180 1020" role="img" aria-label="용 스킬트리 v3"></svg></div>
+    <div class="info" id="info" style="margin-top:10px">
+      노드 클릭 = <b>1랭크 강화</b>(자원 소모) · <span class="kbd">Shift+클릭</span> 또는 우클릭 = <b>1랭크 취소</b>(환급).
+      <b>기본 패시브는 노드가 아니라 5속성 모두 처음부터 자동 적용</b>(해금·자원 소모 불필요, 우측 "활성 속성" 카드에 표시).
+      트리에서 실제로 자원을 써서 여는 <b>첫 단계는 루트(액티브 스킬 해금)</b>이고, 그 다음 <b>액티브 갈래</b>(같은 스킬 업그레이드)와
+      <b>패시브 갈래</b>(생산량·기본 타워 스탯 강화)로 갈라집니다.
+    </div>
+    <div class="legend">
+      <span class="dot" style="background:#e08a3c"></span>루트(액티브 스킬 해금)
+      <span class="dot" style="background:#c9603c"></span>액티브 갈래(업그레이드)
+      <span class="dot" style="background:#5aa0d0"></span>패시브 갈래
+      <span class="dot" style="background:#d0b040"></span>궁극
+      <span class="dot" style="background:#8fd14f"></span>새끼용
+      <span class="dot" style="background:#4a3f39"></span>잠김
+      · 🔒 선행/보유 미충족 또는 <b>해당 속성 새끼용(A+B) 랭크 합</b> 부족 · 해금은 영구, 효과는 <b>활성 속성</b>만 발동(새끼용 노드 제외)
+    </div>
+    <div class="notebox">
+      <b>이전 라운드까지 반영된 것(요약)</b>: 루트 = 액티브 스킬 해금(유료), 기본 패시브는 노드 없이
+      5속성 모두 무료·자동. 암석 액티브는 이미 구현된 <code>METEOR_BARRICADE</code>/<code>MeteorBarricadeSkill</code>/
+      <code>StoneBarricade</code>로 교체(자산 재배정만 필요, 신규 코드 없음). 심화·궁극 게이트는
+      "그 속성 자신의" 새끼용 A+B 랭크 합 기준(알 1마리로 자력 충족 가능).<br>
+      <b>이번 라운드: 각 속성별 세부 밸런스·범위 조정을 반영했습니다.</b> 대부분 기존 클래스 재사용이지만,
+      이번엔 <b style="color:var(--warn)">진짜 신규 코드가 필요한 지점이 늘었습니다</b> — 아래 H1~H11을
+      각 노드의 impl 태그에서 참조 번호로 씁니다:
+      <ul style="margin:6px 0 6px 16px;padding:0">
+        <li><b>H1</b> — <code>DragonTowerStatEffectSO</code>가 <code>towerData</code>를 무시하던 걸 고쳐
+          <code>IElementalAttackData.DragonType</code>으로 필터링(전체 타워 → "그 속성 타워만"). 얼음/불/암석
+          "가동 강화" 3곳에 필요.</li>
+        <li><b>H2</b> — 신규 <code>KinTowerStatEffectSO</code>: <code>KinTowerStatusEffectSO</code>와 동일하게
+          "이 새끼용 자신의 타워"로 한정한 피해%/공속%/사거리% 배율. 얼음·암석 kinA "공격력 증가"에 필요.</li>
+        <li><b>H3</b> — <code>DragonTreeManager.GetRangeMultiplier</code>가 지금 중립값 고정 스텁 — Damage/AttackSpeed와
+          같은 방식으로 실제 집계하도록 전환. 불 kinB "사거리 증가"에 필요(H2와 함께).</li>
+        <li><b>H4</b> — 신규 <code>GetKinBuffRadiusBonus(dragonType)</code> 훅(<code>KinAreaYieldEffectSO</code>와
+          동일 패턴) + <code>BabyDragonBuffSystem</code>이 반경 계산 시 반영. 생명 kinA, 시간 kinB
+          "버프모드 범위 증가"에 필요.</li>
+        <li><b>H5</b> — <b style="color:var(--warn)">미해결</b>: 시간 새끼용의 "버프모드"가 현재 코드상 수치
+          효과가 정의돼 있지 않습니다(<code>BabyDragonBuffSystem</code> 주석: "얼음/불/시간은 생산량 버프가
+          아닌 별개 지역 효과"). 시간 kinA "버프 효율 증가"를 확정하려면 시간 버프모드가 정확히 뭘 하는지부터
+          기획 확정이 필요합니다 — 일단 그 효과의 배율을 올리는 자리로 잡아뒀습니다.</li>
+        <li><b>H6</b> — <code>Skill.HealAmount</code>가 지금 <code>DamagePercent</code>와 달리 위력 배율을
+          안 읽습니다 — <code>GetSkillPowerMultiplierBonus</code>를 반영하도록 확장. 생명 "성 회복
+          업그레이드 II"(회복량 증가)에 필요.</li>
+        <li><b>H7</b> — 신규 "상태이상 지속시간 배율" 훅 + <code>FreezeAllSkill</code> 적용부 반영. 얼음
+          "전역 빙결 업그레이드 II"(빙결 시간 증가)에 필요.</li>
+        <li><b>H8</b> — 신규 "상태이상 틱데미지 배율" 훅(또는 랭크별로 더 강한 <code>DamageOverTimeStatusSO</code>
+          애셋 교체 — 이 경우 <code>GetTowerHitStatus</code>의 "첫 매치 반환" 규칙을 "최고 랭크 우선"으로
+          같이 고쳐야 함). 불 kinA "화상 데미지 증가"에 필요.</li>
+        <li><b>H9</b> — <code>SkillSO</code>에 고정 데미지 필드 신설 + <code>MeteorBarricadeSkill</code>의
+          피해 계산을 "현재체력 비례 %" → "고정 수치"로 전환. 암석 메테오 전체에 영향.</li>
+        <li><b>H10</b> — 신규 "방벽 체력 배율" 훅 + <code>MeteorBarricadeSkill</code>이 <code>StoneBarricade</code>
+          스폰 직후 <code>Health.Initialize(강화된 최대체력)</code> 호출(현재 <code>StoneBarricade</code>는
+          프리팹 고정값만 씀). 암석 "메테오+방벽 업그레이드 II"(방벽 체력 증가)에 필요.</li>
+        <li><b>H11</b> — 신규 "일일 사용 횟수 보너스" 훅 + <code>Skill.UsePerDay</code>/<code>Reset()</code>이
+          반영. 암석 "불괴"(사용 횟수 증가)에 필요.</li>
+      </ul>
+      정리하면 이번 배치는 <b>9개 노드가 신규 코드를 필요로 합니다</b>(H1~H4, H6~H11 — H5는 코드 이전에
+      기획 확정이 먼저 필요). 개별 항목은 각각 기존 패턴을 그대로 복제하는 수준(필드 1개 + 훅 1개 +
+      소비 지점 1곳)이라 하나하나는 작지만, 개수 자체는 이전 라운드(H_MaxHealth 하나)보다 많이 늘었습니다 —
+      실제 착수 전에 팀과 우선순위를 한 번 맞추시는 걸 권합니다.<br>
+      <b>시간 b2n2(원정 보급 강화) 대체안</b>: "제거"만 지시받고 대체 내용이 없어서, 얼음/불/암석의
+      "가동 강화" 노드와 통일되게 <b>"시간 속성 타워 한정 공격속도 추가 증가"</b>(H1)로 채워뒀습니다 —
+      의도와 다르면 알려주세요.
+    </div>
+  </div>
+
+  <!-- 우: 컨트롤 패널 -->
+  <div class="side">
+    <div class="card">
+      <h2>새끼용 <span class="hint">랜덤 획득 시뮬 (주기당 1, 최대 4)</span></h2>
+      <div class="row">
+        <button class="btn primary" id="drawBtn">🥚 다음 주기 보스 처치 → 새끼용 획득</button>
+      </div>
+      <div class="row" style="color:var(--muted);font-size:11px">
+        보유 <b id="ownCount" style="color:var(--kin)">0</b>/4 · 해금 새끼용 노드(전체) <b id="kinCount" style="color:var(--kin)">0</b> <span style="color:var(--muted)">(참고용, 게이트 판정에는 안 씀)</span>
+        <button class="btn small" id="clearOwn">비우기</button>
+      </div>
+      <div class="chips" id="ownRow"></div>
+      <div style="color:var(--muted);font-size:10.5px;margin-top:6px">칩 클릭 = 수동 토글(테스트용). 랜덤 획득이 "무엇을 집중할지"를 결정합니다. 심화·궁극 게이트는 <b style="color:var(--impl)">그 속성 자신의</b> 새끼용 A+B 랭크 합만 봅니다 — 다른 속성 알을 못 뽑아도 내 주력 속성 안에서 자력으로 채울 수 있습니다.</div>
+    </div>
+
+    <div class="card">
+      <h2>활성 속성 <span class="hint">기본 패시브는 해금 불필요, 활성 속성만 발동</span></h2>
+      <div class="chips" id="activeRow"></div>
+      <div class="info" id="passiveInfo" style="margin-top:8px;min-height:auto">속성을 선택하면 자동 적용되는 기본 패시브가 여기 표시됩니다.</div>
+    </div>
+
+    <div class="card">
+      <h2>자원 예산 <span class="hint">보유 바이옴 = 획득량. 숫자 편집·프리셋으로 시나리오 테스트</span></h2>
+      <div class="row">
+        <button class="btn small" data-preset="focus">설원 집중</button>
+        <button class="btn small" data-preset="spread">고루 분산</button>
+        <button class="btn small" data-preset="rich">풍족(밸런스 참고)</button>
+      </div>
+      <div id="pools"></div>
+      <div class="warnbox" id="overWarn"></div>
+    </div>
+
+    <div class="card">
+      <h2>내 빌드 정체성 <span class="hint">투자한 속성·깊이 요약</span></h2>
+      <div class="summary" id="summary"></div>
+      <div class="row" style="margin-top:8px">
+        <span style="color:var(--muted);font-size:11px">총 강화 횟수 <b id="stepCount" style="color:var(--ink)">0</b></span>
+        <button class="btn small" id="resetBtn">전체 초기화</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   설정 상수 — v2와 동일 (경제·게이트는 이번 개편 대상이 아님)
+   ========================================================================= */
+const MAX_OWNED = 4;                 // 주기 4회 → 새끼용 최대 4
+// 게이트 기준 = "그 속성 자신의" 새끼용 A+B 랭크 합(0~6). 전체 속성 합산이 아니다 —
+// 전체 합산으로 두면 예: 얼음만 원해도 다른 속성 알이 안 나오면 얼음 궁극을 영영 못 여는
+// 문제가 생긴다(다른 속성 새끼용 보유는 순전히 랜덤). 자기 속성 알 1마리만 있으면
+// kinA/kinB 랭크만으로 두 게이트 모두 자력으로 채울 수 있어야 한다.
+const GATE_KIN_DEEP = 2;             // 심화 노드 게이트: 해당 속성 새끼용(A+B) 랭크 합 N
+const GATE_KIN_ULT  = 4;             // 궁극 게이트: 해당 속성 새끼용(A+B) 랭크 합 N (최대 6)
+
+const COST = {
+  awaken: [{s:5,  sp:0}],       // 루트 = 액티브 스킬 해금(실제 구매 대상). 기본 패시브는 노드가 아니라 완전 무료.
+  branch: [{s:6,  sp:2}, {s:8,  sp:3}, {s:10, sp:4}],
+  ult:    [{s:15, sp:6}, {s:20, sp:8}],
+  kin:    [{s:5,  sp:2}, {s:7,  sp:2}, {s:9,  sp:3}],
+};
+
+const PRESETS = {
+  focus:  {얼음:[95,40], 불:[20,8],  시간:[20,8],  암석:[20,8],  생명:[22,0]},
+  spread: {얼음:[38,15], 불:[38,15], 시간:[38,15], 암석:[38,15], 생명:[42,0]},
+  rich:   {얼음:[70,28], 불:[70,28], 시간:[70,28], 암석:[70,28], 생명:[78,0]},
+};
+
+/* =========================================================================
+   속성 데이터 — impl 필드는 매핑되는 실제 클래스를 적는다. 이전 라운드까지는 기존
+   DragonSkillEffectSO 파생 클래스 재사용만으로 거의 다 됐지만, 이번 라운드(세부 밸런스 조정)부터는
+   신규 코드가 필요한 지점이 늘어서 "H1"~"H11" 참조 번호로 표기한다 — 정의는 화면 상단 노트박스
+   참고. 노트박스에 없는 노드는 기존 클래스 그대로다.
+
+   루트(awk)      : "액티브 스킬 해금"(구매 대상, 유료) — ActiveSkillUnlockEffectSO. 기본 패시브는
+                     노드가 아니라 5속성 모두 완전 무료·자동이며 "활성 속성" 카드에 표시된다.
+   b1(액티브 갈래) : n1/n2 = 순수 "업그레이드"(해금은 루트로 이동). 원래는 위력%(불·암석, DamagePercent를
+                     쓰는 스킬만) / 쿨감%(전부 공통)로만 갈렸지만, 이번 라운드에서 얼음(빙결시간)·생명
+                     (회복량)·암석(방벽체력)처럼 속성마다 다른 파라미터를 강화하도록 다양해졌다 — 각
+                     노드 impl 참고.
+   b2(패시브 갈래) : n1 = 생산량%(DragonYieldEffectSO, 그대로). n2 "가동 강화"는 이번 라운드부터
+                     "전체 타워"가 아니라 <b>그 속성 타워만</b>(H1) 대상으로 좁혔다 — 생명만 예외로
+                     최대체력%(🔧 별도 확장)를 계속 쓴다.
+   ult             : 속성마다 내용이 달라짐(위력/쿨감 강화 계열, 원정일 감소, 사용횟수 증가 등) — 각 노드 참고.
+   kinA(타워형)    : 이번 라운드부터 "그 새끼용 자신의" 스탯(공격력/화상데미지/버프효율 등)으로 좁혔다.
+   kinB(지역형)    : 기존 KinArea 계열 유지 또는 버프모드 범위(H4)로 재정의된 속성도 있음 — 각 노드 참고.
+   ========================================================================= */
+const ATTRS = [
+  {key:"생명", ang:0,   color:"#7fd14f", slime:"초원슬라임", spec:"기초자원",
+   passive:"활성 시 패시브: 식량·목재·초원슬라임 생산량 증가 + 전체 타워 최대체력 증가",
+   implAwk:"DragonYieldEffectSO + 🔧 신규 확장: DragonTowerStatEffectSO(_maxHealthBonusRatio 필드 추가)",
+   b1:{title:"액티브", unlockName:"성 회복", unlockImpl:"ActiveSkillUnlockEffectSO(SK_Dragon_CastleHeal, 구현됨)",
+       n1:{name:"성 회복 업그레이드 I",  desc:"액티브 [성 회복]의 쿨다운 감소(1단계) — "+
+                          "회복량 자체는 고정값(HealAmount)이라 위력 배율의 영향을 받지 않음",
+                          impl:"DragonSkillPowerEffectSO(쿨감%)"},
+                     n2:{name:"성 회복 업그레이드 II",   desc:"액티브 [성 회복]의 회복량 증가",
+                          impl:"DragonSkillPowerEffectSO(위력%) — H6 필요(HealAmount가 현재 위력 배율을 안 읽음)"}},
+   b2:{title:"패시브", n1:{name:"풍요 생산 강화",     desc:"식량·목재·초원슬라임 생산량 추가 증가",
+                          impl:"DragonYieldEffectSO(생산%)"},
+                     n2:{name:"방벽 강화",           desc:"생명 활성 시 전체 타워 최대체력 소폭 증가",
+                          impl:"🔧 신규 확장: DragonTowerStatEffectSO(_maxHealthBonusRatio) — GetDamageMultiplier와 동일 패턴"}},
+   ult:{name:"만개", desc:"액티브 위력 최종 강화(회복량) + 생산량·최대체력 최종 강화(한 노드에서 동시 적용)",
+        impl:"DragonSkillPowerEffectSO(위력%, H6) + DragonYieldEffectSO + 🔧 신규 MaxHealth% (_effects[] 배열로 동시 참조)"},
+   kinA:{name:"생명 타워 숙련", desc:"생명 새끼용 버프모드의 효과 범위(BuffRadius) 증가",
+        impl:"H4 (신규 GetKinBuffRadiusBonus)"},
+   kinB:{name:"농장 강화", desc:"생명 새끼용 지역형 반경 내 농장 생산 보너스 랭크업",
+        impl:"KinAreaYieldEffectSO(반경 생산%)"} },
+
+  {key:"얼음", ang:72,  color:"#5bc0e0", slime:"설원슬라임", spec:"눈결정",
+   passive:"활성 시 패시브: 전체 타워 기본공격에 둔화 부여", implAwk:"DragonTowerHitStatusEffectSO",
+   b1:{title:"액티브", unlockName:"전역 빙결", unlockImpl:"ActiveSkillUnlockEffectSO(SK_Dragon_FreezeAll, 구현됨)",
+       n1:{name:"전역 빙결 업그레이드 I", desc:"액티브 [전역 빙결]의 쿨다운 감소(1단계) — "+
+                          "빙결은 상태이상 부여형이라 위력 배율(DamagePercent)의 영향을 받지 않음",
+                          impl:"DragonSkillPowerEffectSO(쿨감%)"},
+                     n2:{name:"전역 빙결 업그레이드 II",   desc:"액티브 [전역 빙결]의 빙결 지속시간 증가",
+                          impl:"H7 필요(신규 상태이상 지속시간 배율 훅)"}},
+   b2:{title:"패시브", n1:{name:"눈결정 채집 강화", desc:"눈결정·설원슬라임 생산량 추가 증가",
+                          impl:"DragonYieldEffectSO(생산%)"},
+                     n2:{name:"냉각 가동 강화",   desc:"얼음 속성 타워 한정 공격속도 증가(다른 속성 타워는 영향 없음)",
+                          impl:"DragonTowerStatEffectSO(공속%) + H1 필요(자기 속성 필터)"}},
+   ult:{name:"동결 지배", desc:"액티브 쿨다운 최종 감소 + 생산량 최종 강화(한 노드에서 동시 적용)",
+        impl:"DragonSkillPowerEffectSO(쿨감%) + DragonYieldEffectSO (_effects[] 배열로 동시 참조)"},
+   kinA:{name:"슬로우 타워 숙련", desc:"얼음 새끼용(슬로우 타워) 자신의 공격력 증가",
+        impl:"H2 필요(신규 KinTowerStatEffectSO, 피해%)"},
+   kinB:{name:"강 결빙 강화", desc:"강 결빙 해금 반경 확대(기존 BuffRadius 값을 더 큰 값으로 교체 — 신규 SO 클래스 불필요)",
+        impl:"BabyDragonData.BuffRadius 값 교체(데이터 튜닝)"} },
+
+  {key:"불",   ang:144, color:"#e0603c", slime:"용암슬라임", spec:"불꽃심장",
+   passive:"활성 시 패시브: 몬스터 스폰 시 화상 부여", implAwk:"DragonSpawnStatusEffectSO",
+   b1:{title:"액티브", unlockName:"전역 화염 피해", unlockImpl:"ActiveSkillUnlockEffectSO(SK_Dragon_GlobalDamage, 구현됨)",
+       n1:{name:"전역 화염 업그레이드 I",  desc:"액티브 [전역 화염 피해]의 피해 강화 — "+
+                          "현재체력 비례 피해(DamagePercent)를 실제로 쓰는 스킬이라 위력 배율이 정상 작동",
+                          impl:"DragonSkillPowerEffectSO(위력%)"},
+                     n2:{name:"전역 화염 업그레이드 II",   desc:"액티브 [전역 화염 피해]의 쿨다운 감소",
+                          impl:"DragonSkillPowerEffectSO(쿨감%)"}},
+   b2:{title:"패시브", n1:{name:"불꽃심장 채집 강화", desc:"불꽃심장·용암슬라임 생산량 추가 증가",
+                          impl:"DragonYieldEffectSO(생산%)"},
+                     n2:{name:"가열 가동 강화",   desc:"불 속성 타워 한정 공격력 소폭 증가(다른 속성 타워는 영향 없음)",
+                          impl:"DragonTowerStatEffectSO(피해%) + H1 필요(자기 속성 필터)"}},
+   ult:{name:"지옥불", desc:"액티브 위력·쿨다운 + 전체 타워 공격력 최종 강화(한 노드에서 동시 적용)",
+        impl:"DragonSkillPowerEffectSO + DragonTowerStatEffectSO (_effects[] 배열로 동시 참조)"},
+   kinA:{name:"화상 타워 숙련", desc:"불 새끼용(화상 타워)이 입히는 화상 도트 데미지 소폭 증가",
+        impl:"H8 필요(신규 상태이상 틱데미지 배율 훅)"},
+   kinB:{name:"시야 강화", desc:"불 새끼용(화상 타워) 자신의 공격 사거리 소폭 증가",
+        impl:"H2+H3 필요(신규 KinTowerStatEffectSO 사거리% · Range 집계 스텁 해제)"} },
+
+  {key:"시간", ang:216, color:"#b07de0", slime:"사막슬라임", spec:"시간모래",
+   passive:"활성 시 패시브: 전체 타워 공격속도 증가", implAwk:"DragonTowerStatEffectSO",
+   b1:{title:"액티브", unlockName:"즉시 재활성화", unlockImpl:"ActiveSkillUnlockEffectSO(SK_Dragon_RepairTowers, 구현됨)",
+       n1:{name:"재활성화 업그레이드 I", desc:"액티브 [즉시 재활성화]의 쿨다운 감소(1단계) — "+
+                          "즉시복구는 상태 조작형이라 위력 배율(DamagePercent)의 영향을 받지 않음",
+                          impl:"DragonSkillPowerEffectSO(쿨감%)"},
+                     n2:{name:"재활성화 업그레이드 II", desc:"액티브 [즉시 재활성화]의 쿨다운 추가 감소(2단계)",
+                          impl:"DragonSkillPowerEffectSO(쿨감%)"}},
+   b2:{title:"패시브", n1:{name:"시간모래 채집 강화", desc:"시간모래·사막슬라임 생산량 추가 증가",
+                          impl:"DragonYieldEffectSO(생산%)"},
+                     n2:{name:"가동 강화",     desc:"시간 속성 타워 한정 공격속도 추가 증가(원정 비용 감소 효과는 제거)",
+                          impl:"DragonTowerStatEffectSO(공속%) + H1 필요(자기 속성 필터) — ⚠ 대체 내용 지정 없어 다른 속성 '가동 강화' 패턴에 맞춰 추정"}},
+   ult:{name:"시간 지배", desc:"원정(점령) 소모 일수 -1(고정)",
+        impl:"GetConquestDaysReduction 훅 — 이미 존재·소비 중(신규 코드 불필요), 위치만 kinB→ult로 이동"},
+   kinA:{name:"시간 타워 숙련", desc:"시간 새끼용의 버프모드 효율(배율) 증가",
+        impl:"H5 미해결 — 시간 버프모드의 수치 효과가 코드에 정의돼 있지 않아 기획 확정 선행 필요"},
+   kinB:{name:"점령 가속 강화", desc:"시간 새끼용의 버프모드 효과 범위(BuffRadius) 증가(기존 '점령 소요일 감소'는 궁극으로 이동)",
+        impl:"H4 필요(신규 GetKinBuffRadiusBonus)"} },
+
+  {key:"암석", ang:288, color:"#c9a24a", slime:"암석슬라임", spec:"현자돌",
+   passive:"활성 시 패시브: 석재·특화자원·RP 생산량 증가", implAwk:"DragonYieldEffectSO",
+   b1:{title:"액티브", unlockName:"메테오+방벽",
+       unlockImpl:"ActiveSkillUnlockEffectSO(SkillType.METEOR_BARRICADE·MeteorBarricadeSkill·StoneBarricade.prefab "+
+                   "전부 이미 구현·존재함 — DragonSkillTreeAssetGenerator에서 Stone 액티브 애셋의 Type만 "+
+                   "AREA_CURRENT_HEALTH_DAMAGE→METEOR_BARRICADE로 바꾸고, 피해 방식을 현재체력 비례 %가 아닌 "+
+                   "고정 데미지로 바꾸고(H9), BarricadePrefab 필드에 StoneBarricade.prefab을 넣으면 됨",
+       n1:{name:"메테오+방벽 업그레이드 I",  desc:"메테오의 고정 데미지 증가",
+                          impl:"DragonSkillPowerEffectSO(위력%, 고정 데미지에 곱연산) — H9 선행 필요"},
+                     n2:{name:"메테오+방벽 업그레이드 II",   desc:"방벽(StoneBarricade)의 최대 체력 증가",
+                          impl:"H10 필요(신규 방벽 체력 배율 훅 + StoneBarricade.Health.Initialize 반영)"}},
+   b2:{title:"패시브", n1:{name:"채굴 강화",       desc:"석재·현자돌 생산량 추가 증가",
+                          impl:"DragonYieldEffectSO(생산%)"},
+                     n2:{name:"가공 가동 강화",   desc:"암석 속성 타워 한정 공격력 소폭 증가(다른 속성 타워는 영향 없음)",
+                          impl:"DragonTowerStatEffectSO(피해%) + H1 필요(자기 속성 필터)"}},
+   ult:{name:"불괴", desc:"액티브 [메테오+방벽]의 일일 사용 횟수 증가",
+        impl:"H11 필요(신규 일일 사용 횟수 보너스 훅)"},
+   kinA:{name:"암석 타워 숙련", desc:"암석 새끼용(암석 타워) 자신의 공격력 소폭 증가",
+        impl:"H2 필요(신규 KinTowerStatEffectSO, 피해%)"},
+   kinB:{name:"광산 강화", desc:"암석 새끼용 지역형 반경 내 광산 생산 보너스 랭크업",
+        impl:"KinAreaYieldEffectSO(반경 생산%)"} },
+];
+const ATTR_BY_KEY = Object.fromEntries(ATTRS.map(a=>[a.key,a]));
+
+/* =========================================================================
+   노드 그래프 생성 — 좌표/토폴로지는 v2와 동일
+   ========================================================================= */
+const CX=590, CY=470, NS="http://www.w3.org/2000/svg";
+const SVG=document.getElementById("tree");
+const rad=d=>(d-90)*Math.PI/180;
+const R_AWK=145, R_N1=232, R_N2=320, R_ULT=402, R_KIN=180, BR=13, KINOFF=31;
+
+const nodes={};
+const edges=[];
+const pos=(r,ang)=>({x:CX+r*Math.cos(rad(ang)), y:CY+r*Math.sin(rad(ang))});
+function addNode(n){ n.rank=0; nodes[n.id]=n; return n; }
+
+ATTRS.forEach(a=>{
+  const b=a.ang, k=a.key;
+  const awk=pos(R_AWK,b);
+  // 루트 = 액티브 스킬 해금(유료, 일반 노드). 기본 패시브는 여기 없다 — 노드를 아예 안 차지하고
+  // 5속성 모두 항상 무료로 적용되며, "활성 속성" 카드의 passiveInfo에 별도로 표시된다.
+  addNode({id:k+"_awk", attr:k, kind:"awaken", max:1, name:"액티브 스킬 해금", branch:"root",
+    desc:`액티브 스킬 [${a.b1.unlockName}] 해금`,
+    impl:a.b1.unlockImpl,
+    x:awk.x, y:awk.y, color:a.color, prereq:[]});
+
+  // 액티브 갈래 (b1) — 각도 -BR
+  const a11=pos(R_N1,b-BR), a12=pos(R_N2,b-BR);
+  addNode({id:k+"_b1n1", attr:k, kind:"branch", max:3, name:a.b1.n1.name, short:a.b1.title, branch:"atk",
+    desc:a.b1.n1.desc, impl:a.b1.n1.impl, x:a11.x, y:a11.y, color:"#c9603c", prereq:[k+"_awk"]});
+  addNode({id:k+"_b1n2", attr:k, kind:"branch", max:3, name:a.b1.n2.name, short:a.b1.title, branch:"atk",
+    desc:a.b1.n2.desc, impl:a.b1.n2.impl, x:a12.x, y:a12.y, color:"#c9603c", prereq:[k+"_b1n1"], gateKin:GATE_KIN_DEEP});
+  edges.push([k+"_awk",k+"_b1n1"],[k+"_b1n1",k+"_b1n2"]);
+
+  // 패시브 갈래 (b2) — 각도 +BR
+  const a21=pos(R_N1,b+BR), a22=pos(R_N2,b+BR);
+  addNode({id:k+"_b2n1", attr:k, kind:"branch", max:3, name:a.b2.n1.name, short:a.b2.title, branch:"op",
+    desc:a.b2.n1.desc, impl:a.b2.n1.impl, x:a21.x, y:a21.y, color:"#5aa0d0", prereq:[k+"_awk"]});
+  addNode({id:k+"_b2n2", attr:k, kind:"branch", max:3, name:a.b2.n2.name, short:a.b2.title, branch:"op",
+    desc:a.b2.n2.desc, impl:a.b2.n2.impl, x:a22.x, y:a22.y, color:"#5aa0d0", prereq:[k+"_b2n1"], gateKin:GATE_KIN_DEEP});
+  edges.push([k+"_awk",k+"_b2n1"],[k+"_b2n1",k+"_b2n2"]);
+
+  // 궁극 — 두 갈래 심화 중 하나 이상 + 새끼용 4
+  const u=pos(R_ULT,b);
+  addNode({id:k+"_ult", attr:k, kind:"ult", max:2, name:a.ult.name, branch:"ult",
+    desc:a.ult.desc, impl:a.ult.impl, x:u.x, y:u.y, color:"#d0b040", prereq:[k+"_b1n2","|",k+"_b2n2"], gateKin:GATE_KIN_ULT});
+  edges.push([k+"_b1n2",k+"_ult"],[k+"_b2n2",k+"_ult"]);
+
+  // 새끼용 슬롯 A/B
+  const kA=pos(R_KIN,b-KINOFF), kB=pos(R_KIN,b+KINOFF);
+  addNode({id:k+"_kinA", attr:k, kind:"kin", max:3, name:a.kinA.name, branch:"kin",
+    desc:a.kinA.desc, impl:a.kinA.impl, x:kA.x, y:kA.y, color:a.color, prereq:[k+"_awk"], needOwn:true});
+  addNode({id:k+"_kinB", attr:k, kind:"kin", max:3, name:a.kinB.name, branch:"kin",
+    desc:a.kinB.desc, impl:a.kinB.impl, x:kB.x, y:kB.y, color:a.color, prereq:[k+"_awk"], needOwn:true});
+  edges.push([k+"_awk",k+"_kinA"],[k+"_awk",k+"_kinB"]);
+
+  edges.push(["CENTER",k+"_awk"]);
+});
+
+/* =========================================================================
+   상태 (v2와 동일)
+   ========================================================================= */
+let owned=new Set();
+let activeAttr=null;
+let steps=0;
+const budget={};
+ATTRS.forEach(a=>budget[a.key]={s:0, sp:0});
+applyPreset("spread");
+
+// 전체 속성 통틀어 해금된 새끼용 노드 수 — 이제 게이트 판정에는 안 쓰고, 우측 패널
+// "보유 현황" 표시용 통계로만 남긴다.
+const kinNodeCount = ()=>Object.values(nodes).filter(n=>n.kind==="kin"&&n.rank>0).length;
+
+// 게이트 판정에 실제로 쓰는 값 — "그 속성 자신의" kinA+kinB 랭크 합(다른 속성은 안 셈).
+const kinRankSum = attr => nodes[attr+"_kinA"].rank + nodes[attr+"_kinB"].rank;
+
+function prereqMet(n){
+  if(n.prereq.includes("|")){
+    return n.prereq.filter(p=>p!=="|").some(p=>nodes[p].rank>0);
+  }
+  return n.prereq.every(p=>nodes[p].rank>0);
+}
+const gateMet=n=>!n.gateKin || kinRankSum(n.attr)>=n.gateKin;
+const ownMet =n=>!n.needOwn || owned.has(n.attr);
+const eligible=n=>prereqMet(n)&&gateMet(n)&&ownMet(n);
+
+function spent(){
+  const out={}; ATTRS.forEach(a=>out[a.key]={s:0,sp:0});
+  Object.values(nodes).forEach(n=>{
+    const table=COST[n.kind];
+    const noSpec=n.attr==="생명";
+    for(let i=0;i<n.rank;i++){
+      out[n.attr].s+=table[i].s + (noSpec?table[i].sp:0);
+      out[n.attr].sp+=noSpec?0:table[i].sp;
+    }
+  });
+  return out;
+}
+
+const nextCost=n=> n.rank<n.max ? COST[n.kind][n.rank] : null;
+
+function resolve(){
+  let changed=true;
+  while(changed){
+    changed=false;
+    for(const n of Object.values(nodes)){
+      if(n.rank>0 && !eligible(n)){ n.rank=0; changed=true; }
+    }
+  }
+}
+
+/* =========================================================================
+   렌더링 (v2와 동일 + impl 태그 표시)
+   ========================================================================= */
+function el(tag,attrs){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
+function setInfo(html){ document.getElementById("info").innerHTML=html; }
+function pentPoints(r){ return ATTRS.map(a=>{const p=pos(r,a.ang);return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;}).join(" "); }
+
+function renderTree(){
+  SVG.innerHTML="";
+  edges.forEach(([f,t])=>{
+    const A=f==="CENTER"?{x:CX,y:CY}:nodes[f];
+    const B=nodes[t];
+    const on=(f==="CENTER"?nodes[t].rank>0:(nodes[f].rank>0&&nodes[t].rank>0));
+    SVG.appendChild(el("line",{x1:A.x,y1:A.y,x2:B.x,y2:B.y,
+      stroke:on?B.color:"#332c28","stroke-width":on?3:2,"stroke-opacity":on?0.85:0.45}));
+  });
+  SVG.appendChild(el("polygon",{points:pentPoints(72),fill:"#160f0c",stroke:"#e08a3c","stroke-width":2,"stroke-opacity":0.8}));
+  let c=el("text",{x:CX,y:CY-3,"text-anchor":"middle","font-size":13,fill:"#e08a3c","font-weight":"600"});c.textContent="어미용";SVG.appendChild(c);
+  let c2=el("text",{x:CX,y:CY+14,"text-anchor":"middle","font-size":9,fill:"#8f8175"});c2.textContent="5속성";SVG.appendChild(c2);
+
+  ATTRS.forEach(a=>{
+    const lp=pos(52,a.ang);
+    const g=el("g",{class:"attr-label"});
+    if(activeAttr===a.key) g.appendChild(el("circle",{cx:lp.x,cy:lp.y-3,r:15,fill:"none",stroke:a.color,"stroke-width":2}));
+    const t=el("text",{x:lp.x,y:lp.y+1,"text-anchor":"middle","font-size":11,fill:a.color,"font-weight":"600"});
+    t.textContent=a.key;g.appendChild(t);
+    g.addEventListener("click",()=>{activeAttr=(activeAttr===a.key?null:a.key);render();
+      setInfo(`활성 속성: <b>${activeAttr??"없음"}</b> — 기본 패시브는 해금 없이 무료로 자동 발동(낮 1회 변경). 트리 투자는 이 위에 얹는 추가 강화입니다.`);});
+    SVG.appendChild(g);
+  });
+
+  Object.values(nodes).forEach(n=>{
+    const un=n.rank>0, canUp=n.rank<n.max&&eligible(n);
+    const isRoot=n.kind==="awaken", isKin=n.kind==="kin", isUlt=n.kind==="ult";
+    const r=isKin?16:(isRoot?26:(isUlt?24:22));
+    const g=el("g",{class:"node-g"});
+    let fill,stroke;
+    if(un){ fill="#241a12"; stroke=n.color; }
+    else if(canUp){ fill="#1c1613"; stroke="#7a6a5c"; }
+    else { fill="#141010"; stroke="#4a3f39"; }
+    g.appendChild(el("circle",{cx:n.x,cy:n.y,r:r,fill:fill,stroke:stroke,
+      "stroke-width":un?3:2,"stroke-opacity":un?1:(canUp?0.9:0.5)}));
+
+    const nameFill=un?"#f3e9de":(canUp?"#c8bcae":"#6a5f57");
+    const nm=el("text",{x:n.x,y:n.y+(n.max>1?-1:3),"text-anchor":"middle","font-size":isKin?8.5:9.5,fill:nameFill,"font-weight":"600"});
+    nm.textContent=n.name.length>7?n.name.slice(0,7):n.name; g.appendChild(nm);
+
+    if(n.max>1){
+      const rk=el("text",{x:n.x,y:n.y+10,"text-anchor":"middle","font-size":8.5,
+        fill:un?n.color:"#6a5f57","font-weight":"700"});
+      rk.textContent=`${n.rank}/${n.max}`; g.appendChild(rk);
+    }
+    let badge=null;
+    if(!un && n.needOwn && !ownMet(n)) badge=`🔒 ${n.attr}보유`;
+    else if(!un && n.gateKin && !gateMet(n)) badge=`🔒 ${n.attr}새끼용 Lv${n.gateKin}`;
+    else if(n.gateKin && !un) badge=`${n.attr}새끼용 Lv${n.gateKin}`;
+    if(badge){
+      const bt=el("text",{x:n.x,y:n.y+r+10,"text-anchor":"middle","font-size":8,
+        fill:badge.startsWith("🔒")?"#e0a04c":"#8f8175"});
+      bt.textContent=badge; g.appendChild(bt);
+    }
+    g.addEventListener("click",e=>{ if(e.shiftKey) rankDown(n); else rankUp(n); });
+    g.addEventListener("contextmenu",e=>{ e.preventDefault(); rankDown(n); });
+    g.addEventListener("mouseenter",()=>hover(n));
+    SVG.appendChild(g);
+  });
+}
+
+function renderOwn(){
+  const row=document.getElementById("ownRow"); row.innerHTML="";
+  ATTRS.forEach(a=>{
+    const chip=document.createElement("span");
+    chip.className="chip"+(owned.has(a.key)?" owned":"");
+    chip.textContent=a.key;
+    chip.style.borderColor=a.color;
+    chip.style.background=owned.has(a.key)?a.color:"var(--panel2)";
+    chip.style.color=owned.has(a.key)?"#0e0a0a":a.color;
+    chip.onclick=()=>{ owned.has(a.key)?owned.delete(a.key):owned.add(a.key); resolve(); render(); };
+    row.appendChild(chip);
+  });
+  document.getElementById("ownCount").textContent=owned.size;
+  document.getElementById("kinCount").textContent=kinNodeCount();
+}
+
+function renderActive(){
+  const row=document.getElementById("activeRow"); row.innerHTML="";
+  ATTRS.forEach(a=>{
+    const chip=document.createElement("span");
+    const on=activeAttr===a.key;
+    chip.className="chip"+(on?" owned":"");
+    chip.textContent=a.key;
+    chip.style.borderColor=a.color;
+    chip.style.background=on?a.color:"var(--panel2)";
+    chip.style.color=on?"#0e0a0a":a.color;
+    chip.onclick=()=>{ activeAttr=on?null:a.key; render(); };
+    row.appendChild(chip);
+  });
+  const pinfo=document.getElementById("passiveInfo");
+  pinfo.innerHTML = activeAttr
+    ? `<b style="color:${ATTR_BY_KEY[activeAttr].color}">${activeAttr}</b> 기본 패시브(무료·자동): ${ATTR_BY_KEY[activeAttr].passive}`
+    : "속성을 선택하면 자동 적용되는 기본 패시브가 여기 표시됩니다.";
+}
+
+function renderPools(){
+  const box=document.getElementById("pools"); box.innerHTML="";
+  const sp=spent();
+  const overs=[];
+  ATTRS.forEach(a=>{
+    const bd=budget[a.key], used=sp[a.key];
+    [["s","slime",a.slime],["sp","spec",a.spec]].forEach(([field,cls,label])=>{
+      if(a.key==="생명"&&field==="sp") return;
+      const tot=bd[field], u=used[field];
+      const over=u>tot;
+      if(over) overs.push(`${label}`);
+      const pct=tot>0?Math.min(100,u/tot*100):0;
+      const wrap=document.createElement("div"); wrap.className="pool";
+      wrap.innerHTML=
+        `<div class="lab"><span style="color:${a.color}">${label}</span>`+
+        `<span class="amt ${over?'over':''}">${u} / <input type="number" min="0" value="${tot}" data-k="${a.key}" data-f="${field}"></span></div>`+
+        `<div class="bar"><span style="width:${pct}%;background:${over?'var(--warn)':a.color}"></span></div>`;
+      box.appendChild(wrap);
+    });
+  });
+  box.querySelectorAll("input").forEach(inp=>{
+    inp.addEventListener("change",()=>{ budget[inp.dataset.k][inp.dataset.f]=Math.max(0,parseInt(inp.value)||0); render(); });
+  });
+  document.getElementById("overWarn").innerHTML = overs.length
+    ? `⚠ 예산 초과: <b>${[...new Set(overs)].join(", ")}</b> — 이 빌드는 현재 보유 자원으로 완성 불가. 갈래를 줄이거나 다른 속성을 포기하세요.`
+    : "";
+}
+
+function renderSummary(){
+  const el2=document.getElementById("summary");
+  const blocks=[];
+  // 랭크가 붙는 순서 그대로(루트=액티브 해금 → 액티브 갈래 → 패시브 갈래 → 궁극 → 새끼용) 나열한다 —
+  // 트리 위 방사 순서와 맞춰 두면 "이 태그가 실제로 뭘 찍은 결과인지" 트리와 대조하기 쉽다.
+  const NODE_SLOTS = ["awk","b1n1","b1n2","b2n1","b2n2","ult","kinA","kinB"];
+  ATTRS.forEach(a=>{
+    const k=a.key;
+    const slotNodes = NODE_SLOTS.map(slot=>nodes[k+"_"+slot]);
+    const investedNodes = slotNodes.filter(n=>n.rank>0);
+    const atk=nodes[k+"_b1n1"].rank+nodes[k+"_b1n2"].rank;
+    const op =nodes[k+"_b2n1"].rank+nodes[k+"_b2n2"].rank;
+    const ult=nodes[k+"_ult"].rank>0;
+    const kin=nodes[k+"_kinA"].rank+nodes[k+"_kinB"].rank;
+    if(investedNodes.length===0) return;
+    let role;
+    if(ult) role="궁극";
+    else if(atk>=3&&op<=1) role="액티브 특화";
+    else if(op>=3&&atk<=1) role="패시브 특화";
+    else if(atk>0&&op>0) role="균형";
+    else if(atk>0) role="액티브";
+    else if(op>0) role="패시브";
+    else if(kin>0) role="새끼용만";
+    else role="해금만";
+    const kinTag=kin>0?` +새끼용${kin}`:"";
+    const nodeList = investedNodes.map(n=>
+      `<li><b>${n.name}</b> <span class="lv" style="color:${a.color}">Lv${n.rank}/${n.max}</span></li>`
+    ).join("");
+    blocks.push(
+      `<div class="summary-block">`+
+        `<span class="tag" style="background:${a.color}">${k} · ${role}${kinTag}</span>`+
+        `<ul class="summary-nodes">${nodeList}</ul>`+
+      `</div>`
+    );
+  });
+  el2.innerHTML = blocks.length ? blocks.join("") : `<span class="empty">아직 아무 것도 투자하지 않았습니다. 기본 패시브는 5속성 모두 이미 활성 시 자동 적용됩니다 — 액티브/패시브 갈래부터 강화해보세요.</span>`;
+  document.getElementById("stepCount").textContent=steps;
+}
+
+function render(){ resolve(); renderTree(); renderOwn(); renderActive(); renderPools(); renderSummary(); }
+
+/* =========================================================================
+   상호작용
+   ========================================================================= */
+function hover(n){
+  const roleName={awaken:"루트(액티브 해금)",branch:n.branch==="atk"?"액티브 갈래":"패시브 갈래",ult:"궁극",kin:"새끼용"}[n.kind];
+  const nc=nextCost(n);
+  const a=ATTR_BY_KEY[n.attr];
+  const noSpec=a.key==="생명";
+  const costTxt = nc
+    ? `다음 랭크(Lv${n.rank+1}): <span class="cost">${a.slime} ${nc.s+(noSpec?nc.sp:0)}${(!noSpec&&nc.sp)?` · ${a.spec} ${nc.sp}`:""}</span>`
+    : `<span class="cost">최대 랭크 도달</span>`;
+  let extra="";
+  if(n.gateKin) extra+=` · <b>선행: ${n.attr} 새끼용(A+B) 랭크 합 ${n.gateKin} 이상</b>(현재 ${kinRankSum(n.attr)})`;
+  if(n.needOwn) extra+=` · <b>${n.attr} 새끼용 보유 필요</b>`;
+  const implTxt = n.impl ? `<span class="impl-tag">구현: ${n.impl}</span>` : "";
+  setInfo(`<b>[${n.attr}] ${n.name}</b> <span style="color:#8f8175">(${roleName} · Lv ${n.rank}/${n.max})</span><br>${n.desc}${extra}<br>${costTxt}${implTxt}`);
+}
+
+function rankUp(n){
+  if(n.rank>=n.max){ hover(n); setInfo2("최대 랭크입니다."); return; }
+  if(!prereqMet(n)){ setInfo(`<b>[${n.attr}] ${n.name}</b> — 선행 노드를 먼저 해금하세요.`); return; }
+  if(!ownMet(n)){ setInfo(`<b>[${n.attr}] ${n.name}</b> — 잠김: <b>${n.attr} 새끼용</b>을 보유해야 합니다(우측 패널에서 획득/토글).`); return; }
+  if(!gateMet(n)){ setInfo(`<b>[${n.attr}] ${n.name}</b> — 잠김: <b>${n.attr}</b> 새끼용(A+B) 랭크 합 <b>${n.gateKin}</b> 필요 (현재 ${kinRankSum(n.attr)}, 최대 6).`); return; }
+  n.rank++; steps++; render(); hover(n);
+}
+function rankDown(n){
+  if(n.rank<=0) return;
+  n.rank--; steps=Math.max(0,steps-1); render(); hover(n);
+}
+function setInfo2(msg){ const i=document.getElementById("info"); i.innerHTML+=`<br><span style="color:#e0603c">${msg}</span>`; }
+
+document.getElementById("drawBtn").addEventListener("click",()=>{
+  if(owned.size>=MAX_OWNED){ setInfo(`이미 최대 <b>${MAX_OWNED}마리</b> 보유 중입니다(주기 4회).`); return; }
+  const pool=ATTRS.map(a=>a.key);
+  const pick=pool[Math.floor(Math.random()*pool.length)];
+  owned.add(pick);
+  resolve(); render();
+  const a=ATTR_BY_KEY[pick];
+  setInfo(`🥚 새끼용 <b style="color:${a.color}">${pick}</b> 획득! → <b>${pick}</b> 속성 새끼용 슬롯 활성화. `+
+          `이제 이 속성으로 <b>집중</b>하거나, 부족한 부분을 <b>보완</b>할지 선택하세요.`);
+});
+document.getElementById("clearOwn").addEventListener("click",()=>{ owned.clear(); resolve(); render(); });
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  Object.values(nodes).forEach(n=>n.rank=0); owned.clear(); activeAttr=null; steps=0; render();
+  setInfo("전체 초기화 완료. (기본 패시브는 노드가 아니므로 이 초기화와 무관하게 계속 자동 적용됩니다.)");
+});
+document.querySelectorAll("[data-preset]").forEach(b=>{
+  b.addEventListener("click",()=>{ applyPreset(b.dataset.preset); render();
+    setInfo(`자원 예산 프리셋 <b>${b.textContent}</b> 적용. 같은 빌드라도 보유 자원에 따라 완성 가능 여부가 달라집니다.`); });
+});
+function applyPreset(name){
+  const p=PRESETS[name]; ATTRS.forEach(a=>{ budget[a.key]={s:p[a.key][0], sp:p[a.key][1]}; });
+}
+
+render();
+</script>
+</body>
+</html>
