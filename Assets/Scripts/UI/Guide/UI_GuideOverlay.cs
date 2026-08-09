@@ -137,6 +137,12 @@ public class UI_GuideOverlay : MonoBehaviour
 
             _confirmButton.onClick.AddListener(HandleConfirmClicked);
         }
+        else
+        {
+            // 조용히 죽으면 "보이는데 안 눌리는 버튼"이 되고, 화면 전체를 막는 단계에서는 빠져나갈 길까지 사라진다.
+            Debug.LogWarning("[UI_GuideOverlay] _confirmButton 인스펙터 미연결 - 확인 버튼이 레이캐스트에서 빠지고 " +
+                             "onClick도 등록되지 않아 읽고 넘기는 안내가 진행되지 않습니다.");
+        }
 
         SetVisualsActive(false);
     }
@@ -215,8 +221,10 @@ public class UI_GuideOverlay : MonoBehaviour
 
         // 대상 없이 화면을 덮는 것은 빠져나갈 길이 있을 때만 받는다 - 확인 버튼은 딤 위에 있어 계속 눌린다.
         // 그 버튼조차 없으면 아무것도 누를 수 없게 되므로 거절한다.
+        // 단계가 버튼을 켜라고 해도 배선이 비어 있으면 실제로는 버튼이 없는 것과 같다 - 둘을 함께 본다.
         // 조용히 사라지면 앵커가 여러 개인 안내에서 원인을 찾을 수 없으므로 반드시 남긴다.
-        if (_overlayRoot == null || (target == null && blocksInput && !showConfirmButton))
+        bool hasEscape = showConfirmButton && _confirmButton != null;
+        if (_overlayRoot == null || (target == null && blocksInput && !hasEscape))
         {
             Debug.LogWarning($"[UI_GuideOverlay] {locKey} 안내를 띄울 수 없다 - " +
                              "_overlayRoot가 비었거나, 빠져나갈 버튼 없이 화면 전체를 막으려 했다.");
