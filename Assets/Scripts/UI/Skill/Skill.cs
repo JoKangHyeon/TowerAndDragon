@@ -476,16 +476,39 @@ public class MeteorBarricadeSkill : Skill
             return;
         }
 
-        gridMap.ConstructBuilding(buildingPrefab, anchor, 0);
+        // ConstructBuilding은 일반 건설 판정(점령 여부, 지형 등)을 거치기 때문에 몬스터 경로(길/미점령) 위에서는 항상 실패합니다.
+        // 따라서 직접 위치를 잡아 Instantiate 한 뒤 RegisterFootprint로 우회하여 강제 등록합니다.
+        Vector3 baseOffset = buildingPrefab.transform.localPosition;
+        Vector3 baseScale = buildingPrefab.transform.localScale;
+        Vector3 worldPos = gridMap.GetFootprintCenterWorld(anchor, buildingPrefab.BaseFootprintShape)
+            + buildingPrefab.ComputePlacementOffset(0)
+            + gridMap.ComputeRotationCompensation(buildingPrefab.BaseFootprintShape, 0);
 
-        Building spawned = gridMap.GetBuildingAt(anchor);
-        if (spawned is StoneBarricade barricade)
+        Building spawned = Object.Instantiate(
+            buildingPrefab,
+            worldPos,
+            buildingPrefab.transform.rotation,
+            gridMap.transform);
+
+        spawned.SetPlacementOffset(baseOffset);
+        spawned.SetBaseScale(baseScale);
+        spawned.SetRotation(0);
+        // SetDepthSortOrder는 RegisterFootprint 내부에서 호출됩니다.
+
+        if (gridMap.RegisterFootprint(spawned, anchor))
         {
-            // Initialize를 빠뜨리면 MaxHealth가 0이라 설치되자마자 죽은 것으로 취급된다.
-            float healthMultiplier = DragonTree != null ? DragonTree.GetBarricadeHealthMultiplier() : 1f;
-            barricade.Initialize(healthMultiplier);
+            if (spawned is StoneBarricade barricade)
+            {
+                // Initialize를 빠뜨리면 MaxHealth가 0이라 설치되자마자 죽은 것으로 취급된다.
+                float healthMultiplier = DragonTree != null ? DragonTree.GetBarricadeHealthMultiplier() : 1f;
+                barricade.Initialize(healthMultiplier);
 
-            barricade.RegisterAutoDestroy(Object.FindFirstObjectByType<CycleManager>());
+                barricade.RegisterAutoDestroy(Object.FindFirstObjectByType<CycleManager>());
+            }
+        }
+        else
+        {
+            Object.Destroy(spawned.gameObject);
         }
     }
 }

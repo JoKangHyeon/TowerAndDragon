@@ -47,8 +47,19 @@ public class StoneBarricade : Building, IMonsterTarget
         GridMap gridMap = Object.FindFirstObjectByType<GridMap>();
         if (gridMap != null)
         {
-            Vector3Int gridPos = gridMap.ConvertWorldToGrid(transform.position);
-            gridMap.RemoveBuilding(gridPos);
+            var coords = gridMap.GetFootprintCoords(this);
+            if (coords != null && coords.Count > 0)
+            {
+                gridMap.RemoveBuilding(coords[0]);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+        }
+        else
+        {
+            Destroy(gameObject);
         }
     }
 

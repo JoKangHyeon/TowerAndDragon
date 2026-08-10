@@ -58,9 +58,9 @@ public class HealthBarSystem : MonoBehaviour
 
         foreach (Building building in _gridMap.Buildings)
         {
-            if (building is Tower tower)
+            if (building is Tower || building is StoneBarricade)
             {
-                Attach(tower.gameObject);
+                Attach(building.gameObject);
             }
         }
     }
@@ -75,9 +75,9 @@ public class HealthBarSystem : MonoBehaviour
 
     private void HandleBuildingAdded(Building building)
     {
-        if (building is Tower tower)
+        if (building is Tower || building is StoneBarricade)
         {
-            Attach(tower.gameObject);
+            Attach(building.gameObject);
         }
     }
 

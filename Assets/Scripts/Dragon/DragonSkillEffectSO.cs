@@ -68,7 +68,6 @@ public abstract class DragonSkillEffectSO : ScriptableObject
 
     // 타워 기본 공격이 명중할 때 대상에 얹을 상태이상 (얼음, 불)
     public virtual StatusEffectSO GetTowerHitStatus(DragonType? activeAttribute, TowerData towerData) => null;
-
      // 몬스터 스폰 시점에 얹을 상태이상(불 패시브).
     public virtual StatusEffectSO GetSpawnStatus(DragonType? activeAttribute) => null;
 

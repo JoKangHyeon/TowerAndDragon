@@ -98,8 +98,7 @@ public class MonsterAttack : MonoBehaviour
 
     private void UpdateEnRouteAttack()
     {
-        if (_enRouteTargetTypes == MonsterTargetType.None ||
-        _movement == null)
+        if (_movement == null)
         {
             return;
         }
@@ -132,9 +131,16 @@ public class MonsterAttack : MonoBehaviour
 
         if (_currentTarget.IsDead ||
             _currentTarget.TargetTransform == null ||
-            !CanAttackTargetType(_currentTarget.TargetType))
+            !CanAttackTarget(_currentTarget))
         {
             return false;
+        }
+
+        Collider2D col = _currentTarget.TargetObject.GetComponentInChildren<Collider2D>();
+        if (col != null)
+        {
+            Vector3 closest = col.ClosestPoint(transform.position);
+            return (closest - transform.position).sqrMagnitude <= Range * Range;
         }
 
         return GetSqrDistance(_currentTarget.TargetTransform.position) <= Range * Range;
@@ -156,12 +162,13 @@ public class MonsterAttack : MonoBehaviour
             if (target == null ||
                 target.IsDead ||
                 target.TargetTransform == null ||
-                !CanAttackTargetType(target.TargetType))
+                !CanAttackTarget(target))
             {
                 continue;
             }
 
-            float sqrDistance = GetSqrDistance(target.TargetTransform.position);
+            Vector3 closestPoint = candidate.ClosestPoint(transform.position);
+            float sqrDistance = (closestPoint - transform.position).sqrMagnitude;
             if (sqrDistance >= closestSqrDistance)
             {
                 continue;
@@ -174,9 +181,15 @@ public class MonsterAttack : MonoBehaviour
         return closestTarget;
     }
 
-    private bool CanAttackTargetType(MonsterTargetType targetType)
+    private bool CanAttackTarget(IMonsterTarget target)
     {
-        return (_enRouteTargetTypes & targetType) != MonsterTargetType.None;
+        // 방벽(StoneBarricade)은 몬스터의 타겟 설정(EnRouteTargetTypes)과 무관하게
+        // 길을 물리적으로 가로막고 있으므로 무조건 공격해서 뚫고 지나가도록 합니다.
+        if (target is StoneBarricade)
+        {
+            return true;
+        }
+        return (_enRouteTargetTypes & target.TargetType) != MonsterTargetType.None;
     }
 
     private float GetSqrDistance(Vector3 targetPosition)
@@ -303,7 +316,7 @@ public class MonsterAttack : MonoBehaviour
             IMonsterTarget target = candidate.GetComponentInParent<IMonsterTarget>();
 
 
-            if (target == null || target.IsDead || !CanAttackTargetType(target.TargetType) || !hitTargets.Add(target))
+            if (target == null || target.IsDead || !CanAttackTarget(target) || !hitTargets.Add(target))
             {
                 continue;
             }
