@@ -40,6 +40,10 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
     [SerializeField]
     private WorkerCountOverlayRenderer _countOverlay;
 
+    [Tooltip("인구를 배치할 건물이 하나도 없을 때 안내 메시지를 띄운다. 없으면 조용히 진입만 막는다.")]
+    [SerializeField]
+    private UI_WarningWindow _warningWindow;
+
     [Tooltip("인구를 배치하는 액션 - 건설 확정과 공유하는 좌클릭 액션(Confirm).")]
     [SerializeField]
     private InputActionReference _assignAction;
@@ -194,6 +198,14 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
             return;
         }
 
+        // 인구를 넣을 수 있는 건물이 하나도 없으면 모드에 들어가도 칠할 건물도 누를 대상도 없다 -
+        // 아무 반응 없이 켜졌다 꺼지는 대신 이유를 알려주고 진입하지 않는다.
+        if (!HasAnyPopulationTarget())
+        {
+            _warningWindow?.Show(UI_WarningWindow.MessageId.WorkerMode);
+            return;
+        }
+
         if (_uiManager != null)
         {
             _uiManager.OpenExclusive(this);
@@ -202,6 +214,30 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
         {
             SetWorkerModeActive(true);
         }
+    }
+
+    // 인구를 넣을 수 있는 건물이 하나라도 있는지. 판정 기준은 RefreshOverlays가 대상으로 삼는 것과 같다
+    // (초기화된 IPopulationAllocationTarget + 정원 1명 이상) - 두 기준이 어긋나면
+    // "진입은 되는데 아무것도 안 칠해지는" 상태가 생긴다.
+    // 그리드가 연결되지 않아 판정할 수 없으면 막지 않는다.
+    private bool HasAnyPopulationTarget()
+    {
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
+        {
+            return true;
+        }
+
+        foreach (Building building in _gridMap.Buildings)
+        {
+            var target = building.GetComponent<IPopulationAllocationTarget>();
+
+            if (target != null && target.IsInitialized && target.Capacity > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void SetWorkerModeActive(bool isActive)

@@ -235,7 +235,7 @@ public class UI_ConquestWindow : MonoBehaviour
         {
             if (_warningWindow != null)
             {
-                _warningWindow.ShowClaimWarning();
+                _warningWindow.Show(UI_WarningWindow.MessageId.Claim);
             }
 
             return;

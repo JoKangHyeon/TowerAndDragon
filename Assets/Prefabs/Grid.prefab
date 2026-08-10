@@ -265446,6 +265446,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6283158896326974521, guid: bbd28b3c030f0e3498b66b3fa2d9e693, type: 3}
   m_PrefabInstance: {fileID: 1661683178703747654}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &6681738151754636705 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5455320943320786919, guid: bbd28b3c030f0e3498b66b3fa2d9e693, type: 3}
+  m_PrefabInstance: {fileID: 1661683178703747654}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bad66e0cd0a2b5d4d9c3d31964c86d86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CastleHealth
 --- !u!1001 &2784681993700953076
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -265520,7 +265531,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7376088738189281625, guid: d1d6388b92c334f40acadb3cf7d859d3, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 1.66
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7376088738189281625, guid: d1d6388b92c334f40acadb3cf7d859d3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -265640,6 +265651,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5428592881472441635, guid: 3d1bc8641529fbf4d8792e9eb3f74f81, type: 3}
+      propertyPath: _castle
+      value: 
+      objectReference: {fileID: 6681738151754636705}
     - target: {fileID: 8699297776670747419, guid: 3d1bc8641529fbf4d8792e9eb3f74f81, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0

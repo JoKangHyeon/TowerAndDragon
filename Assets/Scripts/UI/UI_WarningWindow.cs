@@ -1,20 +1,41 @@
+using System;
+using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
 /// 경고 메시지 창. 상황별 메시지(Message_*)를 페이드 인 → 잠깐 유지 → 페이드 아웃으로 띄운다(토스트).
-/// 각 메시지 오브젝트는 시작 시 꺼두고, 요청 시 해당 메시지만 켠다.
+/// 각 메시지 오브젝트는 시작 시 꺼두고, 요청된 종류만 켠다.
+///
+/// 메시지를 늘릴 때는 MessageId에 값을 추가하고 인스펙터 목록에 한 줄만 배정하면 된다.
 /// </summary>
 public class UI_WarningWindow : MonoBehaviour
 {
     private const float DEFAULT_SHOW_DURATION = 2f;
     private const float DEFAULT_FADE_DURATION = 0.3f;
 
-    [Tooltip("밤에 점령을 시도했을 때 띄우는 메시지.")]
-    [SerializeField] private GameObject _messageClaim;
+    /// <summary>경고 메시지의 종류. 인스펙터 목록의 드롭다운이자 호출부가 메시지를 지목하는 이름이다.
+    /// 값의 선언 순서를 바꾸면 이미 배정해 둔 목록의 종류가 밀린다(직렬화는 순서대로 정수로 저장된다) -
+    /// 새 값은 끝에 추가한다.</summary>
+    public enum MessageId
+    {
+        // 밤에 점령을 시도했을 때.
+        Claim,
 
-    [Tooltip("어미용 속성을 하루 1회 제한에 걸려 바꾸지 못할 때 띄우는 메시지.")]
-    [SerializeField] private GameObject _messageMotherDragonChange;
+        // 인구를 배치할 수 있는 건물이 하나도 없는데 인구 배치 모드를 켰을 때.
+        WorkerMode,
+    }
+
+    /// <summary>인스펙터 한 줄 = 메시지 하나. 종류를 함께 지정하므로 목록 순서는 상관없다.</summary>
+    [Serializable]
+    private struct WarningMessage
+    {
+        public MessageId Id;
+        public GameObject Root;
+    }
+
+    [Tooltip("경고 메시지 목록. 종류 하나당 한 줄씩 배정한다 - 순서는 상관없다.")]
+    [SerializeField] private List<WarningMessage> _messages = new();
 
     [Tooltip("페이드 인/아웃 사이 완전히 보이는 시간(초).")]
     [SerializeField] private float _showDuration = DEFAULT_SHOW_DURATION;
@@ -22,39 +43,59 @@ public class UI_WarningWindow : MonoBehaviour
     [Tooltip("페이드 인/아웃 연출 시간(초).")]
     [SerializeField] private float _fadeDuration = DEFAULT_FADE_DURATION;
 
-    private CanvasGroup _messageClaimGroup;
-    private Sequence _claimSequence;
+    // 메시지 하나의 재생 상태. 진행 중인 Sequence를 메시지마다 따로 들고 있어야
+    // 한 메시지를 다시 띄울 때 다른 메시지의 페이드를 끊지 않는다.
+    private sealed class MessageView
+    {
+        public GameObject Root;
+        public CanvasGroup Group;
+        public Sequence Sequence;
+    }
 
-    private CanvasGroup _messageMotherDragonChangeGroup;
-    private Sequence _motherDragonChangeSequence;
+    private readonly Dictionary<MessageId, MessageView> _views = new();
 
     private void Awake()
     {
-        _messageClaimGroup = Prepare(_messageClaim);
-        _messageMotherDragonChangeGroup = Prepare(_messageMotherDragonChange);
+        foreach (WarningMessage message in _messages)
+        {
+            if (message.Root == null)
+            {
+                continue;
+            }
+
+            if (_views.ContainsKey(message.Id))
+            {
+                Debug.LogError(
+                    $"[{nameof(UI_WarningWindow)}] {message.Id} 메시지가 목록에 두 번 있습니다 - 첫 줄만 사용합니다.",
+                    this);
+                continue;
+            }
+
+            _views.Add(message.Id, new MessageView
+            {
+                Root = message.Root,
+                Group = Prepare(message.Root),
+            });
+        }
     }
 
-    // 밤 점령 경고를 페이드로 잠깐 띄운다.
-    public void ShowClaimWarning()
+    /// <summary>해당 종류의 경고를 잠깐 띄운다.</summary>
+    public void Show(MessageId id)
     {
-        _claimSequence = Show(_messageClaim, _messageClaimGroup, _claimSequence);
-    }
+        if (!_views.TryGetValue(id, out MessageView view))
+        {
+            Debug.LogError(
+                $"[{nameof(UI_WarningWindow)}] {id} 메시지가 인스펙터 목록에 배정되지 않았습니다.",
+                this);
+            return;
+        }
 
-    // 어미용 속성 변경이 하루 1회 제한에 걸렸을 때 띄운다.
-    public void ShowMotherDragonChangeWarning()
-    {
-        _motherDragonChangeSequence =
-            Show(_messageMotherDragonChange, _messageMotherDragonChangeGroup, _motherDragonChangeSequence);
+        view.Sequence = PlayFade(view.Root, view.Group, view.Sequence);
     }
 
     // 메시지를 꺼진 상태로 두고 페이드용 CanvasGroup을 확보한다.
     private static CanvasGroup Prepare(GameObject message)
     {
-        if (message == null)
-        {
-            return null;
-        }
-
         CanvasGroup group = message.GetComponent<CanvasGroup>();
 
         if (group == null)
@@ -67,11 +108,10 @@ public class UI_WarningWindow : MonoBehaviour
         return group;
     }
 
-    // 페이드 인 → 유지 → 페이드 아웃. 새로 시작한 Sequence를 돌려주므로 호출부가 보관한다
-    // (메시지마다 따로 들고 있어야 서로의 연출을 끊지 않는다).
-    private Sequence Show(GameObject message, CanvasGroup group, Sequence running)
+    // 페이드 인 → 유지 → 페이드 아웃. 새로 시작한 Sequence를 돌려주므로 호출부가 보관한다.
+    private Sequence PlayFade(GameObject message, CanvasGroup group, Sequence running)
     {
-        if (message == null || group == null)
+        if (group == null)
         {
             return running;
         }
