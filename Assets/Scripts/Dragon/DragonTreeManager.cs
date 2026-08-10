@@ -182,6 +182,37 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
         }
     }
 
+    // 속성 하나가 쓰는 액티브 스킬(해금 여부 무관). 용 창의 스킬 정보 패널처럼
+    // "이 속성은 이런 스킬을 쓴다"를 안내하는 곳에서 쓴다 - 실제 사용 가능 여부는
+    // AvailableActiveSkills가 가른다. 속성당 액티브 노드는 하나뿐이라 첫 스킬을 돌려준다.
+    public SkillSO GetActiveSkillOf(DragonType attribute)
+    {
+        if (Tree == null)
+        {
+            return null;
+        }
+
+        foreach (DragonSkillNodeData node in Tree.DragonNodes)
+        {
+            if (node == null || node.Attribute != attribute)
+            {
+                continue;
+            }
+
+            foreach (DragonSkillEffectSO effect in node.Effects)
+            {
+                SkillSO skill = effect != null ? effect.GetUnlockedSkill() : null;
+
+                if (skill != null)
+                {
+                    return skill;
+                }
+            }
+        }
+
+        return null;
+    }
+
     // 강화·궁극 노드가 부여하는 위력/쿨다운 강화분. SkillTargetingController 등 실제 발동부가
     // 조회한다 - 활성 속성과 일치하는 강화 효과만 합산된다(DragonSkillPowerEffectSO가 스스로 게이트).
     // Skill.Cooltime/DamagePercent가 매 프레임(UI_SkillIndicator) 호출하므로 Aggregate의 클로저

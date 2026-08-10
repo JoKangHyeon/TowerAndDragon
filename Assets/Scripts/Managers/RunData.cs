@@ -34,8 +34,7 @@ public class RunData
     /// <summary>
     /// 세이브 복원 전용. 어미용 속성과 새끼용·알 목록, 주기 보상 수령 이력을 저장값으로 갈아 끼운다.
     /// 보상 이력까지 복원해야 불러오기 후에도 주기당 1회 지급 제한이 유지된다.
-    /// CurrentDragon 인스턴스 자체는 교체하지 않는다 - GameManager.Awake에서 Construct로 걸어 둔
-    /// CycleManager 구독(하루 1회 속성 변경 제한)이 끊기기 때문이다.
+    /// CurrentDragon 인스턴스 자체는 교체하지 않는다 - 다른 곳에서 잡고 있는 참조가 끊기기 때문이다.
     /// CurrentCycle은 CycleManager.SeedRestoredDay가 담당하므로 여기서 건드리지 않는다.
     /// </summary>
     public void RestoreInventory(
@@ -163,31 +162,18 @@ public enum DragonType
 public class Dragon
 {
     public DragonType CurrentType;
-    public bool IsChangedThisDay;
 
     public UnityAction OnDragonTypeChanged;
 
-    private CycleManager _cyclemanager;
-
-    public void Construct(CycleManager cycleManager)
-    {
-        _cyclemanager = cycleManager;
-        _cyclemanager.OnDayStart.AddListener(ResetChangedThisDay);
-    }
-
+    /// <summary>어미용 속성을 바꾼다. 횟수 제한은 없고, 이미 그 속성이면 아무것도 하지 않는다.
+    /// 반환값은 "실제로 바뀌었는가" - 호출부는 이 값으로 속성 변경 알림 발화 여부를 가른다.</summary>
     public bool TryChangeType(DragonType type)
     {
-        if (IsChangedThisDay)
+        if (CurrentType == type)
             return false;
 
         CurrentType = type;
-        IsChangedThisDay = true;
         return true;
-    }
-
-    public void ResetChangedThisDay(int _)
-    {
-        IsChangedThisDay = false;
     }
 }
 
