@@ -85,4 +85,17 @@ public enum TutorialConditionType
 
     // DragonEggInventorySystem.OnEggGranted - 용의 알을 받았다.
     DragonEggGranted,
+
+    // 지정한 종류의 건물 중 인구가 한 명이라도 들어간 것이 있다.
+    // AnyPopulationAssigned는 전체 합계만 보므로 "타워에 배치"를 요구해도 농장에 넣으면 통과해버린다.
+    PopulationAssignedToBuilding,
+
+    // DragonTreeManager.ActiveAttributeChanged - 어미용의 속성을 실제로 바꿨다.
+    // 창을 열어 본 것(DragonWindowMotherTabSelected)과 달리 바꾸는 행동까지 요구한다.
+    MotherDragonAttributeChanged,
+
+    // CycleManager.OnDayStart - 새 날이 시작됐고, 인구가 들어간 생산시설이 있다.
+    // 정산 안내는 정산될 것이 있을 때만 뜻이 있다 - 아무것도 안 지은 플레이어에게
+    // "자원이 들어왔습니다"라고 하면 화면과 말이 어긋난다.
+    DayStartedWithStaffedProduction,
 }

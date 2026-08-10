@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// 목표를 향한 행동이 실제로 일어났을 때 그 주제의 안내를 열어 준다.
@@ -41,12 +42,20 @@ public sealed class TutorialTipChainController : MonoBehaviour
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private UIManager _uiManager;
 
+    [Tooltip("이미 서 있는 건물을 클릭하는 것을 트리거로 쓸 때 필요하다(성처럼 지을 일이 없는 건물).")]
+    [SerializeField] private BuildingPlacementController _placementController;
+
     // 지금 돌고 있는 체인. 하나가 끝나야 다음이 열린다.
     private TutorialRunner _running;
 
     // 이미 한 번 연 체인. 다시 열지 않는다 - 러너는 진행도를 RunData에 남기므로 재활성하면
     // 마지막 단계 뒤에서 재개해 아무것도 안내하지 않은 채 끝난다.
     private readonly HashSet<TutorialRunner> _opened = new();
+
+    /// <summary>팁 체인의 마지막 안내와 인계 시간이 모두 끝나 화면 표시권을 반납했다.</summary>
+    public UnityEvent ChainEnded = new();
+
+    public bool IsRunning => _running != null;
 
     private int CurrentDayNumber =>
         _cycleManager == null ? FIRST_DAY_NUMBER : _cycleManager.CurrentDayNumber;
@@ -62,6 +71,16 @@ public sealed class TutorialTipChainController : MonoBehaviour
         if (_uiManager != null)
         {
             _uiManager.ExclusiveModeOpened.AddListener(HandleExclusiveModeOpened);
+        }
+
+        if (_placementController != null)
+        {
+            _placementController.SelectedBuildingChanged.AddListener(HandleSelectedBuildingChanged);
+        }
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnDayStart.AddListener(HandleDayStart);
         }
 
         // 체인 러너는 제 차례가 오기 전까지 꺼져 있어야 한다 - 켜져 있으면 시작하자마자 안내가 뜬다.
@@ -89,6 +108,16 @@ public sealed class TutorialTipChainController : MonoBehaviour
             _uiManager.ExclusiveModeOpened.RemoveListener(HandleExclusiveModeOpened);
         }
 
+        if (_placementController != null)
+        {
+            _placementController.SelectedBuildingChanged.RemoveListener(HandleSelectedBuildingChanged);
+        }
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
+        }
+
         foreach (Chain chain in _chains)
         {
             if (chain.Runner != null)
@@ -104,6 +133,51 @@ public sealed class TutorialTipChainController : MonoBehaviour
     private void HandleExclusiveModeOpened(MonoBehaviour mode) =>
         TryOpen(TutorialConditionType.ExclusiveModeOpened,
             chain => TutorialTargetMatcher.MatchesMode(mode, chain.Trigger.TargetMode));
+
+    // 정산은 OnDayStart에서 이미 끝나 있으므로(CycleManager의 낮 시작 4단계 중 첫 단계),
+    // 이 시점에 안내를 열면 플레이어는 방금 바뀐 자원 숫자를 보면서 설명을 읽는다.
+    private void HandleDayStart(int _) =>
+        TryOpen(TutorialConditionType.DayStartedWithStaffedProduction, _ => HasStaffedProduction());
+
+    /// <summary>
+    /// 인구가 들어간 생산시설이 하나라도 있는지. 있으면 오늘 아침에 무언가 정산됐다는 뜻이다.
+    /// 자원 총량 증감으로 보지 않는 이유: 유지비가 생산보다 크면 총량이 줄어드는데 그래도 정산은 일어났다.
+    /// </summary>
+    private bool HasStaffedProduction()
+    {
+        if (_gridMap == null)
+        {
+            return false;
+        }
+
+        foreach (Building building in _gridMap.Buildings)
+        {
+            if (!(building is Factory))
+            {
+                continue;
+            }
+
+            var target = building.GetComponent<IPopulationAllocationTarget>();
+            if (target != null && target.IsInitialized && target.AssignedPopulation > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // 성처럼 플레이어가 짓지 않는 건물은 "지어졌을 때"로 열 수 없다 - 클릭해서 골랐을 때를 본다.
+    // 선택이 풀리면 null이 오므로 그때는 아무 체인도 열지 않는다.
+    private void HandleSelectedBuildingChanged(Building building)
+    {
+        if (building == null)
+        {
+            return;
+        }
+
+        TryOpen(TutorialConditionType.BuildingSelectedOnGrid, chain => chain.Trigger.MatchesBuilding(building));
+    }
 
     private void TryOpen(TutorialConditionType condition, Predicate<Chain> matches)
     {
@@ -157,5 +231,6 @@ public sealed class TutorialTipChainController : MonoBehaviour
         _running.gameObject.SetActive(false);
         Debug.Log($"[TutorialTipChainController] 팁 체인 종료: {_running.name}", _running);
         _running = null;
+        ChainEnded.Invoke();
     }
 }

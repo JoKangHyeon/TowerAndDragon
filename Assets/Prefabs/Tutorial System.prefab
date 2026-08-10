@@ -66,8 +66,79 @@ MonoBehaviour:
   - Type: 2
     Amount: 10
   _resourceManager: {fileID: 0}
-  _marksScenarioDismissedOnFinish: 1
+  _marksScenarioDismissedOnFinish: 0
   _holdsGates: 1
+  _holdsOpenedExclusiveMode: 0
+  TutorialEnded:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!1 &700000000000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 700000000000000002}
+  - component: {fileID: 700000000000000003}
+  m_Layer: 0
+  m_Name: TipChain_WorkerMode
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &700000000000000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 700000000000000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8012866731018233354}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &700000000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 700000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
+  _sequence: {fileID: 11400000, guid: 9e6b04c1a7f524db8c3e15f2d80b76ac, type: 2}
+  _gameManager: {fileID: 0}
+  _overlay: {fileID: 0}
+  _uiManager: {fileID: 0}
+  _gridMap: {fileID: 0}
+  _populationManager: {fileID: 0}
+  _placementController: {fileID: 0}
+  _cycleManager: {fileID: 0}
+  _conquestManager: {fileID: 0}
+  _researchManager: {fileID: 0}
+  _conquestWindow: {fileID: 0}
+  _dragonWindow: {fileID: 0}
+  _buildModeWindow: {fileID: 0}
+  _speedSettingWindow: {fileID: 0}
+  _minimapController: {fileID: 0}
+  _handOverDelaySeconds: 3
+  _stallEscapeSeconds: 45
+  _grantStartingResources: 0
+  _startingResources: []
+  _resourceManager: {fileID: 0}
+  _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 0
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -139,6 +210,7 @@ MonoBehaviour:
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
   _holdsGates: 1
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -203,13 +275,14 @@ MonoBehaviour:
   _minimapController: {fileID: 0}
   _handOverDelaySeconds: 3
   _stallEscapeSeconds: 45
-  _grantStartingResources: 1
+  _grantStartingResources: 0
   _startingResources:
   - Type: 2
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
   _holdsGates: 0
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -224,7 +297,7 @@ GameObject:
   - component: {fileID: 8613677810521246548}
   - component: {fileID: 7167298320356602163}
   m_Layer: 0
-  m_Name: Chapter_Day2_MainDragon
+  m_Name: TipChain_MainCastle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -257,7 +330,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
-  _sequence: {fileID: 11400000, guid: 7a9f396a9d357414bb9fb1569b66ab47, type: 2}
+  _sequence: {fileID: 11400000, guid: 8c5d19a742fb34e0ab836e51d70c9b28, type: 2}
   _gameManager: {fileID: 0}
   _overlay: {fileID: 0}
   _uiManager: {fileID: 0}
@@ -280,7 +353,8 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
-  _holdsGates: 1
+  _holdsGates: 0
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -345,13 +419,14 @@ MonoBehaviour:
   _minimapController: {fileID: 0}
   _handOverDelaySeconds: 3
   _stallEscapeSeconds: 45
-  _grantStartingResources: 1
+  _grantStartingResources: 0
   _startingResources:
   - Type: 2
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
   _holdsGates: 0
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -366,7 +441,7 @@ GameObject:
   - component: {fileID: 1893317202817343298}
   - component: {fileID: 2720836826723781114}
   m_Layer: 0
-  m_Name: Chapter_Day1_Build
+  m_Name: TipChain_Tower
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -399,7 +474,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
-  _sequence: {fileID: 11400000, guid: d8c2278afe08d4dcfb17c2d36388c97e, type: 2}
+  _sequence: {fileID: 11400000, guid: 7d1a4c9e2b6f4e0a8c3d5f7b9e1a2c4d, type: 2}
   _gameManager: {fileID: 0}
   _overlay: {fileID: 0}
   _uiManager: {fileID: 0}
@@ -416,13 +491,14 @@ MonoBehaviour:
   _minimapController: {fileID: 0}
   _handOverDelaySeconds: 3
   _stallEscapeSeconds: 45
-  _grantStartingResources: 1
+  _grantStartingResources: 0
   _startingResources:
   - Type: 2
     Amount: 10
   _resourceManager: {fileID: 0}
-  _marksScenarioDismissedOnFinish: 1
-  _holdsGates: 1
+  _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 0
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -494,6 +570,7 @@ MonoBehaviour:
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
   _holdsGates: 1
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -508,7 +585,7 @@ GameObject:
   - component: {fileID: 3576059528626347036}
   - component: {fileID: 1236069427628252029}
   m_Layer: 0
-  m_Name: Chapter_Day2_WorkerMode
+  m_Name: TipChain_Settlement
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -541,7 +618,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
-  _sequence: {fileID: 11400000, guid: 9b90fe37e2e694a44b85cab1b643cf13, type: 2}
+  _sequence: {fileID: 11400000, guid: 5f2ac86b13de44d7b90e7c4128ad6e39, type: 2}
   _gameManager: {fileID: 0}
   _overlay: {fileID: 0}
   _uiManager: {fileID: 0}
@@ -564,7 +641,8 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
-  _holdsGates: 1
+  _holdsGates: 0
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -579,7 +657,7 @@ GameObject:
   - component: {fileID: 6489120303074976529}
   - component: {fileID: 7970915996359550256}
   m_Layer: 0
-  m_Name: Chapter_Day2_Settlement
+  m_Name: TipChain_Conquest
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -612,7 +690,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
-  _sequence: {fileID: 11400000, guid: bcba71fc2efad304f985607c8e7d29d2, type: 2}
+  _sequence: {fileID: 11400000, guid: 2e8b5a1d7c3f4b9e6a0d8c2f5b7e1a3c, type: 2}
   _gameManager: {fileID: 0}
   _overlay: {fileID: 0}
   _uiManager: {fileID: 0}
@@ -635,7 +713,8 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
-  _holdsGates: 1
+  _holdsGates: 0
+  _holdsOpenedExclusiveMode: 1
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -712,6 +791,7 @@ MonoBehaviour:
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
   _holdsGates: 1
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -796,10 +876,11 @@ MonoBehaviour:
   _grantStartingResources: 1
   _startingResources:
   - Type: 2
-    Amount: 10
+    Amount: 20
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
   _holdsGates: 1
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls:
@@ -883,6 +964,7 @@ MonoBehaviour:
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
   _holdsGates: 1
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -941,6 +1023,7 @@ Transform:
   - {fileID: 3316724683260557214}
   - {fileID: 6575356335934245053}
   - {fileID: 5462357790307121941}
+  - {fileID: 700000000000000002}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1228376199196180260
@@ -1041,8 +1124,8 @@ MonoBehaviour:
   _chapters:
   - Runner: {fileID: 8344495355195958704}
     StartDay: 1
-  - Runner: {fileID: 2720836826723781114}
-    StartDay: 1
+  - Runner: {fileID: 7627249709894495564}
+    StartDay: 3
   _cycleManager: {fileID: 0}
 --- !u!114 &6164113016927409944
 MonoBehaviour:
@@ -1135,7 +1218,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8935810487677617019}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7b5b7ff730c9e7b4281551d3c9a0569d, type: 3}
   m_Name: 
@@ -1143,7 +1226,7 @@ MonoBehaviour:
   _researchManager: {fileID: 0}
   _cycleManager: {fileID: 0}
   _toast: {fileID: 0}
-  _grantOnDayNumber: 2
+  _grantOnDayNumber: 3
   _minimumResearchPoints: 10
 --- !u!114 &8136472155423758398
 MonoBehaviour:
@@ -1171,6 +1254,7 @@ MonoBehaviour:
   _gameManager: {fileID: 0}
   _cycleManager: {fileID: 0}
   _toast: {fileID: 0}
+  _tipChainController: {fileID: 7784490545347933196}
   _populationManager: {fileID: 0}
   _gridMap: {fileID: 0}
   _researchManager: {fileID: 0}
@@ -1178,6 +1262,7 @@ MonoBehaviour:
   _uiManager: {fileID: 0}
   _dragonWindow: {fileID: 0}
   _eggInventorySystem: {fileID: 0}
+  _dragonTreeManager: {fileID: 0}
   ObjectivesChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -1194,6 +1279,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialTipChainController
   _chains:
+  - Runner: {fileID: 2720836826723781114}
+    Trigger:
+      _condition: 3
+      _targetMode: 0
+      _targetBuilding: 1
+      _targetFactoryData: {fileID: 0}
+    RecommendedDay: 1
   - Runner: {fileID: 2401732732663486626}
     Trigger:
       _condition: 3
@@ -1215,10 +1307,42 @@ MonoBehaviour:
       _targetBuilding: 6
       _targetFactoryData: {fileID: 0}
     RecommendedDay: 1
+  - Runner: {fileID: 7970915996359550256}
+    Trigger:
+      _condition: 1
+      _targetMode: 3
+      _targetBuilding: 0
+      _targetFactoryData: {fileID: 0}
+    RecommendedDay: 1
+  - Runner: {fileID: 7167298320356602163}
+    Trigger:
+      _condition: 5
+      _targetMode: 0
+      _targetBuilding: 5
+      _targetFactoryData: {fileID: 0}
+    RecommendedDay: 3
+  - Runner: {fileID: 1236069427628252029}
+    Trigger:
+      _condition: 23
+      _targetMode: 0
+      _targetBuilding: 0
+      _targetFactoryData: {fileID: 0}
+    RecommendedDay: 2
+  - Runner: {fileID: 700000000000000003}
+    Trigger:
+      _condition: 1
+      _targetMode: 2
+      _targetBuilding: 0
+      _targetFactoryData: {fileID: 0}
+    RecommendedDay: 2
   _gameManager: {fileID: 0}
   _cycleManager: {fileID: 0}
   _gridMap: {fileID: 0}
   _uiManager: {fileID: 0}
+  _placementController: {fileID: 0}
+  ChainEnded:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &9100741682882582339
 GameObject:
   m_ObjectHideFlags: 0
@@ -1280,13 +1404,14 @@ MonoBehaviour:
   _minimapController: {fileID: 0}
   _handOverDelaySeconds: 3
   _stallEscapeSeconds: 45
-  _grantStartingResources: 1
+  _grantStartingResources: 0
   _startingResources:
   - Type: 2
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
   _holdsGates: 0
+  _holdsOpenedExclusiveMode: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []

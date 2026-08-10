@@ -10,7 +10,7 @@ using UnityEngine.InputSystem;
 /// 획득 토스트(BabyDragonEggNotifier)는 이 컨트롤러와 무관하게 매번 뜬다 - 안내는 1회성,
 /// 알림은 상시라는 구분이다.
 /// </summary>
-public class BabyDragonGuideController : MonoBehaviour
+public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery
 {
     private const string OPEN_INVENTORY_LOC_KEY = "baby_dragon_guide_open_inventory";
     private const string REOPEN_INVENTORY_LOC_KEY = "baby_dragon_guide_reopen_inventory";
@@ -36,6 +36,9 @@ public class BabyDragonGuideController : MonoBehaviour
     [SerializeField] private BuildingPlacementController _placementController;
 
     [SerializeField] private UI_GuideOverlay _overlay;
+
+    [Tooltip("행동을 요구하는 안내 도중 밤으로 넘어가지 못하게 막는 데 쓴다. 비우면 막지 않는다.")]
+    [SerializeField] private CycleManager _cycleManager;
 
     [Tooltip("안내가 끝났을 때 남길 문구를 띄운다. 획득 토스트와 같은 오브젝트를 써도 된다.")]
     [SerializeField] private UI_NotificationToast _toast;
@@ -68,6 +71,18 @@ public class BabyDragonGuideController : MonoBehaviour
     private bool _hasFinishedWaitHatchGuide;
 
     private RunData CurrentRun => _gameManager == null ? null : _gameManager.CurrentRun;
+
+    /// <summary>
+    /// 지금 단계가 낮에 끝내야 하는 행동을 요구하는지. 부화 대기는 <b>밤을 넘겨야</b> 진행되므로 막으면 안 되고,
+    /// 마무리 문구는 읽고 넘기기만 하면 되므로 붙잡을 이유가 없다.
+    /// </summary>
+    private bool BlocksDayEnd =>
+        _currentStep == BabyDragonGuideStep.OpenInventory || _currentStep == BabyDragonGuideStep.PlaceDragon;
+
+    bool IDayEndBlockQuery.CanEndDay()
+    {
+        return !BlocksDayEnd;
+    }
 
     private void OnEnable()
     {
@@ -130,6 +145,12 @@ public class BabyDragonGuideController : MonoBehaviour
             _placementController.BuildingToPlaceChanged.RemoveListener(HandleBuildingToPlaceChanged);
         }
 
+        // 끄면 밤 잠금도 같이 풀어준다 - 안 그러면 영영 막힌 채로 남는다.
+        if (_cycleManager != null)
+        {
+            _cycleManager.RemoveDayEndBlocker(this);
+        }
+
         // 끄면 떠 있던 딤·말풍선도 같이 걷는다 - 안 그러면 화면에 그대로 남는다.
         // 구독을 먼저 끊어야 Release가 부르는 DisplayReleased가 방금 끈 이 컨트롤러를 다시 그리지 않는다.
         if (_overlay != null)
@@ -188,7 +209,10 @@ public class BabyDragonGuideController : MonoBehaviour
     // 첫 안내(인벤토리를 열어라)가 통째로 사라진다. 그래서 창이 열려 있는지를 본다.
     private void HandleTabDisplayed(bool _)
     {
-        if (!IsInventoryOpen)
+        // 알을 받기 전에 인벤토리를 열어 본 것은 이 안내의 완료 조건이 아니다.
+        // 시작 전 탭 이벤트를 받아 WaitHatch까지 기록하면, 이후 알 획득 시 OpenInventory가
+        // 과거 단계로 취급되어 안내가 영영 시작되지 않는다.
+        if (!IsInventoryOpen || !_currentStep.HasValue)
         {
             return;
         }
@@ -199,7 +223,8 @@ public class BabyDragonGuideController : MonoBehaviour
     /// <summary>
     /// 알 획득·부화는 토스트가 먼저 뜨는 이벤트다. 둘이 겹치면 어느 쪽을 봐야 할지 알 수 없으므로
     /// 토스트가 사라질 때까지 기다렸다가 안내를 시작한다.
-    /// 기다리는 동안 플레이어가 먼저 인벤토리를 열어도 Advance가 단조라 늦게 도착한 호출은 무시된다.
+    /// 기다리는 동안 플레이어가 먼저 인벤토리를 열면 시작 전 탭 이벤트는 무시하고,
+    /// 획득 안내를 시작한 직후 현재 열린 상태를 확인해 다음 단계로 이어 간다.
     /// </summary>
     private async UniTaskVoid AdvanceAfterToastAsync(BabyDragonGuideStep step)
     {
@@ -213,6 +238,13 @@ public class BabyDragonGuideController : MonoBehaviour
             cancellationToken: this.GetCancellationTokenOnDestroy());
 
         Advance(step);
+
+        // 알 획득 전에 이미 인벤토리를 열어 둔 플레이어에게 HUD 버튼을 다시 누르게 하지 않는다.
+        // 획득 이벤트로 안내를 시작한 뒤에만 현재 열린 상태를 인정해 알 슬롯 안내로 이어 간다.
+        if (step == BabyDragonGuideStep.OpenInventory && IsInventoryOpen)
+        {
+            Advance(BabyDragonGuideStep.WaitHatch);
+        }
     }
 
     private void HandleBuildingAdded(Building building)
@@ -271,8 +303,31 @@ public class BabyDragonGuideController : MonoBehaviour
         Render();
     }
 
+    /// <summary>
+    /// 밤 잠금을 지금 단계에 맞춘다. 등록은 여럿이 함께 걸 수 있으므로 남이 건 것과 다투지 않는다 -
+    /// 하나라도 막고 있으면 밤으로 넘어가지 않는다.
+    /// </summary>
+    private void UpdateDayEndGate()
+    {
+        if (_cycleManager == null)
+        {
+            return;
+        }
+
+        if (BlocksDayEnd)
+        {
+            _cycleManager.AddDayEndBlocker(this);
+            return;
+        }
+
+        _cycleManager.RemoveDayEndBlocker(this);
+    }
+
     private void Render()
     {
+        // 표시권을 못 잡아 아무것도 그리지 못하는 동안에도 잠금은 단계를 따라가야 한다.
+        UpdateDayEndGate();
+
         if (_overlay == null)
         {
             return;

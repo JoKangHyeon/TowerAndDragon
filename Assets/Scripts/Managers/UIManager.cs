@@ -221,6 +221,13 @@ public class UIManager : MonoBehaviour
             return;
         }
 
+        // 목록이 아직 만들어지지 않았다(다른 오브젝트의 OnEnable이 Awake보다 먼저 부른 경우).
+        // 그 시점에는 열려 있는 창도 없으므로 닫을 것이 없다 - CurrentOpenExclusiveMode와 같은 가드다.
+        if (_exclusiveModes == null)
+        {
+            return;
+        }
+
         foreach (IExclusiveMode mode in _exclusiveModes)
         {
             if (!ReferenceEquals(mode, target) && mode.IsOpen)

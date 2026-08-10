@@ -225,6 +225,11 @@ public class UI_ConquestWindow : MonoBehaviour
         // 클릭음을 내지 않는다 - 점령 모드 진입/해제는 SetConquestModeActive가 창음을 낸다.
         bool nextActive = !_conquestModeController.IsActive;
 
+        if (!nextActive && !CanCloseFromShortcut())
+        {
+            return;
+        }
+
         // 밤에는 점령 모드를 켤 수 없다(창이 아예 열리지 않는다). 끄는 것은 항상 허용.
         if (nextActive && _cycleManager != null && _cycleManager.CurrentCycle == CycleManager.CycleState.Night)
         {

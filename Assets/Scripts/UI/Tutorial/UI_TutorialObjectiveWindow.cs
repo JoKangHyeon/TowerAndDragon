@@ -23,8 +23,9 @@ public sealed class UI_TutorialObjectiveWindow : MonoBehaviour
     [Tooltip("생성된 줄이 들어갈 부모.")]
     [SerializeField] private Transform _slotContainer;
 
-    [Tooltip("목록 배경. 보일 목표가 없을 때는 빈 상자만 남으므로 함께 숨긴다.")]
-    [SerializeField] private Graphic _background;
+    [Tooltip("창을 이루는 것 전부(배경·테두리·장식·헤더·목록)를 담은 루트. 보일 목표가 없을 때 통째로 숨긴다 - " +
+             "배경 한 장만 끄면 테두리와 모서리 장식이 빈 액자로 남는다.")]
+    [SerializeField] private GameObject _windowRoot;
 
     private ComponentPool<UI_TutorialObjectiveSlot> _slotPool;
 
@@ -76,10 +77,10 @@ public sealed class UI_TutorialObjectiveWindow : MonoBehaviour
 
         _slotPool.DeactivateFrom(objectives.Count);
 
-        // 1일차에는 아직 열린 목표가 없다 - 그때 배경만 남으면 빈 상자가 떠 있는 것으로 보인다.
-        if (_background != null)
+        // 1일차에는 아직 열린 목표가 없다 - 그때 창만 남으면 빈 액자가 떠 있는 것으로 보인다.
+        if (_windowRoot != null)
         {
-            _background.enabled = objectives.Count > 0;
+            _windowRoot.SetActive(objectives.Count > 0);
         }
 
         if (_slotContainer is RectTransform containerRect)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -113,15 +114,67 @@ public class CycleManager : MonoBehaviour
         SafeInvoke(OnCycleChanged, CycleState.Day);
     }
 
-    // 튜토리얼이 배선한다 - 배선되지 않은 씬에서는 null로 남아 언제나 밤으로 넘어간다(기존 동작 유지).
-    // PopulationManager.CapacityModifierQuery와 같은 주입 방식.
-    public IDayEndBlockQuery DayEndBlockQuery { get; set; }
+    // 튜토리얼이 등록한다 - 아무도 등록하지 않은 씬에서는 비어 있어 언제나 밤으로 넘어간다(기존 동작 유지).
+    //
+    // 슬롯 하나가 아니라 목록인 이유: 막는 주체가 여럿이고(강제 안내 러너·새끼용 가이드·일일 목표)
+    // 저마다 사는 기간이 다르다. 슬롯 하나를 서로 덮어쓰면 나중에 온 쪽이 앞의 잠금을 지우고,
+    // 그쪽이 물러날 때 null로 되돌려 앞의 잠금까지 함께 풀려버린다.
+    private readonly List<IDayEndBlockQuery> _dayEndBlockers = new();
+
+    // 밤 진입이 관문에 막혔다. 막는 쪽이 직접 문구를 띄우지 않고 여기서 알리는 이유는,
+    // 관문을 거는 컴포넌트가 여럿인데 그 전부에 알림 배선을 복제하게 되기 때문이다.
+    // 씬 YAML에 이 필드 항목이 없으므로 인라인 초기화가 필수다(OnDayReady와 같은 이유).
+    public UnityEvent DayEndBlocked = new();
+
+    /// <summary>하나라도 막고 있으면 밤으로 넘어가지 않는다. 같은 대상을 두 번 넣어도 한 번만 등록된다.</summary>
+    public void AddDayEndBlocker(IDayEndBlockQuery blocker)
+    {
+        if (blocker != null && !_dayEndBlockers.Contains(blocker))
+        {
+            _dayEndBlockers.Add(blocker);
+        }
+    }
+
+    /// <summary>등록을 뗀다. 자기가 넣은 것만 빼므로 남의 잠금은 건드리지 않는다.</summary>
+    public void RemoveDayEndBlocker(IDayEndBlockQuery blocker)
+    {
+        _dayEndBlockers.Remove(blocker);
+    }
+
+    private bool CanEndDay()
+    {
+        foreach (IDayEndBlockQuery blocker in _dayEndBlockers)
+        {
+            if (blocker != null && !blocker.CanEndDay())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// [디버그 전용] 관문을 무시하고 밤으로 넘긴다. 목표 관문은 낮 내내 등록돼 있어
+    /// 평범한 EndDay로는 목표를 다 채우기 전까지 넘어갈 수 없다 - 건너뛰기 도구는 그것을 지나야 한다.
+    /// </summary>
+    public void ForceEndDay()
+    {
+        EndDay(ignoresBlockers: true);
+    }
 
     public void EndDay()
     {
+        EndDay(ignoresBlockers: false);
+    }
+
+    private void EndDay(bool ignoresBlockers)
+    {
         // 밤 시작은 되돌릴 수 없으므로 버튼이 아니라 이 관문에서 막는다 - 다른 진입 경로가 생겨도 함께 막힌다.
-        if (DayEndBlockQuery != null && !DayEndBlockQuery.CanEndDay())
+        if (!ignoresBlockers && !CanEndDay())
         {
+            // 왜 안 눌리는지 알려주지 않으면 버튼이 고장 난 것으로 보인다.
+            DayEndBlocked.Invoke();
             return;
         }
 

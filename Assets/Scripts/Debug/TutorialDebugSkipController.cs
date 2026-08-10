@@ -174,7 +174,7 @@ public sealed class TutorialDebugSkipController : MonoBehaviour
             return;
         }
 
-        _cycleManager.EndDay();
+        _cycleManager.ForceEndDay();
 
         if (_cycleManager.CurrentCycle != CycleManager.CycleState.Night)
         {

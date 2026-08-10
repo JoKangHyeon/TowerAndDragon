@@ -81,6 +81,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
              "플레이어가 스스로 시작한 팁 체인은 언제든 그만둘 수 있어야 하므로 꺼 둔다.")]
     [SerializeField] private bool _holdsGates = true;
 
+    [Tooltip("플레이어가 열어서 시작한 팁 체인에서 현재 배타 모드를 닫거나 다른 모드로 바꾸지 못하게 한다. " +
+             "전체 관문과 달리 시작할 때 열려 있는 창을 닫거나 밤·HUD 조작까지 막지는 않는다.")]
+    [SerializeField] private bool _holdsOpenedExclusiveMode;
+
     private int _currentIndex;
     private bool _isRunning;
     private bool _hasBegun;
@@ -97,6 +101,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     // 마지막 단계를 확인 버튼으로 넘겼는지. 눌러서 "다 읽었다"고 답한 뒤에도 인계를 기다리게 하면
     // 버튼이 먹지 않은 것처럼 보이므로, 그때는 HandOverAsync의 읽을 틈을 건너뛴다.
     private bool _isConfirmedByClick;
+
+    // 팁 체인을 시작하게 한 배타 모드. 체인이 끝나기 전까지 이 모드만 유지한다.
+    private MonoBehaviour _heldExclusiveMode;
 
     // 안내가 지나간 창만 열 수 있다. 지금 단계의 것만 허용하면 플레이어가 그 창을 닫았을 때 다시 열 수 없어 갇힌다.
     private readonly HashSet<TutorialExclusiveModeKind> _unlockedModes = new();
@@ -124,12 +131,17 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         {
             if (_uiManager != null)
             {
+                // 관문을 걸기 전에 화면을 정리한다. 열린 채로 안내가 시작되면 그 창은 딤에 덮여 버튼이 죽고,
+                // 닫기 관문(CanClose)이 "지금 이 창을 닫아라" 단계가 아닌 한 닫는 것도 거절해 갇힌다.
+                // 순서가 중요하다 - OpenQuery를 먼저 걸면 CloseAllExcept가 그 관문에 스스로 막힌다.
+                _uiManager.CloseAllExcept(null);
+
                 _uiManager.OpenQuery = this;
             }
 
             if (_cycleManager != null)
             {
-                _cycleManager.DayEndBlockQuery = this;
+                _cycleManager.AddDayEndBlocker(this);
             }
 
             if (_speedSettingWindow != null)
@@ -141,6 +153,11 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             {
                 _minimapController.BlockQuery = this;
             }
+        }
+        else if (_holdsOpenedExclusiveMode && _uiManager != null)
+        {
+            _heldExclusiveMode = _uiManager.CurrentOpenExclusiveMode;
+            _uiManager.OpenQuery = this;
         }
 
         if (_overlay != null)
@@ -189,6 +206,11 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (!_isRunning)
         {
             return true;
+        }
+
+        if (_holdsOpenedExclusiveMode && _heldExclusiveMode != null)
+        {
+            return ReferenceEquals(mode, _heldExclusiveMode);
         }
 
         foreach (TutorialExclusiveModeKind unlocked in _unlockedModes)
@@ -462,9 +484,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             _uiManager.OpenQuery = null;
         }
 
-        if (_cycleManager != null && ReferenceEquals(_cycleManager.DayEndBlockQuery, this))
+        if (_cycleManager != null)
         {
-            _cycleManager.DayEndBlockQuery = null;
+            _cycleManager.RemoveDayEndBlocker(this);
         }
 
         if (_speedSettingWindow != null && ReferenceEquals(_speedSettingWindow.BlockQuery, this))
@@ -476,6 +498,8 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         {
             _minimapController.BlockQuery = null;
         }
+
+        _heldExclusiveMode = null;
     }
 
     private async UniTaskVoid AutoAdvanceAsync(TutorialStepSO step)
