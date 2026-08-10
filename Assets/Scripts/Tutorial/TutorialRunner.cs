@@ -77,6 +77,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
              "뒤 챕터가 '이미 봤음' 판정으로 아무것도 실행하지 않는다.")]
     [SerializeField] private bool _marksScenarioDismissedOnFinish = true;
 
+    [Tooltip("도는 동안 밤 진입·창 열기·HUD를 잠글지. 1일차 강제 안내만 켠다 - " +
+             "플레이어가 스스로 시작한 팁 체인은 언제든 그만둘 수 있어야 하므로 꺼 둔다.")]
+    [SerializeField] private bool _holdsGates = true;
+
     private int _currentIndex;
     private bool _isRunning;
     private bool _hasBegun;
@@ -113,24 +117,30 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     {
         // 창 열림·밤 시작 판정은 Start가 아니라 여기서 건다 - Start끼리는 순서가 보장되지 않아
         // 첫 단계가 뜨기 전에 플레이어가 앞질러 갈 수 있으면 안 된다.
-        if (_uiManager != null)
+        //
+        // 팁 체인으로 도는 러너는 이 관문을 걸지 않는다. 플레이어가 스스로 시작한 안내이고
+        // 언제든 그만둘 수 있어야 하는데, 관문을 걸면 안내를 켠 대가로 게임이 잠기는 셈이 된다.
+        if (_holdsGates)
         {
-            _uiManager.OpenQuery = this;
-        }
+            if (_uiManager != null)
+            {
+                _uiManager.OpenQuery = this;
+            }
 
-        if (_cycleManager != null)
-        {
-            _cycleManager.DayEndBlockQuery = this;
-        }
+            if (_cycleManager != null)
+            {
+                _cycleManager.DayEndBlockQuery = this;
+            }
 
-        if (_speedSettingWindow != null)
-        {
-            _speedSettingWindow.BlockQuery = this;
-        }
+            if (_speedSettingWindow != null)
+            {
+                _speedSettingWindow.BlockQuery = this;
+            }
 
-        if (_minimapController != null)
-        {
-            _minimapController.BlockQuery = this;
+            if (_minimapController != null)
+            {
+                _minimapController.BlockQuery = this;
+            }
         }
 
         if (_overlay != null)
@@ -506,8 +516,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             _activeStep.BlocksTargetInteraction,
             showsConfirmButton,
             _activeStep.BubbleSlot,
-            // 1일차 강제 안내는 지금까지처럼 배경을 어둡게 깐다 - 읽어야 할 것에 시선을 모은다.
-            dimsBackground: true);
+            _activeStep.DimsBackground);
     }
 
     /// <summary>

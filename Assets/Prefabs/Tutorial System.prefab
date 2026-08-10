@@ -67,6 +67,7 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 1
+  _holdsGates: 1
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -137,6 +138,78 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 1
+  TutorialEnded:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!1 &1385504162217293391
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6575356335934245053}
+  - component: {fileID: 3703944163537485498}
+  m_Layer: 0
+  m_Name: TipChain_ResearchLab
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &6575356335934245053
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1385504162217293391}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8012866731018233354}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3703944163537485498
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1385504162217293391}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
+  _sequence: {fileID: 11400000, guid: 287f88756ddcb46c6be092b96c34ef1b, type: 2}
+  _gameManager: {fileID: 0}
+  _overlay: {fileID: 0}
+  _uiManager: {fileID: 0}
+  _gridMap: {fileID: 0}
+  _populationManager: {fileID: 0}
+  _placementController: {fileID: 0}
+  _cycleManager: {fileID: 0}
+  _conquestManager: {fileID: 0}
+  _researchManager: {fileID: 0}
+  _conquestWindow: {fileID: 0}
+  _dragonWindow: {fileID: 0}
+  _buildModeWindow: {fileID: 0}
+  _speedSettingWindow: {fileID: 0}
+  _minimapController: {fileID: 0}
+  _handOverDelaySeconds: 3
+  _stallEscapeSeconds: 45
+  _grantStartingResources: 1
+  _startingResources:
+  - Type: 2
+    Amount: 10
+  _resourceManager: {fileID: 0}
+  _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -207,6 +280,78 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 1
+  TutorialEnded:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!1 &3961087116957745258
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3316724683260557214}
+  - component: {fileID: 2401732732663486626}
+  m_Layer: 0
+  m_Name: TipChain_Farm
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &3316724683260557214
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3961087116957745258}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8012866731018233354}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2401732732663486626
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3961087116957745258}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
+  _sequence: {fileID: 11400000, guid: 18cdbc15e500d4745863df6ed307872e, type: 2}
+  _gameManager: {fileID: 0}
+  _overlay: {fileID: 0}
+  _uiManager: {fileID: 0}
+  _gridMap: {fileID: 0}
+  _populationManager: {fileID: 0}
+  _placementController: {fileID: 0}
+  _cycleManager: {fileID: 0}
+  _conquestManager: {fileID: 0}
+  _researchManager: {fileID: 0}
+  _conquestWindow: {fileID: 0}
+  _dragonWindow: {fileID: 0}
+  _buildModeWindow: {fileID: 0}
+  _speedSettingWindow: {fileID: 0}
+  _minimapController: {fileID: 0}
+  _handOverDelaySeconds: 3
+  _stallEscapeSeconds: 45
+  _grantStartingResources: 1
+  _startingResources:
+  - Type: 2
+    Amount: 10
+  _resourceManager: {fileID: 0}
+  _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 0
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -277,6 +422,7 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 1
+  _holdsGates: 1
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -347,6 +493,7 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 1
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -417,6 +564,7 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 1
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -487,6 +635,7 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 1
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -562,6 +711,7 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 1
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -572,7 +722,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6606130309212556182}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7b5b7ff730c9e7b4281551d3c9a0569d, type: 3}
   m_Name: 
@@ -649,6 +799,7 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 1
   TutorialEnded:
     m_PersistentCalls:
       m_Calls:
@@ -731,6 +882,7 @@ MonoBehaviour:
     Amount: 10
   _resourceManager: {fileID: 0}
   _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 1
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
@@ -755,6 +907,7 @@ GameObject:
   - component: {fileID: 2833951125441779017}
   - component: {fileID: 7651892599846822379}
   - component: {fileID: 8136472155423758398}
+  - component: {fileID: 7784490545347933196}
   m_Layer: 0
   m_Name: Tutorial System
   m_TagString: Untagged
@@ -785,6 +938,9 @@ Transform:
   - {fileID: 8613677810521246548}
   - {fileID: 5523615184227803248}
   - {fileID: 528640116624589214}
+  - {fileID: 3316724683260557214}
+  - {fileID: 6575356335934245053}
+  - {fileID: 5462357790307121941}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1228376199196180260
@@ -979,7 +1135,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8935810487677617019}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7b5b7ff730c9e7b4281551d3c9a0569d, type: 3}
   m_Name: 
@@ -1004,11 +1160,13 @@ MonoBehaviour:
   _objectives:
   - {fileID: 11400000, guid: 90f86c714741f449cacf1450443602e8, type: 2}
   - {fileID: 11400000, guid: 2b676f1d26ec04c1fab670e3fbd29cc8, type: 2}
+  - {fileID: 11400000, guid: d1812f0962ae1474cb5e57ca93aa02c3, type: 2}
   - {fileID: 11400000, guid: 600b53983683e4d68895750a1d72c0e0, type: 2}
   - {fileID: 11400000, guid: 810ce79933e284564942892590908611, type: 2}
-  - {fileID: 11400000, guid: 94f0b7df4c3774b5db9e1fee92774a1c, type: 2}
-  - {fileID: 11400000, guid: 4b83cc55986c84d8fa9fe6dba64afa16, type: 2}
+  - {fileID: 11400000, guid: 82ab5f0d2d2134f90b307c04c2d2255a, type: 2}
   - {fileID: 11400000, guid: 6665113e41f5f446d9f6bea76e24c891, type: 2}
+  - {fileID: 11400000, guid: 4b83cc55986c84d8fa9fe6dba64afa16, type: 2}
+  - {fileID: 11400000, guid: 94f0b7df4c3774b5db9e1fee92774a1c, type: 2}
   - {fileID: 11400000, guid: a3ffde9475b514768b460959eab5d32e, type: 2}
   _gameManager: {fileID: 0}
   _cycleManager: {fileID: 0}
@@ -1019,6 +1177,116 @@ MonoBehaviour:
   _conquestManager: {fileID: 0}
   _uiManager: {fileID: 0}
   _dragonWindow: {fileID: 0}
+  _eggInventorySystem: {fileID: 0}
   ObjectivesChanged:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &7784490545347933196
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8935810487677617019}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5842743edc24b4f648a687572792c983, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialTipChainController
+  _chains:
+  - Runner: {fileID: 2401732732663486626}
+    Trigger:
+      _condition: 3
+      _targetMode: 0
+      _targetBuilding: 4
+      _targetFactoryData: {fileID: 11400000, guid: 32e7400f3d9f7aa4d9cad12eb03892c6, type: 2}
+    RecommendedDay: 1
+  - Runner: {fileID: 3703944163537485498}
+    Trigger:
+      _condition: 3
+      _targetMode: 0
+      _targetBuilding: 3
+      _targetFactoryData: {fileID: 0}
+    RecommendedDay: 1
+  - Runner: {fileID: 3685629239193047532}
+    Trigger:
+      _condition: 3
+      _targetMode: 0
+      _targetBuilding: 6
+      _targetFactoryData: {fileID: 0}
+    RecommendedDay: 1
+  _gameManager: {fileID: 0}
+  _cycleManager: {fileID: 0}
+  _gridMap: {fileID: 0}
+  _uiManager: {fileID: 0}
+--- !u!1 &9100741682882582339
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5462357790307121941}
+  - component: {fileID: 3685629239193047532}
+  m_Layer: 0
+  m_Name: TipChain_SlimeFarm
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &5462357790307121941
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9100741682882582339}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8012866731018233354}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3685629239193047532
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9100741682882582339}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
+  _sequence: {fileID: 11400000, guid: e4e6e4ea45b6d4ed8aff89d4da29d6b4, type: 2}
+  _gameManager: {fileID: 0}
+  _overlay: {fileID: 0}
+  _uiManager: {fileID: 0}
+  _gridMap: {fileID: 0}
+  _populationManager: {fileID: 0}
+  _placementController: {fileID: 0}
+  _cycleManager: {fileID: 0}
+  _conquestManager: {fileID: 0}
+  _researchManager: {fileID: 0}
+  _conquestWindow: {fileID: 0}
+  _dragonWindow: {fileID: 0}
+  _buildModeWindow: {fileID: 0}
+  _speedSettingWindow: {fileID: 0}
+  _minimapController: {fileID: 0}
+  _handOverDelaySeconds: 3
+  _stallEscapeSeconds: 45
+  _grantStartingResources: 1
+  _startingResources:
+  - Type: 2
+    Amount: 10
+  _resourceManager: {fileID: 0}
+  _marksScenarioDismissedOnFinish: 0
+  _holdsGates: 0
+  TutorialEnded:
     m_PersistentCalls:
       m_Calls: []

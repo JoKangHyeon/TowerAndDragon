@@ -62,6 +62,11 @@ public class BabyDragonGuideController : MonoBehaviour
     // 마무리 문구 중 지금 보여줄 컷. 길이를 넘어서면 안내를 놓는다.
     private int _completionIndex;
 
+    // 부화 대기 안내를 한 번이라도 띄웠는지 / 그것을 읽고 창을 닫아 끝났는지.
+    // 이 단계는 며칠 동안 이어지므로, 끝난 뒤에는 창을 다시 열어도 조용해야 한다.
+    private bool _hasShownWaitHatchGuide;
+    private bool _hasFinishedWaitHatchGuide;
+
     private RunData CurrentRun => _gameManager == null ? null : _gameManager.CurrentRun;
 
     private void OnEnable()
@@ -291,9 +296,21 @@ public class BabyDragonGuideController : MonoBehaviour
                 // 창을 닫은 건 시킨 대로 한 것이다 - 다시 열라고 하면 안내가 제자리를 돈다.
                 if (!IsInventoryOpen)
                 {
+                    // 안내를 본 뒤 창을 닫았다면 이 단계에서 가르칠 것은 끝났다.
+                    // 부화까지 며칠이 걸리는 동안 창을 열 때마다 같은 말을 다시 띄우면,
+                    // 이미 읽은 안내가 지워지지 않고 계속 따라다닌다.
+                    _hasFinishedWaitHatchGuide |= _hasShownWaitHatchGuide;
                     _overlay.Release(this);
                     break;
                 }
+
+                if (_hasFinishedWaitHatchGuide)
+                {
+                    _overlay.Release(this);
+                    break;
+                }
+
+                _hasShownWaitHatchGuide = true;
 
                 // 알 슬롯은 눌러도 반응이 없으므로 "창을 닫고 하루를 보내라"까지 같이 알려준다.
                 // 닫기는 창의 X 버튼으로 한다 - 토글 키로 닫는 경로가 없어서 키 이름을 알려주면 헛짚는다.

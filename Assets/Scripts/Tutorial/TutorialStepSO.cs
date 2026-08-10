@@ -43,6 +43,10 @@ public sealed class TutorialStepSO : ScriptableObject
     [Tooltip("말풍선을 띄울 자리. 타일을 클릭해야 하는 단계는 말풍선이 그리드를 가리므로 Top/Bottom으로 옮긴다.")]
     [SerializeField] private GuideBubbleSlot _bubbleSlot = GuideBubbleSlot.Default;
 
+    [Tooltip("배경을 어둡게 깔지. 끄면 말풍선만 남고 화면이 그대로 보인다 - " +
+             "몬스터 경로선처럼 UI가 아닌 것을 보여주며 설명할 때 쓴다(어둡게 하면 그것까지 묻힌다).")]
+    [SerializeField] private bool _dimsBackground = true;
+
 
     [Header("완료 조건 (WaitForAction 전용)")]
     [SerializeField] private TutorialConditionType _condition = TutorialConditionType.None;
@@ -77,6 +81,7 @@ public sealed class TutorialStepSO : ScriptableObject
     public bool BlocksInput => _blocksInput;
     public bool BlocksTargetInteraction => _blocksTargetInteraction;
     public GuideBubbleSlot BubbleSlot => _bubbleSlot;
+    public bool DimsBackground => _dimsBackground;
     public TutorialConditionType Condition => _condition;
     public TutorialExclusiveModeKind TargetMode => _targetMode;
     public TutorialBuildingKind TargetBuilding => _targetBuilding;

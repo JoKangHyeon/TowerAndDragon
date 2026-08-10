@@ -81,13 +81,10 @@ public sealed class TutorialResearchPointGrant : MonoBehaviour
             return;
         }
 
+        // 조용히 채운다. 예전에는 토스트로 알렸지만 그 시점이 하필 아침이라, 그때 뜨는 안내 말풍선과
+        // 화면에서 겹쳐 둘 다 읽히지 않았다. 포인트가 얼마인지는 연구소를 지었을 때 뜨는
+        // 안내 체인이 짚어 주므로 여기서 따로 말할 이유가 없다.
         _researchManager.AddResearchPoints(missing);
-
-        // 이 컴포넌트는 Tutorial System 프리팹 안에 있고 토스트는 씬 UI라 프리팹 기본 참조로
-        // 연결할 수 없다. 씬 오버라이드가 없거나 풀렸을 때만 한 번 찾아 안내가 사라지지 않게 한다.
-        UI_NotificationToast toast = _toast != null
-            ? _toast
-            : FindFirstObjectByType<UI_NotificationToast>();
-        toast?.Show(RESEARCH_POINTS_GRANTED_LOC_KEY, missing);
+        Debug.Log($"[TutorialResearchPointGrant] 연구 포인트 {missing} 지급 (일차 {_grantOnDayNumber})", this);
     }
 }

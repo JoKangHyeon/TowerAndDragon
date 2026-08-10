@@ -16,7 +16,8 @@ using UnityEngine.Events;
 /// </summary>
 public sealed class TutorialObjectiveController : MonoBehaviour
 {
-    private const string OBJECTIVE_COMPLETED_LOC_KEY = "tutorial_objective_completed";
+    // 완료 알림은 쓰지 않는다 - 목록의 체크 표시가 같은 말을 이미 하고 있다.
+    // 남은 것은 밤으로 넘어가기 직전의 상기뿐이다(목록을 늘 띄워 두어도, 결정 직전에는 한 번 짚어 준다).
     private const string OBJECTIVE_REMAINING_LOC_KEY = "tutorial_objective_remaining";
     private const int FIRST_DAY_NUMBER = 1;
 
@@ -39,6 +40,7 @@ public sealed class TutorialObjectiveController : MonoBehaviour
     [SerializeField] private ConquestManager _conquestManager;
     [SerializeField] private UIManager _uiManager;
     [SerializeField] private UI_DragonWindow _dragonWindow;
+    [SerializeField] private DragonEggInventorySystem _eggInventorySystem;
 
     /// <summary>
     /// 목록에 보일 것이 바뀌었다(목표가 열렸거나 완료됐거나 날짜가 바뀌었다).
@@ -97,6 +99,11 @@ public sealed class TutorialObjectiveController : MonoBehaviour
             _populationManager.PopulationChanged.AddListener(HandlePopulationChanged);
         }
 
+        if (_eggInventorySystem != null)
+        {
+            _eggInventorySystem.OnEggGranted.AddListener(HandleEggGranted);
+        }
+
         if (_cycleManager != null)
         {
             _cycleManager.OnDayStart.AddListener(HandleDayStart);
@@ -137,6 +144,11 @@ public sealed class TutorialObjectiveController : MonoBehaviour
             _populationManager.PopulationChanged.RemoveListener(HandlePopulationChanged);
         }
 
+        if (_eggInventorySystem != null)
+        {
+            _eggInventorySystem.OnEggGranted.RemoveListener(HandleEggGranted);
+        }
+
         if (_cycleManager != null)
         {
             _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
@@ -168,6 +180,13 @@ public sealed class TutorialObjectiveController : MonoBehaviour
         int remaining = 0;
         foreach (TutorialObjectiveSO objective in _visibleObjectives)
         {
+            // 밤을 넘겨야 완료되는 목표는 세지 않는다 - 지금 누르는 이 버튼이 그 목표의 완료 방법이라,
+            // 세어 버리면 "아직 남은 게 있다"가 매일 밤 반드시 뜨고 플레이어는 그것을 지울 방법이 없다.
+            if (objective.CompletionTrigger.Condition == TutorialConditionType.NightSurvived)
+            {
+                continue;
+            }
+
             if (!IsCompleted(objective))
             {
                 remaining++;
@@ -205,6 +224,9 @@ public sealed class TutorialObjectiveController : MonoBehaviour
 
     private void HandleNightEnd(int _) =>
         TryCompleteMatching(TutorialConditionType.NightSurvived, null);
+
+    private void HandleEggGranted(DragonType _) =>
+        TryCompleteMatching(TutorialConditionType.DragonEggGranted, null);
 
     private void HandleExclusiveModeOpened(MonoBehaviour mode)
     {
@@ -261,9 +283,10 @@ public sealed class TutorialObjectiveController : MonoBehaviour
         }
 
         // 아직 목록에 뜨지 않은 날의 목표를 먼저 해냈을 수도 있다 - 그때는 목록에 나타나며 체크된 채로 보인다.
+        //
+        // 완료 알림은 따로 띄우지 않는다. 목록이 늘 화면에 있고 그 줄에 체크가 들어가므로
+        // 토스트까지 내면 같은 사실을 두 번 말하면서 안내 말풍선과 자리를 다툰다.
         RebuildVisibleObjectives();
-
-        _toast?.Show(OBJECTIVE_COMPLETED_LOC_KEY, StringTable.GetString(objective.TitleLocKey));
     }
 
     // 권장 일차가 된 목표를 목록에 넣는다. 지난 날의 목표는 완료 여부와 관계없이 계속 남는다 -

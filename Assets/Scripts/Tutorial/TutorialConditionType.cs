@@ -78,5 +78,11 @@ public enum TutorialConditionType
     AnyPopulationAssigned,
 
     // CycleManager.OnNightEnd - 밤을 넘겼다.
+    //
+    // 이 조건의 목표는 "낮에 아직 남은 일"로 세지 않는다 - 밤으로 넘어가는 것이 곧 완료 방법이라,
+    // 밤 버튼을 누를 때마다 "남은 목표가 있다"고 알리면 절대 지울 수 없는 잔소리가 된다.
     NightSurvived,
+
+    // DragonEggInventorySystem.OnEggGranted - 용의 알을 받았다.
+    DragonEggGranted,
 }
