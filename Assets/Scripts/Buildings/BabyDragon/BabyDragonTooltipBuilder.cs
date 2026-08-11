@@ -82,9 +82,17 @@ public static class BabyDragonTooltipBuilder
             StringTable.GetString(BabyDragonLocKeys.STATUS_LABEL),
             StringTable.GetString(BabyDragonLocKeys.StatusLocKey(babyDragon.CanOperate)));
 
+        bool canOperate = babyDragon.CanOperate;
+
         bool hasEffect = babyDragon.Mode == BabyDragonMode.Buff
-            ? AppendBuffEffects(data, effectiveMultiplier, buffTargets, catalog, babyDragon.CanOperate)
-            : AppendAttackEffects(data, babyDragon.GetComponent<TowerAttack>());
+            ? AppendBuffEffects(data, effectiveMultiplier, buffTargets, catalog, canOperate)
+            : AppendAttackEffects(data, babyDragon.GetComponent<TowerAttack>(), canOperate);
+
+        // 효과가 있는 경우에만 붙인다 - 원래 아무 효과도 없는 모드에는 "멈췄다"고 할 것이 없다.
+        if (hasEffect)
+        {
+            AppendStoppedReason(canOperate);
+        }
 
         // 지금 모드에서 아무 효과도 없다면 그 사실 자체가 알려야 할 정보다 - 빈칸으로 두면
         // 툴팁이 덜 만들어진 것처럼 보인다(모드를 반대로 골라 둔 경우가 여기에 걸린다).
@@ -99,7 +107,10 @@ public static class BabyDragonTooltipBuilder
     // 사거리·간격은 데이터 원본이 아니라 실제 판정에 쓰이는 값을 보여준다 - 연구·오라·지형이
     // 곱해지므로 원본을 그대로 쓰면 버프 배율에서 고친 "표시값 ≠ 적용값"이 여기 남는다.
     // 공격 컴포넌트가 없으면(아직 Setup 전) 원본으로 물러난다.
-    private static bool AppendAttackEffects(BabyDragonData data, TowerAttack attack)
+    //
+    // 굶주리면 공격도 멈춘다(TowerAttack.CanAttackWithCurrentStaffing이 CanOperate를 본다) -
+    // 버프 모드와 같은 방식으로 줄마다 회색 처리해 "지금 적용되지 않는 값"임을 드러낸다.
+    private static bool AppendAttackEffects(BabyDragonData data, TowerAttack attack, bool canOperate)
     {
         if (!data.CanAttack)
         {
@@ -108,28 +119,39 @@ public static class BabyDragonTooltipBuilder
 
         AttackSO attackData = data.Attack;
 
-        AppendRow(
-            StringTable.GetString(RANGE_LABEL_LOC_KEY),
-            string.Format(DISTANCE_FORMAT, attack != null ? attack.EffectiveRange : attackData.Range));
+        AppendStoppableRow(
+            RANGE_LABEL_LOC_KEY,
+            string.Format(DISTANCE_FORMAT, attack != null ? attack.EffectiveRange : attackData.Range),
+            canOperate);
 
-        AppendRow(
-            StringTable.GetString(INTERVAL_LABEL_LOC_KEY),
+        AppendStoppableRow(
+            INTERVAL_LABEL_LOC_KEY,
             string.Format(
                 StringTable.GetString(INTERVAL_VALUE_LOC_KEY),
-                attack != null ? attack.EffectiveAttackInterval : attackData.Interval));
+                attack != null ? attack.EffectiveAttackInterval : attackData.Interval),
+            canOperate);
 
         if (attackData.HasArea)
         {
-            AppendRow(
-                StringTable.GetString(AREA_LABEL_LOC_KEY),
-                string.Format(StringTable.GetString(RADIUS_VALUE_LOC_KEY), attackData.AreaRadius));
+            AppendStoppableRow(
+                AREA_LABEL_LOC_KEY,
+                string.Format(StringTable.GetString(RADIUS_VALUE_LOC_KEY), attackData.AreaRadius),
+                canOperate);
         }
 
-        AppendRow(
-            StringTable.GetString(TARGET_LABEL_LOC_KEY),
-            StringTable.GetString(TargetLocKey(data.TargetMovementFilter)));
+        AppendStoppableRow(
+            TARGET_LABEL_LOC_KEY,
+            StringTable.GetString(TargetLocKey(data.TargetMovementFilter)),
+            canOperate);
 
         return true;
+    }
+
+    // 멈춘 값은 회색으로만 죽인다. 사유는 블록 끝에 한 줄로 따로 붙인다(AppendStoppedReason) -
+    // 줄마다 같은 문장을 반복하면 정작 값이 읽히지 않는다.
+    private static void AppendStoppableRow(string labelLocKey, string value, bool canOperate)
+    {
+        AppendRow(StringTable.GetString(labelLocKey), MarkStopped(value, canOperate));
     }
 
     private static bool AppendBuffEffects(
@@ -151,8 +173,8 @@ public static class BabyDragonTooltipBuilder
         return hasEffect;
     }
 
-    // 굶주려 멈춘 효과는 회색으로 죽이고 사유를 덧붙인다 - 줄을 아예 지우면 "원래 없는 효과"와
-    // 구분되지 않고, 그대로 두면 지금 걸려 있는 것처럼 읽힌다.
+    // 굶주려 멈춘 값은 회색으로 죽인다 - 줄을 아예 지우면 "원래 없는 효과"와 구분되지 않고,
+    // 그대로 두면 지금 걸려 있는 것처럼 읽힌다. 사유는 AppendStoppedReason이 블록 끝에 한 번만 붙인다.
     private static string MarkStopped(string line, bool canOperate)
     {
         if (canOperate)
@@ -160,10 +182,21 @@ public static class BabyDragonTooltipBuilder
             return line;
         }
 
-        return string.Format(
+        return string.Format(StringTable.GetString(STOPPED_EFFECT_FORMAT_LOC_KEY), line);
+    }
+
+    // 멈춘 이유를 블록 끝에 한 줄로 알린다. 상태 행의 "굶주림"만으로는 그것이 지금 이 수치들을
+    // 무효로 만든다는 것까지 읽히지 않는다.
+    private static void AppendStoppedReason(bool canOperate)
+    {
+        if (canOperate)
+        {
+            return;
+        }
+
+        AppendLine(string.Format(
             StringTable.GetString(STOPPED_EFFECT_FORMAT_LOC_KEY),
-            line,
-            StringTable.GetString(STOPPED_LOC_KEY));
+            StringTable.GetString(STOPPED_LOC_KEY)));
     }
 
     // 무엇에 걸리도록 만들어진 버프인지(적용 대상)와 지금 실제로 걸려 있는 곳(적용 중)을 나눠 보여준다 -
@@ -180,21 +213,29 @@ public static class BabyDragonTooltipBuilder
             return false;
         }
 
-        AppendRow(
-            StringTable.GetString(MULTIPLIER_LABEL_LOC_KEY),
-            string.Format(MULTIPLIER_FORMAT, effectiveMultiplier));
+        AppendStoppableRow(
+            MULTIPLIER_LABEL_LOC_KEY,
+            string.Format(MULTIPLIER_FORMAT, effectiveMultiplier),
+            canOperate);
 
-        AppendRow(
-            StringTable.GetString(TARGETS_LABEL_LOC_KEY),
-            JoinResourceNames(data.BuffTargetResources, catalog));
+        AppendStoppableRow(
+            TARGETS_LABEL_LOC_KEY,
+            JoinResourceNames(data.BuffTargetResources, catalog),
+            canOperate);
+
+        // 굶주리면 BabyDragonBuffSystem이 대상을 아예 모으지 않는다 - 범위 안에 시설이 있어도
+        // 빈 목록이 오므로, "대상이 없다"고 쓰면 거짓말이 된다. 사유는 블록 끝에서 한 번 알리므로
+        // 여기서는 아예 이 행을 내지 않는다(모르는 것을 아는 척하지 않는다).
+        if (!canOperate)
+        {
+            return true;
+        }
 
         if (buffTargets == null || buffTargets.Count == 0)
         {
-            // 굶주리면 BabyDragonBuffSystem이 대상을 아예 모으지 않는다 - 범위 안에 시설이 있어도
-            // 빈 목록이 오므로, 그대로 "대상이 없다"고 쓰면 거짓말이 된다.
             AppendRow(
                 StringTable.GetString(AFFECTED_LABEL_LOC_KEY),
-                StringTable.GetString(canOperate ? NO_TARGET_LOC_KEY : STOPPED_LOC_KEY));
+                StringTable.GetString(NO_TARGET_LOC_KEY));
 
             return true;
         }
