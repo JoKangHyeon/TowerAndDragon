@@ -52,9 +52,11 @@ public class UI_BuildingTooltipDriver : MonoBehaviour
 
     private bool IsShowing => _isShowing;
 
+    // 호버 상태까지 함께 지운다 - Hide만 부르면 커서를 건물에 올려 둔 채 비활성→재활성했을 때
+    // 지연을 이미 채운 것으로 보고 툴팁이 즉시 뜬다.
     private void OnDisable()
     {
-        Hide();
+        ClearHover();
     }
 
     private void Update()

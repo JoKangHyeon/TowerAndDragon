@@ -83,10 +83,18 @@ public static class BabyDragonTooltipBuilder
             StringTable.GetString(BabyDragonLocKeys.StatusLocKey(babyDragon.CanOperate)));
 
         bool canOperate = babyDragon.CanOperate;
+        bool hasEffect;
 
-        bool hasEffect = babyDragon.Mode == BabyDragonMode.Buff
-            ? AppendBuffEffects(data, effectiveMultiplier, buffTargets, catalog, canOperate)
-            : AppendAttackEffects(data, babyDragon.GetComponent<TowerAttack>(), canOperate);
+        if (babyDragon.Mode == BabyDragonMode.Buff)
+        {
+            hasEffect = AppendBuffEffects(data, effectiveMultiplier, buffTargets, catalog, canOperate);
+        }
+        else
+        {
+            // Tower가 [RequireComponent]로 보장하지만, 프리팹 구성이 어긋나면 조용히 빈 툴팁이 된다.
+            hasEffect = WiringGuard.RequireComponent(babyDragon, out TowerAttack attack) &&
+                        AppendAttackEffects(data, attack, canOperate);
+        }
 
         // 효과가 있는 경우에만 붙인다 - 원래 아무 효과도 없는 모드에는 "멈췄다"고 할 것이 없다.
         if (hasEffect)
@@ -106,7 +114,9 @@ public static class BabyDragonTooltipBuilder
 
     // 사거리·간격은 데이터 원본이 아니라 실제 판정에 쓰이는 값을 보여준다 - 연구·오라·지형이
     // 곱해지므로 원본을 그대로 쓰면 버프 배율에서 고친 "표시값 ≠ 적용값"이 여기 남는다.
-    // 공격 컴포넌트가 없으면(아직 Setup 전) 원본으로 물러난다.
+    //
+    // Tower가 [RequireComponent(typeof(TowerAttack))]이라 컴포넌트는 늘 붙어 있다 - 막아야 하는 것은
+    // 부재가 아니라 아직 Setup 전이라 실효값이 성립하지 않는 상태이고, 그 판정은 TowerAttack이 한다.
     //
     // 굶주리면 공격도 멈춘다(TowerAttack.CanAttackWithCurrentStaffing이 CanOperate를 본다) -
     // 버프 모드와 같은 방식으로 줄마다 회색 처리해 "지금 적용되지 않는 값"임을 드러낸다.
@@ -121,15 +131,18 @@ public static class BabyDragonTooltipBuilder
 
         AppendStoppableRow(
             RANGE_LABEL_LOC_KEY,
-            string.Format(DISTANCE_FORMAT, attack != null ? attack.EffectiveRange : attackData.Range),
+            string.Format(DISTANCE_FORMAT, attack.EffectiveRange),
             canOperate);
 
-        AppendStoppableRow(
-            INTERVAL_LABEL_LOC_KEY,
-            string.Format(
-                StringTable.GetString(INTERVAL_VALUE_LOC_KEY),
-                attack != null ? attack.EffectiveAttackInterval : attackData.Interval),
-            canOperate);
+        // 실효 간격이 성립하지 않으면(Setup 전, 인구 미할당) 이 줄은 내지 않는다 - 원본으로 물러나면
+        // 다른 줄은 실효값인데 이 줄만 원본이라 섞이고, 무한대를 그대로 쓰면 "∞초"가 찍힌다.
+        if (attack.TryGetEffectiveAttackInterval(out float interval))
+        {
+            AppendStoppableRow(
+                INTERVAL_LABEL_LOC_KEY,
+                string.Format(StringTable.GetString(INTERVAL_VALUE_LOC_KEY), interval),
+                canOperate);
+        }
 
         if (attackData.HasArea)
         {
