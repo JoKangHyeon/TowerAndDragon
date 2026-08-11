@@ -67,12 +67,28 @@ public class BuildingPlacementController : MonoBehaviour
     // 롱프레스가 이 누름을 이동 모드 진입으로 이미 소비했다. 뗄 때 확정을 한 번 더 하지 않도록 막는다.
     private bool _longPressConsumedPress;
 
+    private readonly List<IBuildModeInteractionQuery> _interactionQueries = new();
+
     // 클릭으로 선택이 확정될 때마다 발화한다(선택 해제면 null). 같은 건물을 다시 눌러도 발화하므로
     // SelectedBuilding 폴링과 달리 "재클릭"을 놓치지 않는다.
     // 필드 초기화 시점에 생성하므로 구독자의 Awake/OnEnable 순서와 무관하게 안전하다.
     public UnityEvent<Building> BuildingSelected = new();
 
     public bool IsMoving => _moveSourceCoord.HasValue;
+
+    // 지금 마우스를 따라다니는 배치 대기 프리팹. 그리드 위에서 고른 기존 건물(SelectedBuilding)과는 다른 것이다.
+    public Building BuildingToPlace => _selectedBuilding;
+
+    // 배치 대기 프리팹이 바뀔 때 알린다 - 선택·취소·배치 완료가 모두 SetBuildingToPlace 한 곳을 지난다.
+    // 안내 오버레이가 "무엇을 지을지 고르기 전"과 "타일을 찍기 전"을 구분하는 데 쓴다.
+    public UnityEvent<Building> BuildingToPlaceChanged = new();
+
+    // 그리드에 이미 있는 건물을 클릭해 고른 대상이 바뀔 때 알린다(고른 게 없어지면 null).
+    // 인구 패널은 열림/닫힘 훅이 없어서, 안내가 "건물을 클릭했다"를 잡을 유일한 창구다.
+    public UnityEvent<Building> SelectedBuildingChanged = new();
+
+    // 상태에서 파생시켜 비교하므로 알림이 실제 선택과 어긋날 일이 없다.
+    private Building _notifiedSelection;
 
     // 건설/철거 공통 낮 판정 - CycleManager가 배선되지 않은 씬은 무제한 허용한다
     // (BabyDragonTower.IsMoveable과 같은 fail-open 관례).
@@ -91,6 +107,17 @@ public class BuildingPlacementController : MonoBehaviour
     // 점령 모드 등 다른 모드가 켜져 있을 때 이 컨트롤러의 클릭 처리를 막는다.
     // (컴포넌트를 비활성화하면 공유 입력 액션까지 Disable되므로, 입력만 선택적으로 억제한다.)
     public bool InputSuppressed { get; set; }
+
+    public void AddInteractionQuery(IBuildModeInteractionQuery query)
+    {
+        if (query != null && !_interactionQueries.Contains(query))
+        {
+            _interactionQueries.Add(query);
+        }
+    }
+
+    public void RemoveInteractionQuery(IBuildModeInteractionQuery query) =>
+        _interactionQueries.Remove(query);
 
     public Building SelectedBuilding
     {
@@ -176,7 +203,7 @@ public class BuildingPlacementController : MonoBehaviour
     // 슬롯을 골라 배치 미리보기 중일 때 우클릭하면 배치를 취소한다(선택 해제 + 미리보기 종료).
     private void HandleBuildCancelInput()
     {
-        if (_selectedBuilding == null)
+        if (_selectedBuilding == null || !CanCancelPlacement())
             return;
 
         if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
@@ -187,7 +214,9 @@ public class BuildingPlacementController : MonoBehaviour
     // 회전이 적용되지 않는다(제자리 회전은 지원하지 않음, 회전하려면 이동 모드로 들어가야 함).
     private void HandleRotateInput()
     {
-        if (_rotateAction == null || !_rotateAction.action.WasPerformedThisFrame())
+        if (_rotateAction == null ||
+            !_rotateAction.action.WasPerformedThisFrame() ||
+            !CanRotatePlacement())
             return;
 
         if (_selectedBuilding != null || _moveSourceCoord.HasValue)
@@ -199,12 +228,17 @@ public class BuildingPlacementController : MonoBehaviour
         if (prefab == null)
             return;
 
-        _selectedBuilding = prefab;
+        bool changed = TryChangeBuildingToPlace(prefab);
         Deselect();
         CancelMove();
         _mouseSelectController.BeginPlacementPreview(prefab);
         _mouseSelectController.SetPlacementActive(true);
         Debug.Log($"[BuildingPlacementController] 선택된 건물: {prefab.name}");
+
+        if (changed)
+        {
+            BuildingToPlaceChanged.Invoke(prefab);
+        }
     }
 
     // BabyDragonTower처럼 프리팹 자체엔 스프라이트가 없고 배치 시점에야 데이터로 정해지는
@@ -214,8 +248,27 @@ public class BuildingPlacementController : MonoBehaviour
 
     public void CancelBuildMode()
     {
-        _selectedBuilding = null;
+        bool changed = TryChangeBuildingToPlace(null);
         _mouseSelectController.SetPlacementActive(false);
+
+        if (changed)
+        {
+            BuildingToPlaceChanged.Invoke(null);
+        }
+    }
+
+    // 값만 바꾸고 알리지 않는다 - 알림은 미리보기 세팅이 끝난 뒤 호출부가 보낸다.
+    // 구독자가 절반만 준비된 상태를 보면 안 되기 때문이다.
+    // CancelBuildMode는 이미 아무것도 고르지 않은 상태에서도 여러 경로에서 불리므로 바뀐 경우만 true를 준다.
+    private bool TryChangeBuildingToPlace(Building prefab)
+    {
+        if (_selectedBuilding == prefab)
+        {
+            return false;
+        }
+
+        _selectedBuilding = prefab;
+        return true;
     }
 
     public void RemoveSelectedBuilding()
@@ -241,6 +294,8 @@ public class BuildingPlacementController : MonoBehaviour
         _mouseSelectController.ClearHighlights();
         _rangeIndicator?.Hide();
         _buffRangeIndicator?.Hide();
+
+        NotifySelectedBuildingChanged();
     }
 
     // 건설 비용을 환급한다 - 낮밤 사이클이 한 번도 돌지 않은 당일 건설/철거는 전액, 그 외엔 DEMOLISH_REFUND_RATIO_LATE만큼.
@@ -281,6 +336,7 @@ public class BuildingPlacementController : MonoBehaviour
         CancelBuildMode();
         _moveSourceCoord = _selectedExistingBuildingCoord;
         _selectedExistingBuildingCoord = null;
+        NotifySelectedBuildingChanged();
 
         _mouseSelectController.BeginRepositionPreview(building);
         _mouseSelectController.SetPlacementActive(true);
@@ -302,6 +358,14 @@ public class BuildingPlacementController : MonoBehaviour
 
     public void Deselect()
     {
+        ClearSelectionWithoutNotify();
+        NotifySelectedBuildingChanged();
+    }
+
+    // 알림 없이 선택만 걷는다. 곧바로 다른 건물을 고르는 경로(SelectExistingBuildingAt)가
+    // 중간 상태까지 알리면, 선택 해제를 기다리던 쪽이 건물을 바꿔 클릭한 것만으로 넘어가버린다.
+    private void ClearSelectionWithoutNotify()
+    {
         if (_selectedExistingBuildingCoord.HasValue)
         {
             Building previous = _gridMap.GetBuildingAt(_selectedExistingBuildingCoord.Value);
@@ -315,10 +379,29 @@ public class BuildingPlacementController : MonoBehaviour
         _buffRangeIndicator?.Hide();
     }
 
+    // 값을 따로 들고 다니지 않고 매번 현재 상태에서 계산한다 - 선택이 풀리는 경로가 여러 개라
+    // 각자 알림을 맞춰 넣으면 어긋난다. 실제로 바뀐 경우만 알린다.
+    private void NotifySelectedBuildingChanged()
+    {
+        Building current = _selectedExistingBuildingCoord.HasValue
+            ? _gridMap.GetBuildingAt(_selectedExistingBuildingCoord.Value)
+            : null;
+
+        if (ReferenceEquals(current, _notifiedSelection))
+        {
+            return;
+        }
+
+        _notifiedSelection = current;
+        SelectedBuildingChanged.Invoke(current);
+    }
+
     // _cancelMoveAction(우클릭)으로 새 건물 배치 미리보기, 기존 건물 이동 미리보기, 기존 건물 선택 하이라이트를 모두 취소한다.
     private void HandleCancelInput()
     {
-        if (_cancelMoveAction == null || !_cancelMoveAction.action.WasPerformedThisFrame())
+        if (_cancelMoveAction == null ||
+            !_cancelMoveAction.action.WasPerformedThisFrame() ||
+            !CanCancelPlacement())
             return;
 
         if (_selectedBuilding != null)
@@ -335,6 +418,12 @@ public class BuildingPlacementController : MonoBehaviour
     {
         if (_placeAction == null)
             return;
+
+        if (!CanUseLongPressMove())
+        {
+            _holdCoord = null;
+            return;
+        }
 
         // 새 누름이 시작되면 직전 누름의 소비 표시를 지운다. 아래 조기 반환보다 앞이어야
         // 배치 미리보기 중에 시작된 누름도 정상적으로 초기화된다.
@@ -436,6 +525,45 @@ public class BuildingPlacementController : MonoBehaviour
 
     private static Vector2 PointerScreenPosition() =>
         Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
+
+    private bool CanCancelPlacement()
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanCancelPlacement())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanRotatePlacement()
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanRotatePlacement())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanUseLongPressMove()
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanUseLongPressMove())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     public void ConfirmAtPointer()
     {
@@ -555,7 +683,7 @@ public class BuildingPlacementController : MonoBehaviour
 
         CancelBuildMode();
         CancelMove();
-        Deselect();
+        ClearSelectionWithoutNotify();
 
         if (building != null)
         {
@@ -565,8 +693,11 @@ public class BuildingPlacementController : MonoBehaviour
             ShowRangeIndicatorFor(building);
         }
 
+        // 최종 상태로 한 번만 알린다. A를 고른 뒤 B를 고르면 SelectedBuildingChanged(B) 하나만 나간다.
+        NotifySelectedBuildingChanged();
+
         // 이미 선택된 건물을 다시 눌러도 매번 발화한다. SelectedBuilding은 파생 getter라
-        // 폴링으로는 재클릭을 관측할 수 없다 - 위에서 Deselect() 후 같은 프레임에 다시 선택되므로
+        // 폴링으로는 재클릭을 관측할 수 없다 - 위에서 선택을 걷은 뒤 같은 프레임에 다시 선택되므로
         // 구독자 입장에선 값이 바뀐 적이 없는 것으로 보인다.
         // 선택 해제(building == null)도 알려야 하므로 early return 하지 않는다.
         BuildingSelected.Invoke(building);

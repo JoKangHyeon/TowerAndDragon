@@ -111,17 +111,35 @@ public class MinimapController : MonoBehaviour
         return Mathf.Clamp(desiredPos, mapCenterAxis - availableHalfRange, mapCenterAxis + availableHalfRange);
     }
 
+    /// <summary>
+    /// 안내가 도는 동안 미니맵 조작을 막는 관문. 배선되지 않으면 null로 남아 늘 허용된다.
+    /// </summary>
+    public IHudControlBlockQuery BlockQuery { get; set; }
+
     public void ZoomIn()
     {
+        if (IsBlocked)
+        {
+            return;
+        }
+
         SoundManager.Play(SoundId.UiButtonClick);
         SetZoom(_currentOrthoSize - _zoomStep);
     }
 
     public void ZoomOut()
     {
+        if (IsBlocked)
+        {
+            return;
+        }
+
         SoundManager.Play(SoundId.UiButtonClick);
         SetZoom(_currentOrthoSize + _zoomStep);
     }
+
+    // 막혔으면 클릭음도 내지 않는다 - 소리가 나면 눌린 줄 알고 다시 누르게 된다.
+    private bool IsBlocked => BlockQuery != null && !BlockQuery.CanUseHudControl();
 
     private void SetZoom(float size) => _currentOrthoSize = Mathf.Clamp(size, _minOrthoSize, _maxOrthoSize);
 }

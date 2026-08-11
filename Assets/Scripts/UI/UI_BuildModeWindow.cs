@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -73,6 +74,55 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     private bool _initialized;
 
     private readonly List<UI_BuildingSlot> _spawnedSlots = new();
+    private readonly List<IBuildModeInteractionQuery> _interactionQueries = new();
+
+    public void AddInteractionQuery(IBuildModeInteractionQuery query)
+    {
+        if (query != null && !_interactionQueries.Contains(query))
+        {
+            _interactionQueries.Add(query);
+        }
+    }
+
+    public void RemoveInteractionQuery(IBuildModeInteractionQuery query) =>
+        _interactionQueries.Remove(query);
+
+    // 슬롯은 탭을 고를 때마다 새로 만들어지므로, 슬롯을 가리키려는 안내는 이 이벤트를 듣고 다시 조준해야 한다.
+    // UI_DragonInventoryWindow.OnSlotViewChanged와 같은 용도·같은 이름이다.
+    public UnityEvent OnSlotViewChanged = new();
+
+    // 어느 탭이 골라졌는지 그 탭 버튼으로 알린다 - 인덱스로 넘기면 호출부가 순서를 알아야 하고,
+    // 탭 순서가 바뀌면 조용히 어긋난다. 버튼이면 안내가 가리키던 대상과 그대로 비교할 수 있다.
+    public UnityEvent<RectTransform> OnTabSelected = new();
+
+    /// <summary>
+    /// 현재 탭에 그려진 슬롯 중 이 건물 프리팹에 해당하는 것. 슬롯은 런타임 생성이라
+    /// GuideAnchor로는 가리킬 수 없어서 창이 직접 돌려준다.
+    /// </summary>
+    public bool TryGetSlotRect(Building prefab, out RectTransform slotRect)
+    {
+        slotRect = null;
+
+        if (prefab == null)
+        {
+            return false;
+        }
+
+        // 슬롯에게 직접 물어본다 - Buildings 배열과 인덱스를 맞추는 방식은 끊긴 항목을 건너뛰는 순간
+        // 어긋나고, 어긋났다는 사실이 드러나지 않은 채 엉뚱한 슬롯을 가리킨다.
+        foreach (UI_BuildingSlot slot in _spawnedSlots)
+        {
+            if (slot == null || slot.Prefab != prefab)
+            {
+                continue;
+            }
+
+            slotRect = (RectTransform)slot.transform;
+            return true;
+        }
+
+        return false;
+    }
 
     private void Awake()
     {
@@ -96,6 +146,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         {
             _activeButtons.Remove.onClick.AddListener(() =>
             {
+                if (!CanRemoveSelectedBuilding())
+                {
+                    return;
+                }
+
                 SoundManager.Play(SoundId.UiButtonClick);
 
                 if (_buildingPlacementController != null)
@@ -109,6 +164,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         {
             _activeButtons.Move.onClick.AddListener(() =>
             {
+                if (!CanMoveSelectedBuilding())
+                {
+                    return;
+                }
+
                 SoundManager.Play(SoundId.UiButtonClick);
 
                 if (_buildingPlacementController != null)
@@ -126,6 +186,12 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
                 // 클릭음은 SelectFilter가 아니라 여기서 낸다 - SelectFilter는 초기 탭 지정에도 호출된다.
                 _filterTabs[i].Button.onClick.AddListener(() =>
                 {
+                    RectTransform filterTab = (RectTransform)_filterTabs[index].Button.transform;
+                    if (!CanSelectFilter(filterTab))
+                    {
+                        return;
+                    }
+
                     SoundManager.Play(SoundId.UiButtonClick);
                     SelectFilter(index);
                 });
@@ -210,8 +276,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         if (!_isOpen)
             return;
 
-        if (_closeAction != null && _closeAction.action.WasPerformedThisFrame())
+        if (_closeAction != null && _closeAction.action.WasPerformedThisFrame() &&
+            (_uiManager == null || _uiManager.CanCloseExclusive(this)))
+        {
             CloseBuildPanel();
+        }
     }
 
     // BuildMode 버튼 토글. 열 때는 UIManager를 거쳐 다른 배타 모드(점령 등)를 정리한다.
@@ -220,9 +289,20 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         // 클릭음을 내지 않는다 - 창을 여닫는 제스처는 OpenBuildPanel/CloseBuildPanel의 창음만 낸다.
         EnsureInitialized();
 
+        // 밤에는 건설 모드를 켤 수 없다(창이 아예 열리지 않는다). 닫기는 현재 UI 관문이 허용할 때만 받는다.
+        // 경고 메시지는 띄우지 않는다 - Warning_window에 건설용 메시지 오브젝트가 없다.
+        if (!_isOpen && _cycleManager != null &&
+            _cycleManager.CurrentCycle == CycleManager.CycleState.Night)
+        {
+            return;
+        }
+
         if (_isOpen)
         {
-            CloseBuildPanel();
+            if (_uiManager == null || _uiManager.CanCloseExclusive(this))
+            {
+                CloseBuildPanel();
+            }
         }
         else if (_uiManager != null)
         {
@@ -325,6 +405,9 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         }
 
         RebuildSlots(_filterTabs[index].SlotPrefab, _filterTabs[index].Buildings);
+
+        Button selectedButton = _filterTabs[index].Button;
+        OnTabSelected?.Invoke(selectedButton == null ? null : (RectTransform)selectedButton.transform);
     }
 
     // 컨테이너의 기존 슬롯을 지우고, 주어진 슬롯 프리팹으로 건물 목록만큼 슬롯을 새로 생성한다.
@@ -337,27 +420,94 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         }
         _spawnedSlots.Clear();
 
+        // 슬롯을 지운 것도 조준 대상이 사라진 변화이므로 이 경로에서도 알린다.
         if (slotPrefab == null || _slotContainer == null || buildings == null)
+        {
+            OnSlotViewChanged?.Invoke();
             return;
+        }
 
         bool isPlaceable = _buildingPlacementController == null || _buildingPlacementController.IsDayForBuildActions;
 
         foreach (Building building in buildings)
         {
+            // 참조가 끊긴 항목(프리팹에서 컴포넌트를 다시 만든 경우 등)은 건너뛴다.
+            // 그대로 넘기면 아이콘을 읽다 예외가 나면서 뒤따르는 슬롯까지 통째로 만들어지지 않는다.
+            if (building == null)
+            {
+                Debug.LogError($"[UI_BuildModeWindow] 건물 목록에 끊긴 참조가 있어 슬롯을 건너뜁니다 " +
+                               $"(탭의 {buildings.Length}개 중 하나). 인스펙터에서 다시 지정해야 합니다.", this);
+                continue;
+            }
+
             UI_BuildingSlot slot = Instantiate(slotPrefab, _slotContainer);
             slot.Setup(building, OnSlotSelected);
             slot.SetInteractable(isPlaceable);
             _spawnedSlots.Add(slot);
         }
+
+        OnSlotViewChanged?.Invoke();
     }
 
     // 슬롯 클릭 시 해당 건물을 배치 대상으로 선택 (기존 building buttons에서 옮겨온 기능).
     private void OnSlotSelected(Building prefab)
     {
-        if (_buildingPlacementController != null)
+        if (_buildingPlacementController != null && CanSelectBuilding(prefab))
         {
             _buildingPlacementController.SelectBuilding(prefab);
         }
+    }
+
+    private bool CanSelectFilter(RectTransform filterTab)
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanSelectFilter(filterTab))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanSelectBuilding(Building prefab)
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanSelectBuilding(prefab))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanMoveSelectedBuilding()
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanMoveSelectedBuilding())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanRemoveSelectedBuilding()
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanRemoveSelectedBuilding())
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     bool IExclusiveMode.IsOpen => _isOpen;

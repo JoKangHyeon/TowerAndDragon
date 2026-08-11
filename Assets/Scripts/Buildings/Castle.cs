@@ -122,8 +122,17 @@ public class Castle : Building, IAttackTarget
         }
     }
 
+    // 튜토리얼이 배선한다 - 배선되지 않은 씬에서는 null로 남아 언제나 피해를 받는다(기존 동작 유지).
+    public ICastleDamageBlockQuery DamageBlockQuery { get; set; }
+
     public void TakeDamage(DamageInfo damage)
     {
+        // 아직 무너지면 안 되는 구간(튜토리얼 1~2일차)에서는 치명타만 흘려보낸다.
+        if (DamageBlockQuery != null && !DamageBlockQuery.CanTakeDamage(damage.Amount))
+        {
+            return;
+        }
+
         // 죽음/음수 처리는 Health가 담당하므로 여기서 재검사하지 않는다.
         _health.TakeDamage(damage.Amount);
     }

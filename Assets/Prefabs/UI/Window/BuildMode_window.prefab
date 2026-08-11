@@ -178,6 +178,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6452574338821845503}
   - component: {fileID: 3059653301911559487}
+  - component: {fileID: 1391481302621112989}
   m_Layer: 5
   m_Name: TabMenu_Tower
   m_TagString: Untagged
@@ -250,6 +251,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1391481302621112989
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 959999787255511851}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15b1e215c6c644045a55464cabc7e043, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GuideAnchor
+  _id: 7
 --- !u!1 &974061594315192733
 GameObject:
   m_ObjectHideFlags: 0
@@ -326,7 +340,7 @@ MonoBehaviour:
     - {fileID: 2529574679051624168, guid: 0757c15bc65c21841894cc8708558e44, type: 3}
     - {fileID: 4211619759114365390, guid: 5e00ea73d80027940a0eef61e66fbf14, type: 3}
     - {fileID: 1774243555800913366, guid: e76c64026a56db641bf0ea27093136ce, type: 3}
-    - {fileID: 3556773318352930792, guid: 3f9632178a1093641acbc2ce79176109, type: 3}
+    - {fileID: 327734630829342588, guid: 3f9632178a1093641acbc2ce79176109, type: 3}
     - {fileID: 4751353425643375589, guid: 0cba0fd7f5d677b409b586766beb9181, type: 3}
     - {fileID: 4751353425643375589, guid: 3ab4e920409fbb14c9ee4c0d8bf00202, type: 3}
     - {fileID: 4751353425643375589, guid: 0aac1a24b62270644923f7c35bc28dc7, type: 3}
@@ -340,6 +354,12 @@ MonoBehaviour:
   _openFromOffset: {x: -100, y: 0}
   _closeToOffset: {x: -500, y: 0}
   _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  OnSlotViewChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  OnTabSelected:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1079214682642875549
 GameObject:
   m_ObjectHideFlags: 0
@@ -1319,6 +1339,7 @@ GameObject:
   - component: {fileID: 1216512361376431651}
   - component: {fileID: 2105118971078616091}
   - component: {fileID: 6134664164138374433}
+  - component: {fileID: 1340360343241105472}
   m_Layer: 5
   m_Name: Button_Remove
   m_TagString: Untagged
@@ -1418,6 +1439,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI_ButtonInteractableFade
   _disabledAlpha: 0.4
+--- !u!114 &1340360343241105472
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2572967377337124650}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15b1e215c6c644045a55464cabc7e043, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GuideAnchor
+  _id: 15
 --- !u!1 &2781919321035892319
 GameObject:
   m_ObjectHideFlags: 0
@@ -1614,6 +1648,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5983212902987668544}
   - component: {fileID: 8748256642925894937}
+  - component: {fileID: 4187690189863545739}
   m_Layer: 5
   m_Name: TabMenu_Building
   m_TagString: Untagged
@@ -1686,6 +1721,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &4187690189863545739
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3240207508371076135}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15b1e215c6c644045a55464cabc7e043, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GuideAnchor
+  _id: 8
 --- !u!1 &3266616183651273798
 GameObject:
   m_ObjectHideFlags: 0
@@ -2037,6 +2085,7 @@ GameObject:
   - component: {fileID: 165333391762598438}
   - component: {fileID: 694843831251246026}
   - component: {fileID: 2581816322638150740}
+  - component: {fileID: 5090820422205302781}
   m_Layer: 5
   m_Name: Button_Move
   m_TagString: Untagged
@@ -2136,6 +2185,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI_ButtonInteractableFade
   _disabledAlpha: 0.4
+--- !u!114 &5090820422205302781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4691149680891910560}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15b1e215c6c644045a55464cabc7e043, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GuideAnchor
+  _id: 16
 --- !u!1 &5106940340816624754
 GameObject:
   m_ObjectHideFlags: 0
@@ -2756,6 +2818,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5379451150216615567}
   - component: {fileID: 7185565096097911044}
+  - component: {fileID: 9160293948417165314}
   m_Layer: 5
   m_Name: TabMenu_Factory
   m_TagString: Untagged
@@ -2828,6 +2891,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &9160293948417165314
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6010205928594806664}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15b1e215c6c644045a55464cabc7e043, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GuideAnchor
+  _id: 9
 --- !u!1 &6889026080629185862
 GameObject:
   m_ObjectHideFlags: 0
@@ -3023,8 +3099,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 9203188573246942695}
   m_HandleRect: {fileID: 1025330747571804600}
   m_Direction: 2
-  m_Value: 0.99999964
-  m_Size: 0
+  m_Value: 0
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

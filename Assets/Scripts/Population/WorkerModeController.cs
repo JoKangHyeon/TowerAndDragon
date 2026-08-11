@@ -241,6 +241,9 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
         if (_closeAction == null || !_closeAction.action.WasPerformedThisFrame())
             return;
 
+        if (_uiManager != null && !_uiManager.CanCloseExclusive(this))
+            return;
+
         SetWorkerModeActive(false);
     }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 
 /// <summary>
@@ -38,8 +39,108 @@ public class UIManager : MonoBehaviour
     [Tooltip("단축키 → 배타 모드 열기/닫기 토글 목록. 예: 새끼용 인벤토리(Tab), 건설모드(B), 인구배치(V), 점령(C).")]
     [SerializeField] private ExclusiveModeShortcut[] _exclusiveModeShortcuts;
 
+    // 배타 모드가 열렸을 때 알린다. 버튼·단축키 어느 경로로 열어도 OpenExclusive 하나를 지나므로
+    // 여기 한 곳에 붙이면 창이 늘어나도 자동으로 따라온다(DragonEggInventorySystem.GrantEgg와 같은 패턴).
+    // IExclusiveMode 구현체는 모두 MonoBehaviour라 구독자가 구체 타입으로 판별할 수 있게 그대로 넘긴다.
+    public UnityEvent<MonoBehaviour> ExclusiveModeOpened = new();
+
+    // 배타 모드가 닫혔을 때 알린다. 여는 것과 달리 닫는 데는 단일 통로가 없다 -
+    // ESC는 각 창이 자체 처리하고, 버튼도 창의 토글 메서드를 직접 부르며,
+    // 다른 모드가 열릴 때도 닫힌다. 그래서 호출 지점을 찾아 붙이는 대신 IsOpen 전이를 여기서 관측한다.
+    public UnityEvent<MonoBehaviour> ExclusiveModeClosed = new();
+
+    // 튜토리얼이 등록한다 - 아무도 등록하지 않은 씬에서는 비어 있어 모든 창이 그대로 열린다(기존 동작 유지).
+    //
+    // 슬롯 하나가 아니라 목록인 이유: 챕터 안내와 팁 체인이 동시에 돌 수 있는데, 슬롯 하나를 서로
+    // 덮어쓰면 나중에 온 쪽이 앞의 관문을 지우고 물러날 때 통째로 풀어버린다
+    // (CycleManager._dayEndBlockers를 목록으로 둔 것과 같은 이유다).
+    private readonly List<IExclusiveModeOpenQuery> _openQueries = new();
+
+    /// <summary>하나라도 거절하면 열리지 않는다. 같은 대상을 두 번 넣어도 한 번만 등록된다.</summary>
+    public void AddOpenQuery(IExclusiveModeOpenQuery query)
+    {
+        if (query != null && !_openQueries.Contains(query))
+        {
+            _openQueries.Add(query);
+        }
+    }
+
+    /// <summary>등록을 뗀다. 자기가 넣은 것만 빼므로 남의 관문은 건드리지 않는다.</summary>
+    public void RemoveOpenQuery(IExclusiveModeOpenQuery query)
+    {
+        _openQueries.Remove(query);
+    }
+
+    private bool CanOpenByQueries(MonoBehaviour target)
+    {
+        foreach (IExclusiveModeOpenQuery query in _openQueries)
+        {
+            if (query != null && !query.CanOpen(target))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanUseShortcutByQueries(MonoBehaviour target)
+    {
+        foreach (IExclusiveModeOpenQuery query in _openQueries)
+        {
+            if (query != null && !query.CanUseShortcut(target))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanCloseByQueries(MonoBehaviour target)
+    {
+        foreach (IExclusiveModeOpenQuery query in _openQueries)
+        {
+            if (query != null && !query.CanClose(target))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 지금 열려 있는 배타 모드. 배타이므로 많아야 하나다. 아무것도 안 열려 있으면 null.
+    /// 안내가 "창을 닫으세요" 단계에 들어설 때 이미 닫혀 있는지 확인하는 데 쓴다 -
+    /// 이벤트만 기다리면 안내보다 먼저 닫은 플레이어는 영영 다음으로 넘어가지 못한다.
+    /// </summary>
+    public MonoBehaviour CurrentOpenExclusiveMode
+    {
+        get
+        {
+            if (_exclusiveModes == null)
+            {
+                return null;
+            }
+
+            foreach (IExclusiveMode mode in _exclusiveModes)
+            {
+                if (mode.IsOpen)
+                {
+                    return mode as MonoBehaviour;
+                }
+            }
+
+            return null;
+        }
+    }
+
     private IExclusiveMode[] _exclusiveModes;
     private (InputActionReference action, IExclusiveMode mode)[] _cachedShortcuts;
+
+    // 직전 프레임의 열림 상태. 닫힘 전이를 잡는 데만 쓴다(_exclusiveModes와 같은 인덱스).
+    private bool[] _wasExclusiveModeOpen;
 
     private void Awake()
     {
@@ -63,14 +164,45 @@ public class UIManager : MonoBehaviour
                 continue;
             }
 
+            // 튜토리얼의 버튼 유도를 단축키로 건너뛰지 못하게 한다. 실제 HUD 버튼은
+            // OpenExclusive를 직접 호출하므로 이 관문과 무관하게 현재 안내대로 작동한다.
+            if (!CanUseShortcutByQueries(mode as MonoBehaviour))
+            {
+                continue;
+            }
+
             if (mode.IsOpen)
             {
+                // 안내가 이 창 안을 가리키는 중이면 단축키로 닫지 못하게 막는다.
+                if (!CanCloseExclusive(mode))
+                {
+                    continue;
+                }
+
                 mode.Close();
             }
             else
             {
                 OpenExclusive(mode);
             }
+        }
+
+        DetectClosedExclusiveModes();
+    }
+
+    // 열림→닫힘으로 바뀐 모드를 알린다. 어느 경로로 닫혔든(ESC·버튼·다른 모드 열기) 여기를 지난다.
+    private void DetectClosedExclusiveModes()
+    {
+        for (int i = 0; i < _exclusiveModes.Length; i++)
+        {
+            bool isOpen = _exclusiveModes[i].IsOpen;
+
+            if (_wasExclusiveModeOpen[i] && !isOpen)
+            {
+                ExclusiveModeClosed.Invoke(_exclusiveModes[i] as MonoBehaviour);
+            }
+
+            _wasExclusiveModeOpen[i] = isOpen;
         }
     }
 
@@ -114,6 +246,7 @@ public class UIManager : MonoBehaviour
         if (_exclusiveModeBehaviours == null)
         {
             _exclusiveModes = Array.Empty<IExclusiveMode>();
+            _wasExclusiveModeOpen = Array.Empty<bool>();
             return;
         }
 
@@ -131,12 +264,27 @@ public class UIManager : MonoBehaviour
         }
 
         _exclusiveModes = modes.ToArray();
+        _wasExclusiveModeOpen = new bool[_exclusiveModes.Length];
     }
 
     // target을 제외하고 열려 있는 배타 모드를 모두 닫는다.
     // 진입에 인자가 필요해 Open()으로 표현할 수 없는 모드(스킬 타겟팅 등)가 직접 호출한다.
     public void CloseAllExcept(IExclusiveMode target)
     {
+        // 열리지 않는 것으로 끝난다 - 이미 열린 창을 닫지도 않는다. 안내 중에 아직 설명하지 않은 창이
+        // 열리는 것만 막는 용도라, 거절이 다른 창을 닫는 부작용을 내면 안 된다.
+        if (!CanOpenByQueries(target as MonoBehaviour))
+        {
+            return;
+        }
+
+        // 목록이 아직 만들어지지 않았다(다른 오브젝트의 OnEnable이 Awake보다 먼저 부른 경우).
+        // 그 시점에는 열려 있는 창도 없으므로 닫을 것이 없다 - CurrentOpenExclusiveMode와 같은 가드다.
+        if (_exclusiveModes == null)
+        {
+            return;
+        }
+
         foreach (IExclusiveMode mode in _exclusiveModes)
         {
             if (!ReferenceEquals(mode, target) && mode.IsOpen)
@@ -147,8 +295,33 @@ public class UIManager : MonoBehaviour
     // target을 제외한 나머지 배타 모드가 열려 있으면 닫고, target을 연다.
     public void OpenExclusive(IExclusiveMode target)
     {
+        // 거절당하면 열지 않는다. CloseAllExcept 안에도 같은 판정이 있지만 그것만으로는
+        // "남을 닫지 않는다"까지만 지켜지고 정작 target은 열려버린다 - 여기서 한 번 더 막아야
+        // 안내가 아직 설명하지 않은 창이 실제로 안 열린다.
+        if (!CanOpen(target))
+        {
+            return;
+        }
+
         CloseAllExcept(target);
         target.Open();
+
+        // 열린 뒤에 알린다 - 구독자가 IsOpen을 읽을 수 있어야 한다.
+        ExclusiveModeOpened.Invoke(target as MonoBehaviour);
+    }
+
+    private bool CanOpen(IExclusiveMode target)
+    {
+        return CanOpenByQueries(target as MonoBehaviour);
+    }
+
+    /// <summary>
+    /// ESC처럼 각 모드가 직접 받는 닫기 입력도 UIManager의 튜토리얼 관문을 공유하게 한다.
+    /// 질의가 없는 일반 씬에서는 기존처럼 항상 허용한다.
+    /// </summary>
+    public bool CanCloseExclusive(IExclusiveMode target)
+    {
+        return target == null || CanCloseByQueries(target as MonoBehaviour);
     }
 
     private void OnEnable()

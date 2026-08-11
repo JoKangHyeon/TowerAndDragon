@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 using DG.Tweening;
 
@@ -224,6 +225,11 @@ public class UI_ConquestWindow : MonoBehaviour
         // 클릭음을 내지 않는다 - 점령 모드 진입/해제는 SetConquestModeActive가 창음을 낸다.
         bool nextActive = !_conquestModeController.IsActive;
 
+        if (!nextActive && !CanCloseFromShortcut())
+        {
+            return;
+        }
+
         // 밤에는 점령 모드를 켤 수 없다(창이 아예 열리지 않는다). 끄는 것은 항상 허용.
         if (nextActive && _cycleManager != null && _cycleManager.CurrentCycle == CycleManager.CycleState.Night)
         {
@@ -242,6 +248,24 @@ public class UI_ConquestWindow : MonoBehaviour
             _conquestModeController.SetConquestModeActive(false);
     }
 
+    /// <summary>점령 컨트롤러가 직접 받는 ESC도 튜토리얼 닫기 관문을 거치게 한다.</summary>
+    public bool CanCloseFromShortcut()
+    {
+        return _uiManager == null || _uiManager.CanCloseExclusive(_conquestModeController);
+    }
+
+    /// <summary>
+    /// 점령지를 골라 패널이 열린 시점. 청크 클릭은 어느 경로로든 여기 하나를 지나므로
+    /// 안내가 "땅을 고르세요"를 기다릴 곳도 여기다.
+    /// </summary>
+    public UnityEvent<Vector2Int> ChunkSelected = new();
+
+    /// <summary>
+    /// 지금 고른 점령지가 있는지. 안내가 "땅을 고르세요"를 이벤트가 아니라 상태로도 확인할 수 있어야
+    /// 안내보다 먼저 고른 경우에 그 단계에 갇히지 않는다.
+    /// </summary>
+    public bool HasSelectedChunk => _selectedChunkCoord.HasValue;
+
     // ConquestModeController가 점령 가능한 청크를 클릭했을 때 호출하는 진입점.
     public void OnChunkSelected(Vector2Int chunkCoord)
     {
@@ -249,6 +273,9 @@ public class UI_ConquestWindow : MonoBehaviour
         _conquestModeController.LockChunkSelection(chunkCoord);
         OpenPanel();
         Refresh();
+
+        // 패널이 열린 뒤에 알린다 - 구독자가 패널 안의 앵커를 잡을 수 있어야 한다.
+        ChunkSelected.Invoke(chunkCoord);
     }
 
     // 씬에 미리 세팅해 둔 위치(_homePos)에서 슬라이드 인 시킨다.

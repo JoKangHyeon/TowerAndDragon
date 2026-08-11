@@ -249,6 +249,12 @@ MonoBehaviour:
     Button: {fileID: 6750107281591785852}
     MenuFocus: {fileID: 860761540334034966}
     MenuDefault: {fileID: 6330863509835307247}
+  OnTabDisplayed:
+    m_PersistentCalls:
+      m_Calls: []
+  OnSlotViewChanged:
+    m_PersistentCalls:
+      m_Calls: []
   _slotContainer: {fileID: 3668891204714107812}
   _slotPrefab: {fileID: 2647629034709517647, guid: 6b3a00d38d6900e48a71c96656f7a2bf, type: 3}
   _eggSprite: {fileID: 21300000, guid: b08d8ca1cb8179447b47b536057470c6, type: 3}
@@ -2429,6 +2435,7 @@ GameObject:
   m_Component:
   - component: {fileID: 682642277348764326}
   - component: {fileID: 3902002572293341946}
+  - component: {fileID: 5353972614591265363}
   m_Layer: 5
   m_Name: TabMenu_Egg
   m_TagString: Untagged
@@ -2501,6 +2508,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5353972614591265363
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5261798400714985572}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15b1e215c6c644045a55464cabc7e043, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GuideAnchor
+  _id: 23
 --- !u!1 &5583199674242844043
 GameObject:
   m_ObjectHideFlags: 0
@@ -3425,6 +3445,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6812200960310816943}
   - component: {fileID: 6750107281591785852}
+  - component: {fileID: 111914589522655778}
   m_Layer: 5
   m_Name: TabMenu_BabyDragon
   m_TagString: Untagged
@@ -3497,6 +3518,19 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &111914589522655778
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7817989505583779091}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15b1e215c6c644045a55464cabc7e043, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GuideAnchor
+  _id: 24
 --- !u!1 &8874913661911167434
 GameObject:
   m_ObjectHideFlags: 0

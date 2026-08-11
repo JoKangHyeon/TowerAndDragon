@@ -40,6 +40,13 @@ public class UI_BabyDragonListSlot : MonoBehaviour, IPointerEnterHandler, IPoint
     // (개체, 올라감/벗어남) - 슬롯은 풀에서 재사용되므로 Setup마다 새로 받는다.
     private Action<BabyDragon, bool> _onHoverChanged;
 
+    /// <summary>튜토리얼이 위치 표시/신발 버튼만 정확히 강조할 때 사용한다.</summary>
+    public bool TryGetFocusButtonRect(out RectTransform buttonRect)
+    {
+        buttonRect = _focusButton == null ? null : _focusButton.transform as RectTransform;
+        return buttonRect != null;
+    }
+
     public void Setup(
         BabyDragon dragon,
         BabyDragonData data,

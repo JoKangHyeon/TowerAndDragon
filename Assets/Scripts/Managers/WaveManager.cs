@@ -148,11 +148,15 @@ public class WaveManager : MonoBehaviour
         _waveCancellation?.Cancel();
     }
 
+    /// <summary>[테스트 전용] F 키 등으로 진행 중인 웨이브를 즉시 끝낸다.</summary>
+    public void DebugForceCompleteWave() => ForceCompleteWave();
+
     /// <summary>
-    /// 테스트를 위해 진행 중인 웨이브를 즉시 완료한다.
-    /// 남은 스폰을 취소하고 이미 생성된 몬스터를 사망 처리한 뒤 기존 완료 이벤트를 발행한다.
+    /// 진행 중인 웨이브를 즉시 완료한다. 남은 스폰을 취소하고 이미 생성된 몬스터를 사망 처리한 뒤
+    /// 기존 완료 이벤트를 발행한다 - 밤을 끝내는 경로가 그 이벤트뿐이므로, 몬스터를 잡을 수단이
+    /// 없어 밤이 끝나지 않는 상황(튜토리얼 구제 등)을 푸는 데도 쓴다.
     /// </summary>
-    public void DebugForceCompleteWave()
+    public void ForceCompleteWave()
     {
         if (!IsRunning || _isDebugCompletionRequested)
         {

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -59,6 +60,18 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
     [SerializeField]
     private float _dragThreshold = 10f;
 
+    /// <summary>
+    /// 아직 갈 수 없는 땅(붉은 영역)을 눌렀는데 아래 질의가 패널 열기를 막았다.
+    /// 막은 쪽이 왜 안 되는지 알려 주라고 보내는 신호다 - 막지 않는 씬에서는 발행되지 않는다.
+    /// </summary>
+    [SerializeField]
+    private UnityEvent _unreachableChunkBlocked = new();
+
+    public UnityEvent UnreachableChunkBlocked => _unreachableChunkBlocked;
+
+    // 튜토리얼이 배선한다 - 배선되지 않은 씬에서는 null로 남아 패널이 그대로 열린다(기존 동작 유지).
+    public IUnreachableChunkSelectQuery UnreachableSelectQuery { get; set; }
+
     public bool IsActive { get; private set; }
 
     private Vector2Int? _selectedChunkCoord;
@@ -103,6 +116,9 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
     private void HandleCloseInput()
     {
         if (_closeAction == null || !_closeAction.action.WasPerformedThisFrame())
+            return;
+
+        if (_conquestUI != null && !_conquestUI.CanCloseFromShortcut())
             return;
 
         if (_isSelectionLocked)
@@ -423,6 +439,16 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
         // (짜투리 청크 자체는 코스트 테이블에 없어 패널에 띄울 비용/보상 데이터가 없다).
         if (TryResolveConquestTarget(chunk, out Vector2Int targetChunkCoord))
         {
+            // 아직 갈 수 없는 땅에서 패널을 열지 말라는 씬(튜토리얼)에서는 이유만 알리고 만다.
+            // 질의가 없으면 기존대로 열어 준다.
+            if (UnreachableSelectQuery != null &&
+                !UnreachableSelectQuery.CanSelectUnreachableChunk() &&
+                _unreachableChunkBuffer.Contains(targetChunkCoord))
+            {
+                _unreachableChunkBlocked.Invoke();
+                return;
+            }
+
             _conquestUI.OnChunkSelected(targetChunkCoord);
             return;
         }

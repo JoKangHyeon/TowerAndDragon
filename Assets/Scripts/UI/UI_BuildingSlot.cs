@@ -42,6 +42,9 @@ public class UI_BuildingSlot : MonoBehaviour
     private Action<Building> _onSelected;
     private Button _button;
 
+    /// <summary>이 슬롯이 나타내는 건물. 목록에서 특정 슬롯을 되찾을 때 쓴다.</summary>
+    public Building Prefab => _prefab;
+
     // 슬롯 생성 직후 스포너가 호출: 이 슬롯이 나타내는 건물과 클릭 콜백을 주입한다.
     public void Setup(Building prefab, Action<Building> onSelected)
     {

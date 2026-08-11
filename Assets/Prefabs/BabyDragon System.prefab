@@ -1,0 +1,188 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2852514381633709213
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7569033780861789602}
+  - component: {fileID: 2262977044595471964}
+  - component: {fileID: 6966615182339442138}
+  - component: {fileID: 6649543973287148481}
+  - component: {fileID: 6755297435032812545}
+  - component: {fileID: 4355047978714225132}
+  - component: {fileID: 2814068480602122315}
+  - component: {fileID: 2471524138613045127}
+  - component: {fileID: 3797004316217767523}
+  m_Layer: 0
+  m_Name: BabyDragon System
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7569033780861789602
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2262977044595471964
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cadeb6a27149a9428db02c01f9a95ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonPlacementCoordinator
+  _gridMap: {fileID: 0}
+  _gameManager: {fileID: 0}
+  _placementController: {fileID: 0}
+  _dataCatalog: {fileID: 11400000, guid: 3493e5ed7926f4147ae5f74da9cbd871, type: 2}
+  _babyDragonPrefab: {fileID: 4927136400261429017, guid: 2be7e17dbe60e1148b75df5e1adf3f16, type: 3}
+--- !u!114 &6966615182339442138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a78922a122121f4092af39a62e7bdb9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonFeedingSystem
+  _gridMap: {fileID: 0}
+  _cycleManager: {fileID: 0}
+  _resourceManager: {fileID: 0}
+--- !u!114 &6649543973287148481
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fb3e39e6851e694d9ae033222311c17, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DragonEggInventorySystem
+  _gameManager: {fileID: 0}
+  _cycleManager: {fileID: 0}
+  _dataCatalog: {fileID: 11400000, guid: 3493e5ed7926f4147ae5f74da9cbd871, type: 2}
+  _grantStartingEgg: 0
+  _startingEggType: 4
+  OnEggGranted:
+    m_PersistentCalls:
+      m_Calls: []
+  OnEggHatched:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &6755297435032812545
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b94db57dfe4387f459efa7d69a10d98b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonBuffSystem
+  _gridMap: {fileID: 0}
+  _cycleManager: {fileID: 0}
+  _dragonTreeManager: {fileID: 0}
+  _terrainPenaltyScaleComposite: {fileID: 0}
+  _terrainPenaltySystem: {fileID: 0}
+  BuffsRecomputed:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &4355047978714225132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e752e8b8a404864e9e713bdb93f1cde, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CycleBossDragonEggRewardSystem
+  _gameManager: {fileID: 0}
+  _cycleProgression: {fileID: 0}
+  _eggInventorySystem: {fileID: 6649543973287148481}
+  _rewardPool: {fileID: 11400000, guid: ae4ba2cbfbd78e843a6ab233d5228842, type: 2}
+--- !u!114 &2814068480602122315
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e4a0d98b7cdb494f8becb40efdea2d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonEggNotifier
+  _eggInventorySystem: {fileID: 6649543973287148481}
+  _toast: {fileID: 0}
+--- !u!114 &2471524138613045127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b88a52867b5e246348b5ed2c7141b95b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonInventoryBadge
+  _eggInventorySystem: {fileID: 6649543973287148481}
+  _inventoryWindow: {fileID: 0}
+  _badgeDot: {fileID: 0}
+  _eggTabBadgeDot: {fileID: 0}
+  _dragonTabBadgeDot: {fileID: 0}
+--- !u!114 &3797004316217767523
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6cd896ac8edb984fa5caa238e64269d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonGuideController
+  _gameManager: {fileID: 0}
+  _eggInventorySystem: {fileID: 6649543973287148481}
+  _inventoryWindow: {fileID: 0}
+  _gridMap: {fileID: 0}
+  _placementController: {fileID: 0}
+  _overlay: {fileID: 0}
+  _toast: {fileID: 0}
+  _inventoryButton: {fileID: 0}
+  _inventoryToggleAction: {fileID: 1961000633486905275, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _guideStartDelay: 0
+  StepEntered:
+    m_PersistentCalls:
+      m_Calls: []
