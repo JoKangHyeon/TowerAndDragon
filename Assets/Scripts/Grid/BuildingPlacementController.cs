@@ -669,7 +669,7 @@ public class BuildingPlacementController : MonoBehaviour
             if (_gridMap.IsBlockedByTerrain(coord) &&
                 _gridMap.GetTerrainType(coord) == _iceUnlockableTerrain)
             {
-                _warningWindow.ShowVolcanoConstructionWarning();
+                _warningWindow.Show(UI_WarningWindow.MessageId.VolcanoConstruction);
                 return;
             }
         }

@@ -74,6 +74,9 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     private bool _workerModeNudgeShown;
     private bool _workerModeNudgeCheckScheduled;
 
+    // 속성 변경 알림이 실제 변경인지 새날·복원 갱신인지 가르는 기준값.
+    private DragonType? _lastSeenAttribute;
+
     private RunData CurrentRun => _gameManager == null ? null : _gameManager.CurrentRun;
 
     private int CurrentDayNumber => _cycleManager == null ? FIRST_DAY_NUMBER : _cycleManager.CurrentDayNumber;
@@ -168,6 +171,10 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleAttributeChanged);
+
+            // 구독 직후 현재 값을 한 번 반영해 둔다 - 이 값이 없으면 구독 후 첫 발화가
+            // 새날 갱신인지 실제 변경인지 가릴 수 없다.
+            _lastSeenAttribute = _dragonTreeManager.ActiveAttribute;
         }
 
         if (_tipChainController != null)
@@ -413,12 +420,15 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         TryCompleteMatching(TutorialConditionType.DragonEggGranted, null);
 
     // 어느 속성으로 바꿨는지는 묻지 않는다 - 목표는 "바꿔본다"이지 특정 속성이 아니다.
-    private void HandleAttributeChanged(DragonType _)
+    private void HandleAttributeChanged(DragonType attribute)
     {
-        // DragonTreeManager의 같은 신호는 새날 HUD 갱신과 저장 복원에도 쓰인다. 실제 변경에 성공한 경우에는
-        // Dragon.TryChangeType이 그날의 변경권을 먼저 소비하므로, 그 상태일 때만 목표 행동으로 인정한다.
-        Dragon dragon = CurrentRun?.CurrentDragon;
-        if (dragon == null || !dragon.IsChangedThisDay)
+        // DragonTreeManager의 같은 신호는 새날 HUD 갱신과 저장 복원에도 쓰인다. 그쪽은 현재 속성을
+        // 그대로 다시 실어 보내므로, 직전에 본 속성과 달라졌을 때만 실제 변경으로 인정한다.
+        // (호출부는 Dragon.TryChangeType이 true를 돌려준 경우에만 변경 알림을 발화한다.)
+        bool isActualChange = _lastSeenAttribute.HasValue && _lastSeenAttribute.Value != attribute;
+        _lastSeenAttribute = attribute;
+
+        if (!isActualChange)
         {
             return;
         }

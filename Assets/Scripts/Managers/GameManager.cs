@@ -81,10 +81,6 @@ public class GameManager : MonoBehaviour
     {
         _cycleManager.Construct(this);
 
-        // Dragon.Construct가 어디서도 호출되지 않아 OnDayStart→ResetChangedThisDay 구독이 성립하지 않았다.
-        // 그 결과 속성 변경 제한이 "하루 1회"가 아니라 "런 1회"로 동작했다.
-        _currentRun?.CurrentDragon?.Construct(_cycleManager);
-
         if (_skillManager != null)
         {
             _skillManager.Construct(_cycleManager);
