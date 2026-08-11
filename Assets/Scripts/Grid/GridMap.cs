@@ -400,7 +400,8 @@ public class GridMap : MonoBehaviour
         new Vector3Int(chunkCoord.x * Chunk.CHUNK_SIZE, chunkCoord.y * Chunk.CHUNK_SIZE, 0);
 
     // 지형상 건설 불가 셀이라도 해제 조회원이 허용하면 건설 가능으로 취급한다
-    private bool IsCellConstructible(GridCell cell) =>
+    private bool IsCellConstructible(GridCell cell, Building building = null) =>
+        building is BabyDragonTower ||
         cell.CanConstruct ||
         (ConstructionOverrideQuery != null &&
         ConstructionOverrideQuery.IsConstructionAllowed(cell.Coord, cell.TerrainType));
@@ -413,7 +414,7 @@ public class GridMap : MonoBehaviour
         IsChunkConquered (coord);
 
     public bool CanConstructBuilding(Vector3Int coord, Building ignoreBuilding) =>
-        _cells.TryGetValue(coord, out var cell) && IsCellConstructible(cell) &&
+        _cells.TryGetValue(coord, out var cell) && IsCellConstructible(cell, ignoreBuilding) &&
         (cell.ExistTypeOnCell == ExistTypeOnCell.None || cell.OccupantBuilding == ignoreBuilding) &&
         IsChunkConquered(coord);
 
@@ -876,11 +877,38 @@ public class GridMap : MonoBehaviour
 
     // 호출자가 이미 footprint 좌표를 계산해 둔 경우, 재계산 없이 그 결과를 그대로 검사한다.
     public bool CanConstructBuildingFootprint(List<Vector3Int> footprint, Building building, Building ignoreBuilding) =>
-        building is Factory factory
+        building is BabyDragonTower
+            ? CanConstructBabyDragonFootprint(footprint, ignoreBuilding)
+            : building is Factory factory
             ? CanConstructResourceFootprint(footprint, factory.RequiredResourceNode, ignoreBuilding)
             : building is SealStone
                 ? CanConstructSealStoneFootprint(footprint, ignoreBuilding)
                 : CanConstructFootPrint(footprint, ignoreBuilding);
+
+    // 새끼용은 비행 개체이므로 지형의 일반 건설 가능 여부를 무시한다.
+    // 다만 맵 밖 좌표, 다른 건물 점유, 미점령 청크는 그대로 제한해 배치 규칙의 안전장치는 유지한다.
+    private bool CanConstructBabyDragonFootprint(List<Vector3Int> footprint, Building ignoreBuilding)
+    {
+        if (MonsterPathQuery == null)
+            return false;
+
+        foreach (Vector3Int coord in footprint)
+        {
+            if (!_cells.TryGetValue(coord, out GridCell cell))
+                return false;
+
+            if (cell.ExistTypeOnCell != ExistTypeOnCell.None && cell.OccupantBuilding != ignoreBuilding)
+                return false;
+
+            if (!IsChunkConquered(coord))
+                return false;
+
+            if (MonsterPathQuery.IsOnMonsterPath(coord))
+                return false;
+        }
+
+        return true;
+    }
 
     // 봉인석 전용 배치 판정 - CanConstructResourceFootprint와 동일한 구조(기본 풋프린트 게이트 위에
     // 건물별 추가 조건을 얹는다). 포탈 봉인 영역 소속 + 아직 그 포탈에 봉인석이 없음 + 연구 해금을 모두 요구한다.
