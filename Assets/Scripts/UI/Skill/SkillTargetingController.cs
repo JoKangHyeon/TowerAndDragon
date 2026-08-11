@@ -126,6 +126,11 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
         // 타겟팅 중이 아니었다면 InputSuppressed는 점령/인구 모드 등 다른 주인의 것이므로 건드리지 않는다.
         bool wasTargeting = IsTargeting;
 
+        if (_pendingSkill != null)
+        {
+            _pendingSkill.ClearPreview();
+        }
+
         _pendingSkill = null;
         _hoveredEnemy = null;
 
@@ -151,7 +156,11 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
         if (_rangeIndicator == null || _pendingSkill.Targeting != SkillTargeting.GroundPoint)
             return;
 
-        _rangeIndicator.SetCenter(GetMouseWorldPoint());
+        Vector3 mousePos = GetMouseWorldPoint();
+        Vector3 centerPos = _pendingSkill.GetTargetCenter(mousePos);
+        
+        _rangeIndicator.SetCenter(centerPos);
+        _pendingSkill.UpdatePreview(mousePos);
     }
 
     // 타겟팅 중 Enemy 스킬이면 커서 아래 유효한 적을 찾아 _hoveredEnemy에 캐시하고 삼각형 인디케이터를 갱신한다.
@@ -211,8 +220,9 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
     private void ConfirmGroundPoint(Vector3 worldPoint)
     {
         Skill skill = _pendingSkill;
+        Vector3 snappedPoint = skill.GetTargetCenter(worldPoint);
         CancelTargeting();
-        skill.Activate(new SkillCastContext(worldPoint, null, CasterObject));
+        skill.Activate(new SkillCastContext(snappedPoint, null, CasterObject));
     }
 
     private void ConfirmEnemy(Vector3 worldPoint, BaseMonster target)

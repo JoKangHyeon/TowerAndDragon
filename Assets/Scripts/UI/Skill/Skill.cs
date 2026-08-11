@@ -138,13 +138,17 @@ public abstract class Skill
         }
     }
 
-    public float CooltimeLeft => _charges > 0 ? _cooltimeLeft : _chargeRechargeTimer;
+    public float CooltimeLeft => (IsUnlimitedUse || _charges > 0) ? _cooltimeLeft : _chargeRechargeTimer;
     
     public float CooltimeRatio 
     {
         get 
         {
-            if (_charges > 0)
+            if (IsUnlimitedUse)
+            {
+                return ChargeCooltime > 0f ? Mathf.Min(_cooltimeLeft / ChargeCooltime, 1f) : 0f;
+            }
+            else if (_charges > 0)
             {
                 return _cooltimeLeft > 0f ? Mathf.Min(_cooltimeLeft / 1f, 1f) : 0f;
             }
@@ -253,19 +257,40 @@ public abstract class Skill
         if (!CanUse)
             return;
 
-        ApplyEffect(in context);
-        SpendResources();
+        if (ApplyEffect(in context))
+        {
+            SpendResources();
+        }
     }
 
-    /// <summary>실제 스킬 효과 - 서브클래스가 구현한다.</summary>
-    protected abstract void ApplyEffect(in SkillCastContext context);
+    /// <summary>타겟팅 모드 중 커서 위치에 따른 스킬의 가시적 프리뷰(실루엣 등)를 업데이트한다.</summary>
+    public virtual void UpdatePreview(Vector3 targetPoint) { }
+
+    /// <summary>타겟팅 모드가 끝날 때 프리뷰 관련 리소스를 정리한다.</summary>
+    public virtual void ClearPreview() { }
+
+    /// <summary>마우스 좌표를 받아 스킬이 실제로 적용될 중심점을 반환한다 (스냅 처리용).</summary>
+    public virtual Vector3 GetTargetCenter(Vector3 pointerWorldPosition)
+    {
+        return pointerWorldPosition;
+    }
+
+    /// <summary>실제 스킬 효과 - 서브클래스가 구현한다. 실패 시 false를 반환하면 자원을 소모하지 않는다.</summary>
+    protected abstract bool ApplyEffect(in SkillCastContext context);
 
     private void SpendResources()
     {
-        _cooltimeLeft = 1f; // 1 second internal cooldown for rapid fire
-        if (!IsUnlimitedUse)
+        if (IsUnlimitedUse)
         {
+            // 무제한 스킬(얼음, 불 등)은 스택(Charge) 개념이 없으므로, 기본 쿨타임 자체를 쿨다운으로 적용한다.
+            _cooltimeLeft = ChargeCooltime;
+        }
+        else
+        {
+            // 스택 기반 스킬(메테오)은 1초의 연사 방지 대기 시간만 주고 스택을 소모한다.
+            _cooltimeLeft = 1f; 
             _charges -= 1;
+            
             if (_charges < UsePerDay && _chargeRechargeTimer <= 0)
             {
                 _chargeRechargeTimer = ChargeCooltime;
@@ -287,9 +312,10 @@ public class DebugSkill : Skill
 
     public override SkillTargeting Targeting => SkillTargeting.Instant;
 
-    protected override void ApplyEffect(in SkillCastContext context)
+    protected override bool ApplyEffect(in SkillCastContext context)
     {
         Debug.Log("Skill Actived");
+        return true;
     }
 }
 
@@ -300,14 +326,15 @@ public class SingleCurrentHealthDamageSkill : Skill
 
     public override SkillTargeting Targeting => SkillTargeting.Enemy;
 
-    protected override void ApplyEffect(in SkillCastContext context)
+    protected override bool ApplyEffect(in SkillCastContext context)
     {
         BaseMonster target = context.TargetEnemy;
 
         if (target == null || target.IsDead)
-            return;
+            return false;
 
         target.TakeDamage(new DamageInfo(target.CurrentHealth * DamagePercent));
+        return true;
     }
 }
 
@@ -319,7 +346,7 @@ public class AreaCurrentHealthDamageSkill : Skill
 
     public override SkillTargeting Targeting => SkillTargeting.GroundPoint;
 
-    protected override void ApplyEffect(in SkillCastContext context)
+    protected override bool ApplyEffect(in SkillCastContext context)
     {
         float radiusX = AreaRadius;
         float radiusY = AreaRadius * IsometricMath.RADIUS_Y_RATIO;
@@ -348,6 +375,7 @@ public class AreaCurrentHealthDamageSkill : Skill
 
             monster.TakeDamage(new DamageInfo(monster.CurrentHealth * DamagePercent));
         }
+        return true;
     }
 }
 
@@ -359,10 +387,10 @@ public class FreezeAllSkill : Skill
 
     public override SkillTargeting Targeting => SkillTargeting.Instant;
 
-    protected override void ApplyEffect(in SkillCastContext context)
+    protected override bool ApplyEffect(in SkillCastContext context)
     {
         if (AppliedStatus == null || context.AllMonsters == null)
-            return;
+            return false;
 
         foreach (BaseMonster monster in context.AllMonsters)
         {
@@ -371,6 +399,7 @@ public class FreezeAllSkill : Skill
                 monster.ApplyStatus(AppliedStatus);
             }
         }
+        return true;
     }
 }
 
@@ -384,10 +413,10 @@ public class GlobalCurrentHealthDamageSkill : Skill
 
     public override SkillTargeting Targeting => SkillTargeting.Instant;
 
-    protected override void ApplyEffect(in SkillCastContext context)
+    protected override bool ApplyEffect(in SkillCastContext context)
     {
         if (context.AllMonsters == null)
-            return;
+            return false;
 
         foreach (BaseMonster monster in context.AllMonsters)
         {
@@ -401,6 +430,7 @@ public class GlobalCurrentHealthDamageSkill : Skill
                 monster.ApplyStatus(AppliedStatus);
             }
         }
+        return true;
     }
 }
 
@@ -413,10 +443,10 @@ public class RepairTowersSkill : Skill
 
     public override SkillTargeting Targeting => SkillTargeting.Instant;
 
-    protected override void ApplyEffect(in SkillCastContext context)
+    protected override bool ApplyEffect(in SkillCastContext context)
     {
         if (context.AllBuildings == null)
-            return;
+            return false;
 
         foreach (Building building in context.AllBuildings)
         {
@@ -425,6 +455,7 @@ public class RepairTowersSkill : Skill
                 tower.RestoreAtMorning();
             }
         }
+        return true;
     }
 }
 
@@ -438,30 +469,139 @@ public class HealCastleSkill : Skill
 
     public override SkillTargeting Targeting => SkillTargeting.Instant;
 
-    protected override void ApplyEffect(in SkillCastContext context)
+    protected override bool ApplyEffect(in SkillCastContext context)
     {
-        context.TargetCastle?.Repair(HealAmount);
+        if (context.TargetCastle != null)
+        {
+            context.TargetCastle.Repair(HealAmount);
+            return true;
+        }
+        return false;
     }
 }
 
 /// <summary>용 스킬트리 암석 액티브 - 지정 위치에 광역 데미지를 주고 방벽을 설치합니다.</summary>
 public class MeteorBarricadeSkill : Skill
 {
-    // 찍은 칸이 경로가 아닐 때 경로 칸을 찾아볼 최대 거리(셀). 메테오의 피해 반경과 비슷한 수준으로
-    // 두어, 피해가 닿는 범위 안에서만 방벽이 자리를 잡도록 한다.
     private const int BARRICADE_SNAP_DISTANCE = 2;
+    private GameObject _previewInstance;
 
     public MeteorBarricadeSkill(SkillSO skillData) : base(skillData) { }
 
     public override SkillTargeting Targeting => SkillTargeting.GroundPoint;
 
-    protected override void ApplyEffect(in SkillCastContext context)
+    public override Vector3 GetTargetCenter(Vector3 pointerWorldPosition)
     {
+        GridMap gridMap = Object.FindFirstObjectByType<GridMap>();
+        if (gridMap == null || Data.BarricadePrefab == null) return pointerWorldPosition;
+
+        Building buildingPrefab = Data.BarricadePrefab.GetComponent<Building>();
+        if (buildingPrefab == null) return pointerWorldPosition;
+
+        Vector3Int gridPos = gridMap.PickCellAtWorldPoint(pointerWorldPosition);
+        
+        if (gridMap.TryResolveTemporaryObstacleAnchor(
+                gridPos, buildingPrefab.BaseFootprintShape, BARRICADE_SNAP_DISTANCE, out Vector3Int anchor))
+        {
+            return gridMap.GetFootprintCenterWorld(anchor, buildingPrefab.BaseFootprintShape)
+                + buildingPrefab.ComputePlacementOffset(0)
+                + gridMap.ComputeRotationCompensation(buildingPrefab.BaseFootprintShape, 0);
+        }
+        
+        return pointerWorldPosition;
+    }
+
+    public override void UpdatePreview(Vector3 targetPoint)
+    {
+        GridMap gridMap = Object.FindFirstObjectByType<GridMap>();
+        if (gridMap == null || Data.BarricadePrefab == null) return;
+
+        Building buildingPrefab = Data.BarricadePrefab.GetComponent<Building>();
+        if (buildingPrefab == null) return;
+
+        Vector3Int gridPos = gridMap.PickCellAtWorldPoint(targetPoint);
+        
+        bool canPlace = gridMap.TryResolveTemporaryObstacleAnchor(
+                gridPos, buildingPrefab.BaseFootprintShape, BARRICADE_SNAP_DISTANCE, out Vector3Int anchor);
+
+        if (canPlace)
+        {
+            if (_previewInstance == null)
+            {
+                _previewInstance = Object.Instantiate(Data.BarricadePrefab);
+                
+                // 로직 비활성화
+                Building building = _previewInstance.GetComponent<Building>();
+                if (building != null) building.enabled = false;
+                
+                Collider2D[] colliders = _previewInstance.GetComponentsInChildren<Collider2D>();
+                foreach (var col in colliders) col.enabled = false;
+
+                // 반투명 처리
+                SpriteRenderer[] renderers = _previewInstance.GetComponentsInChildren<SpriteRenderer>();
+                foreach (var r in renderers)
+                {
+                    Color c = r.color;
+                    c.a = 0.5f;
+                    r.color = c;
+                    r.sortingOrder = 32767; // 최상단 노출
+                }
+            }
+            
+            _previewInstance.SetActive(true);
+
+            Vector3 worldPos = gridMap.GetFootprintCenterWorld(anchor, buildingPrefab.BaseFootprintShape)
+                + buildingPrefab.ComputePlacementOffset(0)
+                + gridMap.ComputeRotationCompensation(buildingPrefab.BaseFootprintShape, 0);
+
+            _previewInstance.transform.position = worldPos;
+        }
+        else
+        {
+            if (_previewInstance != null)
+            {
+                _previewInstance.SetActive(false);
+            }
+        }
+    }
+
+    public override void ClearPreview()
+    {
+        if (_previewInstance != null)
+        {
+            Object.Destroy(_previewInstance);
+            _previewInstance = null;
+        }
+    }
+
+    protected override bool ApplyEffect(in SkillCastContext context)
+    {
+        // 1. [설치 가능 여부 검증 파트] 방벽을 세울 수 있는 경로 칸인지 가장 먼저 검사합니다.
+        GridMap gridMap = Object.FindFirstObjectByType<GridMap>();
+        if (gridMap == null || Data.BarricadePrefab == null) return false;
+
+        Vector3Int gridPos = gridMap.PickCellAtWorldPoint(context.TargetPoint);
+        Building buildingPrefab = Data.BarricadePrefab.GetComponent<Building>();
+
+        if (buildingPrefab == null)
+            return false;
+
+        if (!gridMap.TryResolveTemporaryObstacleAnchor(
+                gridPos, buildingPrefab.BaseFootprintShape, BARRICADE_SNAP_DISTANCE, out Vector3Int anchor))
+        {
+            string reason = gridMap.MonsterPathQuery == null
+                ? "씬에 MonsterPathMap이 없습니다(조회원 미등록)"
+                : $"주변 {BARRICADE_SNAP_DISTANCE}칸 안에 설치 가능한 몬스터 경로 칸이 없습니다";
+
+            Debug.LogWarning($"[MeteorBarricadeSkill] 방벽 설치 실패 - 셀 {gridPos}: {reason}");
+            return false; // 여기서 false를 반환하면 쿨타임과 스택이 차감되지 않습니다.
+        }
+
+        // 2. [데미지 파트] 설치가 확실시되었으므로 데미지를 먼저 줍니다.
         float radiusX = AreaRadius;
         float radiusY = AreaRadius * IsometricMath.RADIUS_Y_RATIO;
         LayerMask layers = TargetLayers != 0 ? TargetLayers : LayerMask.GetMask("Enemy");
 
-        // 1. [데미지 파트] 브로드페이즈 + 아이소메트릭 타원 방정식 검사
         Collider2D[] hitColliders = Physics2D.OverlapCircleAll(context.TargetPoint, radiusX, layers);
         HashSet<BaseMonster> targets = new HashSet<BaseMonster>();
 
@@ -474,42 +614,12 @@ public class MeteorBarricadeSkill : Skill
             }
         }
 
-        // 체력 비례가 아니라 고정 데미지다 - 체력 비례로 두면 체력이 높은 보스에게 과하게 강하고
-        // 잡몹은 절대 못 잡는 형태가 되어, 방벽과 조합하는 지연 플레이와 맞지 않는다.
         foreach (BaseMonster monster in targets)
         {
             monster.TakeDamage(new DamageInfo(FlatDamage));
         }
 
-        // 2. [설치 파트] 해당 위치 그리드에 방벽 설치
-        GridMap gridMap = Object.FindFirstObjectByType<GridMap>();
-        if (gridMap == null || Data.BarricadePrefab == null) return;
-
-        // TargetPoint는 ScreenToWorldPoint 결과, 즉 고저차가 이미 반영된 "렌더된" 좌표다.
-        // 평면 역변환(ConvertWorldToGrid)을 쓰면 그 Y 오프셋을 되돌리지 못해 단차가 있는 곳에서
-        // 눈에 보이는 타일과 몇 칸씩 어긋난 셀이 나온다 - MouseSelectController와 동일하게
-        // 그 점을 실제로 덮고 있는 타일을 고르는 PickCellAtWorldPoint를 써야 한다.
-        Vector3Int gridPos = gridMap.PickCellAtWorldPoint(context.TargetPoint);
-        Building buildingPrefab = Data.BarricadePrefab.GetComponent<Building>();
-
-        if (buildingPrefab == null)
-            return;
-
-        // 일반 건설 판정이 아니라 임시 장애물 판정을 쓴다 - 일반 판정은 "건설 가능한 지형 +
-        // 점령 완료 청크"를 요구하는데, 방벽은 몬스터가 오는 길목에 세우는 물건이라 그 조건이
-        // 성립하지 않는다(GridMap.CanPlaceTemporaryObstacle 주석 참고).
-        // 정확히 찍은 칸이 경로가 아니면 가까운 경로 칸으로 스냅한다 - 경로는 폭이 1칸이라
-        // 조준으로 맞히기를 요구할 수 없다(GridMap.TryResolveTemporaryObstacleAnchor 주석 참고).
-        if (!gridMap.TryResolveTemporaryObstacleAnchor(
-                gridPos, buildingPrefab.BaseFootprintShape, BARRICADE_SNAP_DISTANCE, out Vector3Int anchor))
-        {
-            string reason = gridMap.MonsterPathQuery == null
-                ? "씬에 MonsterPathMap이 없습니다(조회원 미등록)"
-                : $"주변 {BARRICADE_SNAP_DISTANCE}칸 안에 설치 가능한 몬스터 경로 칸이 없습니다";
-
-            Debug.LogWarning($"[MeteorBarricadeSkill] 방벽 설치 실패 - 셀 {gridPos}: {reason}");
-            return;
-        }
+        // 3. [설치 파트] 데미지 부여 후 방벽 설치를 마저 진행합니다.
 
         // ConstructBuilding은 일반 건설 판정(점령 여부, 지형 등)을 거치기 때문에 몬스터 경로(길/미점령) 위에서는 항상 실패합니다.
         // 따라서 직접 위치를 잡아 Instantiate 한 뒤 RegisterFootprint로 우회하여 강제 등록합니다.
@@ -534,16 +644,16 @@ public class MeteorBarricadeSkill : Skill
         {
             if (spawned is StoneBarricade barricade)
             {
-                // Initialize를 빠뜨리면 MaxHealth가 0이라 설치되자마자 죽은 것으로 취급된다.
                 float healthMultiplier = DragonTree != null ? DragonTree.GetBarricadeHealthMultiplier() : 1f;
                 barricade.Initialize(healthMultiplier);
-
                 barricade.RegisterAutoDestroy(Object.FindFirstObjectByType<CycleManager>());
             }
+            return true;
         }
         else
         {
             Object.Destroy(spawned.gameObject);
+            return false;
         }
     }
 }
