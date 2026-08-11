@@ -261,6 +261,21 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         RenderResolution();
         RenderFullScreen();
         RenderLanguage();
+        RenderSaveAvailability();
+    }
+
+    // 저장은 낮에만 가능하다(SaveService 계약 2). 눌러 봐야 슬롯이 전부 잠긴 창만 열리는 버튼을
+    // 살려 두지 않는다 - UI_BuildModeWindow와 같은 처리다. 흐려지는 것은 버튼에 붙은
+    // UI_ButtonInteractableFade가 맡으므로 여기서 색을 직접 건드리지 않는다.
+    // 위상 판정을 CycleManager에서 다시 하지 않고 SaveService에 위임한다 - 판정이 두 벌로
+    // 갈라지지 않고, 새 SerializeField 배선을 늘리지 않는다. CanSave가 아니라 IsSaveablePhase를
+    // 보는 이유는 그쪽 주석에 있다(이 창은 열 때 한 번만 판정한다).
+    private void RenderSaveAvailability()
+    {
+        if (_saveButton != null)
+        {
+            _saveButton.interactable = _saveService != null && _saveService.IsSaveablePhase;
+        }
     }
 
     private void RenderVolumes()

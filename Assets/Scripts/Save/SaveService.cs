@@ -130,13 +130,21 @@ public sealed class SaveService : MonoBehaviour
 
     // --- 저장 ---
 
-    public bool CanSave =>
+    /// <summary>
+    /// 지금 국면이 저장을 허용하는지. 진행 중인 저장(_isSaving)은 보지 않는다 -
+    /// "저장할 수 없는 상태"와 "지금 저장이 돌고 있다"는 UI에 다르게 비쳐야 한다.
+    /// 저장 버튼처럼 창을 열 때 한 번만 판정하는 곳은 이 값을 봐야 한다. CanSave를 보면
+    /// 낮이 시작될 때 도는 자동저장의 디스크 쓰기에 걸려, 저장할 수 있는 낮인데도
+    /// 버튼이 잠긴 채 창을 다시 열 때까지 풀리지 않는다.
+    /// </summary>
+    public bool IsSaveablePhase =>
         !_isRestoring &&
-        !_isSaving &&
         _gameManager != null &&
         !_gameManager.IsGameEnded &&
         _cycleManager != null &&
         _cycleManager.CurrentCycle == CycleManager.CycleState.Day;
+
+    public bool CanSave => IsSaveablePhase && !_isSaving;
 
     public async UniTask<SaveResult> SaveAsync(
         int slotIndex,
