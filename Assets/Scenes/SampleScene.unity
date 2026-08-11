@@ -1159,9 +1159,26 @@ MonoBehaviour:
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: db3200645c162584daeae3f0b9ed9bd1, type: 3}
+  m_Script: {fileID: 11500000, guid: cc70f87391bb556438189252040bf4be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
+  _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _wasdSpeed: 12
+  _edgeScrollSpeed: 12
+  _dragSensitivity: 1
+  _edgeScrollEnabled: 1
+  _edgeScrollThreshold: 20
+  _zoomSpeed: 3
+  _minZoom: 3
+  _maxZoom: 18
+  _zoomSmoothing: 8
+  _moveSmoothTime: 0.08
+  _boundsTilemap: {fileID: 362517319}
+  _excludedBoundsTile: {fileID: 11400000, guid: 72c049b1c04abcf41a1152ba4c5fb4cb, type: 2}
+  _boundsMarginMin: {x: 0, y: 0}
+  _boundsMarginMax: {x: 0, y: 0}
+  _mapMin: {x: -60, y: -60}
+  _mapMax: {x: 60, y: 60}
 --- !u!1 &528527939
 GameObject:
   m_ObjectHideFlags: 0
@@ -2199,6 +2216,9 @@ MonoBehaviour:
   OnCycleChanged:
     m_PersistentCalls:
       m_Calls: []
+  DayEndBlocked:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &914589612
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2224,6 +2244,10 @@ MonoBehaviour:
       IsModeInitialized: 0
     DragonEggs: []
     BossDragonEggRewards: []
+    EnteredGuideSteps: 
+    EnteredTutorialStepIds: []
+    IsTutorialDismissed: 0
+    CompletedTutorialObjectiveIds: []
     OnInventoryChanged:
       m_PersistentCalls:
         m_Calls: []
@@ -2566,6 +2590,14 @@ MonoBehaviour:
   _gameManager: {fileID: 914589612}
   _cycleManager: {fileID: 914589611}
   _dataCatalog: {fileID: 11400000, guid: 3493e5ed7926f4147ae5f74da9cbd871, type: 2}
+  _grantStartingEgg: 0
+  _startingEggType: 4
+  OnEggGranted:
+    m_PersistentCalls:
+      m_Calls: []
+  OnEggHatched:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &936144408
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8002,6 +8034,12 @@ MonoBehaviour:
   _moveHoldDuration: 2
   _dragThreshold: 10
   BuildingSelected:
+    m_PersistentCalls:
+      m_Calls: []
+  BuildingToPlaceChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  SelectedBuildingChanged:
     m_PersistentCalls:
       m_Calls: []
 --- !u!4 &1692054029
