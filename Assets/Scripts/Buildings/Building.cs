@@ -72,7 +72,7 @@ public class Building : MonoBehaviour
     // 예산 대상이 아닌 건물(UsesMoveGrant == false)은 예산 확인 자체를 건너뛴다.
     public virtual bool IsMoveable =>
         _isMoveable && (!UsesMoveGrant || _moveGrantQuery == null || _moveGrantQuery.HasRemainingMoveGrant);
-    public bool IsRemoveable => _isRemoveable;
+    public virtual bool IsRemoveable => _isRemoveable;
 
     // 운영 중단 상태(얼음 새끼용 버프가 사라진 화염지대 건물 등). 인구 배치만 막는다.
     // Tower._isDisabled(체력 소진 → 부활 대기)와는 별개 개념이라 이름을 구분한다.

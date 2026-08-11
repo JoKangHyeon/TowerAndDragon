@@ -47,6 +47,13 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
     public bool HasStatus(string statusId) => 
         _statusReceiver != null && _statusReceiver.HasStatus(statusId);
 
+    public bool IsActionBlocked =>
+        _statusReceiver != null &&
+        _statusReceiver.IsActionBlocked;
+
+    public bool CanAct =>
+        !IsDead &&
+        !IsActionBlocked;
 
     private int _animKeyMove = Animator.StringToHash("Move");
     private int _animKeyTakeDamage = Animator.StringToHash("TakeDamage");
@@ -140,6 +147,10 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
 
     private void Update()
     {
+        if (!CanAct)
+        {
+            return;
+        }
         _specialBehaviorRunner.Tick(Time.deltaTime);
     }
 

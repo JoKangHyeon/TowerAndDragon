@@ -13,6 +13,7 @@ public class MonsterAttack : MonoBehaviour
     [SerializeField] private Transform _firePoint;
 
     private MonsterData _data;
+    private BaseMonster _owner;
     private AttackSO _attack;
     private MonsterTargetType _enRouteTargetTypes;
     private MonsterMovement _movement;
@@ -69,6 +70,7 @@ public class MonsterAttack : MonoBehaviour
         _animator= animator; 
 
         _data = data;
+        _owner = GetComponent<BaseMonster>();
         _attack = data.Attack;
         _enRouteTargetTypes = data.EnRouteTargetTypes;
         _movement = movement;
@@ -82,7 +84,10 @@ public class MonsterAttack : MonoBehaviour
 
     private void Update()
     {
-        if (!_isInitialized || !_isAutoAttackEnabled)
+        if (!_isInitialized ||
+            !_isAutoAttackEnabled ||
+            _owner == null ||
+            !_owner.CanAct)
         {
             return;
         }
@@ -221,6 +226,11 @@ public class MonsterAttack : MonoBehaviour
     /// </summary>
     private void Fire(IAttackTarget target)
     {
+        if (_owner == null || !_owner.CanAct)
+        {
+            return;
+        }
+
         AttackContext context = new AttackContext(
             gameObject,
             _attackPowerModifier,
@@ -295,7 +305,10 @@ public class MonsterAttack : MonoBehaviour
     // 범위 만큼 폭발
     public void ExecuteBlast(float radius)
     {
-        if (!_isInitialized || radius <= 0)
+        if (!_isInitialized || 
+            radius <= 0 ||
+            _owner == null ||
+            !_owner.CanAct)
         {
             return;
         }

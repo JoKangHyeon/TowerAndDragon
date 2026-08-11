@@ -15,7 +15,7 @@ public class StoneBarricade : Building, IMonsterTarget
     public Transform TargetTransform => transform;
     public GameObject TargetObject => gameObject;
     public bool IsDead => _health == null || _health.IsDead;
-    public new bool IsRemoveable => true; // 무조건 철거 가능하게 오버라이드
+    public override bool IsRemoveable => true; // 무조건 철거 가능하게 오버라이드
 
     protected override void Awake() 
     {

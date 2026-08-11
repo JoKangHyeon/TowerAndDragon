@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.VisualScripting.Antlr3.Runtime.Misc;
 using UnityEngine;
 
 // 몬스터 1체에 걸린 지속 효과(슬로우·화상 등)를 보관·만료·틱 처리한다.
@@ -15,6 +16,13 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
     private struct MoveSpeedEntry
     {
         public MoveSpeedStatusSO Source;
+        public bool IsInfinite;
+        public float RemainingSeconds;
+    }
+    
+    private struct FreezeEntry
+    {
+        public FreezeStatusSO Source;
         public bool IsInfinite;
         public float RemainingSeconds;
     }
@@ -39,7 +47,10 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
     private readonly Dictionary<string, MoveSpeedEntry> _moveSpeedStatuses = new();
     private readonly Dictionary<string, DotEntry> _dotStatuses = new();
     private readonly Dictionary<string, StackEntry> _stackStatuses = new();
+    private readonly Dictionary<string, FreezeEntry> _freezeStatuses = new();
     private readonly List<string> _keysBuffer = new();
+
+    public bool IsActionBlocked => _freezeStatuses.Count > 0;
 
     private BaseMonster _monster;
 
@@ -52,7 +63,14 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
 
             foreach (MoveSpeedEntry entry in _moveSpeedStatuses.Values)
             {
-                strongest = Mathf.Min(strongest, entry.Source.SpeedMultiplier);
+                strongest = Mathf.Min(
+                    strongest,
+                    entry.Source.SpeedMultiplier);
+            }
+
+            if (_freezeStatuses.Count > 0)
+            {
+                strongest = 0f;
             }
 
             return strongest;
@@ -75,6 +93,9 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         {
             case null:
                 return;
+            case FreezeStatusSO freeze:
+                ApplyFreeze(freeze);
+                break;
             case MoveSpeedStatusSO moveSpeed:
                 ApplyMoveSpeed(moveSpeed);
                 break;
@@ -91,8 +112,10 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
     {
         _moveSpeedStatuses.Clear();
         _dotStatuses.Clear();
-        _monster?.RefreshMoveSpeed();
         _stackStatuses.Clear();
+        _freezeStatuses.Clear();
+
+        _monster?.RefreshMoveSpeed();
     }
 
     private void ApplyMoveSpeed(MoveSpeedStatusSO status)
@@ -155,9 +178,26 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         Apply(status.TriggeredStatus, element);
     }
 
+    private void ApplyFreeze(FreezeStatusSO status)
+    {
+        string key = ResolveKey(status);
+
+        _freezeStatuses[key] = new FreezeEntry
+        {
+            Source = status,
+            IsInfinite = status.IsInfinite,
+            RemainingSeconds = status.DurationSeconds
+        };
+
+        _monster?.RefreshMoveSpeed();
+    }
+
     private void Update()
     {
         float deltaTime = Time.deltaTime;
+
+        bool movementChanged = TickMoveSpeedStatuses(deltaTime);
+        bool freezeChanged = TickFreezeStatuses(deltaTime);
 
         if (TickMoveSpeedStatuses(deltaTime))
         {
@@ -242,6 +282,43 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         return anyExpired;
     }
 
+    private bool TickFreezeStatuses(float deltaTime)
+    {
+        if (_freezeStatuses.Count == 0)
+        {
+            return false;
+        }
+
+        _keysBuffer.Clear();
+        _keysBuffer.AddRange(_freezeStatuses.Keys);
+
+        bool anyExpired = false;
+
+        foreach (string key in _keysBuffer)
+        {
+            FreezeEntry entry = _freezeStatuses[key];
+
+            if (entry.IsInfinite)
+            {
+                continue;
+            }
+
+            entry.RemainingSeconds -= deltaTime;
+
+            if (entry.RemainingSeconds <= 0f)
+            {
+                _freezeStatuses.Remove(key);
+                anyExpired = true;
+            }
+            else
+            {
+                _freezeStatuses[key] = entry;
+            }
+        }
+
+        return anyExpired;
+    }
+
     private void TickDotStatuses(float deltaTime)
     {
         if (_dotStatuses.Count == 0)
@@ -296,6 +373,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         }
 
         return _moveSpeedStatuses.ContainsKey(statusId) ||
+            _freezeStatuses.ContainsKey(statusId) ||
             _dotStatuses.ContainsKey(statusId) ||
             _stackStatuses.ContainsKey(statusId);
     }
