@@ -87,11 +87,28 @@ public class UI_TooltipTrigger : MonoBehaviour,
         _presenter?.Hide(this);
     }
 
+    private void OnEnable()
+    {
+        StringTable.OnLanguageChanged += HandleLanguageChanged;
+    }
+
     // 창이 닫히거나 이 행이 꺼질 때 툴팁이 화면에 남지 않게 한다(OnPointerExit가 오지 않는다).
     private void OnDisable()
     {
+        StringTable.OnLanguageChanged -= HandleLanguageChanged;
         _isHovered = false;
         _presenter?.Hide(this);
+    }
+
+    // 툴팁을 띄운 채로 언어가 바뀌면 화면의 문구가 이전 언어로 남는다. 인스펙터 키 방식은 ResolveContent가
+    // 현재 언어로 즉시 다시 만들고, 동적 방식은 소유 스크립트가 다시 밀어 넣을 때까지 이전 값을 유지한다.
+    // 표시기가 없으면 그릴 곳이 없으므로 조용히 빠진다(배선 누락 경고는 실제로 띄울 때만 낸다).
+    private void HandleLanguageChanged()
+    {
+        if (_isHovered && _presenter != null)
+        {
+            RefreshWhileHovered();
+        }
     }
 
     private void RefreshWhileHovered()

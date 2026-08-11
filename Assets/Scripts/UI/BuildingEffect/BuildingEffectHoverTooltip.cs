@@ -30,9 +30,25 @@ public class BuildingEffectHoverTooltip : MonoBehaviour
     // 문구는 호버 대상이 바뀔 때만 새로 만든다 - 매 프레임 만들면 같은 문자열을 계속 새로 할당한다.
     private Building _hoveredBuilding;
 
+    private void OnEnable()
+    {
+        StringTable.OnLanguageChanged += RebuildHoveredTooltip;
+    }
+
     private void OnDisable()
     {
+        StringTable.OnLanguageChanged -= RebuildHoveredTooltip;
         ClearHover();
+    }
+
+    // 호버 대상이 그대로여도 언어가 바뀌면 문구를 다시 만들어야 한다 - 위 캐시가 대상이 바뀔 때만
+    // 갱신하므로, 언어 전환은 그 캐시를 무효화하는 또 하나의 계기다.
+    private void RebuildHoveredTooltip()
+    {
+        if (_hoveredBuilding != null)
+        {
+            ShowForHovered();
+        }
     }
 
     private void Update()

@@ -97,6 +97,10 @@ public class PortalWavePreviewRenderer : MonoBehaviour
             _cycleManager.OnCycleChanged.AddListener(HandleCycleChanged);
         }
 
+        // 툴팁 문구와 마릿수 라벨은 Setup 시점에 만들어 카드가 들고 있으므로, 언어가 바뀌면 다시 그려야
+        // 이전 언어로 만들어 둔 문자열이 남지 않는다(UI_IngameWindow.RefreshLocalizedTexts와 같은 이유).
+        StringTable.OnLanguageChanged += QueueRefresh;
+
         // 구독 직후 현재 상태를 한 번 반영한다. 다만 초기 시야(Castle.SetUpInitialTerritory)는 Start에서
         // 잡히므로, 다른 안개 렌더러들과 같은 이유로 한 프레임 뒤에 그린다.
         QueueRefresh();
@@ -123,6 +127,8 @@ public class PortalWavePreviewRenderer : MonoBehaviour
         {
             _cycleManager.OnCycleChanged.RemoveListener(HandleCycleChanged);
         }
+
+        StringTable.OnLanguageChanged -= QueueRefresh;
     }
 
     private void CachePortalMap()
