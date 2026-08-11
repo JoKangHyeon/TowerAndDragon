@@ -57,6 +57,10 @@ public class MouseSelectController : MonoBehaviour
     private int _previewRotationSteps;
     private Vector3 _ghostLocalOffset;
     private Sprite _ghostSpriteOverride;
+    // 풀을 한 번이라도 만들어 봤는지. 템플릿 렌더러가 없어 풀이 null로 남는 씬에서 매 프레임
+    // 재시도하지 않게 한다. 도메인 리로드로 이 값도 함께 초기화되므로 복구 목적은 그대로 지켜진다.
+    private bool _hasBuiltPools;
+
     private bool _isPlacementActive;
     private bool _isRepositionPreview;
     private Vector3Int? _lastDrawnAnchor;
@@ -117,6 +121,13 @@ public class MouseSelectController : MonoBehaviour
 
         if (_selectionHighlightPool != null && _occupiedHighlightPool != null)
             return;
+
+        // 템플릿 렌더러가 비어 있으면 CreatePool이 null을 돌려주어 위 조기 반환이 영원히 성립하지 않는다.
+        // 그 상태로 두면 아래 정리·생성이 호출될 때마다(툴팁 호버 판정은 매 프레임 부른다) 다시 돈다.
+        if (_hasBuiltPools)
+            return;
+
+        _hasBuiltPools = true;
 
         RemoveOrphanedPoolObjects();
 
@@ -202,6 +213,45 @@ public class MouseSelectController : MonoBehaviour
         worldPos.z = 0f;
 
         return worldPos;
+    }
+
+    /// <summary>
+    /// 포인터 위치를 안전하게 구한다. 카메라나 마우스가 없으면 false를 돌려준다 -
+    /// 매 프레임 도는 호출부(툴팁 호버 판정)가 씬 전환·카메라 교체 순간에 예외로 죽지 않게 한다.
+    /// 실패를 좌표로 뭉개지 않으므로 <see cref="GetPointerWorldPoint"/>를 쓰는 클릭 판정과 달리
+    /// "원점을 가리켰다"로 오해될 여지가 없다.
+    /// </summary>
+    public bool TryGetPointerWorldPoint(out Vector3 worldPoint)
+    {
+        EnsureRuntimeState();
+
+        if (_cam == null || Mouse.current == null)
+        {
+            worldPoint = default;
+            return false;
+        }
+
+        worldPoint = _cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+        worldPoint.z = 0f;
+
+        return true;
+    }
+
+    /// <summary>
+    /// 커서가 얹힌 셀을 안전하게 구한다. <see cref="GetHoveredCell"/>의 예외 없는 판.
+    /// </summary>
+    public bool TryGetHoveredCell(out Vector3Int cell)
+    {
+        if (!TryGetPointerWorldPoint(out Vector3 worldPos))
+        {
+            cell = default;
+            return false;
+        }
+
+        worldPos.y -= _yOffset;
+        cell = _gridMap.PickCellAtWorldPoint(worldPos);
+
+        return true;
     }
 
     public Vector3Int GetHoveredCell()

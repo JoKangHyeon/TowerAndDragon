@@ -14,18 +14,19 @@ using UnityEngine.UI;
 public class UI_BabyDragonManageWindow : MonoBehaviour
 {
     private const string BUFF_RADIUS_FORMAT = "{0:0.#}";
-    private const string BUFF_MULTIPLIER_FORMAT = "×{0:0.##}";
+    private const string BUFF_MULTIPLIER_FORMAT = BabyDragonLocKeys.BUFF_MULTIPLIER_FORMAT;
 
-    private const string TITLE_FORMAT_LOC_KEY = "baby_dragon_manage_title_format";
-    private const string STATUS_LABEL_LOC_KEY = "baby_dragon_manage_status_label";
-    private const string STATUS_ACTIVE_LOC_KEY = "baby_dragon_manage_status_active";
-    private const string STATUS_STARVING_LOC_KEY = "baby_dragon_manage_status_starving";
-    private const string FEED_LABEL_LOC_KEY = "baby_dragon_manage_feed_label";
+    // 툴팁(BabyDragonTooltipBuilder)과 같은 라벨을 쓰는 키는 공용 클래스에 둔다 (커밋규칙 §3.2).
+    private const string TITLE_FORMAT_LOC_KEY = BabyDragonLocKeys.TITLE_FORMAT;
+    private const string STATUS_LABEL_LOC_KEY = BabyDragonLocKeys.STATUS_LABEL;
+    private const string STATUS_ACTIVE_LOC_KEY = BabyDragonLocKeys.STATUS_ACTIVE;
+    private const string STATUS_STARVING_LOC_KEY = BabyDragonLocKeys.STATUS_STARVING;
+    private const string FEED_LABEL_LOC_KEY = BabyDragonLocKeys.FEED_LABEL;
     private const string FEED_INFO_LOC_KEY = "baby_dragon_feed_info"; // UI_DragonInventorySlot과 공유하는 기존 키
     private const string BUFF_RADIUS_LABEL_LOC_KEY = "baby_dragon_manage_buff_radius_label";
-    private const string BUFF_MULTIPLIER_LABEL_LOC_KEY = "baby_dragon_manage_buff_multiplier_label";
-    private const string MODE_ATTACK_LOC_KEY = "baby_dragon_manage_mode_attack";
-    private const string MODE_BUFF_LOC_KEY = "baby_dragon_manage_mode_buff";
+    private const string BUFF_MULTIPLIER_LABEL_LOC_KEY = BabyDragonLocKeys.BUFF_MULTIPLIER_LABEL;
+    private const string MODE_ATTACK_LOC_KEY = BabyDragonLocKeys.MODE_ATTACK;
+    private const string MODE_BUFF_LOC_KEY = BabyDragonLocKeys.MODE_BUFF;
     private const string RELOCATE_LOC_KEY = "baby_dragon_manage_relocate";
     private const string SKILL_TREE_LOC_KEY = "baby_dragon_manage_skill_tree";
     private const string REMOVE_LOC_KEY = "baby_dragon_manage_remove";
@@ -39,6 +40,9 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     [SerializeField] private ResourceCatalog _resourceCatalog;
     [Tooltip("용 창. 강화 트리는 이 창의 어미용 탭 안에 있다(과거 독립 스킬트리 창은 은퇴).")]
     [SerializeField] private UI_DragonWindow _dragonWindow;
+
+    [Tooltip("배율 표시에 혈족 강화를 반영한다. 비우면 데이터 원본 배율을 그대로 보여준다.")]
+    [SerializeField] private BabyDragonBuffSystem _buffSystem;
 
     [Header("패널")]
     [SerializeField] private GameObject _panel;
@@ -315,11 +319,26 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
         return BabyDragonFeedFormula.ResolveDailyFeed(data, sameTypeCount, totalCount);
     }
 
+    // 데이터 원본이 아니라 실제로 곱해지는 배율을 보여준다 - 혈족 강화를 해금하면 실제 생산량은
+    // 늘어나는데 표시만 그대로여서 두 숫자가 갈렸다. 툴팁도 같은 값을 쓴다.
+    // 미연결이면 혈족 강화가 빠진 원본 배율이 나온다 - 그게 바로 이 표시를 실효값으로 바꾼 이유라
+    // 조용히 넘기지 않고 알린다(툴팁과 숫자가 갈리는 원인이 여기 하나뿐이다).
+    private float ResolveDisplayMultiplier(BabyDragonData data) =>
+        WiringGuard.Optional(_buffSystem, nameof(_buffSystem), this)
+            ? _buffSystem.GetEffectiveYieldMultiplier(data)
+            : BabyDragonBuffFormula.ResolveYieldMultiplier(data, BabyDragonBuffFormula.NO_KIN_BONUS_RATIO);
+
     // 버프 반경이 없는 속성(순수 공격형)은 버프 관련 행을 아예 숨긴다 - 값이 0인 채로 보여주면
     // "버프가 있는데 반경만 0"으로 오해할 수 있다.
+    //
+    // 반경과 배율은 조건이 다르다. 반경은 건설 해제·지역 페널티 무효화의 범위이기도 해서 버프 모드를
+    // 쓸 수 있으면 늘 의미가 있지만, 배율은 대상 자원이 있어야 실제로 곱해진다 - 불·얼음·시간은
+    // 대상 자원이 None이라 배율이 ×1로 고정이고, 그것을 보여주면 생산 버프가 있는 것처럼 읽힌다.
+    // 툴팁도 같은 기준(BabyDragonBuffFormula.HasYieldBuff)을 쓴다.
     private void RefreshBuffRows(BabyDragonData data, Color attributeColor)
     {
         bool hasBuff = _boundTower.CanUseBuffMode;
+        bool hasYieldBuff = BabyDragonBuffFormula.HasYieldBuff(data);
 
         if (_buffRadiusRow != null)
         {
@@ -336,14 +355,14 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
 
         if (_buffMultiplierRow != null)
         {
-            _buffMultiplierRow.gameObject.SetActive(hasBuff);
-            if (hasBuff)
+            _buffMultiplierRow.gameObject.SetActive(hasYieldBuff);
+            if (hasYieldBuff)
             {
                 _buffMultiplierRow.Setup(
                     _buffIcon,
                     attributeColor,
                     StringTable.GetString(BUFF_MULTIPLIER_LABEL_LOC_KEY),
-                    string.Format(BUFF_MULTIPLIER_FORMAT, data.BuffYieldMultiplier));
+                    string.Format(BUFF_MULTIPLIER_FORMAT, ResolveDisplayMultiplier(data)));
             }
         }
     }

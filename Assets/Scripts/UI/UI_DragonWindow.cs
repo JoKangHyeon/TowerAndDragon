@@ -806,10 +806,13 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             return;
         }
 
-        if (_placementCoordinator != null)
+        // 무음으로 넘기면 창만 닫히고 아무 일도 일어나지 않아, 배치가 안 되는 원인이 어디에도 드러나지 않는다.
+        if (!WiringGuard.Require(_placementCoordinator, nameof(_placementCoordinator), this))
         {
-            _placementCoordinator.BeginPlacement(dragon);
+            return;
         }
+
+        _placementCoordinator.BeginPlacement(dragon);
     }
 
     // 레코드에 결속된 인스턴스를 찾아 카메라를 옮긴다.

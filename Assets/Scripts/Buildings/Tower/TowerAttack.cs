@@ -152,6 +152,12 @@ public class TowerAttack : MonoBehaviour
         _nextAttackTime = Time.time + GetAttackInterval();
     }
 
+    /// <summary>
+    /// 다음 발사까지의 실제 간격(초). 연구·오라·지형이 반영된 값이라 데이터 원본(Attack.Interval)과 다르다 -
+    /// 표시(툴팁)와 판정이 같은 값을 보게 하려고 노출한다. EffectiveRange와 같은 이유다.
+    /// </summary>
+    public float EffectiveAttackInterval => GetAttackInterval();
+
     private float GetAttackInterval()
     {
         float staffingRatio = _staffing.StaffingRatio;

@@ -1242,7 +1242,7 @@ PrefabInstance:
     - target: {fileID: 2473110274389148054, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _placementCoordinator
       value: 
-      objectReference: {fileID: 1940473174}
+      objectReference: {fileID: 1073712215}
     - target: {fileID: 2473110274389148054, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _buildingPlacementController
       value: 
@@ -1855,6 +1855,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3821788185184956374, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _buffSystem
+      value: 
+      objectReference: {fileID: 1073712212}
     - target: {fileID: 3821788185184956374, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _gameManager
       value: 
@@ -3199,6 +3203,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6864070389072513261, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -50.00049
+      objectReference: {fileID: 0}
     - target: {fileID: 6874002290473965843, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0
@@ -4262,7 +4270,7 @@ PrefabInstance:
     - target: {fileID: 9135527939180726335, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _placementCoordinator
       value: 
-      objectReference: {fileID: 1940473174}
+      objectReference: {fileID: 0}
     - target: {fileID: 9135527939180726335, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _buildingPlacementController
       value: 
@@ -4321,7 +4329,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 1521450988358325637, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1166007529}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
 --- !u!114 &46995105 stripped
@@ -4523,6 +4534,11 @@ LineRenderer:
   m_UseWorldSpace: 1
   m_Loop: 1
   m_ApplyActiveColorSpace: 1
+--- !u!224 &173086939 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 1521450988358325637, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 46995104}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &233073150
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5033,7 +5049,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CycleBossDragonEggRewardSystem
   _gameManager: {fileID: 1911913296}
   _cycleProgression: {fileID: 1528605482}
-  _eggInventorySystem: {fileID: 1940473171}
+  _eggInventorySystem: {fileID: 0}
   _rewardPool: {fileID: 11400000, guid: ae4ba2cbfbd78e843a6ab233d5228842, type: 2}
 --- !u!1 &514351981
 GameObject:
@@ -5477,6 +5493,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &617975129 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6625355842257905210, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 46995104}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4eb56b7099d817a478b51267f372e9e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_TooltipPresenter
 --- !u!1 &751314078
 GameObject:
   m_ObjectHideFlags: 0
@@ -5727,7 +5754,6 @@ Transform:
   - {fileID: 1018617754}
   - {fileID: 1550159054}
   - {fileID: 751314081}
-  - {fileID: 1940473175}
   - {fileID: 1176445552}
   - {fileID: 514351999}
   - {fileID: 847401238}
@@ -5735,6 +5761,7 @@ Transform:
   - {fileID: 790976143}
   - {fileID: 431700180}
   - {fileID: 326854451}
+  - {fileID: 1073712211}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &847401237
@@ -5783,7 +5810,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ProductionForecast
   _gridMap: {fileID: 233073158}
   _populationManager: {fileID: 1911913292}
-  _babyDragonBuffSystem: {fileID: 1940473172}
+  _babyDragonBuffSystem: {fileID: 0}
   _terrainPenaltySystem: {fileID: 514351982}
   _terrainUpkeepSystem: {fileID: 2118368778}
   ForecastChanged:
@@ -5906,6 +5933,300 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de911ad3c42f38b49a99b83793b4851d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ConquestModeController
+--- !u!1 &1073712210
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1073712211}
+  - component: {fileID: 1073712215}
+  - component: {fileID: 1073712214}
+  - component: {fileID: 1073712213}
+  - component: {fileID: 1073712212}
+  - component: {fileID: 1073712218}
+  - component: {fileID: 1073712217}
+  - component: {fileID: 1073712216}
+  m_Layer: 0
+  m_Name: BabyDragon System
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1073712211
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1073712210}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 821372536}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1073712212
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1073712210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b94db57dfe4387f459efa7d69a10d98b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonBuffSystem
+  _gridMap: {fileID: 233073158}
+  _cycleManager: {fileID: 1911913294}
+  _dragonTreeManager: {fileID: 1911913293}
+  _terrainPenaltyScaleComposite: {fileID: 514351998}
+  _terrainPenaltySystem: {fileID: 514351982}
+  BuffsRecomputed:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &1073712213
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1073712210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fb3e39e6851e694d9ae033222311c17, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DragonEggInventorySystem
+  _gameManager: {fileID: 1911913296}
+  _cycleManager: {fileID: 1911913294}
+  _dataCatalog: {fileID: 11400000, guid: 3493e5ed7926f4147ae5f74da9cbd871, type: 2}
+  _grantStartingEgg: 1
+  _startingEggType: 4
+  OnEggGranted:
+    m_PersistentCalls:
+      m_Calls: []
+  OnEggHatched:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &1073712214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1073712210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a78922a122121f4092af39a62e7bdb9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonFeedingSystem
+  _gridMap: {fileID: 233073158}
+  _cycleManager: {fileID: 1911913294}
+  _resourceManager: {fileID: 1911913295}
+--- !u!114 &1073712215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1073712210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9cadeb6a27149a9428db02c01f9a95ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonPlacementCoordinator
+  _gridMap: {fileID: 233073158}
+  _gameManager: {fileID: 1911913296}
+  _placementController: {fileID: 1508974826}
+  _dataCatalog: {fileID: 11400000, guid: 3493e5ed7926f4147ae5f74da9cbd871, type: 2}
+  _babyDragonPrefab: {fileID: 4927136400261429017, guid: 2be7e17dbe60e1148b75df5e1adf3f16, type: 3}
+--- !u!114 &1073712216
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1073712210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55955d2f972a61b49bf70d486a1f45be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GridCellHoveredBuildingSource
+  _gridMap: {fileID: 233073158}
+  _mouseSelectController: {fileID: 1176445553}
+--- !u!114 &1073712217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1073712210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac35080a7cbf86849abf2ae015a83614, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonTooltipProvider
+  _buffSystem: {fileID: 1073712212}
+  _resourceCatalog: {fileID: 11400000, guid: 3c68623cfd9e6d74b8c4e6e8fa62c090, type: 2}
+--- !u!114 &1073712218
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1073712210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a48eb028986b0a4ba7c0357f53d4c7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_BuildingTooltipDriver
+  _presenter: {fileID: 617975129}
+  _hoveredBuildingSource: {fileID: 1073712216}
+  _providers:
+  - {fileID: 1073712217}
+  _placementController: {fileID: 1508974826}
+  _hoverDelay: 0.3
+  _refreshInterval: 0.25
+--- !u!1001 &1166007528
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 173086939}
+    m_Modifications:
+    - target: {fileID: 2540885970289428884, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: _eggInventorySystem
+      value: 
+      objectReference: {fileID: 1073712213}
+    - target: {fileID: 3644515052990332054, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3644515052990332054, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3644515052990332054, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3644515052990332054, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3644515052990332054, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3644515052990332054, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3696369952280920111, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 800
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 100
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 200
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6068371308054089332, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+      propertyPath: m_Name
+      value: BabyDragonEggToast
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+--- !u!224 &1166007529 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 3815476518153057873, guid: a3a26b102ca1da64187ffbc4457607c1, type: 3}
+  m_PrefabInstance: {fileID: 1166007528}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1176445551
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7541,12 +7862,7 @@ MonoBehaviour:
     CurrentDragon:
       CurrentType: 4
       IsChangedThisDay: 0
-    BabyDragons:
-    - DragonName: 
-      DragonType: 4
-      IsInTower: 0
-      Mode: 0
-      IsModeInitialized: 0
+    BabyDragons: []
     DragonEggs: []
     BossDragonEggRewards: []
     EnteredGuideSteps: 
@@ -7813,116 +8129,6 @@ MonoBehaviour:
   _nightLockedBuildingTint: {r: 0.7, g: 0.7, b: 0.7, a: 1}
   _countLabelColor: {r: 1, g: 1, b: 1, a: 1}
   _dragThreshold: 10
---- !u!1 &1940473170
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1940473175}
-  - component: {fileID: 1940473174}
-  - component: {fileID: 1940473173}
-  - component: {fileID: 1940473171}
-  - component: {fileID: 1940473172}
-  m_Layer: 0
-  m_Name: BabyDragon System
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1940473171
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1940473170}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3fb3e39e6851e694d9ae033222311c17, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DragonEggInventorySystem
-  _gameManager: {fileID: 1911913296}
-  _cycleManager: {fileID: 1911913294}
-  _dataCatalog: {fileID: 11400000, guid: 3493e5ed7926f4147ae5f74da9cbd871, type: 2}
-  _grantStartingEgg: 0
-  _startingEggType: 4
-  OnEggGranted:
-    m_PersistentCalls:
-      m_Calls: []
-  OnEggHatched:
-    m_PersistentCalls:
-      m_Calls: []
---- !u!114 &1940473172
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1940473170}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b94db57dfe4387f459efa7d69a10d98b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonBuffSystem
-  _gridMap: {fileID: 233073158}
-  _cycleManager: {fileID: 1911913294}
-  _dragonTreeManager: {fileID: 1911913293}
-  _terrainPenaltyScaleComposite: {fileID: 514351998}
-  _terrainPenaltySystem: {fileID: 514351982}
-  BuffsRecomputed:
-    m_PersistentCalls:
-      m_Calls: []
---- !u!114 &1940473173
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1940473170}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a78922a122121f4092af39a62e7bdb9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonFeedingSystem
-  _gridMap: {fileID: 233073158}
-  _cycleManager: {fileID: 1911913294}
-  _resourceManager: {fileID: 1911913295}
---- !u!114 &1940473174
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1940473170}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9cadeb6a27149a9428db02c01f9a95ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonPlacementCoordinator
-  _gridMap: {fileID: 233073158}
-  _gameManager: {fileID: 1911913296}
-  _placementController: {fileID: 1508974826}
-  _dataCatalog: {fileID: 11400000, guid: 3493e5ed7926f4147ae5f74da9cbd871, type: 2}
-  _babyDragonPrefab: {fileID: 4927136400261429017, guid: 2be7e17dbe60e1148b75df5e1adf3f16, type: 3}
---- !u!4 &1940473175
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1940473170}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 821372536}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1951343440
 GameObject:
   m_ObjectHideFlags: 0
