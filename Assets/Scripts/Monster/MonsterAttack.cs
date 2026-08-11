@@ -18,6 +18,7 @@ public class MonsterAttack : MonoBehaviour
     private MonsterTargetType _enRouteTargetTypes;
     private MonsterMovement _movement;
     private IMonsterTarget _currentTarget;
+    private Collider2D _currentTargetCollider;
     private Castle _finalTarget;
     private ResolvedEnemyStatModifier _attackPowerModifier;
     private Animator _animator;
@@ -141,10 +142,9 @@ public class MonsterAttack : MonoBehaviour
             return false;
         }
 
-        Collider2D col = _currentTarget.TargetObject.GetComponentInChildren<Collider2D>();
-        if (col != null)
+        if (_currentTargetCollider != null)
         {
-            Vector3 closest = col.ClosestPoint(transform.position);
+            Vector3 closest = _currentTargetCollider.ClosestPoint(transform.position);
             return (closest - transform.position).sqrMagnitude <= Range * Range;
         }
 
@@ -210,12 +210,14 @@ public class MonsterAttack : MonoBehaviour
         }
 
         _currentTarget = target;
+        _currentTargetCollider = target.TargetObject.GetComponentInChildren<Collider2D>();
         _movement.Stop();
     }
 
     private void ClearCurrentTarget()
     {
         _currentTarget = null;
+        _currentTargetCollider = null;
         _movement.Begin();
     }
 

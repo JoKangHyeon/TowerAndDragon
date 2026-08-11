@@ -80,6 +80,7 @@ public readonly struct SkillCastContext
 public abstract class Skill
 {
     private const int UNLIMITED_USE_PER_DAY = -1;
+    private const float ANTI_SPAM_DELAY = 1f;
 
     private readonly SkillSO _skillData;
 
@@ -150,7 +151,7 @@ public abstract class Skill
             }
             else if (_charges > 0)
             {
-                return _cooltimeLeft > 0f ? Mathf.Min(_cooltimeLeft / 1f, 1f) : 0f;
+                return _cooltimeLeft > 0f ? Mathf.Min(_cooltimeLeft / ANTI_SPAM_DELAY, 1f) : 0f;
             }
             else
             {
@@ -288,7 +289,7 @@ public abstract class Skill
         else
         {
             // 스택 기반 스킬(메테오)은 1초의 연사 방지 대기 시간만 주고 스택을 소모한다.
-            _cooltimeLeft = 1f; 
+            _cooltimeLeft = ANTI_SPAM_DELAY; 
             _charges -= 1;
             
             if (_charges < UsePerDay && _chargeRechargeTimer <= 0)
@@ -485,6 +486,17 @@ public class MeteorBarricadeSkill : Skill
 {
     private const int BARRICADE_SNAP_DISTANCE = 2;
     private GameObject _previewInstance;
+    private GridMap _gridMap;
+    private Building _buildingPrefab;
+    private static readonly int EnemyLayerMask = LayerMask.GetMask("Enemy");
+
+    private void EnsureCached()
+    {
+        if (_gridMap == null)
+            _gridMap = Object.FindFirstObjectByType<GridMap>();
+        if (_buildingPrefab == null && Data.BarricadePrefab != null)
+            _buildingPrefab = Data.BarricadePrefab.GetComponent<Building>();
+    }
 
     public MeteorBarricadeSkill(SkillSO skillData) : base(skillData) { }
 
@@ -492,20 +504,17 @@ public class MeteorBarricadeSkill : Skill
 
     public override Vector3 GetTargetCenter(Vector3 pointerWorldPosition)
     {
-        GridMap gridMap = Object.FindFirstObjectByType<GridMap>();
-        if (gridMap == null || Data.BarricadePrefab == null) return pointerWorldPosition;
+        EnsureCached();
+        if (_gridMap == null || _buildingPrefab == null) return pointerWorldPosition;
 
-        Building buildingPrefab = Data.BarricadePrefab.GetComponent<Building>();
-        if (buildingPrefab == null) return pointerWorldPosition;
-
-        Vector3Int gridPos = gridMap.PickCellAtWorldPoint(pointerWorldPosition);
+        Vector3Int gridPos = _gridMap.PickCellAtWorldPoint(pointerWorldPosition);
         
-        if (gridMap.TryResolveTemporaryObstacleAnchor(
-                gridPos, buildingPrefab.BaseFootprintShape, BARRICADE_SNAP_DISTANCE, out Vector3Int anchor))
+        if (_gridMap.TryResolveTemporaryObstacleAnchor(
+                gridPos, _buildingPrefab.BaseFootprintShape, BARRICADE_SNAP_DISTANCE, out Vector3Int anchor))
         {
-            return gridMap.GetFootprintCenterWorld(anchor, buildingPrefab.BaseFootprintShape)
-                + buildingPrefab.ComputePlacementOffset(0)
-                + gridMap.ComputeRotationCompensation(buildingPrefab.BaseFootprintShape, 0);
+            return _gridMap.GetFootprintCenterWorld(anchor, _buildingPrefab.BaseFootprintShape)
+                + _buildingPrefab.ComputePlacementOffset(0)
+                + _gridMap.ComputeRotationCompensation(_buildingPrefab.BaseFootprintShape, 0);
         }
         
         return pointerWorldPosition;
@@ -513,16 +522,13 @@ public class MeteorBarricadeSkill : Skill
 
     public override void UpdatePreview(Vector3 targetPoint)
     {
-        GridMap gridMap = Object.FindFirstObjectByType<GridMap>();
-        if (gridMap == null || Data.BarricadePrefab == null) return;
+        EnsureCached();
+        if (_gridMap == null || _buildingPrefab == null) return;
 
-        Building buildingPrefab = Data.BarricadePrefab.GetComponent<Building>();
-        if (buildingPrefab == null) return;
-
-        Vector3Int gridPos = gridMap.PickCellAtWorldPoint(targetPoint);
+        Vector3Int gridPos = _gridMap.PickCellAtWorldPoint(targetPoint);
         
-        bool canPlace = gridMap.TryResolveTemporaryObstacleAnchor(
-                gridPos, buildingPrefab.BaseFootprintShape, BARRICADE_SNAP_DISTANCE, out Vector3Int anchor);
+        bool canPlace = _gridMap.TryResolveTemporaryObstacleAnchor(
+                gridPos, _buildingPrefab.BaseFootprintShape, BARRICADE_SNAP_DISTANCE, out Vector3Int anchor);
 
         if (canPlace)
         {
@@ -550,9 +556,9 @@ public class MeteorBarricadeSkill : Skill
             
             _previewInstance.SetActive(true);
 
-            Vector3 worldPos = gridMap.GetFootprintCenterWorld(anchor, buildingPrefab.BaseFootprintShape)
-                + buildingPrefab.ComputePlacementOffset(0)
-                + gridMap.ComputeRotationCompensation(buildingPrefab.BaseFootprintShape, 0);
+            Vector3 worldPos = _gridMap.GetFootprintCenterWorld(anchor, _buildingPrefab.BaseFootprintShape)
+                + _buildingPrefab.ComputePlacementOffset(0)
+                + _gridMap.ComputeRotationCompensation(_buildingPrefab.BaseFootprintShape, 0);
 
             _previewInstance.transform.position = worldPos;
         }
@@ -576,20 +582,16 @@ public class MeteorBarricadeSkill : Skill
 
     protected override bool ApplyEffect(in SkillCastContext context)
     {
+        EnsureCached();
         // 1. [설치 가능 여부 검증 파트] 방벽을 세울 수 있는 경로 칸인지 가장 먼저 검사합니다.
-        GridMap gridMap = Object.FindFirstObjectByType<GridMap>();
-        if (gridMap == null || Data.BarricadePrefab == null) return false;
+        if (_gridMap == null || _buildingPrefab == null) return false;
 
-        Vector3Int gridPos = gridMap.PickCellAtWorldPoint(context.TargetPoint);
-        Building buildingPrefab = Data.BarricadePrefab.GetComponent<Building>();
+        Vector3Int gridPos = _gridMap.PickCellAtWorldPoint(context.TargetPoint);
 
-        if (buildingPrefab == null)
-            return false;
-
-        if (!gridMap.TryResolveTemporaryObstacleAnchor(
-                gridPos, buildingPrefab.BaseFootprintShape, BARRICADE_SNAP_DISTANCE, out Vector3Int anchor))
+        if (!_gridMap.TryResolveTemporaryObstacleAnchor(
+                gridPos, _buildingPrefab.BaseFootprintShape, BARRICADE_SNAP_DISTANCE, out Vector3Int anchor))
         {
-            string reason = gridMap.MonsterPathQuery == null
+            string reason = _gridMap.MonsterPathQuery == null
                 ? "씬에 MonsterPathMap이 없습니다(조회원 미등록)"
                 : $"주변 {BARRICADE_SNAP_DISTANCE}칸 안에 설치 가능한 몬스터 경로 칸이 없습니다";
 
@@ -600,7 +602,7 @@ public class MeteorBarricadeSkill : Skill
         // 2. [데미지 파트] 설치가 확실시되었으므로 데미지를 먼저 줍니다.
         float radiusX = AreaRadius;
         float radiusY = AreaRadius * IsometricMath.RADIUS_Y_RATIO;
-        LayerMask layers = TargetLayers != 0 ? TargetLayers : LayerMask.GetMask("Enemy");
+        LayerMask layers = TargetLayers != 0 ? TargetLayers : EnemyLayerMask;
 
         Collider2D[] hitColliders = Physics2D.OverlapCircleAll(context.TargetPoint, radiusX, layers);
         HashSet<BaseMonster> targets = new HashSet<BaseMonster>();
@@ -623,24 +625,24 @@ public class MeteorBarricadeSkill : Skill
 
         // ConstructBuilding은 일반 건설 판정(점령 여부, 지형 등)을 거치기 때문에 몬스터 경로(길/미점령) 위에서는 항상 실패합니다.
         // 따라서 직접 위치를 잡아 Instantiate 한 뒤 RegisterFootprint로 우회하여 강제 등록합니다.
-        Vector3 baseOffset = buildingPrefab.transform.localPosition;
-        Vector3 baseScale = buildingPrefab.transform.localScale;
-        Vector3 worldPos = gridMap.GetFootprintCenterWorld(anchor, buildingPrefab.BaseFootprintShape)
-            + buildingPrefab.ComputePlacementOffset(0)
-            + gridMap.ComputeRotationCompensation(buildingPrefab.BaseFootprintShape, 0);
+        Vector3 baseOffset = _buildingPrefab.transform.localPosition;
+        Vector3 baseScale = _buildingPrefab.transform.localScale;
+        Vector3 worldPos = _gridMap.GetFootprintCenterWorld(anchor, _buildingPrefab.BaseFootprintShape)
+            + _buildingPrefab.ComputePlacementOffset(0)
+            + _gridMap.ComputeRotationCompensation(_buildingPrefab.BaseFootprintShape, 0);
 
         Building spawned = Object.Instantiate(
-            buildingPrefab,
+            _buildingPrefab,
             worldPos,
-            buildingPrefab.transform.rotation,
-            gridMap.transform);
+            _buildingPrefab.transform.rotation,
+            _gridMap.transform);
 
         spawned.SetPlacementOffset(baseOffset);
         spawned.SetBaseScale(baseScale);
         spawned.SetRotation(0);
         // SetDepthSortOrder는 RegisterFootprint 내부에서 호출됩니다.
 
-        if (gridMap.RegisterFootprint(spawned, anchor))
+        if (_gridMap.RegisterFootprint(spawned, anchor))
         {
             if (spawned is StoneBarricade barricade)
             {
