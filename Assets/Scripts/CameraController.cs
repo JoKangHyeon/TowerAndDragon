@@ -22,6 +22,11 @@ public class CameraController : MonoBehaviour
     private const float SCROLL_TO_ZOOM_SCALE = 0.01f;
     private const int   BOOKMARK_COUNT      = 5;
 
+    // 씬 로드 직후 첫 프레임의 unscaledDeltaTime에는 로드 히칭이 통째로 들어간다.
+    // (unscaledDeltaTime은 Time.maximumDeltaTime으로 상한이 걸리지 않는다)
+    // 그 값을 그대로 쓰면 이동 입력 한 프레임이 카메라를 맵 경계까지 순간이동시킨다.
+    private const float MAX_INPUT_DELTA_TIME = 0.05f;
+
     // ─────────────────────────────────────────────
     // Inspector 설정
     // ─────────────────────────────────────────────
@@ -46,6 +51,10 @@ public class CameraController : MonoBehaviour
 
     [Header("이동 스무딩")]
     [SerializeField] private float _moveSmoothTime = 0.08f;
+
+    [Header("시작 위치")]
+    [Tooltip("게임 시작 시 이 대상을 화면 중앙에 두고 출발한다. 비우면 씬에 저장된 카메라 위치를 그대로 사용")]
+    [SerializeField] private Transform _startFocusTarget;
 
     [Header("맵 경계 (World 좌표)")]
     [Tooltip("지정 시 시작할 때 타일맵 실제 경계로 _mapMin/_mapMax를 덮어씀. 비우면 아래 수동 값 사용")]
@@ -74,8 +83,17 @@ public class CameraController : MonoBehaviour
 
     private bool _isDragEndInEdge;
 
+    // 씬 로드 직후 Input System의 마우스 위치는 첫 마우스 이벤트가 오기 전까지 (0,0)이다.
+    // (0,0)은 좌·하단 임계값을 동시에 만족해 엣지 스크롤을 남서쪽으로 폭주시킨다.
+    private bool _hasMouseMoved;
+
     // 북마크 (0~4 = 단축키 1~5)
     private Vector3?[] _bookmarks = new Vector3?[BOOKMARK_COUNT];
+
+    /// 이동 입력에 쓰는 프레임 간격.
+    /// 일시정지·배속(Time.timeScale) 중에도 조작 체감이 같아야 하므로 unscaled를 쓰되,
+    /// 씬 로드 직후의 비정상적으로 큰 프레임 간격은 잘라낸다.
+    private static float InputDeltaTime => Mathf.Min(Time.unscaledDeltaTime, MAX_INPUT_DELTA_TIME);
 
     // ─────────────────────────────────────────────
     // Unity 생명주기
@@ -99,6 +117,19 @@ public class CameraController : MonoBehaviour
 
         _mapMin = min - _boundsMarginMin;
         _mapMax = max + _boundsMarginMax;
+    }
+
+    /// 시작 위치를 성 등 지정 대상으로 맞춘다.
+    /// Awake가 아니라 Start인 이유: Awake의 InitMapBounds가 끝난 뒤여야 클램프가 올바른 경계로 동작한다.
+    /// 성의 트랜스폼은 Castle.Start가 옮기지 않으므로 Start끼리의 순서에 의존하지 않는다.
+    private void Start()
+    {
+        if (!WiringGuard.Optional(_startFocusTarget, nameof(_startFocusTarget), this))
+        {
+            return;
+        }
+
+        SnapTo(_startFocusTarget.position);
     }
 
     private void OnEnable()
@@ -138,8 +169,7 @@ public class CameraController : MonoBehaviour
         if (moveInput == Vector2.zero) return;
 
         Vector3 dir = new Vector3(moveInput.x, moveInput.y, 0f).normalized;
-        // 일시정지/배속(Time.timeScale) 중에도 카메라는 항상 동일한 속도로 조작할 수 있어야 한다.
-        _targetPos += dir * _wasdSpeed * Time.unscaledDeltaTime;
+        _targetPos += dir * _wasdSpeed * InputDeltaTime;
     }
 
     /// 마우스를 화면 가장자리로 가져가면 카메라 이동 (스타크래프트 방식)
@@ -150,8 +180,15 @@ public class CameraController : MonoBehaviour
         if (_isDragging) return;
         if (Mouse.current == null) return;
 
+        // 마우스를 한 번이라도 움직이기 전에는 위치를 신뢰할 수 없다. (스폰 직후의 (0,0))
+        if (Mouse.current.delta.ReadValue() != Vector2.zero) _hasMouseMoved = true;
+        if (!_hasMouseMoved) return;
+
         Vector2 mousePos = Mouse.current.position.ReadValue();
-        Vector3 dir      = Vector3.zero;
+        // 화면 밖 좌표(에디터 툴바 위 등)는 아래 임계값 비교를 항상 통과해 버린다.
+        if (!IsInsideScreen(mousePos)) return;
+
+        Vector3 dir = Vector3.zero;
 
         if (mousePos.x < _edgeScrollThreshold)                 dir.x -= 1f;
         if (mousePos.x > Screen.width  - _edgeScrollThreshold) dir.x += 1f;
@@ -171,8 +208,7 @@ public class CameraController : MonoBehaviour
         }
         if (dir == Vector3.zero) return;
 
-        // 일시정지/배속 중에도 카메라는 항상 동일한 속도로 조작할 수 있어야 한다.
-        _targetPos += dir.normalized * _edgeScrollSpeed * Time.unscaledDeltaTime;
+        _targetPos += dir.normalized * _edgeScrollSpeed * InputDeltaTime;
     }
 
     /// 마우스 좌클릭 드래그로 카메라 이동
@@ -320,6 +356,16 @@ public class CameraController : MonoBehaviour
         _targetPos = ClampToMapBounds(new Vector3(worldPosition.x, worldPosition.y, _targetPos.z));
     }
 
+    /// 시작 위치 지정처럼 보간 없이 즉시 그 자리로 옮겨야 할 때 사용.
+    /// MoveTo는 목표만 바꿔 SmoothDamp로 서서히 다가가므로 시작 위치에는 쓸 수 없다.
+    public void SnapTo(Vector2 worldPosition)
+    {
+        MoveTo(worldPosition);   // 클램프는 MoveTo가 수행한다
+        transform.position = new Vector3(_targetPos.x, _targetPos.y, transform.position.z);
+        // 남아있던 SmoothDamp 속도가 다음 프레임에 카메라를 밀어내지 않도록 초기화한다.
+        _smoothVelocity = Vector3.zero;
+    }
+
     /// 엣지 스크롤 토글 (설정 화면 연동)
     public void SetEdgeScrollEnabled(bool enabled)
     {
@@ -336,6 +382,11 @@ public class CameraController : MonoBehaviour
         screenPos.z = 0f;
         return _cam.ScreenToWorldPoint(screenPos);
     }
+
+    /// 스크린 좌표가 게임 화면 안에 있는지
+    private static bool IsInsideScreen(Vector2 screenPos) =>
+        screenPos.x >= 0f && screenPos.x <= Screen.width &&
+        screenPos.y >= 0f && screenPos.y <= Screen.height;
 
     private static bool IsPointerOverUI() =>
         EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
