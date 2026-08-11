@@ -26,6 +26,10 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
     private ComponentPool<UI_ConquestRewardSlot> _slotPool;
     private RectTransform _slotContainerRect;
 
+    // 슬롯 풀과 같은 인덱스로 자라는 툴팁 트리거 목록. 풀이 슬롯을 필요할 때 만들므로
+    // Awake에서 한 번에 모을 수 없어, 슬롯을 처음 꺼낼 때 채운다.
+    private readonly List<UI_TooltipTrigger> _slotTooltipTriggers = new();
+
     private void Awake()
     {
         if (_slotPrefab != null && _slotContainer != null)
@@ -35,9 +39,12 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
         }
     }
 
-    // 적 종류별 (아이콘, 마릿수) 목록을 받아 슬롯을 채운다.
+    // 적 종류별 (아이콘, 마릿수, 데이터) 목록을 받아 슬롯을 채운다.
     // 슬롯은 풀로 재사용하고, 이번에 쓰지 않은 슬롯은 비활성화한다.
-    public void Setup(IReadOnlyList<(Sprite Icon, int Count)> entries)
+    // presenter는 칸에 마우스를 올렸을 때 설명을 그릴 표시기다. 비어 있으면 툴팁만 뜨지 않는다.
+    public void Setup(
+        IReadOnlyList<(Sprite Icon, int Count, MonsterData Data)> entries,
+        UI_TooltipPresenter presenter)
     {
         if (_slotPool == null)
         {
@@ -46,11 +53,13 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
 
         for (int i = 0; i < entries.Count; i++)
         {
-            (Sprite icon, int count) = entries[i];
+            (Sprite icon, int count, MonsterData data) = entries[i];
 
             // 몬스터 아이콘은 인게임 스프라이트를 그대로 쓰므로 틴트 없이 원색으로 표시한다.
             UI_ConquestRewardSlot slot = _slotPool.Get(i);
             slot.Setup(icon, Color.white, string.Format(CountFormat, count));
+
+            SetupTooltip(i, slot, data, presenter);
         }
 
         _slotPool.DeactivateFrom(entries.Count);
@@ -62,5 +71,34 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
         {
             LayoutRebuilder.ForceRebuildLayoutImmediate(_slotContainerRect);
         }
+    }
+
+    // 이번 갱신에서 쓰지 않은 슬롯은 비활성화되고, UI_TooltipTrigger가 OnDisable에서 스스로 툴팁을 닫는다.
+    // 그래서 여기서는 쓰는 칸만 채우면 되고, 밤이 되어 카드가 통째로 꺼져도 툴팁이 남지 않는다.
+    private void SetupTooltip(
+        int slotIndex,
+        UI_ConquestRewardSlot slot,
+        MonsterData data,
+        UI_TooltipPresenter presenter)
+    {
+        while (_slotTooltipTriggers.Count <= slotIndex)
+        {
+            _slotTooltipTriggers.Add(null);
+        }
+
+        if (_slotTooltipTriggers[slotIndex] == null)
+        {
+            if (!WiringGuard.RequireComponent(slot, out UI_TooltipTrigger slotTrigger, this))
+            {
+                return;
+            }
+
+            _slotTooltipTriggers[slotIndex] = slotTrigger;
+        }
+
+        UI_TooltipTrigger trigger = _slotTooltipTriggers[slotIndex];
+
+        trigger.SetPresenter(presenter);
+        trigger.SetContent(MonsterTooltipBuilder.Build(data));
     }
 }

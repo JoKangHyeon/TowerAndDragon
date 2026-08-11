@@ -37,6 +37,10 @@ public class PortalWavePreviewRenderer : MonoBehaviour
     [Tooltip("포탈 위에 띄울 예고 카드 프리팹(월드 스페이스).")]
     [SerializeField] private UI_PortalWavePreviewCard _cardPrefab;
 
+    [Tooltip("아이콘 칸에 마우스를 올렸을 때 적 설명을 그릴 표시기(Ingame_window의 Tooltip_Layer). " +
+             "비워두면 예고 카드는 그대로 뜨고 툴팁만 뜨지 않습니다.")]
+    [SerializeField] private UI_TooltipPresenter _tooltipPresenter;
+
     [Tooltip("마커를 띄울 기준 경로(중앙 직선 통로)의 루트 인덱스.")]
     [SerializeField] private int _corridorRouteIndex = 1;
 
@@ -54,7 +58,7 @@ public class PortalWavePreviewRenderer : MonoBehaviour
     private readonly Dictionary<BaseMonster, Sprite> _iconByMonsterPrefab = new();
     private readonly Dictionary<MonsterData, int> _entryIndexByMonster = new();
     private readonly List<RouteSpawnPlan> _sortedRoutes = new();
-    private readonly List<(Sprite Icon, int Count)> _entryBuffer = new();
+    private readonly List<(Sprite Icon, int Count, MonsterData Data)> _entryBuffer = new();
 
     private ComponentPool<UI_PortalWavePreviewCard> _cardPool;
     private bool _isRefreshQueued;
@@ -72,6 +76,10 @@ public class PortalWavePreviewRenderer : MonoBehaviour
             Debug.LogError("[PortalWavePreviewRenderer] WaveCycleProgression 또는 GridMap 참조가 없습니다.", this);
             return;
         }
+
+        // 표시기가 없어도 예고 카드 자체는 그대로 뜬다(툴팁만 안 뜬다). 다만 배선을 빠뜨린 것과
+        // 일부러 비워 둔 것을 구분할 수 없으므로 경고는 남긴다.
+        WiringGuard.Optional(_tooltipPresenter, nameof(_tooltipPresenter), this);
 
         _waveCycleProgression.DayWaveResolved.AddListener(HandleDayWaveResolved);
 
@@ -231,7 +239,7 @@ public class PortalWavePreviewRenderer : MonoBehaviour
 
             UI_PortalWavePreviewCard card = _cardPool.Get(usedCardCount);
             card.transform.position = anchor + _cardOffset;
-            card.Setup(_entryBuffer);
+            card.Setup(_entryBuffer, _tooltipPresenter);
 
             usedCardCount++;
         }
@@ -323,13 +331,17 @@ public class PortalWavePreviewRenderer : MonoBehaviour
 
                 if (_entryIndexByMonster.TryGetValue(monsterData, out int existingIndex))
                 {
-                    (Sprite icon, int count) = _entryBuffer[existingIndex];
-                    _entryBuffer[existingIndex] = (icon, count + spawnGroup.SpawnCount);
+                    (Sprite icon, int count, MonsterData data) = _entryBuffer[existingIndex];
+                    _entryBuffer[existingIndex] = (icon, count + spawnGroup.SpawnCount, data);
                     continue;
                 }
 
                 _entryIndexByMonster[monsterData] = _entryBuffer.Count;
-                _entryBuffer.Add((ResolveMonsterIcon(spawnGroup.Source.MonsterPrefab), spawnGroup.SpawnCount));
+
+                _entryBuffer.Add((
+                    ResolveMonsterIcon(spawnGroup.Source.MonsterPrefab),
+                    spawnGroup.SpawnCount,
+                    monsterData));
             }
         }
     }
