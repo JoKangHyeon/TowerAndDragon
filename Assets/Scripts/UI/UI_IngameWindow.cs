@@ -63,7 +63,8 @@ public class UI_IngameWindow : MonoBehaviour
 
     [Header("자원 표시 (Panel_TopLeft)")]
     [SerializeField] private ResourceManager _resourceManager;
-    [Tooltip("자원 종류별 수량 텍스트. 기본 3종 + 특화 4종 + 슬라임 5종.")]
+    [Tooltip("자원 종류별 수량 텍스트. 현재는 기본 3종(식량·통나무·돌) + 특화 4종만 배선돼 있다 - " +
+        "슬라임 5종은 이 창에 표시하지 않는다(용 창에서 확인한다).")]
     [SerializeField] private ResourceSlot[] _resourceSlots;
     [Tooltip("하루 예상 증감 표기용. 각 자원 보유량 옆에 (+증가) 또는 (-감소)로 노출한다.")]
     [FormerlySerializedAs("_productionForecast")]
@@ -112,14 +113,6 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private Button _buttonResearch;
     [Tooltip("연구 창. 버튼 클릭 시 연구 창을 토글한다.")]
     [SerializeField] private UI_ResearchWindow _researchWindow;
-    [Tooltip("연구 버튼 라벨. 스트링테이블에서 채운다.")]
-    [SerializeField] private TMP_Text _buttonResearchLabel;
-
-    [Header("새끼용 인벤토리 (Panel_BottomRight)")]
-    [Tooltip("새끼용 인벤토리 창 토글 버튼.")]
-    [SerializeField] private Button _buttonBabyDragonInventory;
-    [Tooltip("새끼용 인벤토리 창. 버튼 클릭 시 토글한다.")]
-    [SerializeField] private UI_DragonInventoryWindow _babyDragonInventoryWindow;
 
     [Header("설정 (Button_Setting)")]
     [Tooltip("설정 창 토글 버튼.")]
@@ -198,16 +191,6 @@ public class UI_IngameWindow : MonoBehaviour
         if (_buttonResearch != null && _researchWindow != null)
         {
             _buttonResearch.onClick.AddListener(_researchWindow.ToggleFromEntryPoint);
-        }
-
-        if (_buttonResearchLabel != null)
-        {
-            _buttonResearchLabel.text = StringTable.GetString(ResearchLocKeys.WINDOW_HEADER);
-        }
-
-        if (_buttonBabyDragonInventory != null && _babyDragonInventoryWindow != null)
-        {
-            _buttonBabyDragonInventory.onClick.AddListener(_babyDragonInventoryWindow.ToggleFromEntryPoint);
         }
 
         if (_buttonSetting != null && _configWindow != null)
@@ -347,11 +330,6 @@ public class UI_IngameWindow : MonoBehaviour
     private void RefreshLocalizedTexts()
     {
         RenderDay(_currentDay);
-
-        if (_buttonResearchLabel != null)
-        {
-            _buttonResearchLabel.text = StringTable.GetString(ResearchLocKeys.WINDOW_HEADER);
-        }
 
         // 자원 툴팁 문구는 SetContent로 '밀어 넣는' 방식이라, 다시 그리지 않으면 언어를 바꿔도
         // 이전 언어로 만들어 둔 문자열이 그대로 남는다(수량 표기와 달리 값이 안 바뀌면 갱신될 일이 없다).

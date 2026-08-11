@@ -17,7 +17,6 @@ public class UI_MainCastleWindow : MonoBehaviour
     private const string SLIME_LABEL_LOC_KEY = "main_castle_window_slime_label";
     private const string CHANGE_BUTTON_LOC_KEY = "main_castle_window_change_button";
     private const string CHANGE_AVAILABLE_LOC_KEY = "main_castle_window_change_available";
-    private const string CHANGE_USED_LOC_KEY = "main_castle_window_change_used";
     private const string SKILL_TREE_BUTTON_LOC_KEY = "main_castle_window_skill_tree_button";
     private const string HEADER_LOC_KEY = "main_castle_window_header";
     private const string NIGHT_LOCKED_LOC_KEY = "building_window_night_locked";
@@ -282,7 +281,7 @@ public class UI_MainCastleWindow : MonoBehaviour
 
         // DragonTreeManager는 이 알림 없이는 속성 변경을 감지할 수 없다(Dragon.OnDragonTypeChanged가
         // 어디서도 invoke되지 않음 - DragonTreeManager.cs 주석 참고). 변경이 실제로 적용됐을 때만
-        // 알려야 낮 1회 제한(IsChangedThisDay)에 막힌 시도까지 HUD를 불필요하게 재바인딩하지 않는다.
+        // 알려야 같은 속성을 다시 고른 경우까지 HUD를 불필요하게 재바인딩하지 않는다.
         if (changed && _dragonTreeManager != null)
         {
             _dragonTreeManager.NotifyActiveAttributeChanged();
@@ -452,9 +451,9 @@ public class UI_MainCastleWindow : MonoBehaviour
         bool hasSelection = _currentSelectedType != (DragonType)(-1);
         bool isDifferentFromCurrent = !hasSelection || _currentSelectedType != dragon.CurrentType;
 
+        // 변경 횟수 제한은 없다 - 낮인지, 그리고 현재와 다른 속성을 골랐는지만 본다.
         bool canChange =
             IsDay &&
-            !dragon.IsChangedThisDay &&
             hasSelection &&
             isDifferentFromCurrent;
 
@@ -465,8 +464,7 @@ public class UI_MainCastleWindow : MonoBehaviour
 
         if (_changeStatusText != null)
         {
-            _changeStatusText.text = StringTable.GetString(
-                dragon.IsChangedThisDay ? CHANGE_USED_LOC_KEY : CHANGE_AVAILABLE_LOC_KEY);
+            _changeStatusText.text = StringTable.GetString(CHANGE_AVAILABLE_LOC_KEY);
         }
     }
 

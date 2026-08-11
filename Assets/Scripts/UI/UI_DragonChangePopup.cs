@@ -6,7 +6,7 @@ using UnityEngine.UI;
 // 카드 하나 = 속성 하나(Type_Ice/Fire/Time/Stone/Life) - 지금은 모든 카드가 같은 자리표시 스프라이트를
 // 쓰고 있어 이미지로 속성을 구분할 수 없다. 그래서 버튼은 GetComponentsInChildren 같은 자동 탐색이 아니라
 // 인스펙터에서 카드 이름을 보고 하나씩 배정한다(_attributeButtons 배열 - DragonType 선언 순서를 따른다).
-// 실제 변경 규칙(TryChangeType의 낮 1회 제한)은 재구현하지 않고 Dragon에 위임한다 -
+// 실제 변경은 재구현하지 않고 Dragon.TryChangeType에 위임한다 -
 // UI_MainCastleWindow.ApplyDragonType과 같은 호출 순서(TryChangeType → NotifyActiveAttributeChanged).
 public class UI_DragonChangePopup : MonoBehaviour
 {
@@ -74,8 +74,8 @@ public class UI_DragonChangePopup : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    // 현재 속성 카드는 숨긴다 - 같은 속성으로 바꾸는 건 의미가 없고,
-    // TryChangeType이 성공 처리되면서 낮 1회 변경 기회만 소모된다.
+    // 현재 속성 카드는 숨긴다 - 같은 속성으로 바꾸는 건 의미가 없다
+    // (TryChangeType도 같은 속성이면 아무것도 하지 않는다).
     private void ApplyCardVisibility()
     {
         if (!WiringGuard.RequireNotEmpty(_attributeCards, nameof(_attributeCards), this))
@@ -101,10 +101,8 @@ public class UI_DragonChangePopup : MonoBehaviour
     private Dragon CurrentDragon =>
         _gameManager != null ? _gameManager.CurrentRun?.CurrentDragon : null;
 
-    // 카드 클릭 = 그 속성으로 즉시 변경 시도 + 팝업 닫기. 별도 확인 버튼은 없다(프리팹에 존재하지 않는다).
-    // 변경이 낮 1회 제한에 막히면 TryChangeType이 조용히 false를 반환한다 - 이번 범위에서는
-    // 실패 피드백 UI를 새로 만들지 않는다(요청에 없었고, MainCastleWindow도 실패 시 버튼을 비활성화할 뿐
-    // 별도 안내 문구는 없다).
+    // 카드 클릭 = 그 속성으로 즉시 변경 + 팝업 닫기. 별도 확인 버튼은 없다(프리팹에 존재하지 않는다).
+    // 변경 횟수 제한은 없으므로 실패하는 경우는 같은 속성을 고른 때뿐이고, 그 카드는 애초에 숨겨져 있다.
     private void SelectAttribute(DragonType attribute)
     {
         Dragon dragon = CurrentDragon;

@@ -98,11 +98,16 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("Left_Panel_frame/Icon_dragon/Button_change - 속성 변경 팝업을 연다.")]
     [SerializeField] private Button _changeButton;
 
+    [Header("Mother Dragon - 스킬 정보 (Panel_MotherDragon/Panel_Skill)")]
+    [Tooltip("Panel_Skill/Icon_Skill 의 Image. 스킬 에셋에 스프라이트가 없으면 숨긴다.")]
+    [SerializeField] private Image _skillIcon;
+    [Tooltip("Panel_Skill/Text_name (TMP). 스킬 이름(SkillSO.NameStringKey)을 표시한다.")]
+    [SerializeField] private TextMeshProUGUI _skillNameText;
+    [Tooltip("Panel_Skill/Text_info (TMP). 스킬 설명(SkillSO.DescriptionStringKey)을 표시한다.")]
+    [SerializeField] private TextMeshProUGUI _skillInfoText;
+
     [Tooltip("Popup_Dragon_Change - 실제 변경 로직은 이 팝업이 갖고 있다.")]
     [SerializeField] private UI_DragonChangePopup _changePopup;
-
-    [Tooltip("속성 변경이 하루 1회 제한에 걸렸을 때 토스트를 띄운다. 없으면 조용히 무시한다.")]
-    [SerializeField] private UI_WarningWindow _warningWindow;
 
     [Header("Baby Dragon / Egg 리스트 (Panel_BabyDragon)")]
     [Tooltip("Panel_Right/Panel_DragonInfo/Text (TMP). 마우스를 올린 새끼용 슬롯의 속성 설명을 표시하고, " +
@@ -539,21 +544,12 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     // Button_change 하나로 속성 변경 팝업을 열고 닫는다.
     // 팝업에는 바깥 클릭 blocker가 없어, 카드를 고르지 않고 무르려면 이 버튼이 유일한 수단이다.
     // (팝업은 버튼을 가리지 않는 위치에 떠서 두 번째 클릭이 버튼에 닿는다.)
+    // 속성 변경에는 횟수 제한이 없으므로 여는 조건도 따로 없다.
     private void ToggleChangePopup()
     {
         if (_changePopup.IsOpen)
         {
             _changePopup.Close();
-            return;
-        }
-
-        // 오늘 이미 바꿨으면 팝업을 열지 않고 경고만 띄운다 - 눌러도 아무 일이 없는 카드만 늘어놓는 것보다
-        // 이유를 바로 알려주는 편이 낫다(변경 규칙 자체는 Dragon.TryChangeType이 단일 출처다).
-        Dragon dragon = CurrentRun?.CurrentDragon;
-
-        if (dragon != null && dragon.IsChangedThisDay)
-        {
-            _warningWindow?.ShowMotherDragonChangeWarning();
             return;
         }
 
@@ -599,6 +595,8 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     private void RenderMotherDragon()
     {
         DragonType? attribute = _dragonTreeManager != null ? _dragonTreeManager.ActiveAttribute : null;
+
+        RenderMotherSkill(attribute);
 
         // RunData/CurrentDragon이 아직 없거나 매니저가 주입되지 않은 시점 -
         // 프리팹의 자리표시 문구("Dragon Name")가 그대로 보이지 않도록 비워둔다.
@@ -655,6 +653,45 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
+    // Panel_Skill - 현재 속성이 쓰는 액티브 스킬의 아이콘·이름·설명.
+    // 스킬트리 해금 여부는 보지 않는다 - "이 속성은 이런 스킬을 쓴다"는 안내가 목적이라
+    // 해금 전에도 같은 내용을 보여준다(실제 사용 가능 여부는 HUD 쪽 SkillManager가 가른다).
+    private void RenderMotherSkill(DragonType? attribute)
+    {
+        SkillSO skill = attribute.HasValue && _dragonTreeManager != null
+            ? _dragonTreeManager.GetActiveSkillOf(attribute.Value)
+            : null;
+
+        if (_skillNameText != null)
+        {
+            _skillNameText.text = skill != null
+                ? StringTable.GetString(skill.NameStringKey)
+                : string.Empty;
+        }
+
+        if (_skillInfoText != null)
+        {
+            _skillInfoText.text = skill != null
+                ? StringTable.GetString(skill.DescriptionStringKey)
+                : string.Empty;
+        }
+
+        if (_skillIcon == null)
+        {
+            return;
+        }
+
+        // 스킬 에셋의 Sprite가 아직 전부 비어 있으므로(실측), 스프라이트가 없으면 프리팹의
+        // 자리표시 이미지가 그대로 남지 않도록 아이콘을 숨긴다(_motherIcon과 같은 처리).
+        Sprite sprite = skill != null ? skill.Sprite : null;
+        _skillIcon.enabled = sprite != null;
+
+        if (sprite != null)
+        {
+            _skillIcon.sprite = sprite;
+        }
+    }
+
     private RunData CurrentRun => _gameManager != null ? _gameManager.CurrentRun : null;
 
     // 슬롯은 전부 프리팹에서 새로 만들어 컨테이너(Content) 아래에 넣는다.
@@ -707,8 +744,41 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         // 설치 중인 용도 함께 표시한다 - 슬롯의 Icon_Focus가 미배치(배치 시작)/배치(카메라 이동)로
         // 갈리므로 목록에서 빼면 배치된 개체를 찾아갈 방법이 없어진다.
         // (기존 BabyDragon_window는 슬롯이 배치 버튼이라 IsInTower를 걸러냈다.)
+        //
+        // 다만 아직 배치하지 않은 용을 목록 위쪽에 모은다 - 이 창에서 가장 자주 하는 일이
+        // "남은 용을 배치하는 것"이라 스크롤을 내려 찾지 않아도 되게 한다.
+        // 정렬이 아니라 2패스 순회라 각 그룹 안에서는 run.BabyDragons의 기존 순서가 유지된다.
+        used = AppendBabyDragonSlots(run, isInTower: false, used, ref isHoveredStillListed);
+        used = AppendBabyDragonSlots(run, isInTower: true, used, ref isHoveredStillListed);
+
+        _babyDragonSlotPool.DeactivateFrom(used);
+
+        // 슬롯이 풀에서 재사용되거나 비활성화될 때는 OnPointerExit가 오지 않는다.
+        // 호버 중이던 용이 목록에서 사라졌을 때만 설명을 비우고, 남아 있으면 그대로 유지한다
+        // (마우스를 올려둔 채 알이 부화하는 등으로 목록이 갱신돼도 설명이 깜빡이지 않게).
+        if (!isHoveredStillListed)
+        {
+            _hoveredBabyDragon = null;
+        }
+
+        RenderBabyInfo();
+    }
+
+    // isInTower와 배치 상태가 같은 용만 used번 슬롯부터 이어서 채우고, 다음에 쓸 슬롯 번호를 돌려준다.
+    // 풀은 인덱스 순서대로 Content 아래에 붙으므로 슬롯 번호가 곧 목록에서의 위치가 된다.
+    private int AppendBabyDragonSlots(
+        RunData run,
+        bool isInTower,
+        int used,
+        ref bool isHoveredStillListed)
+    {
         foreach (BabyDragon dragon in run.BabyDragons)
         {
+            if (dragon.IsInTower != isInTower)
+            {
+                continue;
+            }
+
             if (!TryResolveBabyDragonData(dragon.DragonType, out BabyDragonData data))
             {
                 continue;
@@ -722,17 +792,7 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             isHoveredStillListed |= dragon == _hoveredBabyDragon;
         }
 
-        _babyDragonSlotPool.DeactivateFrom(used);
-
-        // 슬롯이 풀에서 재사용되거나 비활성화될 때는 OnPointerExit가 오지 않는다.
-        // 호버 중이던 용이 목록에서 사라졌을 때만 설명을 비우고, 남아 있으면 그대로 유지한다
-        // (마우스를 올려둔 채 알이 부화하는 등으로 목록이 갱신돼도 설명이 깜빡이지 않게).
-        if (!isHoveredStillListed)
-        {
-            _hoveredBabyDragon = null;
-        }
-
-        RenderBabyInfo();
+        return used;
     }
 
     // Icon_Focus 클릭 - 어느 쪽이든 창을 먼저 닫는다(그리드를 봐야 하는 동작이라 창이 방해된다).
