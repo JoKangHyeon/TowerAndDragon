@@ -39,6 +39,14 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField] private TerrainType[] _penaltyMitigationTerrains;
     public IReadOnlyList<TerrainType> PenaltyMitigationTerrains => _penaltyMitigationTerrains;
 
+    [Tooltip("용암 지대처럼 지형 때문에 건설이 막혔을 때 경고를 띄울 창. 비어 있으면 안내만 생략되고 판정은 그대로다.")]
+    [SerializeField]
+    private UI_WarningWindow _warningWindow;
+
+    [Tooltip("이 지형 때문에 막히면 '얼음 새끼용의 범위가 필요하다'고 안내한다. BD_Ice의 _constructionUnlockTerrains와 같게 유지할 것 - 절벽·물처럼 어떤 새끼용으로도 풀 수 없는 지형을 여기 넣으면 안내가 거짓말이 된다.")]
+    [SerializeField]
+    private TerrainType _iceUnlockableTerrain = TerrainType.Volcano;
+
 
     [Tooltip("타워를 이만큼(초) 꾹 누르고 있으면 이동 모드로 진입한다.")]
     [SerializeField]
@@ -616,8 +624,15 @@ public class BuildingPlacementController : MonoBehaviour
         if (!IsDayForBuildActions)
             return false;
 
-        if (!_gridMap.CanConstructBuildingFootprint(anchor, _mouseSelectController.CurrentFootprintShape, _selectedBuilding, null))
+        // 풋프린트를 한 번만 계산해 판정과 경고가 같은 칸 목록을 보게 한다(MouseSelectController.Update와 같은 형태).
+        List<Vector3Int> footprint =
+            _gridMap.GetFootprintCoords(anchor, _mouseSelectController.CurrentFootprintShape);
+
+        if (!_gridMap.CanConstructBuildingFootprint(footprint, _selectedBuilding, null))
+        {
+            WarnIfBlockedByIceUnlockableTerrain(footprint);
             return false;
+        }
 
         IReadOnlyList<ResourceAmount> cost = _selectedBuilding.BuildCost;
         if (_resourceManager != null && !_resourceManager.CanAfford(cost))
@@ -636,6 +651,28 @@ public class BuildingPlacementController : MonoBehaviour
 
         CancelBuildMode();
         return true;
+    }
+
+    // 풋프린트 중 "얼음 새끼용이라면 풀 수 있었을 지형"(용암) 때문에 막힌 칸이 있으면 그 이유를 알린다.
+    // 호버 미리보기의 빨간 타일은 용암·절벽·물·미점령·점유를 전부 같은 색으로 보여줘서 "무엇을 하면
+    // 되는지"를 알려주지 못한다. 반대로 절벽·물처럼 어떤 새끼용으로도 풀 수 없는 지형에서 이 문구가
+    // 뜨면 안 되므로, 지형이 막은 경우(IsBlockedByTerrain)로 좁힌 뒤 지형 종류까지 확인한다.
+    private void WarnIfBlockedByIceUnlockableTerrain(List<Vector3Int> footprint)
+    {
+        if (_warningWindow == null)
+        {
+            return;
+        }
+
+        foreach (Vector3Int coord in footprint)
+        {
+            if (_gridMap.IsBlockedByTerrain(coord) &&
+                _gridMap.GetTerrainType(coord) == _iceUnlockableTerrain)
+            {
+                _warningWindow.ShowVolcanoConstructionWarning();
+                return;
+            }
+        }
     }
 
     // 건물 종류별 건설 비용 데이터를 조회 - UI_BuildingSlot.ResolveName과 동일한 타입 분기 패턴.
@@ -667,7 +704,12 @@ public class BuildingPlacementController : MonoBehaviour
             return false;
 
         if (!_gridMap.MoveBuilding(prevCoord, anchor, _mouseSelectController.PreviewRotationSteps))
+        {
+            // 플레이어 입장에선 새로 짓는 것과 옮기는 것이 똑같이 "용암에 못 놓는다"이므로 같은 안내를 준다.
+            WarnIfBlockedByIceUnlockableTerrain(
+                _gridMap.GetFootprintCoords(anchor, _mouseSelectController.CurrentFootprintShape));
             return false;
+        }
 
         building.NotifyMoved();
         building.SetHighlighted(false, default);

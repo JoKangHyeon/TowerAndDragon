@@ -99,11 +99,8 @@ public class TerrainUpkeepSystem : MonoBehaviour
 
             TerrainPenaltyModifiers penalty = _terrainPenaltySystem.Resolve(building);
 
-            // 반올림은 시설 단위로 한 번만 한다 - 여러 지형에 걸친 건물의 비율 가중치는
-            // 소수이므로, 인구를 곱하기 전에 정수화하면 오차가 커진다.
-            var upkeep = new TerrainUpkeepRules.FacilityUpkeep(
-                Mathf.RoundToInt(target.AssignedPopulation * penalty.WoodUpkeepPerPopulation),
-                Mathf.RoundToInt(target.AssignedPopulation * penalty.StoneUpkeepPerPopulation));
+            TerrainUpkeepRules.FacilityUpkeep upkeep =
+                TerrainUpkeepRules.ResolveFacilityUpkeep(target.AssignedPopulation, penalty);
 
             if (!upkeep.HasUpkeep)
             {

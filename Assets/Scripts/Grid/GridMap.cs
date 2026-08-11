@@ -435,6 +435,12 @@ public class GridMap : MonoBehaviour
     public bool IsNaturallyConstructible (Vector3Int coord) =>
         _cells.TryGetValue(coord, out GridCell cell) && cell.CanConstruct;
 
+    // 지형 때문에(해제 조회원까지 따져도) 건설이 막힌 셀인지. 실패 사유를 되물어 경고 문구를 고르는
+    // 용도다 - 점유·미점령 같은 다른 사유와 구분해야 하기 때문에 IsNaturallyConstructible로는 부족하다
+    // (얼음 새끼용이 이미 풀어준 셀까지 "지형 탓"으로 잡아버린다).
+    public bool IsBlockedByTerrain(Vector3Int coord) =>
+        _cells.TryGetValue(coord, out GridCell cell) && !IsCellConstructible(cell);
+
     // 디버그 오버레이/로그 전용 원시 지형 생산력 - 자원 종류·연구 강화와 무관한 순수 값이다.
     public int GetBaseYield(Vector3Int coord) =>
         _cells.TryGetValue(coord, out GridCell cell) ? cell.BaseYield : 0;

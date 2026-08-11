@@ -768,6 +768,73 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26941716a71269f4bb95dbd977f72da9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GridMap
+--- !u!1 &314372490
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 314372491}
+  - component: {fileID: 314372493}
+  - component: {fileID: 314372492}
+  m_Layer: 0
+  m_Name: BuildingEffectSystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &314372491
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 314372490}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 698775030}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &314372492
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 314372490}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 585963aebbffb0d4d81d7eee3c636fbf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingEffectHoverTooltip
+  _mouseSelectController: {fileID: 250167905}
+  _gridMap: {fileID: 313449541}
+  _tooltipPresenter: {fileID: 944163940}
+  _badgeSystem: {fileID: 314372493}
+--- !u!114 &314372493
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 314372490}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 111b8798d397ca1479b2d88c9541b4ee, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingEffectBadgeSystem
+  _gridMap: {fileID: 313449541}
+  _badgePrefab: {fileID: 6200000000000000003, guid: c8a1f30d724b4e14b9027ad6e31f85c2, type: 3}
+  _iconData: {fileID: 11400000, guid: d51b8e6a3f0c4a748b6d29c17e0a4f36, type: 2}
+  _terrainPenaltySystem: {fileID: 1652351659}
+  _babyDragonBuffSystem: {fileID: 936144406}
+  _populationManager: {fileID: 914589617}
 --- !u!1 &334704090
 GameObject:
   m_ObjectHideFlags: 0
@@ -1896,6 +1963,7 @@ Transform:
   - {fileID: 619099542}
   - {fileID: 1239370978}
   - {fileID: 1464424654}
+  - {fileID: 314372491}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &704850238
@@ -1930,6 +1998,10 @@ PrefabInstance:
       propertyPath: _cycleManager
       value: 
       objectReference: {fileID: 914589611}
+    - target: {fileID: 1524292489982518287, guid: 962c2eeb01b802d489e27603bb8e25db, type: 3}
+      propertyPath: _tooltipPresenter
+      value: 
+      objectReference: {fileID: 944163940}
     - target: {fileID: 3082328905160274139, guid: 962c2eeb01b802d489e27603bb8e25db, type: 3}
       propertyPath: _pathRoot
       value: 
@@ -6842,6 +6914,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5db4aac255165ed4a83e68df370bf90c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
+--- !u!114 &944163940 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6625355842257905210, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 944163938}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4eb56b7099d817a478b51267f372e9e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_TooltipPresenter
+--- !u!114 &944163941 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8378660529608903312, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 944163938}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7b8234ec3124a14a9a0f2e0d0003b0a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_WarningWindow
 --- !u!114 &987628432 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6444730923389697932, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -8031,6 +8125,8 @@ MonoBehaviour:
   _rangeIndicator: {fileID: 1494252251}
   _buffRangeIndicator: {fileID: 528527941}
   _penaltyMitigationTerrains: 
+  _warningWindow: {fileID: 944163941}
+  _iceUnlockableTerrain: 2
   _moveHoldDuration: 2
   _dragThreshold: 10
   BuildingSelected:

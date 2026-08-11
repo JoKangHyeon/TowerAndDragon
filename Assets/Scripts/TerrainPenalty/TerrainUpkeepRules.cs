@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 /// <summary>
 /// 지역 유지비의 실제 정산과 (추후) UI 미리보기가 공유하는 순수 계산 규칙이다.
@@ -20,6 +21,21 @@ public static class TerrainUpkeepRules
             StoneAmount = stoneAmount;
         }
     }
+
+    /// <summary>
+    /// 시설 한 개가 다음 정산에서 실제로 낼 지역 유지비. 실제 차감(TerrainUpkeepSystem)과
+    /// 표시(BuildingEffectResolver)가 반드시 같은 값을 내야 하므로 계산식은 여기 하나만 둔다
+    /// (Factory.CalculateYield와 같은 이유).
+    ///
+    /// 반올림은 시설 단위로 한 번만 한다 - 여러 지형에 걸친 건물의 비율 가중치는 소수이므로,
+    /// 인구를 곱하기 전에 정수화하면 오차가 커진다.
+    /// </summary>
+    public static FacilityUpkeep ResolveFacilityUpkeep(
+        int assignedPopulation,
+        in TerrainPenaltyModifiers penalty) =>
+        new FacilityUpkeep(
+            Mathf.RoundToInt(assignedPopulation * penalty.WoodUpkeepPerPopulation),
+            Mathf.RoundToInt(assignedPopulation * penalty.StoneUpkeepPerPopulation));
 
     public static void AccumulateRequirement(
         IReadOnlyList<FacilityUpkeep> facilities,

@@ -16,6 +16,9 @@ public class UI_WarningWindow : MonoBehaviour
     [Tooltip("어미용 속성을 하루 1회 제한에 걸려 바꾸지 못할 때 띄우는 메시지.")]
     [SerializeField] private GameObject _messageMotherDragonChange;
 
+    [Tooltip("용암이 흐르는 타일에 건설·이동을 시도했을 때 띄우는 메시지(얼음 새끼용 버프 반경이 필요하다는 안내).")]
+    [SerializeField] private GameObject _messageVolcanoConstruction;
+
     [Tooltip("페이드 인/아웃 사이 완전히 보이는 시간(초).")]
     [SerializeField] private float _showDuration = DEFAULT_SHOW_DURATION;
 
@@ -28,10 +31,14 @@ public class UI_WarningWindow : MonoBehaviour
     private CanvasGroup _messageMotherDragonChangeGroup;
     private Sequence _motherDragonChangeSequence;
 
+    private CanvasGroup _messageVolcanoConstructionGroup;
+    private Sequence _volcanoConstructionSequence;
+
     private void Awake()
     {
         _messageClaimGroup = Prepare(_messageClaim);
         _messageMotherDragonChangeGroup = Prepare(_messageMotherDragonChange);
+        _messageVolcanoConstructionGroup = Prepare(_messageVolcanoConstruction);
     }
 
     // 밤 점령 경고를 페이드로 잠깐 띄운다.
@@ -45,6 +52,13 @@ public class UI_WarningWindow : MonoBehaviour
     {
         _motherDragonChangeSequence =
             Show(_messageMotherDragonChange, _messageMotherDragonChangeGroup, _motherDragonChangeSequence);
+    }
+
+    // 용암이 흐르는 타일이라 건설·이동이 막혔을 때 띄운다(얼음 새끼용의 버프 반경 안에서만 가능).
+    public void ShowVolcanoConstructionWarning()
+    {
+        _volcanoConstructionSequence =
+            Show(_messageVolcanoConstruction, _messageVolcanoConstructionGroup, _volcanoConstructionSequence);
     }
 
     // 메시지를 꺼진 상태로 두고 페이드용 CanvasGroup을 확보한다.
