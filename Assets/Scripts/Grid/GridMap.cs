@@ -614,15 +614,15 @@ public class GridMap : MonoBehaviour
         }
     }
 
-    public void ConstructBuilding(Building prefab, Vector3Int anchor, int rotationSteps)
+    public bool ConstructBuilding(Building prefab, Vector3Int anchor, int rotationSteps)
     {
         if (prefab == null)
-            return;
+            return false;
 
         FootprintShape rotatedShape = prefab.BaseFootprintShape.Rotated(rotationSteps);
 
-        if (!TryGetFootprint(anchor, rotatedShape, out List<GridCell> footprint))
-            return;
+        if (!TryGetFootprint(anchor, rotatedShape, prefab, null, out List<GridCell> footprint))
+            return false;
 
         Vector3 baseOffset = prefab.transform.localPosition;
         Vector3 baseScale = prefab.transform.localScale;
@@ -650,6 +650,7 @@ public class GridMap : MonoBehaviour
 
         LastAddedBuilding = building;
         OnBuildingAdded?.Invoke(building);
+        return true;
     }
 
     // 회전 스텝에 따라 가로/세로 축의 짝홀이 서로 바뀌면서 생기는 어긋남(FootprintShape.ParityMismatch 차이)을
@@ -711,14 +712,27 @@ public class GridMap : MonoBehaviour
     }
 
     public bool TryGetFootprint(Vector3Int anchor, FootprintShape shape, out List<GridCell> footprint) =>
-        TryGetFootprint(anchor, shape, null, out footprint);
+        TryGetFootprint(anchor, shape, null, null, out footprint);
 
     public bool TryGetFootprint(Vector3Int anchor, FootprintShape shape, Building ignoreBuilding, out List<GridCell> footprint)
+        => TryGetFootprint(anchor, shape, ignoreBuilding, ignoreBuilding, out footprint);
+
+    private bool TryGetFootprint(
+        Vector3Int anchor,
+        FootprintShape shape,
+        Building candidateBuilding,
+        Building ignoreBuilding,
+        out List<GridCell> footprint)
     {
         footprint = new List<GridCell>();
-        foreach (Vector3Int coord in GetFootprintCoords(anchor, shape))
+        List<Vector3Int> footprintCoords = GetFootprintCoords(anchor, shape);
+
+        if (!CanConstructBuildingFootprint(footprintCoords, candidateBuilding, ignoreBuilding))
+            return false;
+
+        foreach (Vector3Int coord in footprintCoords)
         {
-            if (!CanConstructBuilding(coord, ignoreBuilding) || !_cells.TryGetValue(coord, out GridCell cell))
+            if (!_cells.TryGetValue(coord, out GridCell cell))
                 return false;
 
             footprint.Add(cell);

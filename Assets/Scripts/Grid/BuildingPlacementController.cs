@@ -639,7 +639,8 @@ public class BuildingPlacementController : MonoBehaviour
             return false;
 
         Debug.Log($"[BuildingPlacementController] 건설 위치: {anchor}");
-        _gridMap.ConstructBuilding(_selectedBuilding, anchor, _mouseSelectController.PreviewRotationSteps);
+        if (!_gridMap.ConstructBuilding(_selectedBuilding, anchor, _mouseSelectController.PreviewRotationSteps))
+            return false;
 
         if (_cycleManager != null)
             _gridMap.GetBuildingAt(anchor)?.SetConstructedCycle(_cycleManager.CurrentCycleNumber);

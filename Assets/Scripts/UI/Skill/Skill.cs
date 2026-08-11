@@ -84,7 +84,8 @@ public abstract class Skill
     private readonly SkillSO _skillData;
 
     private float _cooltimeLeft;
-    private int _usePerDayLeft;
+    private float _chargeRechargeTimer;
+    private int _charges;
 
     // 용 스킬트리 강화/궁극 노드의 위력·쿨다운 보너스 조회원 - SkillManager가 생성 직후 주입한다.
     // 없으면(용 스킬트리와 무관한 스킬) 보너스 0으로 취급한다.
@@ -125,7 +126,7 @@ public abstract class Skill
 
     // 강화·궁극 노드(DragonSkillPowerEffectSO)의 쿨다운 감소 비율을 반영한다 - 이 값을 읽지 않으면
     // 해당 10개 노드를 해금해도 쿨다운이 전혀 줄지 않는다.
-    public float Cooltime
+    public float ChargeCooltime
     {
         get
         {
@@ -137,9 +138,24 @@ public abstract class Skill
         }
     }
 
-    public float CooltimeLeft => _cooltimeLeft;
-    public float CooltimeRatio => Cooltime > 0f ? Mathf.Min(_cooltimeLeft / Cooltime, 1f) : 0f;
-    public int UsePerDayLeft => _usePerDayLeft;
+    public float CooltimeLeft => _charges > 0 ? _cooltimeLeft : _chargeRechargeTimer;
+    
+    public float CooltimeRatio 
+    {
+        get 
+        {
+            if (_charges > 0)
+            {
+                return _cooltimeLeft > 0f ? Mathf.Min(_cooltimeLeft / 1f, 1f) : 0f;
+            }
+            else
+            {
+                return ChargeCooltime > 0f ? Mathf.Min(_chargeRechargeTimer / ChargeCooltime, 1f) : 0f;
+            }
+        }
+    }
+    
+    public int UsePerDayLeft => _charges;
 
     // 궁극 노드(DragonSkillPowerEffectSO._extraUsePerDay)의 추가 횟수를 반영한다.
     // 무제한(-1) 스킬에 더하면 -1이 깨져 IsUnlimitedUse가 false가 되므로 먼저 걸러낸다.
@@ -209,9 +225,25 @@ public abstract class Skill
         if (_cooltimeLeft > 0)
         {
             _cooltimeLeft -= deltaTime;
-
             if (_cooltimeLeft < 0)
                 _cooltimeLeft = 0;
+        }
+
+        if (!IsUnlimitedUse && _charges < UsePerDay)
+        {
+            _chargeRechargeTimer -= deltaTime;
+            if (_chargeRechargeTimer <= 0)
+            {
+                _charges++;
+                if (_charges < UsePerDay)
+                {
+                    _chargeRechargeTimer += ChargeCooltime;
+                }
+                else
+                {
+                    _chargeRechargeTimer = 0f;
+                }
+            }
         }
     }
 
@@ -230,19 +262,22 @@ public abstract class Skill
 
     private void SpendResources()
     {
-        _cooltimeLeft = Cooltime;
+        _cooltimeLeft = 1f; // 1 second internal cooldown for rapid fire
         if (!IsUnlimitedUse)
         {
-            _usePerDayLeft -= 1;
+            _charges -= 1;
+            if (_charges < UsePerDay && _chargeRechargeTimer <= 0)
+            {
+                _chargeRechargeTimer = ChargeCooltime;
+            }
         }
     }
 
     public void Reset()
     {
         _cooltimeLeft = 0f;
-
-        // DefaultUsePerDay를 직접 읽으면 궁극 노드의 추가 횟수가 매일 아침 사라진다.
-        _usePerDayLeft = UsePerDay;
+        _chargeRechargeTimer = 0f;
+        _charges = UsePerDay;
     }
 }
 

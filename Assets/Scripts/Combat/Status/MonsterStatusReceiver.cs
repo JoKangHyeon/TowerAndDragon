@@ -199,7 +199,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         bool movementChanged = TickMoveSpeedStatuses(deltaTime);
         bool freezeChanged = TickFreezeStatuses(deltaTime);
 
-        if (TickMoveSpeedStatuses(deltaTime))
+        if (movementChanged || freezeChanged)
         {
             _monster?.RefreshMoveSpeed();
         }

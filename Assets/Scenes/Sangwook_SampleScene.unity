@@ -185,6 +185,7 @@ MonoBehaviour:
   _cycleManager: {fileID: 914589611}
   _uiManager: {fileID: 944163939}
   _countOverlay: {fileID: 37122976}
+  _warningWindow: {fileID: 0}
   _assignAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _idleHighlightColor: {r: 1, g: 0, b: 0, a: 1}
@@ -2266,6 +2267,9 @@ MonoBehaviour:
   OnCycleChanged:
     m_PersistentCalls:
       m_Calls: []
+  DayEndBlocked:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &914589612
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2282,7 +2286,6 @@ MonoBehaviour:
     CurrentCycle: 0
     CurrentDragon:
       CurrentType: 4
-      IsChangedThisDay: 0
     BabyDragons:
     - DragonName: 
       DragonType: 4
@@ -2291,6 +2294,10 @@ MonoBehaviour:
       IsModeInitialized: 0
     DragonEggs: []
     BossDragonEggRewards: []
+    EnteredGuideSteps: 
+    EnteredTutorialStepIds: []
+    IsTutorialDismissed: 0
+    CompletedTutorialObjectiveIds: []
     OnInventoryChanged:
       m_PersistentCalls:
         m_Calls: []
@@ -2651,6 +2658,14 @@ MonoBehaviour:
   _gameManager: {fileID: 914589612}
   _cycleManager: {fileID: 914589611}
   _dataCatalog: {fileID: 11400000, guid: 3493e5ed7926f4147ae5f74da9cbd871, type: 2}
+  _grantStartingEgg: 0
+  _startingEggType: 4
+  OnEggGranted:
+    m_PersistentCalls:
+      m_Calls: []
+  OnEggHatched:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &936144408
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8217,6 +8232,12 @@ MonoBehaviour:
   BuildingSelected:
     m_PersistentCalls:
       m_Calls: []
+  BuildingToPlaceChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  SelectedBuildingChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!4 &1692054029
 Transform:
   m_ObjectHideFlags: 0
@@ -8323,6 +8344,14 @@ PrefabInstance:
       propertyPath: _cycleManager
       value: 
       objectReference: {fileID: 914589611}
+    - target: {fileID: 3360647432619492658, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3360647432619492658, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: m_Name
       value: Grid_HeightVariant
@@ -8339,6 +8368,10 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: 0.067
       objectReference: {fileID: 0}
+    - target: {fileID: 7933654254519542084, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: _gameManager
+      value: 
+      objectReference: {fileID: 914589612}
     - target: {fileID: 8228429161871257706, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
