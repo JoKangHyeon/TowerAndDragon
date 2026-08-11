@@ -189,6 +189,21 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery
                 _currentStep = step;
             }
         }
+
+        if (!_currentStep.HasValue)
+        {
+            return;
+        }
+
+        // 단계만 되돌리면 그 단계 안의 진행도가 0으로 남아 이미 읽은 안내가 다시 뜬다.
+        // 지나온 단계에서 파생되는 값이므로 저장하지 않고 여기서 도로 계산한다.
+        _hasShownWaitHatchGuide = _currentStep.Value > BabyDragonGuideStep.WaitHatch;
+        _hasFinishedWaitHatchGuide = _hasShownWaitHatchGuide;
+
+        if (_currentStep.Value == BabyDragonGuideStep.Completed)
+        {
+            _completionIndex = COMPLETION_LOC_KEYS.Length;
+        }
     }
 
     // 알 획득 토스트는 결과 알림이고, 인벤토리 버튼 안내는 다음 행동이므로 함께 보여도 역할이 겹치지 않는다.

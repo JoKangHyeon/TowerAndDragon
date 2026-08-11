@@ -49,9 +49,66 @@ public class UIManager : MonoBehaviour
     // 다른 모드가 열릴 때도 닫힌다. 그래서 호출 지점을 찾아 붙이는 대신 IsOpen 전이를 여기서 관측한다.
     public UnityEvent<MonoBehaviour> ExclusiveModeClosed = new();
 
-    // 튜토리얼이 배선한다 - 배선되지 않은 씬에서는 null로 남아 모든 창이 그대로 열린다(기존 동작 유지).
-    // PopulationManager.CapacityModifierQuery와 같은 주입 방식.
-    public IExclusiveModeOpenQuery OpenQuery { get; set; }
+    // 튜토리얼이 등록한다 - 아무도 등록하지 않은 씬에서는 비어 있어 모든 창이 그대로 열린다(기존 동작 유지).
+    //
+    // 슬롯 하나가 아니라 목록인 이유: 챕터 안내와 팁 체인이 동시에 돌 수 있는데, 슬롯 하나를 서로
+    // 덮어쓰면 나중에 온 쪽이 앞의 관문을 지우고 물러날 때 통째로 풀어버린다
+    // (CycleManager._dayEndBlockers를 목록으로 둔 것과 같은 이유다).
+    private readonly List<IExclusiveModeOpenQuery> _openQueries = new();
+
+    /// <summary>하나라도 거절하면 열리지 않는다. 같은 대상을 두 번 넣어도 한 번만 등록된다.</summary>
+    public void AddOpenQuery(IExclusiveModeOpenQuery query)
+    {
+        if (query != null && !_openQueries.Contains(query))
+        {
+            _openQueries.Add(query);
+        }
+    }
+
+    /// <summary>등록을 뗀다. 자기가 넣은 것만 빼므로 남의 관문은 건드리지 않는다.</summary>
+    public void RemoveOpenQuery(IExclusiveModeOpenQuery query)
+    {
+        _openQueries.Remove(query);
+    }
+
+    private bool CanOpenByQueries(MonoBehaviour target)
+    {
+        foreach (IExclusiveModeOpenQuery query in _openQueries)
+        {
+            if (query != null && !query.CanOpen(target))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanUseShortcutByQueries(MonoBehaviour target)
+    {
+        foreach (IExclusiveModeOpenQuery query in _openQueries)
+        {
+            if (query != null && !query.CanUseShortcut(target))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanCloseByQueries(MonoBehaviour target)
+    {
+        foreach (IExclusiveModeOpenQuery query in _openQueries)
+        {
+            if (query != null && !query.CanClose(target))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// 지금 열려 있는 배타 모드. 배타이므로 많아야 하나다. 아무것도 안 열려 있으면 null.
@@ -109,7 +166,7 @@ public class UIManager : MonoBehaviour
 
             // 튜토리얼의 버튼 유도를 단축키로 건너뛰지 못하게 한다. 실제 HUD 버튼은
             // OpenExclusive를 직접 호출하므로 이 관문과 무관하게 현재 안내대로 작동한다.
-            if (OpenQuery != null && !OpenQuery.CanUseShortcut(mode as MonoBehaviour))
+            if (!CanUseShortcutByQueries(mode as MonoBehaviour))
             {
                 continue;
             }
@@ -216,7 +273,7 @@ public class UIManager : MonoBehaviour
     {
         // 열리지 않는 것으로 끝난다 - 이미 열린 창을 닫지도 않는다. 안내 중에 아직 설명하지 않은 창이
         // 열리는 것만 막는 용도라, 거절이 다른 창을 닫는 부작용을 내면 안 된다.
-        if (OpenQuery != null && !OpenQuery.CanOpen(target as MonoBehaviour))
+        if (!CanOpenByQueries(target as MonoBehaviour))
         {
             return;
         }
@@ -255,7 +312,7 @@ public class UIManager : MonoBehaviour
 
     private bool CanOpen(IExclusiveMode target)
     {
-        return OpenQuery == null || OpenQuery.CanOpen(target as MonoBehaviour);
+        return CanOpenByQueries(target as MonoBehaviour);
     }
 
     /// <summary>
@@ -264,7 +321,7 @@ public class UIManager : MonoBehaviour
     /// </summary>
     public bool CanCloseExclusive(IExclusiveMode target)
     {
-        return target == null || OpenQuery == null || OpenQuery.CanClose(target as MonoBehaviour);
+        return target == null || CanCloseByQueries(target as MonoBehaviour);
     }
 
     private void OnEnable()

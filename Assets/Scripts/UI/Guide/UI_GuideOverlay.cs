@@ -386,6 +386,11 @@ public class UI_GuideOverlay : MonoBehaviour
 
         _target = null;
         _worldTarget = null;
+
+        // 대상을 기다리는 상태까지 풀어야 한다 - 남겨두면 LateUpdate가 "대상이 사라졌다"로 보고
+        // 확인 버튼이 있는 단계를 딤째로 다시 띄운다(표시권은 계속 쥐고 있으므로 early return도 안 걸린다).
+        _expectsTarget = false;
+
         SetVisualsActive(false);
     }
 

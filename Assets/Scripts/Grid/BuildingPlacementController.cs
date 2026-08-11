@@ -358,6 +358,14 @@ public class BuildingPlacementController : MonoBehaviour
 
     public void Deselect()
     {
+        ClearSelectionWithoutNotify();
+        NotifySelectedBuildingChanged();
+    }
+
+    // 알림 없이 선택만 걷는다. 곧바로 다른 건물을 고르는 경로(SelectExistingBuildingAt)가
+    // 중간 상태까지 알리면, 선택 해제를 기다리던 쪽이 건물을 바꿔 클릭한 것만으로 넘어가버린다.
+    private void ClearSelectionWithoutNotify()
+    {
         if (_selectedExistingBuildingCoord.HasValue)
         {
             Building previous = _gridMap.GetBuildingAt(_selectedExistingBuildingCoord.Value);
@@ -369,8 +377,6 @@ public class BuildingPlacementController : MonoBehaviour
         _mouseSelectController.ClearHighlights();
         _rangeIndicator?.Hide();
         _buffRangeIndicator?.Hide();
-
-        NotifySelectedBuildingChanged();
     }
 
     // 값을 따로 들고 다니지 않고 매번 현재 상태에서 계산한다 - 선택이 풀리는 경로가 여러 개라
@@ -677,7 +683,7 @@ public class BuildingPlacementController : MonoBehaviour
 
         CancelBuildMode();
         CancelMove();
-        Deselect();
+        ClearSelectionWithoutNotify();
 
         if (building != null)
         {
@@ -687,8 +693,11 @@ public class BuildingPlacementController : MonoBehaviour
             ShowRangeIndicatorFor(building);
         }
 
+        // 최종 상태로 한 번만 알린다. A를 고른 뒤 B를 고르면 SelectedBuildingChanged(B) 하나만 나간다.
+        NotifySelectedBuildingChanged();
+
         // 이미 선택된 건물을 다시 눌러도 매번 발화한다. SelectedBuilding은 파생 getter라
-        // 폴링으로는 재클릭을 관측할 수 없다 - 위에서 Deselect() 후 같은 프레임에 다시 선택되므로
+        // 폴링으로는 재클릭을 관측할 수 없다 - 위에서 선택을 걷은 뒤 같은 프레임에 다시 선택되므로
         // 구독자 입장에선 값이 바뀐 적이 없는 것으로 보인다.
         // 선택 해제(building == null)도 알려야 하므로 early return 하지 않는다.
         BuildingSelected.Invoke(building);

@@ -676,7 +676,6 @@ GameObject:
   - component: {fileID: 6164113016927409944}
   - component: {fileID: 7413218219516619242}
   - component: {fileID: 1700263342070194300}
-  - component: {fileID: 2833951125441779017}
   - component: {fileID: 7651892599846822379}
   - component: {fileID: 8136472155423758398}
   - component: {fileID: 7784490545347933196}
@@ -882,21 +881,6 @@ MonoBehaviour:
     Target: {fileID: 0}
   - Id: 37
     Target: {fileID: 0}
---- !u!114 &2833951125441779017
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8935810487677617019}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 009e5bc046cf47e68b2f39041c87026f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TutorialDebugSkipController
-  _scenarioController: {fileID: 2864583794261499338}
-  _cycleManager: {fileID: 0}
-  _waveManager: {fileID: 0}
 --- !u!114 &7651892599846822379
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -911,7 +895,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TutorialResearchPointGrant
   _researchManager: {fileID: 0}
   _cycleManager: {fileID: 0}
-  _toast: {fileID: 0}
   _grantOnDayNumber: 3
   _minimumResearchPoints: 10
 --- !u!114 &8136472155423758398
@@ -1022,7 +1005,6 @@ MonoBehaviour:
       _targetBuilding: 0
       _targetFactoryData: {fileID: 0}
     RecommendedDay: 2
-  _gameManager: {fileID: 0}
   _cycleManager: {fileID: 0}
   _gridMap: {fileID: 0}
   _uiManager: {fileID: 0}

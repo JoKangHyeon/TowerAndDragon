@@ -169,7 +169,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 // 순서가 중요하다 - OpenQuery를 먼저 걸면 CloseAllExcept가 그 관문에 스스로 막힌다.
                 _uiManager.CloseAllExcept(null);
 
-                _uiManager.OpenQuery = this;
+                _uiManager.AddOpenQuery(this);
             }
 
             if (_cycleManager != null)
@@ -190,7 +190,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         else if (_holdsOpenedExclusiveMode && _uiManager != null)
         {
             _heldExclusiveMode = _uiManager.CurrentOpenExclusiveMode;
-            _uiManager.OpenQuery = this;
+            _uiManager.AddOpenQuery(this);
         }
 
         if (_overlay != null)
@@ -235,6 +235,16 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         return !_isRunning;
     }
 
+    // OnEnable이 else-if라 _holdsGates가 켜져 있으면 _heldExclusiveMode는 채워지지 않는다.
+    // 두 플래그를 같이 켠 러너를 "창 하나만 붙잡는" 쪽으로 보내면 붙잡을 창이 없는 것으로
+    // 오인해 관문이 통째로 풀린다.
+    private bool HoldsOpenedExclusiveModeOnly => !_holdsGates && _holdsOpenedExclusiveMode;
+
+    // 붙잡을 창이 없는 채로 도는 안내(트리거 창이 닫힌 뒤에야 시작된 큐 체인 등).
+    // 이때는 열기만 풀어주면 안 된다 - 닫기까지 같이 풀지 않으면 플레이어가 연 창을
+    // ESC로 닫지 못하고 X 버튼만 남는다.
+    private bool HoldsNoExclusiveMode => HoldsOpenedExclusiveModeOnly && _heldExclusiveMode == null;
+
     bool IExclusiveModeOpenQuery.CanOpen(MonoBehaviour mode)
     {
         if (!_isRunning)
@@ -242,9 +252,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             return true;
         }
 
-        if (_holdsOpenedExclusiveMode && _heldExclusiveMode != null)
+        // 이미 열려 있던 창 안에서 도는 안내다. 그 창 하나만 붙잡고, 그 외에는 관여하지 않는다.
+        if (HoldsOpenedExclusiveModeOnly)
         {
-            return ReferenceEquals(mode, _heldExclusiveMode);
+            return _heldExclusiveMode == null || ReferenceEquals(mode, _heldExclusiveMode);
         }
 
         foreach (TutorialExclusiveModeKind unlocked in _unlockedModes)
@@ -261,10 +272,11 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// <summary>
     /// 패널 토글 단축키는 버튼 유도를 건너뛰므로 튜토리얼 중에는 막는다. 닫기 안내에서는
     /// ESC뿐 아니라 해당 패널의 토글 키로도 닫을 수 있다는 문구에 맞춰 다시 허용한다.
+    /// 붙잡은 창이 없는 안내도 허용한다 - 열기를 막지 않으면서 닫기만 막으면 갇힌다.
     /// </summary>
     bool IExclusiveModeOpenQuery.CanUseShortcut(MonoBehaviour mode)
     {
-        if (!_isRunning || _activeStep == null)
+        if (!_isRunning || _activeStep == null || HoldsNoExclusiveMode)
         {
             return true;
         }
@@ -276,10 +288,11 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// <summary>
     /// 키보드 단축키는 오버레이의 입력 차단을 통과하므로, 안내가 정확히 이 창을 닫으라고
     /// 요구하는 단계가 아니면 막는다. 버튼은 오버레이가 현재 유도 대상만 통과시킨다.
+    /// 붙잡은 창이 없는 안내는 예외다 - CanOpen이 열기를 허용하므로 닫기도 같이 풀어야 한다.
     /// </summary>
     bool IExclusiveModeOpenQuery.CanClose(MonoBehaviour mode)
     {
-        if (!_isRunning || _activeStep == null)
+        if (!_isRunning || _activeStep == null || HoldsNoExclusiveMode)
         {
             return true;
         }
@@ -589,9 +602,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     // 남이 걸어둔 것을 지우지 않도록 내가 건 경우에만 뗀다.
     private void ReleaseOpenQuery()
     {
-        if (_uiManager != null && ReferenceEquals(_uiManager.OpenQuery, this))
+        if (_uiManager != null)
         {
-            _uiManager.OpenQuery = null;
+            _uiManager.RemoveOpenQuery(this);
         }
 
         if (_cycleManager != null)
@@ -938,18 +951,20 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// </summary>
     private bool IsConditionAlreadySatisfied(TutorialStepSO step)
     {
-        if (step.Kind != TutorialStepKind.WaitForAction || _uiManager == null)
+        if (step.Kind != TutorialStepKind.WaitForAction)
         {
             return false;
         }
 
+        // _uiManager는 아래 두 조건에서만 쓴다. 위에서 통째로 막으면 배선되지 않은 러너가
+        // 나머지 조건의 폴백까지 전부 잃고, 이벤트가 죽어 있는 조건은 그대로 갇힌다.
         switch (step.Condition)
         {
             case TutorialConditionType.ExclusiveModeOpened:
-                return MatchesMode(_uiManager.CurrentOpenExclusiveMode, step.TargetMode);
+                return _uiManager != null && MatchesMode(_uiManager.CurrentOpenExclusiveMode, step.TargetMode);
 
             case TutorialConditionType.ExclusiveModeClosed:
-                return !MatchesMode(_uiManager.CurrentOpenExclusiveMode, step.TargetMode);
+                return _uiManager != null && !MatchesMode(_uiManager.CurrentOpenExclusiveMode, step.TargetMode);
 
             case TutorialConditionType.BuildingSelectedForPlacement:
                 return _placementController != null &&
@@ -1333,11 +1348,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             return;
         }
 
-        bool isExpectedTab = _activeStep.Condition == TutorialConditionType.DragonWindowMotherTabSelected
-            ? !isBabyTab
-            : isBabyTab;
-
-        if (isExpectedTab)
+        // isBabyTab만 믿지 않는다 - UI_DragonWindow.OpenAtMotherTab은 창이 실제로 열리기 전에
+        // 탭 이벤트를 먼저 쏘는데, 안내 중이면 그 열기가 관문에 거절될 수 있다.
+        // 상태 폴백과 같은 판정을 쓰면 두 경로가 어긋나지 않는다.
+        if (IsConditionAlreadySatisfied(_activeStep))
         {
             Advance();
         }

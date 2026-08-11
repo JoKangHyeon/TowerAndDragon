@@ -59,8 +59,10 @@ public sealed class TutorialCastleGuard : MonoBehaviour, ICastleDamageBlockQuery
             return;
         }
 
-        _castle.DamageBlockQuery = this;
+        // 구독을 먼저 걸고 차단은 그 뒤에 건다 - 순서가 반대면 구독이 실패했을 때
+        // 치명타 거절만 살아남아 성은 죽지 않고 구제도 오지 않는 교착이 된다.
         _castle.HealthChanged.AddListener(HandleHealthChanged);
+        _castle.DamageBlockQuery = this;
     }
 
     private void OnDisable()
