@@ -247,8 +247,8 @@ public class CameraController : MonoBehaviour
             }
             else if (!ctrl && pressedThisFrame && _bookmarks[i].HasValue)
             {
-                // 복귀
-                _targetPos = _bookmarks[i].Value;
+                // 복귀 — 저장 시점보다 줌 아웃돼 있으면 그 위치가 이미 경계를 넘을 수 있다
+                _targetPos = ClampToMapBounds(_bookmarks[i].Value);
                 Debug.Log($"[Camera] Bookmark {i + 1} 복귀");
             }
         }
@@ -259,18 +259,25 @@ public class CameraController : MonoBehaviour
     // ─────────────────────────────────────────────
 
     /// 맵 경계 밖으로 나가지 않도록 targetPos 클램프
-    /// 뷰포트(orthographicSize 기준)가 맵 경계를 넘어서지 않도록,
-    /// 줌 상태에 따라 클램프 범위 자체를 안쪽으로 당겨준다.
     private void ClampTargetPosition()
     {
+        _targetPos = ClampToMapBounds(_targetPos);
+    }
+
+    /// 뷰포트(orthographicSize 기준)가 맵 경계를 넘어서지 않는 위치로 보정한다.
+    /// 줌 상태에 따라 클램프 범위 자체를 안쪽으로 당겨준다. (z는 그대로 보존)
+    /// 카메라를 움직이는 모든 경로(입력·MoveTo·북마크·최종 위치)가 이 함수를 거쳐야 한다.
+    private Vector3 ClampToMapBounds(Vector3 position)
+    {
         // _targetZoom이 아니라 _cam.orthographicSize를 쓰는 이유:
-        // ClampTargetPosition은 ApplyMovement의 줌 Lerp보다 먼저 호출되므로
+        // 클램프는 ApplyMovement의 줌 Lerp보다 먼저 호출되므로
         // 이 시점의 orthographicSize가 "이번 프레임 실제 화면에 반영된 값"과 일치한다.
         float halfHeight = _cam.orthographicSize;
         float halfWidth  = halfHeight * _cam.aspect;
 
-        _targetPos.x = ClampAxis(_targetPos.x, _mapMin.x + halfWidth,  _mapMax.x - halfWidth);
-        _targetPos.y = ClampAxis(_targetPos.y, _mapMin.y + halfHeight, _mapMax.y - halfHeight);
+        position.x = ClampAxis(position.x, _mapMin.x + halfWidth,  _mapMax.x - halfWidth);
+        position.y = ClampAxis(position.y, _mapMin.y + halfHeight, _mapMax.y - halfHeight);
+        return position;
     }
 
     /// 뷰포트가 맵보다 큰 축은 min > max가 되므로, 그 축은 맵 중앙으로 고정한다.
@@ -289,9 +296,13 @@ public class CameraController : MonoBehaviour
     {
         // Z축은 카메라 고유 깊이 유지
         Vector3 goal = new Vector3(_targetPos.x, _targetPos.y, transform.position.z);
-        transform.position = Vector3.SmoothDamp(
+        Vector3 smoothed = Vector3.SmoothDamp(
             transform.position, goal, ref _smoothVelocity, _moveSmoothTime,
             Mathf.Infinity, Time.unscaledDeltaTime);
+
+        // 시작 위치가 경계 밖이거나 줌 아웃으로 허용 범위가 좁아지는 중에도
+        // 실제 화면이 맵 밖을 비추지 않도록 최종 위치까지 클램프한다.
+        transform.position = ClampToMapBounds(smoothed);
 
         _cam.orthographicSize = Mathf.Lerp(
             _cam.orthographicSize, _targetZoom, _zoomSmoothing * Time.unscaledDeltaTime);
@@ -302,9 +313,11 @@ public class CameraController : MonoBehaviour
     // ─────────────────────────────────────────────
 
     /// 미니맵 클릭 등 외부에서 카메라 위치를 즉시 설정할 때 사용
+    /// UI 이벤트에서 호출되므로 Update의 클램프보다 늦게 실행될 수 있다.
+    /// 여기서 바로 클램프하지 않으면 그 프레임의 SmoothDamp가 경계 밖으로 카메라를 끌고 간다.
     public void MoveTo(Vector2 worldPosition)
     {
-        _targetPos = new Vector3(worldPosition.x, worldPosition.y, _targetPos.z);
+        _targetPos = ClampToMapBounds(new Vector3(worldPosition.x, worldPosition.y, _targetPos.z));
     }
 
     /// 엣지 스크롤 토글 (설정 화면 연동)
