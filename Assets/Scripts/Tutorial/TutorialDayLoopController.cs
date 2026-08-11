@@ -66,14 +66,52 @@ public sealed class TutorialDayLoopController : MonoBehaviour
 
     private void HandleNightStart(int dayNumber)
     {
-        // 마지막 날이거나(정상) 그보다 뒤라면(비정상) 엔딩으로 보낸다 - 어느 쪽이든 웨이브를 또 돌리지 않는다.
-        if (dayNumber >= TUTORIAL_TOTAL_DAYS)
+        // 마지막 날을 넘긴 밤은 정상 흐름에 없다. 여기서 신호만 보내고 끝내면 밤이 영영 안 끝난다 -
+        // TutorialBossDefeatController는 _hasBegun 때문에 두 번째 호출에서 즉시 return하고,
+        // 밤을 끝내는 유일한 경로인 WaveManager.AllMonstersDefeated는 웨이브가 없으니 오지 않는다.
+        // 그래서 이 경우에는 신호를 보내지 않고 곧바로 밤을 닫는다.
+        if (dayNumber > TUTORIAL_TOTAL_DAYS)
+        {
+            Debug.LogError(
+                $"[TutorialDayLoopController] {dayNumber}일차 밤은 튜토리얼에 없습니다 - " +
+                "웨이브 없이 밤이 잠기지 않도록 즉시 종료합니다. 엔딩·보스 배선을 확인하세요.", this);
+            EndNightNextFrameAsync().Forget();
+            return;
+        }
+
+        // 마지막 날은 보스가 맡는다. 웨이브를 또 돌리지 않는다.
+        if (dayNumber == TUTORIAL_TOTAL_DAYS)
         {
             _finalNightStarted.Invoke();
+            WatchFinalNightStartedAsync().Forget();
             return;
         }
 
         StartNightWave(dayNumber);
+    }
+
+    /// <summary>
+    /// 마지막 밤에 보스 웨이브가 실제로 돌기 시작했는지 확인하는 감시자.
+    ///
+    /// _finalNightStarted를 듣는 쪽(TutorialBossDefeatController)이 배선 누락으로 웨이브를 못 돌리면
+    /// LogError만 남기고 물러난다. 그런데 밤을 끝내는 경로가 웨이브뿐이라 그대로 두면 밤이 잠긴다 -
+    /// 게임오버 창이 없는 튜토리얼 씬에서는 그게 곧 게임 전체 정지다.
+    /// 신호를 받은 쪽에 시작할 틈을 한 프레임 주고, 그래도 웨이브가 없으면 밤을 닫는다.
+    /// </summary>
+    private async UniTaskVoid WatchFinalNightStartedAsync()
+    {
+        await UniTask.Yield(this.GetCancellationTokenOnDestroy());
+
+        if (_waveManager != null && _waveManager.IsRunning)
+        {
+            return;
+        }
+
+        Debug.LogError(
+            "[TutorialDayLoopController] 마지막 밤에 보스 웨이브가 시작되지 않아 밤을 강제 종료합니다. " +
+            "TutorialBossDefeatController의 _waveManager·_bossWave 배선을 확인하세요.", this);
+
+        _cycleManager.EndNight();
     }
 
     private void StartNightWave(int dayNumber)

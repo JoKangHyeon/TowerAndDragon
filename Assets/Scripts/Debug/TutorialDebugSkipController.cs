@@ -32,6 +32,14 @@ public sealed class TutorialDebugSkipController : MonoBehaviour
 
     private void Update()
     {
+        // 이 컴포넌트를 최종 빌드에서 빼는 것은 "지우는 것을 잊지 않는다"에 기대고 있었다.
+        // Tutorial.unity가 빌드 씬 목록에 있고 컴포넌트도 켜진 채라, 잊으면 F1~F3이 플레이어 손에 그대로 간다.
+        // 잊어도 안전하도록 여기서 한 번 더 막는다 - 에디터와 개발 빌드에서만 듣는다.
+        if (!Application.isEditor && !Debug.isDebugBuild)
+        {
+            return;
+        }
+
         if (_scenarioController == null || Keyboard.current == null)
         {
             return;

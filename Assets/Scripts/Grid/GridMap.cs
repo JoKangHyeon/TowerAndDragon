@@ -75,6 +75,12 @@ public class GridMap : MonoBehaviour
     public UnityEvent<Building> OnBuildingAdded;
     public UnityEvent<Building> OnBuildingRemoving;
 
+    /// <summary>
+    /// 가장 최근 그리드에 등록된 건물. 건설 직후 이어지는 안내가 같은 종류의 기존 건물 대신
+    /// 방금 지은 대상을 정확히 조명하는 데 쓴다.
+    /// </summary>
+    public Building LastAddedBuilding { get; private set; }
+
     // 건물이 같은 인스턴스를 유지한 채 좌표만 옮겨졌음을 알린다(MoveBuilding 전용).
     // OnBuildingAdded/OnBuildingRemoving은 발행하지 않으므로, 위치 기반 판정(예: 새끼용 버프 범위)을
     // 이동 시에도 갱신해야 하는 구독자는 이 이벤트를 따로 구독해야 한다.
@@ -630,6 +636,7 @@ public class GridMap : MonoBehaviour
         foreach (GridCell cell in footprint)
             OnCellChanged?.Invoke(cell);
 
+        LastAddedBuilding = building;
         OnBuildingAdded?.Invoke(building);
     }
 
@@ -686,6 +693,7 @@ public class GridMap : MonoBehaviour
 
         _buildingFootprintCells[building] = footprint;
         building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor));
+        LastAddedBuilding = building;
         OnBuildingAdded?.Invoke(building);
         return true;
     }

@@ -24,8 +24,12 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     private const string NIGHT_BLOCKED_LOC_KEY = "tutorial_night_blocked";
     private const string WORKER_MODE_NUDGE_LOC_KEY = "tutorial_worker_mode_nudge";
 
+    // "아직 해보지 않은 것이 {0}가지 남았습니다." - 밤으로 넘어가기 직전 1회 상기.
+    private const string OBJECTIVE_REMAINING_LOC_KEY = "tutorial_objective_remaining";
+
     private const int FIRST_DAY_NUMBER = 1;
     private const int WORKER_MODE_NUDGE_DAY = 2;
+    private const float DEFAULT_WORKER_MODE_NUDGE_DELAY_SECONDS = 1f;
 
     [Tooltip("추적할 목표들. 순서는 목록에 보이는 순서다.")]
     [SerializeField] private List<TutorialObjectiveSO> _objectives = new();
@@ -41,6 +45,10 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
 
     [Tooltip("마지막 건물 팁이 화면 표시권을 반납한 뒤 워커모드 토스트를 띄우는 데 쓴다.")]
     [SerializeField] private TutorialTipChainController _tipChainController;
+
+    [Tooltip("건물 팁과 열려 있던 창이 모두 끝난 뒤 워커모드 토스트를 띄우기까지 기다릴 시간(초).")]
+    [Min(0f)]
+    [SerializeField] private float _workerModeNudgeDelaySeconds = DEFAULT_WORKER_MODE_NUDGE_DELAY_SECONDS;
 
     [Header("완료 조건을 듣는 대상")]
     [SerializeField] private PopulationManager _populationManager;
@@ -80,27 +88,41 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     }
 
     /// <summary>
-    /// 오늘까지 열린 목표를 다 끝내야 밤으로 넘어간다.
+    /// <b>목표는 밤 진입을 막지 않는다.</b> 항상 true를 돌려준다.
     ///
-    /// 밤을 넘겨야 완료되는 목표는 세지 않는다 - 지금 누르는 이 버튼이 그 목표의 완료 방법이라,
-    /// 세어 버리면 어떤 방법으로도 풀 수 없는 잠금이 된다.
+    /// 예전에는 오늘 목표를 다 채워야 밤으로 넘어갈 수 있었는데, 그 구조에는 풀 수 없는 잠금이 있었다 -
+    /// 3일차 보스 밤이 "어미용 속성 변경"(하루 1회 제한)과 "연구 완료"(지급 타이밍 의존) 뒤에 잠기고,
+    /// 2일차는 건설 목표 셋이 동시에 관문이 되어 자원이 모자라면 회복할 방법이 사라진다.
+    /// 목표는 통과 관문이 아니라 권장 학습 항목이므로, 미완료는 다음 날로 이월시키고 밤은 그대로 보낸다.
+    ///
+    /// 인터페이스 구현 자체는 남겨 둔다 - 등록/해제 배선과 DayEndBlocked 상기 문구가 이 자리에 묶여 있고,
+    /// 나중에 "이 목표만은 막는다"가 필요해지면 여기 한 곳만 고치면 된다.
     /// </summary>
-    bool IDayEndBlockQuery.CanEndDay()
+    bool IDayEndBlockQuery.CanEndDay() => true;
+
+    /// <summary>아직 끝내지 않은 오늘의 목표 수. 밤 버튼을 누를 때 한 번 상기하는 데 쓴다.</summary>
+    private int RemainingObjectiveCount
     {
-        foreach (TutorialObjectiveSO objective in _visibleObjectives)
+        get
         {
-            if (objective.CompletionTrigger.Condition == TutorialConditionType.NightSurvived)
+            int remaining = 0;
+            foreach (TutorialObjectiveSO objective in _visibleObjectives)
             {
-                continue;
+                // 밤을 넘겨야 완료되는 목표는 세지 않는다 - 지금 누르는 이 버튼이 그 목표의 완료 방법이라,
+                // 세어 버리면 절대 지울 수 없는 잔소리가 된다.
+                if (objective.CompletionTrigger.Condition == TutorialConditionType.NightSurvived)
+                {
+                    continue;
+                }
+
+                if (!IsCompleted(objective))
+                {
+                    remaining++;
+                }
             }
 
-            if (!IsCompleted(objective))
-            {
-                return false;
-            }
+            return remaining;
         }
-
-        return true;
     }
 
     // 구독은 Awake에서 한다(CLAUDE.md 이벤트 초기화 규칙) - Start끼리는 순서가 보장되지 않아
@@ -156,6 +178,7 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         if (_cycleManager != null)
         {
             _cycleManager.OnDayStart.AddListener(HandleDayStart);
+            _cycleManager.OnDayEnd.AddListener(HandleDayEnd);
             _cycleManager.OnNightEnd.AddListener(HandleNightEnd);
             _cycleManager.DayEndBlocked.AddListener(HandleDayEndBlocked);
             _cycleManager.AddDayEndBlocker(this);
@@ -213,6 +236,7 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         if (_cycleManager != null)
         {
             _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
+            _cycleManager.OnDayEnd.RemoveListener(HandleDayEnd);
             _cycleManager.OnNightEnd.RemoveListener(HandleNightEnd);
             _cycleManager.DayEndBlocked.RemoveListener(HandleDayEndBlocked);
             _cycleManager.RemoveDayEndBlocker(this);
@@ -220,11 +244,26 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     }
 
     // 막힌 이유를 말해 주지 않으면 버튼이 고장 난 것으로 보인다.
+    // 이제 목표는 밤을 막지 않으므로, 이 신호는 1일차 안내 러너처럼 다른 관문이 걸었을 때만 온다.
     private void HandleDayEndBlocked()
     {
         if (_toast != null)
         {
             _toast.Show(NIGHT_BLOCKED_LOC_KEY);
+        }
+    }
+
+    /// <summary>
+    /// 밤으로 넘어가는 순간 남은 목표 수를 한 번 짚어 준다. 막지는 않는다 -
+    /// 목록은 늘 화면에 있지만, 되돌릴 수 없는 결정 직전에는 한 번 더 말해 주는 편이 낫다.
+    /// 남은 것이 없으면 아무 말도 하지 않는다.
+    /// </summary>
+    private void HandleDayEnd(int _)
+    {
+        int remaining = RemainingObjectiveCount;
+        if (remaining > 0 && _toast != null)
+        {
+            _toast.Show(OBJECTIVE_REMAINING_LOC_KEY, remaining);
         }
     }
 
@@ -254,12 +293,22 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     {
         // 건설 목표와 건물 팁이 같은 OnBuildingAdded에서 결정된다. 이벤트 구독 순서와 무관하게
         // 팁이 시작된 뒤 검사하도록 한 프레임을 양보한다.
-        await UniTask.Yield(this.GetCancellationTokenOnDestroy());
+        var token = this.GetCancellationTokenOnDestroy();
+        await UniTask.Yield(token);
+
+        if (_workerModeNudgeDelaySeconds > 0f)
+        {
+            await UniTask.WaitForSeconds(
+                _workerModeNudgeDelaySeconds,
+                ignoreTimeScale: true,
+                cancellationToken: token);
+        }
+
         _workerModeNudgeCheckScheduled = false;
         TryShowWorkerModeNudge();
     }
 
-    private void HandleTipChainEnded() => TryShowWorkerModeNudge();
+    private void HandleTipChainEnded() => ScheduleWorkerModeNudgeCheck();
 
     /// <summary>
     /// 2일차 건설 목표를 모두 마친 시점에 워커모드의 존재만 알린다.
@@ -268,7 +317,8 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     private void TryShowWorkerModeNudge()
     {
         if (_workerModeNudgeShown || _toast == null || CurrentDayNumber != WORKER_MODE_NUDGE_DAY ||
-            (_tipChainController != null && _tipChainController.IsRunning))
+            (_tipChainController != null && _tipChainController.IsRunning) ||
+            (_uiManager != null && _uiManager.CurrentOpenExclusiveMode != null))
         {
             return;
         }
@@ -296,7 +346,11 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         }
     }
 
-    private void HandleDayStart(int _) => RebuildVisibleObjectives();
+    private void HandleDayStart(int _)
+    {
+        RebuildVisibleObjectives();
+        ScheduleWorkerModeNudgeCheck();
+    }
 
     private void HandleBuildingAdded(Building building)
     {
@@ -359,11 +413,27 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         TryCompleteMatching(TutorialConditionType.DragonEggGranted, null);
 
     // 어느 속성으로 바꿨는지는 묻지 않는다 - 목표는 "바꿔본다"이지 특정 속성이 아니다.
-    private void HandleAttributeChanged(DragonType _) =>
+    private void HandleAttributeChanged(DragonType _)
+    {
+        // DragonTreeManager의 같은 신호는 새날 HUD 갱신과 저장 복원에도 쓰인다. 실제 변경에 성공한 경우에는
+        // Dragon.TryChangeType이 그날의 변경권을 먼저 소비하므로, 그 상태일 때만 목표 행동으로 인정한다.
+        Dragon dragon = CurrentRun?.CurrentDragon;
+        if (dragon == null || !dragon.IsChangedThisDay)
+        {
+            return;
+        }
+
         TryCompleteMatching(TutorialConditionType.MotherDragonAttributeChanged, null);
+    }
 
     private void HandleExclusiveModeOpened(MonoBehaviour mode)
     {
+        if (mode is WorkerModeController)
+        {
+            // 이미 스스로 일꾼 모드를 찾은 플레이어에게 나중에 존재를 다시 알리지 않는다.
+            _workerModeNudgeShown = true;
+        }
+
         TryCompleteMatching(TutorialConditionType.ExclusiveModeOpened,
             objective => TutorialTargetMatcher.MatchesMode(mode, objective.CompletionTrigger.TargetMode));
     }
@@ -373,6 +443,9 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     {
         TryCompleteMatching(TutorialConditionType.ExclusiveModeClosed,
             objective => TutorialTargetMatcher.MatchesMode(mode, objective.CompletionTrigger.TargetMode));
+
+        // 슬라임 농장 팁은 용 창을 연 채 끝날 수 있다. 그 창을 닫은 뒤 읽을 틈을 두고 토스트를 다시 검사한다.
+        ScheduleWorkerModeNudgeCheck();
     }
 
     // 용 창은 새끼용·어미용이 한 창의 두 탭이라 창이 열렸는지로는 구분되지 않는다 - 탭까지 봐야 한다.

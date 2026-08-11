@@ -22,7 +22,8 @@ public sealed class TutorialConquestHint : MonoBehaviour, IUnreachableChunkSelec
 
     private void OnEnable()
     {
-        if (_conquestModeController == null)
+        // 비면 갈 수 없는 땅을 눌러도 안내가 없어 "버튼이 안 먹는다"만 남는다.
+        if (!WiringGuard.Require(_conquestModeController, nameof(_conquestModeController), this))
         {
             return;
         }

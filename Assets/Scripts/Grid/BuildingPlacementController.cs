@@ -67,6 +67,8 @@ public class BuildingPlacementController : MonoBehaviour
     // 롱프레스가 이 누름을 이동 모드 진입으로 이미 소비했다. 뗄 때 확정을 한 번 더 하지 않도록 막는다.
     private bool _longPressConsumedPress;
 
+    private readonly List<IBuildModeInteractionQuery> _interactionQueries = new();
+
     // 클릭으로 선택이 확정될 때마다 발화한다(선택 해제면 null). 같은 건물을 다시 눌러도 발화하므로
     // SelectedBuilding 폴링과 달리 "재클릭"을 놓치지 않는다.
     // 필드 초기화 시점에 생성하므로 구독자의 Awake/OnEnable 순서와 무관하게 안전하다.
@@ -105,6 +107,17 @@ public class BuildingPlacementController : MonoBehaviour
     // 점령 모드 등 다른 모드가 켜져 있을 때 이 컨트롤러의 클릭 처리를 막는다.
     // (컴포넌트를 비활성화하면 공유 입력 액션까지 Disable되므로, 입력만 선택적으로 억제한다.)
     public bool InputSuppressed { get; set; }
+
+    public void AddInteractionQuery(IBuildModeInteractionQuery query)
+    {
+        if (query != null && !_interactionQueries.Contains(query))
+        {
+            _interactionQueries.Add(query);
+        }
+    }
+
+    public void RemoveInteractionQuery(IBuildModeInteractionQuery query) =>
+        _interactionQueries.Remove(query);
 
     public Building SelectedBuilding
     {
@@ -190,7 +203,7 @@ public class BuildingPlacementController : MonoBehaviour
     // 슬롯을 골라 배치 미리보기 중일 때 우클릭하면 배치를 취소한다(선택 해제 + 미리보기 종료).
     private void HandleBuildCancelInput()
     {
-        if (_selectedBuilding == null)
+        if (_selectedBuilding == null || !CanCancelPlacement())
             return;
 
         if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
@@ -201,7 +214,9 @@ public class BuildingPlacementController : MonoBehaviour
     // 회전이 적용되지 않는다(제자리 회전은 지원하지 않음, 회전하려면 이동 모드로 들어가야 함).
     private void HandleRotateInput()
     {
-        if (_rotateAction == null || !_rotateAction.action.WasPerformedThisFrame())
+        if (_rotateAction == null ||
+            !_rotateAction.action.WasPerformedThisFrame() ||
+            !CanRotatePlacement())
             return;
 
         if (_selectedBuilding != null || _moveSourceCoord.HasValue)
@@ -378,7 +393,9 @@ public class BuildingPlacementController : MonoBehaviour
     // _cancelMoveAction(우클릭)으로 새 건물 배치 미리보기, 기존 건물 이동 미리보기, 기존 건물 선택 하이라이트를 모두 취소한다.
     private void HandleCancelInput()
     {
-        if (_cancelMoveAction == null || !_cancelMoveAction.action.WasPerformedThisFrame())
+        if (_cancelMoveAction == null ||
+            !_cancelMoveAction.action.WasPerformedThisFrame() ||
+            !CanCancelPlacement())
             return;
 
         if (_selectedBuilding != null)
@@ -395,6 +412,12 @@ public class BuildingPlacementController : MonoBehaviour
     {
         if (_placeAction == null)
             return;
+
+        if (!CanUseLongPressMove())
+        {
+            _holdCoord = null;
+            return;
+        }
 
         // 새 누름이 시작되면 직전 누름의 소비 표시를 지운다. 아래 조기 반환보다 앞이어야
         // 배치 미리보기 중에 시작된 누름도 정상적으로 초기화된다.
@@ -496,6 +519,45 @@ public class BuildingPlacementController : MonoBehaviour
 
     private static Vector2 PointerScreenPosition() =>
         Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
+
+    private bool CanCancelPlacement()
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanCancelPlacement())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanRotatePlacement()
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanRotatePlacement())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanUseLongPressMove()
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanUseLongPressMove())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     public void ConfirmAtPointer()
     {

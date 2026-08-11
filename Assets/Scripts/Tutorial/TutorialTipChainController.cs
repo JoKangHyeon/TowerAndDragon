@@ -13,7 +13,8 @@ using UnityEngine.Events;
 /// 안내이므로 도중에 그만두는 것도 자유여야 한다. 그만두면 러너는 그 단계에 머물고, 다시 그 화면으로
 /// 돌아오면 이어서 진행된다.
 ///
-/// 체인은 한 번에 하나만 연다. 농장과 슬라임 농장을 연달아 지으면 뒤엣것은 앞엣것이 끝난 뒤에 열린다.
+/// 체인은 한 번에 하나만 연다. 농장과 슬라임 농장을 연달아 지으면 뒤엣것은 대기열에 남겨
+/// 앞엣것이 끝난 뒤에 연다. 건설처럼 한 번뿐인 신호를 버리면 그 팁은 다시 열 방법이 없기 때문이다.
 /// </summary>
 public sealed class TutorialTipChainController : MonoBehaviour
 {
@@ -35,7 +36,6 @@ public sealed class TutorialTipChainController : MonoBehaviour
 
     [SerializeField] private List<Chain> _chains = new();
 
-    [SerializeField] private GameManager _gameManager;
     [SerializeField] private CycleManager _cycleManager;
 
     [Header("트리거를 듣는 대상")]
@@ -48,11 +48,15 @@ public sealed class TutorialTipChainController : MonoBehaviour
     // 지금 돌고 있는 체인. 하나가 끝나야 다음이 열린다.
     private TutorialRunner _running;
 
+    // 다른 체인이 도는 동안 조건을 만족한 체인. 건설 이벤트는 한 번뿐이므로 그 자리에서 버리지 않는다.
+    private readonly Queue<Chain> _pendingChains = new();
+    private readonly HashSet<TutorialRunner> _pendingRunners = new();
+
     // 이미 한 번 연 체인. 다시 열지 않는다 - 러너는 진행도를 RunData에 남기므로 재활성하면
     // 마지막 단계 뒤에서 재개해 아무것도 안내하지 않은 채 끝난다.
     private readonly HashSet<TutorialRunner> _opened = new();
 
-    /// <summary>팁 체인의 마지막 안내와 인계 시간이 모두 끝나 화면 표시권을 반납했다.</summary>
+    /// <summary>실행 중이거나 대기 중인 모든 팁 체인이 끝나 화면 표시권을 반납했다.</summary>
     public UnityEvent ChainEnded = new();
 
     public bool IsRunning => _running != null;
@@ -75,7 +79,9 @@ public sealed class TutorialTipChainController : MonoBehaviour
 
         if (_placementController != null)
         {
-            _placementController.SelectedBuildingChanged.AddListener(HandleSelectedBuildingChanged);
+            // SelectedBuildingChanged는 선택 해제 경로에서 쓰는 상태 전이 신호다. 실제 클릭은
+            // BuildingSelected가 매번 발행하므로, 성처럼 이미 서 있는 건물의 팁 시작은 이쪽을 들어야 한다.
+            _placementController.BuildingSelected.AddListener(HandleBuildingSelected);
         }
 
         if (_cycleManager != null)
@@ -110,7 +116,7 @@ public sealed class TutorialTipChainController : MonoBehaviour
 
         if (_placementController != null)
         {
-            _placementController.SelectedBuildingChanged.RemoveListener(HandleSelectedBuildingChanged);
+            _placementController.BuildingSelected.RemoveListener(HandleBuildingSelected);
         }
 
         if (_cycleManager != null)
@@ -169,7 +175,7 @@ public sealed class TutorialTipChainController : MonoBehaviour
 
     // 성처럼 플레이어가 짓지 않는 건물은 "지어졌을 때"로 열 수 없다 - 클릭해서 골랐을 때를 본다.
     // 선택이 풀리면 null이 오므로 그때는 아무 체인도 열지 않는다.
-    private void HandleSelectedBuildingChanged(Building building)
+    private void HandleBuildingSelected(Building building)
     {
         if (building == null)
         {
@@ -181,14 +187,11 @@ public sealed class TutorialTipChainController : MonoBehaviour
 
     private void TryOpen(TutorialConditionType condition, Predicate<Chain> matches)
     {
-        if (_running != null)
-        {
-            return;
-        }
-
         foreach (Chain chain in _chains)
         {
-            if (chain.Runner == null || _opened.Contains(chain.Runner))
+            if (chain.Runner == null ||
+                _opened.Contains(chain.Runner) ||
+                _pendingRunners.Contains(chain.Runner))
             {
                 continue;
             }
@@ -203,7 +206,16 @@ public sealed class TutorialTipChainController : MonoBehaviour
                 continue;
             }
 
-            Open(chain);
+            if (_running == null)
+            {
+                Open(chain);
+            }
+            else
+            {
+                _pendingChains.Enqueue(chain);
+                _pendingRunners.Add(chain.Runner);
+            }
+
             return;
         }
     }
@@ -231,6 +243,22 @@ public sealed class TutorialTipChainController : MonoBehaviour
         _running.gameObject.SetActive(false);
         Debug.Log($"[TutorialTipChainController] 팁 체인 종료: {_running.name}", _running);
         _running = null;
+
+        while (_pendingChains.Count > 0)
+        {
+            Chain next = _pendingChains.Dequeue();
+            TutorialRunner nextRunner = next.Runner;
+            _pendingRunners.Remove(nextRunner);
+
+            if (nextRunner == null || _opened.Contains(nextRunner))
+            {
+                continue;
+            }
+
+            Open(next);
+            return;
+        }
+
         ChainEnded.Invoke();
     }
 }

@@ -14,7 +14,6 @@ using UnityEngine;
 /// </summary>
 public sealed class TutorialResearchPointGrant : MonoBehaviour
 {
-    private const string RESEARCH_POINTS_GRANTED_LOC_KEY = "tutorial_day2_research_points_granted";
     private const int FIRST_DAY_NUMBER = 1;
     private const int DEFAULT_GRANT_DAY_NUMBER = 2;
 
@@ -22,8 +21,6 @@ public sealed class TutorialResearchPointGrant : MonoBehaviour
 
     [Tooltip("지급할 날을 기다리는 데 쓴다.")]
     [SerializeField] private CycleManager _cycleManager;
-
-    [SerializeField] private UI_NotificationToast _toast;
 
     [Tooltip("이 일차 아침에 지급한다. 연구를 안내하는 날보다 앞서면 안 된다.")]
     [Min(FIRST_DAY_NUMBER)]

@@ -24,7 +24,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery
     // 배치가 끝난 뒤 순서대로 보여줄 마무리 문구. 확인 버튼으로 한 컷씩 넘긴다.
     private static readonly string[] COMPLETION_LOC_KEYS = { COMPLETED_LOC_KEY, MANAGE_HINT_LOC_KEY };
 
-    private const float DEFAULT_GUIDE_START_DELAY = 0.5f;
+    private const float DEFAULT_GUIDE_START_DELAY = 0f;
 
     [SerializeField] private GameManager _gameManager;
     [SerializeField] private DragonEggInventorySystem _eggInventorySystem;
@@ -49,8 +49,8 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery
     [Tooltip("인벤토리 토글 액션. 안내 문구에 실제 키 이름을 넣는 데만 쓴다 - 바인딩을 바꾸면 문구도 따라간다.")]
     [SerializeField] private InputActionReference _inventoryToggleAction;
 
-    [Tooltip("알 획득·부화 토스트가 사라진 뒤 안내를 시작하기까지의 추가 여유(초). " +
-             "토스트 자체의 길이는 토스트에서 읽어오므로 여기에 포함하지 않는다.")]
+    [Tooltip("부화 토스트가 사라진 뒤 배치 안내를 시작하기까지의 추가 여유(초). " +
+             "0이면 토스트가 사라지는 즉시 다음 행동을 안내한다. 토스트 자체의 길이는 포함하지 않는다.")]
     [SerializeField] private float _guideStartDelay = DEFAULT_GUIDE_START_DELAY;
 
     /// <summary>
@@ -191,11 +191,21 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery
         }
     }
 
-    private void HandleEggGranted(DragonType _) =>
-        AdvanceAfterToastAsync(BabyDragonGuideStep.OpenInventory).Forget();
+    // 알 획득 토스트는 결과 알림이고, 인벤토리 버튼 안내는 다음 행동이므로 함께 보여도 역할이 겹치지 않는다.
+    // 토스트 전체 길이를 기다리면 플레이어는 그동안 다음 행동을 알 수 없으므로 지급 프레임에 바로 유도한다.
+    private void HandleEggGranted(DragonType _)
+    {
+        Advance(BabyDragonGuideStep.OpenInventory);
+
+        // 알을 받기 전에 이미 인벤토리를 열어 둔 플레이어에게 HUD 버튼을 다시 누르게 하지 않는다.
+        if (IsInventoryOpen)
+        {
+            Advance(BabyDragonGuideStep.WaitHatch);
+        }
+    }
 
     private void HandleEggHatched(DragonType _) =>
-        AdvanceAfterToastAsync(BabyDragonGuideStep.PlaceDragon).Forget();
+        AdvanceAfterHatchToastAsync().Forget();
 
     // 사용자가 방금 누른 결과라 즉시 반응해야 한다 - 지연시키면 조작이 먹지 않은 것처럼 보인다.
     //
@@ -221,12 +231,10 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery
     }
 
     /// <summary>
-    /// 알 획득·부화는 토스트가 먼저 뜨는 이벤트다. 둘이 겹치면 어느 쪽을 봐야 할지 알 수 없으므로
-    /// 토스트가 사라질 때까지 기다렸다가 안내를 시작한다.
-    /// 기다리는 동안 플레이어가 먼저 인벤토리를 열면 시작 전 탭 이벤트는 무시하고,
-    /// 획득 안내를 시작한 직후 현재 열린 상태를 확인해 다음 단계로 이어 간다.
+    /// 부화 결과를 확인하기 전에 배치 안내가 덮이지 않도록 부화 토스트만 사라질 때까지 기다린다.
+    /// 알 획득은 다음 행동을 즉시 알려야 하므로 이 경로를 거치지 않는다.
     /// </summary>
-    private async UniTaskVoid AdvanceAfterToastAsync(BabyDragonGuideStep step)
+    private async UniTaskVoid AdvanceAfterHatchToastAsync()
     {
         // 토스트 길이를 여기에 베껴 두면 토스트만 고쳤을 때 조용히 어긋나므로 토스트에서 직접 읽는다.
         float toastDuration = _toast == null ? 0f : _toast.TotalDuration;
@@ -237,14 +245,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery
             ignoreTimeScale: true,
             cancellationToken: this.GetCancellationTokenOnDestroy());
 
-        Advance(step);
-
-        // 알 획득 전에 이미 인벤토리를 열어 둔 플레이어에게 HUD 버튼을 다시 누르게 하지 않는다.
-        // 획득 이벤트로 안내를 시작한 뒤에만 현재 열린 상태를 인정해 알 슬롯 안내로 이어 간다.
-        if (step == BabyDragonGuideStep.OpenInventory && IsInventoryOpen)
-        {
-            Advance(BabyDragonGuideStep.WaitHatch);
-        }
+        Advance(BabyDragonGuideStep.PlaceDragon);
     }
 
     private void HandleBuildingAdded(Building building)
@@ -295,6 +296,13 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery
     private void HandleConfirmClicked()
     {
         if (_currentStep != BabyDragonGuideStep.Completed || _completionIndex >= COMPLETION_LOC_KEYS.Length)
+        {
+            return;
+        }
+
+        // 확인 버튼은 오버레이가 공용이라 튜토리얼 러너의 클릭도 여기로 온다. 이 가이드는 우선순위가 낮아
+        // 양보하고 있을 때가 있는데, 그때 남의 클릭을 받으면 뜨지도 않은 완료 문구가 넘어가 버린다.
+        if (_overlay != null && !_overlay.IsDisplaying(this))
         {
             return;
         }

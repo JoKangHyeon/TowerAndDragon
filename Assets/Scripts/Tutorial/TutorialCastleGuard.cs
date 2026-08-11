@@ -81,7 +81,14 @@ public sealed class TutorialCastleGuard : MonoBehaviour, ICastleDamageBlockQuery
 
     private void HandleHealthChanged(float current, float max)
     {
-        if (_isDefeatAllowed || _waveManager == null || !_waveManager.IsRunning || max <= 0f)
+        if (_isDefeatAllowed || max <= 0f)
+        {
+            return;
+        }
+
+        // _waveManager가 비면 구제가 통째로 사라지는데, 치명타 거절은 그대로 살아 있다 -
+        // 성은 죽지 않고 몬스터도 정리되지 않아 밤이 영영 끝나지 않는다. 조용히 넘기면 안 되는 조합이다.
+        if (!WiringGuard.Require(_waveManager, nameof(_waveManager), this) || !_waveManager.IsRunning)
         {
             return;
         }

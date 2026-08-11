@@ -33,7 +33,8 @@ public sealed class TutorialStepSO : ScriptableObject
              "알 목록과 새끼용 목록이 한 패널에 함께 있으므로 어느 쪽인지 단계가 정한다.")]
     [SerializeField] private TutorialDynamicTargetKind _dynamicTarget = TutorialDynamicTargetKind.None;
 
-    [Tooltip("대상 외 클릭을 막을지. 대상이 없으면 막을 수 없다 - 막으면 아무것도 누를 수 없게 된다.")]
+    [Tooltip("설명형 단계에서도 대상 외 클릭을 막을지. 행동형 단계는 지정 대상이 있으면 항상 자동으로 막는다. " +
+             "대상이 없으면 막을 수 없다 - 막으면 아무것도 누를 수 없게 된다.")]
     [SerializeField] private bool _blocksInput;
 
     [Tooltip("가리키기만 하고 대상 클릭은 막을지. 눌러보게 하는 게 아니라 '이런 게 있다'만 알리는 설명형에 쓴다. " +

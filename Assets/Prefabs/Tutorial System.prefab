@@ -142,78 +142,6 @@ MonoBehaviour:
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
---- !u!1 &976380898123282940
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 4737015640267321524}
-  - component: {fileID: 7968921123668102461}
-  m_Layer: 0
-  m_Name: Chapter_Day1_BabyDragon
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!4 &4737015640267321524
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 976380898123282940}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 8012866731018233354}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7968921123668102461
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 976380898123282940}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
-  _sequence: {fileID: 11400000, guid: 11ff0eb550db3ac41b736bcf44a821c7, type: 2}
-  _gameManager: {fileID: 0}
-  _overlay: {fileID: 0}
-  _uiManager: {fileID: 0}
-  _gridMap: {fileID: 0}
-  _populationManager: {fileID: 0}
-  _placementController: {fileID: 0}
-  _cycleManager: {fileID: 0}
-  _conquestManager: {fileID: 0}
-  _researchManager: {fileID: 0}
-  _conquestWindow: {fileID: 0}
-  _dragonWindow: {fileID: 0}
-  _buildModeWindow: {fileID: 0}
-  _speedSettingWindow: {fileID: 0}
-  _minimapController: {fileID: 0}
-  _handOverDelaySeconds: 3
-  _stallEscapeSeconds: 45
-  _grantStartingResources: 0
-  _startingResources:
-  - Type: 2
-    Amount: 10
-  _resourceManager: {fileID: 0}
-  _marksScenarioDismissedOnFinish: 0
-  _holdsGates: 1
-  _holdsOpenedExclusiveMode: 0
-  TutorialEnded:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!1 &1385504162217293391
 GameObject:
   m_ObjectHideFlags: 0
@@ -502,78 +430,6 @@ MonoBehaviour:
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
---- !u!1 &4945284629468154373
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 5272336124065718581}
-  - component: {fileID: 2195519133383838444}
-  m_Layer: 0
-  m_Name: Chapter_Day2_BabyDragon
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!4 &5272336124065718581
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4945284629468154373}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 8012866731018233354}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2195519133383838444
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4945284629468154373}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
-  _sequence: {fileID: 11400000, guid: ea6f410be469e8849ab25bfd9cde6b47, type: 2}
-  _gameManager: {fileID: 0}
-  _overlay: {fileID: 0}
-  _uiManager: {fileID: 0}
-  _gridMap: {fileID: 0}
-  _populationManager: {fileID: 0}
-  _placementController: {fileID: 0}
-  _cycleManager: {fileID: 0}
-  _conquestManager: {fileID: 0}
-  _researchManager: {fileID: 0}
-  _conquestWindow: {fileID: 0}
-  _dragonWindow: {fileID: 0}
-  _buildModeWindow: {fileID: 0}
-  _speedSettingWindow: {fileID: 0}
-  _minimapController: {fileID: 0}
-  _handOverDelaySeconds: 3
-  _stallEscapeSeconds: 45
-  _grantStartingResources: 0
-  _startingResources:
-  - Type: 2
-    Amount: 10
-  _resourceManager: {fileID: 0}
-  _marksScenarioDismissedOnFinish: 0
-  _holdsGates: 1
-  _holdsOpenedExclusiveMode: 0
-  TutorialEnded:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!1 &5999122477008686711
 GameObject:
   m_ObjectHideFlags: 0
@@ -718,100 +574,6 @@ MonoBehaviour:
   TutorialEnded:
     m_PersistentCalls:
       m_Calls: []
---- !u!1 &6606130309212556182
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6789141499591771121}
-  - component: {fileID: 223003474567916916}
-  - component: {fileID: 7249497754878622949}
-  m_Layer: 0
-  m_Name: Chapter_Day2_Research
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!4 &6789141499591771121
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6606130309212556182}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 8012866731018233354}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &223003474567916916
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6606130309212556182}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
-  _sequence: {fileID: 11400000, guid: 75a056f514e12d9448629e930cbc2097, type: 2}
-  _gameManager: {fileID: 0}
-  _overlay: {fileID: 0}
-  _uiManager: {fileID: 0}
-  _gridMap: {fileID: 0}
-  _populationManager: {fileID: 0}
-  _placementController: {fileID: 0}
-  _cycleManager: {fileID: 0}
-  _conquestManager: {fileID: 0}
-  _researchManager: {fileID: 0}
-  _conquestWindow: {fileID: 0}
-  _dragonWindow: {fileID: 0}
-  _buildModeWindow: {fileID: 0}
-  _speedSettingWindow: {fileID: 0}
-  _minimapController: {fileID: 0}
-  _handOverDelaySeconds: 3
-  _stallEscapeSeconds: 45
-  _grantStartingResources: 1
-  _startingResources:
-  - Type: 2
-    Amount: 20
-  - Type: 4
-    Amount: 20
-  - Type: 1
-    Amount: 10
-  _resourceManager: {fileID: 0}
-  _marksScenarioDismissedOnFinish: 0
-  _holdsGates: 1
-  _holdsOpenedExclusiveMode: 0
-  TutorialEnded:
-    m_PersistentCalls:
-      m_Calls: []
---- !u!114 &7249497754878622949
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6606130309212556182}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7b5b7ff730c9e7b4281551d3c9a0569d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TutorialResearchPointGrant
-  _researchManager: {fileID: 0}
-  _cycleManager: {fileID: 0}
-  _toast: {fileID: 0}
-  _grantOnDayNumber: 2
-  _minimumResearchPoints: 10
 --- !u!1 &7629367864829055304
 GameObject:
   m_ObjectHideFlags: 0
@@ -896,78 +658,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
---- !u!1 &7718608209724602650
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 5422992088106227900}
-  - component: {fileID: 8961153058711931650}
-  m_Layer: 0
-  m_Name: Chapter_Day2_SlimeFarm
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!4 &5422992088106227900
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7718608209724602650}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 8012866731018233354}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8961153058711931650
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7718608209724602650}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
-  _sequence: {fileID: 11400000, guid: f59086742088e7c43a3f6c4db24cb246, type: 2}
-  _gameManager: {fileID: 0}
-  _overlay: {fileID: 0}
-  _uiManager: {fileID: 0}
-  _gridMap: {fileID: 0}
-  _populationManager: {fileID: 0}
-  _placementController: {fileID: 0}
-  _cycleManager: {fileID: 0}
-  _conquestManager: {fileID: 0}
-  _researchManager: {fileID: 0}
-  _conquestWindow: {fileID: 0}
-  _dragonWindow: {fileID: 0}
-  _buildModeWindow: {fileID: 0}
-  _speedSettingWindow: {fileID: 0}
-  _minimapController: {fileID: 0}
-  _handOverDelaySeconds: 3
-  _stallEscapeSeconds: 45
-  _grantStartingResources: 0
-  _startingResources:
-  - Type: 2
-    Amount: 10
-  _resourceManager: {fileID: 0}
-  _marksScenarioDismissedOnFinish: 0
-  _holdsGates: 1
-  _holdsOpenedExclusiveMode: 0
-  TutorialEnded:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!1 &8935810487677617019
 GameObject:
   m_ObjectHideFlags: 0
@@ -1011,12 +701,8 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1893317202817343298}
-  - {fileID: 4737015640267321524}
   - {fileID: 6489120303074976529}
-  - {fileID: 5272336124065718581}
-  - {fileID: 5422992088106227900}
   - {fileID: 3576059528626347036}
-  - {fileID: 6789141499591771121}
   - {fileID: 8613677810521246548}
   - {fileID: 5523615184227803248}
   - {fileID: 528640116624589214}
@@ -1255,6 +941,7 @@ MonoBehaviour:
   _cycleManager: {fileID: 0}
   _toast: {fileID: 0}
   _tipChainController: {fileID: 7784490545347933196}
+  _workerModeNudgeDelaySeconds: 1
   _populationManager: {fileID: 0}
   _gridMap: {fileID: 0}
   _researchManager: {fileID: 0}
@@ -1320,7 +1007,7 @@ MonoBehaviour:
       _targetMode: 0
       _targetBuilding: 5
       _targetFactoryData: {fileID: 0}
-    RecommendedDay: 3
+    RecommendedDay: 2
   - Runner: {fileID: 1236069427628252029}
     Trigger:
       _condition: 23

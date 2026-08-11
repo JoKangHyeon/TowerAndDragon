@@ -10,11 +10,14 @@ using UnityEngine.Events;
 /// 이 컴포넌트의 활성 체크박스가 곧 튜토리얼 on/off 스위치다(새끼용 가이드와 같은 관례).
 /// 도는 동안에는 아직 설명하지 않은 배타 창을 열지 못하게 막고(IExclusiveModeOpenQuery),
 /// 토스트도 멈춰 둔다 - 안내와 다른 정보가 뒤섞이면 무엇을 하라는 것인지 알 수 없어진다.
-/// 새끼용 가이드보다 우선순위가 높아 표시권을 빼앗기지 않으므로, 오버레이의 DisplayReleased는 구독하지 않는다 -
-/// 구독하면 스스로 Release한 직후 다시 그리려 들어 끝난 안내가 되살아난다.
+///
+/// 러너는 한 번에 하나가 아니다 - TutorialScenarioController의 챕터와 TutorialTipChainController의
+/// 팁 체인이 같은 프레임에 켜질 수 있고(3일차 아침의 보스 예고 + 정산 팁), 둘 다 같은 우선순위라
+/// 나중에 켜진 쪽은 표시권을 못 얻는다. 그래서 <b>확인 클릭은 표시권을 가진 러너만 받고</b>,
+/// 진 쪽은 DisplayReleased를 듣고 자기 차례에 다시 그린다(HandleConfirmClicked · HandleDisplayReleased).
 /// </summary>
 public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDayEndBlockQuery,
-    IHudControlBlockQuery
+    IHudControlBlockQuery, IBuildModeInteractionQuery
 {
     private const float DEFAULT_HAND_OVER_DELAY = 1.5f;
     private const float DEFAULT_STALL_ESCAPE_SECONDS = 45f;
@@ -85,6 +88,26 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
              "전체 관문과 달리 시작할 때 열려 있는 창을 닫거나 밤·HUD 조작까지 막지는 않는다.")]
     [SerializeField] private bool _holdsOpenedExclusiveMode;
 
+    // Render를 부른 경로. 같은 단계가 두 번 그려질 때만 로그에 남는다(Render 참고).
+    private const string RENDER_REASON_ENTER_STEP = "단계 진입";
+    private const string RENDER_REASON_ANCHOR_REGISTERED = "앵커 등록";
+    private const string RENDER_REASON_SLOT_VIEW = "슬롯 목록 갱신";
+    private const string RENDER_REASON_STALL_ESCAPE = "스톨 탈출(확인 버튼 제공)";
+    private const string RENDER_REASON_DISPLAY_RELEASED = "표시권 반납으로 재시도";
+    private const string RENDER_REASON_TARGET_WAIT_TIMEOUT = "대상 대기 시간 초과";
+
+    // 단계가 가리킬 대상이 나타나기를 기다리는 시간(초). 창이 열리는 데 필요한 한두 프레임만 넘기면 되고,
+    // 이보다 길어지면 배선 문제로 보고 대상 없이 그린다.
+    private const float TARGET_WAIT_SECONDS = 0.5f;
+
+    // 마지막으로 그린 단계와 그 횟수. 재렌더를 세기 위한 것이라 단계가 바뀌면 1로 돌아간다.
+    private TutorialStepSO _renderedStep;
+    private int _renderCount;
+
+    // 이 단계에서는 대상을 더 기다리지 않는다. 유예가 지났거나 이미 한 번 포기한 경우로,
+    // 단계를 넘길 때마다 풀린다.
+    private bool _hasWaivedTargetWait;
+
     private int _currentIndex;
     private bool _isRunning;
     private bool _hasBegun;
@@ -122,6 +145,16 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     // Start는 이미 지나갔으므로 여기서 복구하지 않으면 튜토리얼이 되살아나지 않는다.
     private void OnEnable()
     {
+        if (_buildModeWindow != null)
+        {
+            _buildModeWindow.AddInteractionQuery(this);
+        }
+
+        if (_placementController != null)
+        {
+            _placementController.AddInteractionQuery(this);
+        }
+
         // 창 열림·밤 시작 판정은 Start가 아니라 여기서 건다 - Start끼리는 순서가 보장되지 않아
         // 첫 단계가 뜨기 전에 플레이어가 앞질러 갈 수 있으면 안 된다.
         //
@@ -163,6 +196,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (_overlay != null)
         {
             _overlay.ConfirmClicked += HandleConfirmClicked;
+            _overlay.DisplayReleased += HandleDisplayReleased;
         }
 
         RunData run = CurrentRun;
@@ -254,8 +288,54 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                MatchesMode(mode, _activeStep.TargetMode);
     }
 
+    bool IBuildModeInteractionQuery.CanSelectFilter(RectTransform filterTab)
+    {
+        if (!IsWaitingForAction)
+        {
+            return true;
+        }
+
+        if (_activeStep.Condition != TutorialConditionType.BuildPanelTabSelected ||
+            !GuideAnchorRegistry.TryGet(_activeStep.AnchorId, out RectTransform targetTab))
+        {
+            return false;
+        }
+
+        return ReferenceEquals(filterTab, targetTab);
+    }
+
+    bool IBuildModeInteractionQuery.CanSelectBuilding(Building prefab) =>
+        !IsWaitingForAction ||
+        (_activeStep.Condition == TutorialConditionType.BuildingSelectedForPlacement &&
+         MatchesBuilding(prefab, _activeStep));
+
+    bool IBuildModeInteractionQuery.CanMoveSelectedBuilding() =>
+        !IsWaitingForAction || _activeStep.Condition == TutorialConditionType.BuildingMoved;
+
+    bool IBuildModeInteractionQuery.CanRemoveSelectedBuilding() =>
+        !IsWaitingForAction || _activeStep.Condition == TutorialConditionType.BuildingRemoved;
+
+    bool IBuildModeInteractionQuery.CanCancelPlacement() => !IsWaitingForAction;
+
+    bool IBuildModeInteractionQuery.CanRotatePlacement() => !IsWaitingForAction;
+
+    bool IBuildModeInteractionQuery.CanUseLongPressMove() => !IsWaitingForAction;
+
+    private bool IsWaitingForAction =>
+        _isRunning && _activeStep != null && _activeStep.Kind == TutorialStepKind.WaitForAction;
+
     private void OnDisable()
     {
+        if (_buildModeWindow != null)
+        {
+            _buildModeWindow.RemoveInteractionQuery(this);
+        }
+
+        if (_placementController != null)
+        {
+            _placementController.RemoveInteractionQuery(this);
+        }
+
         UnsubscribeConditions();
         _isRunning = false;
         _activeStep = null;
@@ -267,8 +347,29 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (_overlay != null)
         {
             _overlay.ConfirmClicked -= HandleConfirmClicked;
+            _overlay.DisplayReleased -= HandleDisplayReleased;
             _overlay.Release(this);
         }
+    }
+
+    /// <summary>
+    /// 표시권이 비었다 - 양보하고 기다리던 단계를 이제 그린다.
+    ///
+    /// 예전 주석은 "우선순위가 높아 빼앗기지 않으니 구독하지 않는다"였는데, 그 전제는 러너가 하나일 때만
+    /// 성립했다. 지금은 챕터 러너와 팁 체인 러너가 같은 우선순위로 동시에 돌 수 있고, 진 쪽은 이것을
+    /// 듣지 않으면 이긴 쪽이 끝난 뒤에도 영영 그려지지 않는다(확인 클릭도 이제 걸러지므로 그대로 멈춘다).
+    ///
+    /// 스스로 Release한 직후 되살아나는 것은 두 가드로 막는다 - Finish는 Release 전에 _isRunning을 내리고,
+    /// 이미 내가 그리고 있는 동안 온 신호는 무시한다.
+    /// </summary>
+    private void HandleDisplayReleased()
+    {
+        if (!_isRunning || _activeStep == null || _overlay == null || _overlay.IsDisplaying(this))
+        {
+            return;
+        }
+
+        Render(RENDER_REASON_DISPLAY_RELEASED);
     }
 
     // 확인 버튼은 오버레이가 공용이라 남의 단계에서도 눌릴 수 있다 - 지금 내 단계일 때만 받는다.
@@ -276,6 +377,14 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     private void HandleConfirmClicked()
     {
         if (!_isRunning || _activeStep == null)
+        {
+            return;
+        }
+
+        // "내 단계인가"만 보면 부족하다 - 러너가 둘 이상 동시에 돌 수 있고(챕터 + 팁 체인),
+        // 둘 다 GuidePriority.DAY_ONE_TUTORIAL이라 진 쪽은 그려지지 않은 채 살아 있다.
+        // 그 상태에서 이긴 쪽의 확인 클릭을 함께 받으면 화면에 뜬 적 없는 안내가 전부 지나가 버린다.
+        if (_overlay != null && !_overlay.IsDisplaying(this))
         {
             return;
         }
@@ -361,6 +470,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         // 새 단계는 막히지 않은 상태에서 시작한다 - 앞 단계에서 내준 확인 버튼이 따라오면
         // 행동형 단계를 눌러서 건너뛸 수 있게 된다.
         _isStalled = false;
+        _hasWaivedTargetWait = false;
 
         // 마지막 단계인지는 아래에서 갈리므로, 여기서 지우면 확인 버튼으로 끝낸 것을 Finish가 알 수 없다.
         if (index >= _sequence.Steps.Count)
@@ -405,7 +515,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
 
         SubscribeCondition(_activeStep);
-        Render();
+        Render(RENDER_REASON_ENTER_STEP);
 
         // 확인 버튼을 쓰는 설명은 누를 때까지 기다린다(ConfirmClicked 구독). 그 외에는 시간으로 넘긴다.
         if (_activeStep.Kind == TutorialStepKind.Acknowledge && !_activeStep.WaitForConfirm)
@@ -517,7 +627,52 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
     }
 
-    private void Render()
+    // UnityEvent(OnSlotViewChanged)가 붙일 수 있는 인자 없는 형태. 그쪽은 창이 목록을 다시 그릴 때 온다.
+    private void Render() => Render(RENDER_REASON_SLOT_VIEW);
+
+    /// <summary>이 단계가 가리킬 곳을 지정했는지. 지정하지 않은 설명은 대상 없이 그리는 것이 정상이다.</summary>
+    private static bool DeclaresTarget(TutorialStepSO step) =>
+        step.AnchorId != GuideAnchorId.None ||
+        step.TargetBuildingSlot != null ||
+        step.DynamicTarget != TutorialDynamicTargetKind.None;
+
+    /// <summary>
+    /// 대상이 나타나기를 잠깐 기다렸다가, 그래도 없으면 대상 없이라도 그린다.
+    ///
+    /// 기다리는 동안에는 앞 단계의 화면이 그대로 남는다 - 한두 프레임이면 눈에 띄지 않지만,
+    /// 앵커 배선이 잘못돼 영영 오지 않는 경우까지 기다리면 엉뚱한 안내가 화면에 남는다.
+    /// 그래서 유예를 두고, 지나면 포기하고 그린다(예전 동작). 45초 스톨 탈출은 그 뒤에 따로 작동한다.
+    /// </summary>
+    private async UniTaskVoid WaitForTargetThenRenderAsync(TutorialStepSO step)
+    {
+        await UniTask.WaitForSeconds(
+            TARGET_WAIT_SECONDS,
+            ignoreTimeScale: true,
+            cancellationToken: this.GetCancellationTokenOnDestroy());
+
+        // 그 사이 대상이 나타나 이미 그려졌거나 단계가 넘어갔으면 할 일이 없다.
+        if (!_isRunning || _activeStep != step || _hasWaivedTargetWait)
+        {
+            return;
+        }
+
+        Debug.LogWarning(
+            $"[TutorialRunner] '{step.StepId}' 단계가 가리킬 대상을 {TARGET_WAIT_SECONDS}초 안에 찾지 못해 " +
+            "문구만 띄웁니다. 앵커 배선을 확인하세요.", this);
+
+        _hasWaivedTargetWait = true;
+        Render(RENDER_REASON_TARGET_WAIT_TIMEOUT);
+    }
+
+    /// <summary>
+    /// 지금 단계를 화면에 그린다.
+    ///
+    /// <paramref name="reason"/>은 진단용이다. 한 단계가 <b>두 번 이상 그려지는</b> 경로가 다섯 개나 되는데
+    /// (단계 진입·앵커 등록·슬롯 갱신·스톨 탈출·표시권 반납) 로그에는 단계 진입만 남아서,
+    /// "같은 안내가 두 번 떴다"는 제보가 들어와도 어느 경로였는지 되짚을 수 없었다.
+    /// 두 번째부터만 남기므로 정상 흐름에서는 조용하다.
+    /// </summary>
+    private void Render(string reason)
     {
         if (_overlay == null || _activeStep == null)
         {
@@ -525,9 +680,61 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
 
         RectTransform target = ResolveAnchor(_activeStep);
+        Renderer worldTarget = target == null ? ResolveWorldTarget(_activeStep) : null;
+        bool hasTarget = target != null || worldTarget != null;
+
+        // 가리킬 곳을 선언한 단계인데 그 대상이 아직 화면에 없으면 이번 프레임은 그리지 않는다.
+        //
+        // 대부분은 "창이 지금 열리는 중"이다 - 건물을 클릭한 프레임에 단계가 넘어가지만
+        // 인구 패널은 다음 프레임에 열리므로 그 사이 앵커가 등록돼 있지 않다. 그 상태로 그리면
+        // 대상이 없어 blocksInput이 꺼지고, 오버레이가 딤을 통째로 걷었다가(SetSpotlightActive(false))
+        // 다음 프레임에 구멍 뚫린 딤을 다시 깔아 화면이 한 번 번쩍인다.
+        //
+        // ResolveAnchor가 이미 등록 콜백을 걸어 두었으므로 창이 열리는 순간 다시 불린다.
+        // 그 콜백이 영영 오지 않는 경우(앵커 배선 실수)를 대비해 유예 시간을 두고 한 번은 그린다.
+        if (!hasTarget && !_isStalled && !_hasWaivedTargetWait && DeclaresTarget(_activeStep))
+        {
+            WaitForTargetThenRenderAsync(_activeStep).Forget();
+            return;
+        }
+
+        // 재렌더 집계는 실제로 그리는 것이 확정된 뒤에 한다 - 위에서 미룬 것까지 세면
+        // 화면에 뜨지도 않은 호출이 "두 번째로 그림"으로 기록돼 진단이 어긋난다.
+        if (ReferenceEquals(_renderedStep, _activeStep))
+        {
+            _renderCount++;
+            Debug.Log(
+                $"[TutorialRunner] {name} 단계 '{_activeStep.StepId}'를 {_renderCount}번째로 그립니다 (사유: {reason}). " +
+                "같은 안내가 다시 뜬 것으로 보이면 이 사유가 원인입니다.", this);
+        }
+        else
+        {
+            _renderedStep = _activeStep;
+            _renderCount = 1;
+        }
 
         // 갇힌 단계에서는 행동형에도 확인 버튼을 띄운다 - 그것이 유일한 빠져나갈 길이다.
         bool showsConfirmButton = _activeStep.ShowsConfirmButton || _isStalled;
+
+        // 행동형은 대상이 있으면 데이터 설정과 무관하게 대상 밖을 자동 차단한다. 이 규칙을 에셋마다
+        // 수동으로 켜게 두면 한 단계가 빠졌을 때 다른 탭·건물을 눌러 튜토리얼 순서가 무너진다.
+        bool blocksInput = (_activeStep.BlocksInput || _activeStep.Kind == TutorialStepKind.WaitForAction) &&
+                           (hasTarget || showsConfirmButton);
+
+        if (worldTarget != null)
+        {
+            _overlay.ShowWorldTarget(
+                this,
+                GuidePriority.DAY_ONE_TUTORIAL,
+                worldTarget,
+                _activeStep.MessageLocKey,
+                blocksInput,
+                _activeStep.BlocksTargetInteraction,
+                showsConfirmButton,
+                _activeStep.BubbleSlot,
+                _activeStep.DimsBackground);
+            return;
+        }
 
         // 대상을 못 찾았을 때 입력까지 막으면 오버레이가 아무것도 그리지 않는다 - 문구만이라도 띄운다.
         _overlay.Show(
@@ -535,12 +742,41 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             GuidePriority.DAY_ONE_TUTORIAL,
             target,
             _activeStep.MessageLocKey,
-            // 대상이 없어도 확인 버튼이 있으면 화면 전체를 막을 수 있다 - 읽는 동안 뒤쪽이 눌리면 안 된다.
-            _activeStep.BlocksInput && (target != null || showsConfirmButton),
+            blocksInput,
             _activeStep.BlocksTargetInteraction,
             showsConfirmButton,
             _activeStep.BubbleSlot,
             _activeStep.DimsBackground);
+    }
+
+    private Renderer ResolveWorldTarget(TutorialStepSO step)
+    {
+        if (step.Condition != TutorialConditionType.BuildingSelectedOnGrid || _gridMap == null)
+        {
+            return null;
+        }
+
+        Building recent = _gridMap.LastAddedBuilding;
+        if (recent != null && MatchesBuilding(recent, step))
+        {
+            return recent.GetComponentInChildren<Renderer>(true);
+        }
+
+        Building selected = _placementController == null ? null : _placementController.SelectedBuilding;
+        if (selected != null && MatchesBuilding(selected, step))
+        {
+            return selected.GetComponentInChildren<Renderer>(true);
+        }
+
+        foreach (Building building in _gridMap.Buildings)
+        {
+            if (building != null && MatchesBuilding(building, step))
+            {
+                return building.GetComponentInChildren<Renderer>(true);
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -569,7 +805,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             $"[TutorialRunner] '{step.StepId}' 단계가 {_stallEscapeSeconds}초 동안 진행되지 않아 " +
             "확인 버튼으로 넘어갈 수 있게 합니다. 완료 조건 배선을 확인하세요.", this);
 
-        Render();
+        Render(RENDER_REASON_STALL_ESCAPE);
     }
 
     // 대상을 못 찾아도 단계는 진행돼야 하므로 문구만 띄우고(null), 나중에 나타나면 그때 다시 그린다.
@@ -1026,7 +1262,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (_isRunning && _activeStep != null && _activeStep.AnchorId == id)
         {
             GuideAnchorRegistry.AnchorRegistered -= HandleAnchorRegistered;
-            Render();
+            Render(RENDER_REASON_ANCHOR_REGISTERED);
         }
     }
 

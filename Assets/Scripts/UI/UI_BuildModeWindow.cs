@@ -74,6 +74,18 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     private bool _initialized;
 
     private readonly List<UI_BuildingSlot> _spawnedSlots = new();
+    private readonly List<IBuildModeInteractionQuery> _interactionQueries = new();
+
+    public void AddInteractionQuery(IBuildModeInteractionQuery query)
+    {
+        if (query != null && !_interactionQueries.Contains(query))
+        {
+            _interactionQueries.Add(query);
+        }
+    }
+
+    public void RemoveInteractionQuery(IBuildModeInteractionQuery query) =>
+        _interactionQueries.Remove(query);
 
     // 슬롯은 탭을 고를 때마다 새로 만들어지므로, 슬롯을 가리키려는 안내는 이 이벤트를 듣고 다시 조준해야 한다.
     // UI_DragonInventoryWindow.OnSlotViewChanged와 같은 용도·같은 이름이다.
@@ -134,6 +146,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         {
             _activeButtons.Remove.onClick.AddListener(() =>
             {
+                if (!CanRemoveSelectedBuilding())
+                {
+                    return;
+                }
+
                 SoundManager.Play(SoundId.UiButtonClick);
 
                 if (_buildingPlacementController != null)
@@ -147,6 +164,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         {
             _activeButtons.Move.onClick.AddListener(() =>
             {
+                if (!CanMoveSelectedBuilding())
+                {
+                    return;
+                }
+
                 SoundManager.Play(SoundId.UiButtonClick);
 
                 if (_buildingPlacementController != null)
@@ -164,6 +186,12 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
                 // 클릭음은 SelectFilter가 아니라 여기서 낸다 - SelectFilter는 초기 탭 지정에도 호출된다.
                 _filterTabs[i].Button.onClick.AddListener(() =>
                 {
+                    RectTransform filterTab = (RectTransform)_filterTabs[index].Button.transform;
+                    if (!CanSelectFilter(filterTab))
+                    {
+                        return;
+                    }
+
                     SoundManager.Play(SoundId.UiButtonClick);
                     SelectFilter(index);
                 });
@@ -261,7 +289,7 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         // 클릭음을 내지 않는다 - 창을 여닫는 제스처는 OpenBuildPanel/CloseBuildPanel의 창음만 낸다.
         EnsureInitialized();
 
-        // 밤에는 건설 모드를 켤 수 없다(창이 아예 열리지 않는다). 끄는 것은 항상 허용.
+        // 밤에는 건설 모드를 켤 수 없다(창이 아예 열리지 않는다). 닫기는 현재 UI 관문이 허용할 때만 받는다.
         // 경고 메시지는 띄우지 않는다 - Warning_window에 건설용 메시지 오브젝트가 없다.
         if (!_isOpen && _cycleManager != null &&
             _cycleManager.CurrentCycle == CycleManager.CycleState.Night)
@@ -271,7 +299,10 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
 
         if (_isOpen)
         {
-            CloseBuildPanel();
+            if (_uiManager == null || _uiManager.CanCloseExclusive(this))
+            {
+                CloseBuildPanel();
+            }
         }
         else if (_uiManager != null)
         {
@@ -421,10 +452,62 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     // 슬롯 클릭 시 해당 건물을 배치 대상으로 선택 (기존 building buttons에서 옮겨온 기능).
     private void OnSlotSelected(Building prefab)
     {
-        if (_buildingPlacementController != null)
+        if (_buildingPlacementController != null && CanSelectBuilding(prefab))
         {
             _buildingPlacementController.SelectBuilding(prefab);
         }
+    }
+
+    private bool CanSelectFilter(RectTransform filterTab)
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanSelectFilter(filterTab))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanSelectBuilding(Building prefab)
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanSelectBuilding(prefab))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanMoveSelectedBuilding()
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanMoveSelectedBuilding())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanRemoveSelectedBuilding()
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanRemoveSelectedBuilding())
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     bool IExclusiveMode.IsOpen => _isOpen;

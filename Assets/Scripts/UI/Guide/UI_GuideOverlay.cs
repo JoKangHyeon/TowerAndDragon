@@ -67,6 +67,7 @@ public class UI_GuideOverlay : MonoBehaviour
     private RectTransform _holeBlocker;
 
     private RectTransform _target;
+    private Renderer _worldTarget;
 
     // 이 단계가 애초에 가리킬 대상을 가지고 있었는지. "원래 대상이 없는 안내"와
     // "가리키던 대상이 사라진 안내"는 다르게 다뤄야 한다 - 앞은 그대로 두고, 뒤는 연출을 거둔다.
@@ -109,8 +110,25 @@ public class UI_GuideOverlay : MonoBehaviour
     private Camera UiCamera =>
         _canvas == null || _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _canvas.worldCamera;
 
+    private static Camera WorldCamera => Camera.main;
+
     // 소유자가 Release 없이 파괴된 경우에도 표시권이 영구히 잠기지 않게 유니티 쪽 null 비교를 태운다.
     private bool HasOwner => _owner is MonoBehaviour behaviour ? behaviour != null : _owner != null;
+
+    /// <summary>
+    /// 지금 화면을 차지하고 있는 것이 이것인지. <see cref="ConfirmClicked"/>는 구독자 전원에게 가므로,
+    /// 확인 버튼처럼 공용 UI로 전진하는 쪽은 이것으로 <b>남에게 눌린 클릭</b>을 걸러내야 한다 -
+    /// 같은 우선순위의 안내가 둘 붙으면 진 쪽은 그려지지도 않은 채 클릭 한 번에 함께 전진해
+    /// 로그에는 다 지나간 것으로 남고 화면에는 아무것도 뜨지 않는다.
+    /// </summary>
+    public bool IsDisplaying(object owner) => HasOwner && ReferenceEquals(_owner, owner);
+
+    /// <summary>
+    /// 지금 안내가 가리키고 있는 UI 대상. 아무것도 안 가리키면 null이다.
+    /// 스스로 자리를 계산해 두는 앵커(<see cref="MonsterPathGuideAnchor"/>)가 <b>자기가 쓰일 때만</b>
+    /// 계산하도록 판단하는 데 쓴다 - 매 프레임 도는 계산이라 아무도 안 볼 때 돌면 그대로 낭비다.
+    /// </summary>
+    public RectTransform CurrentTarget => HasOwner ? _target : null;
 
     private void Awake()
     {
@@ -218,6 +236,46 @@ public class UI_GuideOverlay : MonoBehaviour
         bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot,
         bool dimsBackground, params object[] args)
     {
+        return ShowInternal(
+            owner,
+            priority,
+            target,
+            null,
+            locKey,
+            blocksInput,
+            blocksTargetInteraction,
+            showConfirmButton,
+            bubbleSlot,
+            dimsBackground,
+            args);
+    }
+
+    /// <summary>
+    /// 월드 오브젝트를 클릭하게 하는 안내. 렌더러의 월드 바운드를 화면 사각형으로 투영해
+    /// UI 대상과 같은 딤 구멍을 만들므로, 해당 오브젝트 밖의 UI와 월드 클릭을 함께 막을 수 있다.
+    /// </summary>
+    public bool ShowWorldTarget(object owner, int priority, Renderer target, string locKey, bool blocksInput,
+        bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot,
+        bool dimsBackground, params object[] args)
+    {
+        return ShowInternal(
+            owner,
+            priority,
+            null,
+            target,
+            locKey,
+            blocksInput,
+            blocksTargetInteraction,
+            showConfirmButton,
+            bubbleSlot,
+            dimsBackground,
+            args);
+    }
+
+    private bool ShowInternal(object owner, int priority, RectTransform target, Renderer worldTarget,
+        string locKey, bool blocksInput, bool blocksTargetInteraction, bool showConfirmButton,
+        GuideBubbleSlot bubbleSlot, bool dimsBackground, params object[] args)
+    {
         if (owner == null)
         {
             Debug.LogWarning($"[UI_GuideOverlay] owner 없이 Show({locKey})가 호출됐다 - 표시권을 관리할 수 없어 무시한다.");
@@ -235,7 +293,8 @@ public class UI_GuideOverlay : MonoBehaviour
         // 단계가 버튼을 켜라고 해도 배선이 비어 있으면 실제로는 버튼이 없는 것과 같다 - 둘을 함께 본다.
         // 조용히 사라지면 앵커가 여러 개인 안내에서 원인을 찾을 수 없으므로 반드시 남긴다.
         bool hasEscape = showConfirmButton && _confirmButton != null;
-        if (_overlayRoot == null || (target == null && blocksInput && !hasEscape))
+        bool hasTarget = target != null || worldTarget != null;
+        if (_overlayRoot == null || (!hasTarget && blocksInput && !hasEscape))
         {
             Debug.LogWarning($"[UI_GuideOverlay] {locKey} 안내를 띄울 수 없다 - " +
                              "_overlayRoot가 비었거나, 빠져나갈 버튼 없이 화면 전체를 막으려 했다.");
@@ -246,7 +305,8 @@ public class UI_GuideOverlay : MonoBehaviour
         _owner = owner;
         _ownerPriority = priority;
         _target = target;
-        _expectsTarget = target != null;
+        _worldTarget = worldTarget;
+        _expectsTarget = hasTarget;
         _blocksInput = blocksInput;
         _blocksTargetInteraction = blocksTargetInteraction;
         _showConfirmButton = showConfirmButton;
@@ -263,6 +323,10 @@ public class UI_GuideOverlay : MonoBehaviour
         if (_target != null)
         {
             Layout();
+        }
+        else if (_worldTarget != null)
+        {
+            LayoutWorldTarget();
         }
         else if (_blocksInput)
         {
@@ -321,6 +385,7 @@ public class UI_GuideOverlay : MonoBehaviour
         }
 
         _target = null;
+        _worldTarget = null;
         SetVisualsActive(false);
     }
 
@@ -336,6 +401,7 @@ public class UI_GuideOverlay : MonoBehaviour
 
         _owner = null;
         _target = null;
+        _worldTarget = null;
         SetVisualsActive(false);
 
         // 기다리던 가이드가 자기 현재 단계로 다시 유도할 기회를 준다.
@@ -414,16 +480,26 @@ public class UI_GuideOverlay : MonoBehaviour
             return;
         }
 
-        bool isTargetVisible = _target != null && _target.gameObject.activeInHierarchy;
+        bool isUiTargetVisible = _target != null && _target.gameObject.activeInHierarchy;
+        bool isWorldTargetVisible = _worldTarget != null &&
+                                    _worldTarget.enabled &&
+                                    _worldTarget.gameObject.activeInHierarchy;
 
-        if (isTargetVisible)
+        if (isUiTargetVisible || isWorldTargetVisible)
         {
             if (!_visualsActive)
             {
                 SetVisualsActive(true);
             }
 
-            Layout();
+            if (isUiTargetVisible)
+            {
+                Layout();
+            }
+            else
+            {
+                LayoutWorldTarget();
+            }
             return;
         }
 
@@ -547,6 +623,20 @@ public class UI_GuideOverlay : MonoBehaviour
         LayoutHoleBlocker(hole);
     }
 
+    private void LayoutWorldTarget()
+    {
+        if (!TryResolveWorldLocalRect(_worldTarget, out Rect hole))
+        {
+            SetVisualsActive(false);
+            return;
+        }
+
+        SetSpotlightActive(true);
+        LayoutDim(hole);
+        LayoutHighlight(hole);
+        LayoutHoleBlocker(hole);
+    }
+
     private void LayoutHoleBlocker(Rect hole)
     {
         if (_holeBlocker == null)
@@ -648,13 +738,65 @@ public class UI_GuideOverlay : MonoBehaviour
         return new Rect(min, max - min);
     }
 
+    private bool TryResolveWorldLocalRect(Renderer target, out Rect localRect)
+    {
+        localRect = Rect.zero;
+        Camera worldCamera = WorldCamera;
+
+        if (target == null || worldCamera == null)
+        {
+            return false;
+        }
+
+        Bounds bounds = target.bounds;
+        Vector3 boundsMin = bounds.min;
+        Vector3 boundsMax = bounds.max;
+
+        var screenMin = new Vector2(float.MaxValue, float.MaxValue);
+        var screenMax = new Vector2(float.MinValue, float.MinValue);
+
+        AccumulateWorldCorner(new Vector3(boundsMin.x, boundsMin.y, boundsMin.z), worldCamera, ref screenMin, ref screenMax);
+        AccumulateWorldCorner(new Vector3(boundsMin.x, boundsMin.y, boundsMax.z), worldCamera, ref screenMin, ref screenMax);
+        AccumulateWorldCorner(new Vector3(boundsMin.x, boundsMax.y, boundsMin.z), worldCamera, ref screenMin, ref screenMax);
+        AccumulateWorldCorner(new Vector3(boundsMin.x, boundsMax.y, boundsMax.z), worldCamera, ref screenMin, ref screenMax);
+        AccumulateWorldCorner(new Vector3(boundsMax.x, boundsMin.y, boundsMin.z), worldCamera, ref screenMin, ref screenMax);
+        AccumulateWorldCorner(new Vector3(boundsMax.x, boundsMin.y, boundsMax.z), worldCamera, ref screenMin, ref screenMax);
+        AccumulateWorldCorner(new Vector3(boundsMax.x, boundsMax.y, boundsMin.z), worldCamera, ref screenMin, ref screenMax);
+        AccumulateWorldCorner(new Vector3(boundsMax.x, boundsMax.y, boundsMax.z), worldCamera, ref screenMin, ref screenMax);
+
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _overlayRoot, screenMin, UiCamera, out Vector2 localMin) ||
+            !RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _overlayRoot, screenMax, UiCamera, out Vector2 localMax))
+        {
+            return false;
+        }
+
+        var padding = new Vector2(_holePadding, _holePadding);
+        localMin -= padding;
+        localMax += padding;
+        localRect = new Rect(localMin, localMax - localMin);
+        return true;
+    }
+
+    private static void AccumulateWorldCorner(
+        Vector3 corner,
+        Camera worldCamera,
+        ref Vector2 screenMin,
+        ref Vector2 screenMax)
+    {
+        Vector2 screenPoint = worldCamera.WorldToScreenPoint(corner);
+        screenMin = Vector2.Min(screenMin, screenPoint);
+        screenMax = Vector2.Max(screenMax, screenPoint);
+    }
+
     private void PlayPulses()
     {
         KillPulses();
         _bubblePulseTween = CreatePulse(_bubbleRoot);
 
         // 테두리는 대상이 있을 때만 보이므로 그때만 움직인다.
-        if (_target != null)
+        if (_target != null || _worldTarget != null)
         {
             _highlightPulseTween = CreatePulse(_holeHighlight);
         }

@@ -41,6 +41,10 @@ public sealed class MonsterPathGuideAnchor : MonoBehaviour
     [Tooltip("경로를 비추는 카메라. 비우면 Camera.main을 쓴다.")]
     [SerializeField] private Camera _worldCamera;
 
+    [Tooltip("이 앵커를 가리키는 안내가 떠 있을 때만 자리를 다시 계산한다. 비우면 매 프레임 계산한다 - " +
+             "안내가 이 앵커를 쓰는 단계는 하나뿐이라, 비워 두면 튜토리얼 내내 쓰이지 않는 계산이 돈다.")]
+    [SerializeField] private UI_GuideOverlay _overlay;
+
     [Tooltip("구한 영역을 이만큼(화면 픽셀) 넓힌다 - 선이 구멍 가장자리에 딱 붙으면 잘린 것처럼 보인다.")]
     [Min(0f)]
     [SerializeField] private float _screenPadding = DEFAULT_SCREEN_PADDING;
@@ -55,6 +59,13 @@ public sealed class MonsterPathGuideAnchor : MonoBehaviour
     // Overlay 모드에서는 카메라를 넘기면 좌표가 어긋나므로 null이어야 한다(UI_GuideOverlay와 같은 규칙).
     private Camera UiCamera =>
         _canvas == null || _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _canvas.worldCamera;
+
+    /// <summary>
+    /// 지금 안내가 이 앵커를 가리키고 있는지. 오버레이를 배선하지 않았으면 판단할 근거가 없으므로
+    /// 예전처럼 매 프레임 계산한다 - 성능을 위해 안내가 어긋나는 쪽을 택하지는 않는다.
+    /// </summary>
+    private bool IsTargetedByGuide =>
+        _overlay == null || ReferenceEquals(_overlay.CurrentTarget, _rect);
 
     private void Awake()
     {
@@ -94,8 +105,17 @@ public sealed class MonsterPathGuideAnchor : MonoBehaviour
 
     // 카메라가 움직이면 같은 경로라도 화면에서의 자리가 달라지므로 매 프레임 다시 맞춘다.
     // 안내가 구멍을 다시 그리는 것도 LateUpdate라, 여기서 갱신해야 같은 프레임에 반영된다.
+    //
+    // 다만 이 앵커를 가리키는 안내가 떠 있을 때만 계산한다. 경로선 전부의 월드 바운드를 화면으로
+    // 투영하는 일이라 공짜가 아닌데, 이 앵커를 쓰는 단계는 1일차의 경로 안내 하나뿐이다.
+    // 게이트가 없으면 튜토리얼이 도는 내내 아무도 보지 않는 사각형을 매 프레임 다시 맞추게 된다.
     private void LateUpdate()
     {
+        if (!IsTargetedByGuide)
+        {
+            return;
+        }
+
         if (!TryResolveScreenRect(out Rect screenRect))
         {
             return;

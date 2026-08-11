@@ -41,6 +41,9 @@ public sealed class UI_TutorialEndingPanel : MonoBehaviour
     /// <summary>다음 버튼이 눌렸다. 순서 진행은 시퀀서가 판단한다.</summary>
     public event Action NextClicked;
 
+    /// <summary>확인 대기 컷을 넘길 버튼이 실제로 있는지. 없으면 기다려도 깨울 방법이 없다.</summary>
+    public bool HasNextButton => _nextButton != null;
+
     // 포맷 인자가 없어도 언어가 바뀌면 다시 그려야 하므로 현재 키를 들고 있는다(UI_GuideOverlay와 같은 방식).
     private string _currentLocKey;
 
