@@ -140,5 +140,39 @@ public class WaveDefinitionSO : ScriptableObject
         {
             Debug.LogError($"WaveDefinitionSO: {portalId} 포탈 생성 그룹의 시작 지연은 음수일 수 없습니다.", this);
         }
+
+        ValidateMovementTypeMatch(portalId, spawnGroup);
+    }
+
+    // 이동은 프리팹에 붙은 컴포넌트가, 대공/대지 피격 판정은 MonsterData가 결정한다.
+    // 둘이 어긋나면 "공중처럼 날아오는데 대공 타워가 못 때리는" 적이 조용히 만들어지므로
+    // 편성 시점(에디터)에 잡아둔다.
+    private void ValidateMovementTypeMatch(PortalDirection portalId, SpawnGroupData spawnGroup)
+    {
+        if (spawnGroup.MonsterPrefab == null || spawnGroup.MonsterData == null)
+        {
+            return;
+        }
+
+        MonsterMovement movement = spawnGroup.MonsterPrefab.GetComponent<MonsterMovement>();
+        if (movement == null)
+        {
+            return;
+        }
+
+        MonsterMovementType prefabMovementType = movement is AirDirectMovement
+            ? MonsterMovementType.Air
+            : MonsterMovementType.Ground;
+
+        if (prefabMovementType == spawnGroup.MonsterData.MovementType)
+        {
+            return;
+        }
+
+        Debug.LogError(
+            $"WaveDefinitionSO: {portalId} 포탈 생성 그룹의 프리팹 " +
+            $"{spawnGroup.MonsterPrefab.name}({prefabMovementType})과 데이터 " +
+            $"{spawnGroup.MonsterData.name}({spawnGroup.MonsterData.MovementType})의 이동 방식이 다릅니다.",
+            this);
     }
 }

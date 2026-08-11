@@ -12,7 +12,7 @@ using UnityEngine.Splines;
 [RequireComponent(typeof(Health))]
 [RequireComponent(typeof(MonsterAttack))]
 [RequireComponent(typeof(MonsterStatusReceiver))]
-public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget
+public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IMovementTypedTarget
 {
     [SerializeField] private MonsterData _data;
 
@@ -29,6 +29,13 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget
 
     public MonsterData Data => _data;
     public bool IsDead => _health == null || _health.IsDead;
+
+    // 공중/지상 판정의 기준은 붙어 있는 이동 컴포넌트가 아니라 데이터다 - TakeDamage의 속성 면역
+    // 판정(_data.AcceptsElement)과 같은 방침이며, 인스턴스화 전에도 읽을 수 있다.
+    // 프리팹과 데이터가 어긋난 편성은 WaveDefinitionSO의 검증이 잡는다.
+    // WaveManager는 Instantiate 직후 Setup을 호출하므로 그 사이 _data가 비어 있을 수 있다.
+    public MonsterMovementType MovementType =>
+        _data != null ? _data.MovementType : default;
 
     // 현재 체력 비례 데미지(스킬 등)를 산정하기 위해 노출한다 - Health 자체는 계속 private로 캡슐화.
     public float CurrentHealth => _health == null ? 0f : _health.CurrentHealth;

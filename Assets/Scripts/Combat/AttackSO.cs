@@ -43,6 +43,16 @@ public class AttackSO : ScriptableObject
 
     private void ApplyEffectsToTarget(IDamageable target, in AttackContext context)
     {
+        // 대공/대지 필터의 유일한 관문. 단일 대상·광역·투사체 명중이 모두 여기로 모이므로
+        // 여기 한 곳만 막으면 된다. 특히 ApplyEffectsInArea는 명중 대상을 먼저 집합에 넣기 때문에
+        // 후보 순회에만 필터를 걸면 그 대상이 새어나간다.
+        // 주의: 피해뿐 아니라 TowerHealAuraEffectSO처럼 대상을 쓰지 않는 효과도 함께 막힌다
+        // ("공격 자체가 빗나갔다"는 해석) - 버그가 아니다.
+        if (!context.MovementFilter.CanTarget(target))
+        {
+            return;
+        }
+
         foreach (AttackEffectSO effect in _effects)
         {
             effect.Apply(target, in context);

@@ -27,6 +27,10 @@ public class TowerAttack : MonoBehaviour
 
     private AttackSO Attack => _towerData.Attack;
 
+    // 대공/대지 전용 여부. 타겟 선정과 피해 적용(AttackContext를 타고 AttackSO까지)이
+    // 반드시 같은 값을 봐야 한다.
+    private TargetMovementFilter MovementFilter => _towerData.TargetMovementFilter;
+
     // 판정(브로드페이즈·정밀 타원)과 표시(사거리 원)가 반드시 같은 값을 봐야 하므로
     // 런타임 공격과 아직 Awake가 실행되지 않은 설치 프리팹이 아래 계산식을 공유한다.
     public float EffectiveRange => CalculateEffectiveRange(_towerData, _statMultiplierQuery);
@@ -127,7 +131,7 @@ public class TowerAttack : MonoBehaviour
             // 타워 공격 디버깅용
             if (_showDebugLogs && _target != null)
             {
-                Debug.Log($"[TowerAttack] {name}이(가) 타겟 {_target.name} 선정했습니다.", this);
+                Debug.Log($"[TowerAttack] {name}이(가) 타겟 {_target.name} 선정했습니다. (필터 {MovementFilter}, 대상 {_target.MovementType})", this);
             }
             //까지
         }
@@ -167,6 +171,14 @@ public class TowerAttack : MonoBehaviour
             return false;
         }
 
+        // 사거리보다 먼저 본다 - 여기서 걸러주지 않으면 Update가 재탐색을 하지 않아
+        // (재탐색은 현재 타겟이 무효일 때만 일어난다) 공격할 수 없는 적을 문 채로
+        // 바로 옆의 유효한 적을 영영 찾지 못한다.
+        if (!MovementFilter.Allows(_target.MovementType))
+        {
+            return false;
+        }
+
         return IsWithinAttackRange(_target.transform.position);
     }
 
@@ -202,7 +214,9 @@ public class TowerAttack : MonoBehaviour
         foreach (Collider2D candidate in candidates)
         {
             BaseMonster monster = candidate.GetComponentInParent<BaseMonster>();
-            if (monster == null || monster.IsDead)
+            if (monster == null ||
+                monster.IsDead ||
+                !MovementFilter.Allows(monster.MovementType))
             {
                 continue;
             }
@@ -284,7 +298,8 @@ public class TowerAttack : MonoBehaviour
             damageModifier,
             extraStatuses,
             _targetLayers,
-            attackElement);
+            attackElement,
+            MovementFilter);
 
         if(_animator != null)
         {
@@ -333,7 +348,13 @@ public class TowerAttack : MonoBehaviour
             return;
         }
 
-        Gizmos.color = Color.red;
+        // 사거리만으로는 대공/대지 전용 타워를 구분할 수 없어 색으로 함께 보여준다.
+        Gizmos.color = MovementFilter switch
+        {
+            TargetMovementFilter.GroundOnly => Color.green,
+            TargetMovementFilter.AirOnly => Color.cyan,
+            _ => Color.red,
+        };
 
         // 실제 판정(IsWithinAttackRange)과 같은 타원을 그린다 - Gizmos엔 타원 API가 없으므로
         // Y축만 압축한 행렬로 원을 그려 근사한다.

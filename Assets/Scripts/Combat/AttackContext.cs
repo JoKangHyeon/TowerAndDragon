@@ -12,6 +12,10 @@ public readonly struct AttackContext
     public LayerMask TargetLayers { get; }
     public DragonType? AttackElement { get; }
 
+    // 대공/대지 전용 공격이 노릴 수 있는 대상의 이동 방식. 레이어는 공중·지상이 동일하므로
+    // 물리 질의만으로는 구분할 수 없어, 이 값이 광역 판정까지 따라간다.
+    public TargetMovementFilter MovementFilter { get; }
+
     // 명중 시점에 대상에 추가로 얹을 상태이상(용 스킬트리 얼음 패시브 등).
     // 발사 시점(TowerAttack.Fire)이 아니라 명중 시점(AttackSO.Execute)에 적용해야
     // 투사체가 명중할 때까지 지연되는 타이밍과 어긋나지 않는다.
@@ -68,12 +72,14 @@ public readonly struct AttackContext
         ResolvedEnemyStatModifier attackPowerModifier,
         IReadOnlyList<StatusEffectSO> extraStatuses,
         LayerMask targetLayers,
-        DragonType? attackElement = null)
+        DragonType? attackElement = null,
+        TargetMovementFilter movementFilter = TargetMovementFilter.All)
     {
         Source = source;
         AttackPowerModifier = attackPowerModifier;
         ExtraStatuses = extraStatuses;
         TargetLayers = targetLayers;
         AttackElement = attackElement;
+        MovementFilter = movementFilter;
     }
 }
