@@ -12,26 +12,32 @@ using UnityEngine.UI;
 // 표시 형식·아이콘 틴트·구독 타이밍이 창마다 어긋나지 않도록 여기 한 곳에만 둔다.
 public class ResourceAmountView
 {
-    // 자원 표기: 보유량 + 하루 예상 생산량. 생산량은 "보유량(+생산량)" 형태(TMP 리치텍스트 컬러 태그).
-    private const string AMOUNT_WITH_PRODUCTION_FORMAT = "{0}<color=#{1}>(+{2})</color>";
+    // 자원 표기(보유량 + 하루 순증감)의 서식과 색 판정은 ResourceAmountFormatter가 갖는다 -
+    // HUD(UI_IngameWindow)와 같은 규칙으로 보이게 하기 위함.
 
-    // 하루 생산량 글씨 기본 색(연두색).
-    public static readonly Color PRODUCTION_COLOR_DEFAULT = new Color(0.62f, 1f, 0.42f);
+    // 하루 순증가 글씨 기본 색(연두색).
+    public static readonly Color PRODUCTION_COLOR_DEFAULT = ResourceAmountFormatter.GAIN_COLOR_DEFAULT;
+
+    // 하루 순감소·고갈 글씨 기본 색(적색).
+    public static readonly Color LOSS_COLOR_DEFAULT = ResourceAmountFormatter.LOSS_COLOR_DEFAULT;
 
     private readonly ResourceManager _resourceManager;
     private readonly ResourceForecast _resourceForecast;
     private readonly Color _productionColor;
+    private readonly Color _lossColor;
     private readonly IReadOnlyList<ResourceAmountSlot> _slots;
 
     public ResourceAmountView(
         ResourceManager resourceManager,
         ResourceForecast resourceForecast,
         Color productionColor,
+        Color lossColor,
         IReadOnlyList<ResourceAmountSlot> slots)
     {
         _resourceManager = resourceManager;
         _resourceForecast = resourceForecast;
         _productionColor = productionColor;
+        _lossColor = lossColor;
         _slots = slots;
     }
 
@@ -46,7 +52,7 @@ public class ResourceAmountView
 
         _resourceManager.ResourceChanged.AddListener(RenderOne);
 
-        // 생산량 예측이 바뀌면(건물/인구 변경) 보유량 옆 (+생산량) 표기를 다시 그린다.
+        // 예측이 바뀌면(건물/인구/새끼용 변경) 보유량 옆 증감 표기를 다시 그린다.
         if (_resourceForecast != null)
         {
             _resourceForecast.ForecastChanged.AddListener(RenderAll);
@@ -149,19 +155,8 @@ public class ResourceAmountView
         }
     }
 
-    // "보유량" 또는 하루 예상 생산량이 있으면 "보유량(+생산량)"(생산량만 색 지정)으로 만든다.
-    private string Format(ResourceType type, int amount)
-    {
-        int production = _resourceForecast != null ? _resourceForecast.GetDailyProduction(type) : 0;
-        if (production <= 0)
-        {
-            return amount.ToString();
-        }
-
-        return string.Format(
-            AMOUNT_WITH_PRODUCTION_FORMAT,
-            amount,
-            ColorUtility.ToHtmlStringRGB(_productionColor),
-            production);
-    }
+    // "보유량", "보유량(+증가)", "보유량(-감소)" 중 하나로 만든다. 생산량이 아니라 순증감을 쓰므로
+    // 새끼용 먹이처럼 소모가 있는 슬라임도 실제로 줄어드는 양이 그대로 드러난다.
+    private string Format(ResourceType type, int amount) =>
+        ResourceAmountFormatter.Format(type, amount, _resourceForecast, _productionColor, _lossColor);
 }

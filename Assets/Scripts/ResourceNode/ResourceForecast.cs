@@ -1,11 +1,14 @@
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 
 /// <summary>
 /// '다음 정산에서 자원이 얼마나 늘고 줄지'를 자원 종류별로 집계한다.
 /// - 생산: 각 Factory가 OnDayStart에 쓰는 것과 같은 공식(Factory.AccumulateProjectedProduction)
-/// - 소모: 인구 식량 유지비(PopulationUpkeepRules)와 지역 자재 유지비(TerrainUpkeepSystem)
+/// - 소모: 인구 식량 유지비(PopulationUpkeepRules)와 지역 자재 유지비(TerrainUpkeepSystem),
+///   그리고 새끼용 먹이 슬라임(BabyDragonFeedProjection)
 /// 실제 정산은 DailySettlementManager가 OnDayStartUpkeep에 수행하고, 이 클래스는 같은 규칙으로
 /// 예상치만 계산해 UI에 제공한다. 건물 추가/제거·인구 배치·버프·지형 페널티 변경 시 다시 계산하고
 /// ForecastChanged로 알린다.
@@ -34,7 +37,7 @@ public class ResourceForecast : MonoBehaviour
     private readonly Dictionary<ResourceType, int> _production = new();
     private readonly Dictionary<ResourceType, int> _consumption = new();
 
-    // 툴팁 내역용 평탄 목록. 자원 12종 × 출처 3종이라 선형 스캔으로 충분하고, 자원별 리스트를
+    // 툴팁 내역용 평탄 목록. 자원 12종 × 출처 4종이라 선형 스캔으로 충분하고, 자원별 리스트를
     // 따로 두는 것보다 재계산 때 할당이 없다.
     private readonly List<ResourceForecastEntry> _entries = new();
 
@@ -42,12 +45,15 @@ public class ResourceForecast : MonoBehaviour
     // 한 번 거쳐 간다.
     private readonly Dictionary<ResourceType, int> _terrainUpkeepBuffer = new();
 
+    // 새끼용 먹이를 받아올 때만 쓰는 임시 버퍼. 지역 유지비 버퍼와 같은 용도다.
+    private readonly Dictionary<ResourceType, int> _babyDragonFeedBuffer = new();
+
     private void OnEnable()
     {
         if (WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
-            _gridMap.OnBuildingAdded.AddListener(HandleBuildingChanged);
-            _gridMap.OnBuildingRemoving.AddListener(HandleBuildingChanged);
+            _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
+            _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoving);
         }
 
         if (WiringGuard.Require(_populationManager, nameof(_populationManager), this))
@@ -72,8 +78,8 @@ public class ResourceForecast : MonoBehaviour
     {
         if (_gridMap != null)
         {
-            _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingChanged);
-            _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingChanged);
+            _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingAdded);
+            _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingRemoving);
         }
 
         if (_populationManager != null)
@@ -126,9 +132,24 @@ public class ResourceForecast : MonoBehaviour
         }
     }
 
-    private void HandleBuildingChanged(Building building) => Recompute();
+    // 건물 등록은 GridMap이 목록에 넣은 뒤 발화하므로 그 자리에서 바로 계산해도 된다.
+    private void HandleBuildingAdded(Building building) => Recompute();
+
+    private void HandleBuildingRemoving(Building building) =>
+        RecomputeAfterRemoval(this.GetCancellationTokenOnDestroy()).Forget();
+
     private void HandlePopulationChanged(PopulationState state) => Recompute();
     private void HandleBuffsRecomputed() => Recompute();
+
+    // 철거는 '지우기 직전'에 알려 오므로(GridMap.RemoveBuilding) 이 프레임의 _gridMap.Buildings에는
+    // 철거될 건물이 아직 남아 있다. 그 자리에서 계산하면 사라진 건물의 생산·유지비·먹이가 그대로
+    // 남고, 철거 이후에는 재계산을 부를 이벤트가 없어 값이 계속 어긋난다. 한 프레임 미뤄 목록이
+    // 정리된 뒤 계산한다(CLAUDE.md 이벤트 초기화 규칙의 명시적 한 프레임 지연과 같은 취지).
+    private async UniTaskVoid RecomputeAfterRemoval(CancellationToken cancellationToken)
+    {
+        await UniTask.NextFrame(cancellationToken);
+        Recompute();
+    }
 
     private void Recompute()
     {
@@ -139,6 +160,7 @@ public class ResourceForecast : MonoBehaviour
         AccumulateProduction();
         AccumulatePopulationUpkeep();
         AccumulateTerrainUpkeep();
+        AccumulateBabyDragonFeed();
 
         ForecastChanged?.Invoke();
     }
@@ -189,6 +211,24 @@ public class ResourceForecast : MonoBehaviour
         foreach (KeyValuePair<ResourceType, int> pair in _terrainUpkeepBuffer)
         {
             AddConsumption(pair.Key, ResourceForecastSource.TerrainUpkeep, pair.Value);
+        }
+    }
+
+    // 새끼용은 매일 아침 속성별 슬라임을 먹는다(BabyDragonFeedingSystem이 실제로 쓰는 것과 같은 집계).
+    // 별도 배선 없이 _gridMap.Buildings에서 직접 세므로 씬마다 참조를 다시 이어줄 필요가 없다.
+    private void AccumulateBabyDragonFeed()
+    {
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
+        {
+            return;
+        }
+
+        _babyDragonFeedBuffer.Clear();
+        BabyDragonFeedProjection.AccumulateDailyFeed(_gridMap.Buildings, _babyDragonFeedBuffer);
+
+        foreach (KeyValuePair<ResourceType, int> pair in _babyDragonFeedBuffer)
+        {
+            AddConsumption(pair.Key, ResourceForecastSource.BabyDragonFeed, pair.Value);
         }
     }
 

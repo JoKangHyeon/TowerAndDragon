@@ -20,6 +20,10 @@ public class BabyDragonFeedingSystem : MonoBehaviour
     // 아침마다 한 번 갱신하는 속성별 설치 수 - 새끼용 하나하나가 리스트를 다시 순회하지 않게 한다.
     private readonly Dictionary<DragonType, int> _installedCountByDragonType = new();
 
+    // 위 집계와 같은 순회에서 나오는 전체 마릿수. 예상치(ResourceForecast)와 같은 기준을 쓰기 위해
+    // _babyDragons.Count 대신 BabyDragonFeedProjection이 돌려준 값을 그대로 쓴다.
+    private int _installedTotalCount;
+
     private void OnEnable()
     {
         if (WiringGuard.Require(_gridMap, nameof(_gridMap), this))
@@ -91,21 +95,14 @@ public class BabyDragonFeedingSystem : MonoBehaviour
         }
     }
 
+    // 집계는 예상치(ResourceForecast)와 공유한다 - 마릿수 세는 기준이 갈리면 표시값과
+    // 실제 차감액이 조용히 어긋난다.
     private void RefreshInstalledCounts()
     {
-        _installedCountByDragonType.Clear();
-
-        foreach (BabyDragonTower babyDragon in _babyDragons)
-        {
-            if (babyDragon.DragonData == null)
-            {
-                continue;
-            }
-
-            DragonType dragonType = babyDragon.DragonData.DragonType;
-            _installedCountByDragonType.TryGetValue(dragonType, out int count);
-            _installedCountByDragonType[dragonType] = count + 1;
-        }
+        BabyDragonFeedProjection.AccumulateInstalledCounts(
+            _babyDragons,
+            _installedCountByDragonType,
+            out _installedTotalCount);
     }
 
     private void Feed(BabyDragonTower babyDragon)
@@ -121,7 +118,7 @@ public class BabyDragonFeedingSystem : MonoBehaviour
         }
 
         _installedCountByDragonType.TryGetValue(data.DragonType, out int sameTypeCount);
-        int requiredFeed = BabyDragonFeedFormula.ResolveDailyFeed(data, sameTypeCount, _babyDragons.Count);
+        int requiredFeed = BabyDragonFeedFormula.ResolveDailyFeed(data, sameTypeCount, _installedTotalCount);
 
         if (requiredFeed <= 0)
         {
@@ -146,7 +143,7 @@ public class BabyDragonFeedingSystem : MonoBehaviour
             $"[BabyDragonFeedingSystem] {babyDragon.name} 먹이 {slimeType}" +
             $" 필요 {requiredFeed} (기본 {data.BaseFeed}" +
             $" + 같은속성 {sameTypeCount} 추가분 {data.AdditionalFeedPerSameType}" +
-            $" + 전체 {_babyDragons.Count} 추가분 {data.AdditionalFeedPerTotal})" +
+            $" + 전체 {_installedTotalCount} 추가분 {data.AdditionalFeedPerTotal})" +
             $" / 지불 {isFed}, 잔량 {_resourceManager.GetAmount(slimeType)}",
             babyDragon);
     }

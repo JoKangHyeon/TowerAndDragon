@@ -25,20 +25,10 @@ public class UI_IngameWindow : MonoBehaviour
     private const string DAY_LOC_KEY = "main_day";
     private static string DayFormat => StringTable.GetString(DAY_LOC_KEY);
 
-    // 자원 표기: 보유량 옆에 다음 정산의 순증감(생산 - 소모)을 한 값으로만 붙인다.
-    // "(+10)(-20)"처럼 나누어 쓰지 않고 합산해 "(-10)"으로 보여준다.
-    private const string RESOURCE_WITH_GAIN_FORMAT =
-        "{0}<color=#{1}>(+{2})</color>";
-    private const string RESOURCE_WITH_LOSS_FORMAT =
-        "{0}<color=#{1}>(-{2})</color>";
-
-    // 다음 정산 후 보유량이 0 이하가 되는 자원은 보유량 숫자까지 적색으로 물들여 경고한다.
-    private const string RESOURCE_DEPLETING_FORMAT =
-        "<color=#{1}>{0}(-{2})</color>";
-
-    // 하루 생산량 글씨 기본 색(연두색).
-    private static readonly Color PRODUCTION_COLOR_DEFAULT = new Color(0.62f, 1f, 0.42f);
-    private static readonly Color LOSS_COLOR_DEFAULT = new Color(1f, 0.35f, 0.35f);
+    // 자원 표기(보유량 + 순증감)의 서식과 색 판정은 ResourceAmountFormatter가 갖는다 -
+    // 용 창의 슬라임 칸(ResourceAmountView)과 같은 규칙으로 보이게 하기 위함.
+    private static readonly Color PRODUCTION_COLOR_DEFAULT = ResourceAmountFormatter.GAIN_COLOR_DEFAULT;
+    private static readonly Color LOSS_COLOR_DEFAULT = ResourceAmountFormatter.LOSS_COLOR_DEFAULT;
 
     // 웨이브 진행 바가 가득 찰 때까지의 일수. 이 값째 클리어에 슬라이더가 가득 찬다.
     private const int WAVE_FILL_LENGTH = 6;
@@ -494,34 +484,13 @@ public class UI_IngameWindow : MonoBehaviour
 
     // 하루 순증감(생산 - 소모)을 합산해 한 값으로만 표시한다.
     // 증가면 연두색 (+N), 감소면 적색 (-N), 다음 정산 후 바닥나면 보유량까지 적색으로 물들인다.
-    private string FormatResourceAmount(ResourceType type, int amount)
-    {
-        int netChange = _resourceForecast != null ? _resourceForecast.GetDailyNetChange(type) : 0;
-
-        if (netChange == 0)
-        {
-            return amount.ToString();
-        }
-
-        if (netChange > 0)
-        {
-            return string.Format(
-                RESOURCE_WITH_GAIN_FORMAT,
-                amount,
-                ColorUtility.ToHtmlStringRGB(_productionColor),
-                netChange);
-        }
-
-        string lossFormat = ResourceForecastRules.WillRunOut(amount, netChange)
-            ? RESOURCE_DEPLETING_FORMAT
-            : RESOURCE_WITH_LOSS_FORMAT;
-
-        return string.Format(
-            lossFormat,
+    private string FormatResourceAmount(ResourceType type, int amount) =>
+        ResourceAmountFormatter.Format(
+            type,
             amount,
-            ColorUtility.ToHtmlStringRGB(LOSS_COLOR_DEFAULT),
-            Mathf.Abs(netChange));
-    }
+            _resourceForecast,
+            _productionColor,
+            LOSS_COLOR_DEFAULT);
 
     // 자원 행의 툴팁 트리거는 _resourceSlots와 같은 인덱스로 캐시해 둔다(OnEnable에서 1회 해석).
     private void RenderResourceTooltip(int slotIndex, ResourceType type, int amount)

@@ -10,10 +10,12 @@ public static class ResourceLocKeys
     public const string SOURCE_PRODUCTION = "resource_forecast_production";
     public const string SOURCE_POPULATION_UPKEEP = "resource_forecast_population_upkeep";
     public const string SOURCE_TERRAIN_UPKEEP = "resource_forecast_terrain_upkeep";
+    public const string SOURCE_BABY_DRAGON_FEED = "resource_forecast_baby_dragon_feed";
 
     // 이대로 날을 넘겼을 때 벌어질 일. 자원마다 결과가 다르다.
     public const string WARNING_FOOD = "resource_warning_food";
     public const string WARNING_MATERIAL = "resource_warning_material";
+    public const string WARNING_SLIME = "resource_warning_slime";
     public const string WARNING_GENERIC = "resource_warning_generic";
 
     // 부족분 없이 정확히 바닥나는 경우(모자라지는 않지만 다음 날엔 낼 것이 없다).
@@ -26,14 +28,23 @@ public static class ResourceLocKeys
             ResourceForecastSource.Production => SOURCE_PRODUCTION,
             ResourceForecastSource.PopulationUpkeep => SOURCE_POPULATION_UPKEEP,
             ResourceForecastSource.TerrainUpkeep => SOURCE_TERRAIN_UPKEEP,
+            ResourceForecastSource.BabyDragonFeed => SOURCE_BABY_DRAGON_FEED,
             _ => SOURCE_PRODUCTION,
         };
     }
 
     // 부족 시 결과가 같은 자원끼리 문구를 공유한다.
-    // 식량 = 인구 아사(PopulationUpkeepSystem), 나무·돌 = 시설 인구 배치 해제(TerrainUpkeepSystem).
+    // 식량 = 인구 아사(PopulationUpkeepSystem), 나무·돌 = 시설 인구 배치 해제(TerrainUpkeepSystem),
+    // 슬라임 = 먹이를 못 받은 새끼용 정지(BabyDragonFeedingSystem).
     public static string WarningLocKey(ResourceType type)
     {
+        // 슬라임 판정은 DragonSlimeTable에 맡긴다 - 속성-슬라임 대응표를 여기 또 적으면
+        // 슬라임이 늘거나 바뀔 때 한쪽만 고쳐져 조용히 어긋난다.
+        if (DragonSlimeTable.TryGetAttribute(type, out DragonType _))
+        {
+            return WARNING_SLIME;
+        }
+
         return type switch
         {
             ResourceType.Food => WARNING_FOOD,

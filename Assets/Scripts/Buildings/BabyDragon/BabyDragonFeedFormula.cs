@@ -9,8 +9,25 @@ public static class BabyDragonFeedFormula
     // sameTypeCount/totalCount는 "이 용까지 포함해서 설치됐다고 가정했을 때"의 마릿수다.
     public static int ResolveDailyFeed(BabyDragonData data, int sameTypeCount, int totalCount)
     {
-        return data.BaseFeed
-            + data.AdditionalFeedPerSameType * Mathf.Max(0, sameTypeCount - 1)
-            + data.AdditionalFeedPerTotal * Mathf.Max(0, totalCount - 1);
+        return ResolveDailyFeed(
+            data.BaseFeed,
+            data.AdditionalFeedPerSameType,
+            data.AdditionalFeedPerTotal,
+            sameTypeCount,
+            totalCount);
+    }
+
+    // 값만 받는 오버로드. BabyDragonData의 먹이 필드가 읽기 전용이라 EditMode 테스트에서 구성할 수
+    // 없으므로, 공식 자체를 검증할 수 있도록 데이터 접근과 계산을 분리해 둔다.
+    public static int ResolveDailyFeed(
+        int baseFeed,
+        int additionalFeedPerSameType,
+        int additionalFeedPerTotal,
+        int sameTypeCount,
+        int totalCount)
+    {
+        return baseFeed
+            + additionalFeedPerSameType * Mathf.Max(0, sameTypeCount - 1)
+            + additionalFeedPerTotal * Mathf.Max(0, totalCount - 1);
     }
 }
