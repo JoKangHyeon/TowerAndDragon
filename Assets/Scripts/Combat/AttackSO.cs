@@ -25,6 +25,11 @@ public class AttackSO : ScriptableObject
 
     public float Range => _range;
     public float Interval => _interval;
+
+    // 효과 목록을 읽기 전용으로 노출한다 - 빌드모드의 타워 정보 팝업이 피해량(DamageEffectSO.Amount)을
+    // 표시하려면 이 목록을 훑어야 한다. 적용은 Execute가 담당하므로 밖에서는 조회만 한다.
+    public IReadOnlyList<AttackEffectSO> Effects =>
+        _effects ?? System.Array.Empty<AttackEffectSO>();
     public float AreaRadius => _areaRadius;
     public bool HasArea => _areaRadius > 0f;
 
