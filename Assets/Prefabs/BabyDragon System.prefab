@@ -15,7 +15,6 @@ GameObject:
   - component: {fileID: 6755297435032812545}
   - component: {fileID: 4355047978714225132}
   - component: {fileID: 2814068480602122315}
-  - component: {fileID: 2471524138613045127}
   - component: {fileID: 3797004316217767523}
   m_Layer: 0
   m_Name: BabyDragon System
@@ -144,23 +143,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BabyDragonEggNotifier
   _eggInventorySystem: {fileID: 6649543973287148481}
   _toast: {fileID: 0}
---- !u!114 &2471524138613045127
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2852514381633709213}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b88a52867b5e246348b5ed2c7141b95b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonInventoryBadge
-  _eggInventorySystem: {fileID: 6649543973287148481}
-  _inventoryWindow: {fileID: 0}
-  _badgeDot: {fileID: 0}
-  _eggTabBadgeDot: {fileID: 0}
-  _dragonTabBadgeDot: {fileID: 0}
 --- !u!114 &3797004316217767523
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -168,7 +150,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2852514381633709213}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c6cd896ac8edb984fa5caa238e64269d, type: 3}
   m_Name: 
@@ -179,6 +161,7 @@ MonoBehaviour:
   _gridMap: {fileID: 0}
   _placementController: {fileID: 0}
   _overlay: {fileID: 0}
+  _cycleManager: {fileID: 0}
   _toast: {fileID: 0}
   _inventoryButton: {fileID: 0}
   _inventoryToggleAction: {fileID: 1961000633486905275, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

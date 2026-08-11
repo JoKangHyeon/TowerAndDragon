@@ -351,6 +351,9 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         float radiusY = radius * IsometricMath.RADIUS_Y_RATIO;
         Vector3 center = babyDragon.transform.position;
 
+        // 시설마다 달라지지 않는 값이라 루프 밖에서 한 번만 구한다.
+        float babyDragonMultiplier = GetEffectiveYieldMultiplier(babyDragon.DragonData);
+
         foreach (Factory factory in _factories)
         {
             if (!IsometricMath.IsWithinEllipse(factory.transform.position, center, radius, radiusY))
@@ -358,11 +361,6 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
                 Debug.Log($"[BabyDragonBuffSystem] {factory.name}: 범위 밖 → 버프 없음");
                 continue;
             }
-
-            float kinBonus = _dragonTreeManager != null
-                ? _dragonTreeManager.GetKinAreaYieldBonusRatio(babyDragon.DragonData.DragonType)
-                : 0f;
-            float babyDragonMultiplier = babyDragon.DragonData.BuffYieldMultiplier * (1f + kinBonus);
 
             foreach (ResourceType resourceType in factory.EnumerateProducedResourceTypes())
             {
@@ -378,6 +376,66 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
                 float before = multiplierByFactoryResource[key];
                 multiplierByFactoryResource[key] *= babyDragonMultiplier;
                 Debug.Log($"[BabyDragonBuffSystem] {factory.name} ({resourceType}): 범위 안 → ×{before} → ×{multiplierByFactoryResource[key]} (새끼용 배율 ×{babyDragonMultiplier})");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 이 데이터의 새끼용이 생산량에 실제로 곱하는 배율(혈족 강화 포함). 버프 적용과 UI 표시가
+    /// 같은 값을 쓰도록 계산 경로를 여기 하나로 모은다.
+    /// </summary>
+    public float GetEffectiveYieldMultiplier(BabyDragonData data) =>
+        BabyDragonBuffFormula.ResolveYieldMultiplier(data, GetKinBonusRatio(data));
+
+    private float GetKinBonusRatio(BabyDragonData data) =>
+        _dragonTreeManager != null && data != null
+            ? _dragonTreeManager.GetKinAreaYieldBonusRatio(data.DragonType)
+            : BabyDragonBuffFormula.NO_KIN_BONUS_RATIO;
+
+    /// <summary>
+    /// 이 새끼용 한 마리가 지금 버프하고 있는 (생산시설, 자원) 쌍을 모은다. 표시 전용 조회다.
+    ///
+    /// 재계산 결과(_multiplierByFactoryResource)는 모든 새끼용의 배율을 곱해 누적한 값이라 거기서
+    /// "이 마리의 몫"만 되돌릴 수 없다. 그래서 같은 판정을 이 마리 기준으로 한 번 더 돈다 -
+    /// 커서를 올리고 있는 동안에만 호출되므로 생산시설 수만큼의 비용은 문제되지 않는다.
+    /// </summary>
+    public void CollectBuffTargets(BabyDragonTower babyDragon, List<BabyDragonBuffTarget> into)
+    {
+        if (into == null)
+        {
+            return;
+        }
+
+        into.Clear();
+
+        if (babyDragon == null ||
+            !babyDragon.CanOperate ||
+            babyDragon.Mode != BabyDragonMode.Buff ||
+            !BabyDragonBuffFormula.HasYieldBuff(babyDragon.DragonData))
+        {
+            return;
+        }
+
+        BabyDragonData data = babyDragon.DragonData;
+        float radiusY = data.BuffRadius * IsometricMath.RADIUS_Y_RATIO;
+        Vector3 center = babyDragon.transform.position;
+
+        foreach (Factory factory in _factories)
+        {
+            if (!IsometricMath.IsWithinEllipse(
+                    factory.transform.position, center, data.BuffRadius, radiusY))
+            {
+                continue;
+            }
+
+            foreach (ResourceType resourceType in factory.EnumerateProducedResourceTypes())
+            {
+                if ((data.BuffTargetResources & resourceType) == 0)
+                {
+                    continue;
+                }
+
+                into.Add(new BabyDragonBuffTarget(factory, resourceType));
             }
         }
     }
