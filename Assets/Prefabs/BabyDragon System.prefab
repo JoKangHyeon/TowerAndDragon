@@ -14,8 +14,10 @@ GameObject:
   - component: {fileID: 6649543973287148481}
   - component: {fileID: 6755297435032812545}
   - component: {fileID: 4355047978714225132}
-  - component: {fileID: 2814068480602122315}
   - component: {fileID: 3797004316217767523}
+  - component: {fileID: 7058177553212603923}
+  - component: {fileID: 7394305190510001644}
+  - component: {fileID: 2151442718162923406}
   m_Layer: 0
   m_Name: BabyDragon System
   m_TagString: Untagged
@@ -129,20 +131,6 @@ MonoBehaviour:
   _cycleProgression: {fileID: 0}
   _eggInventorySystem: {fileID: 6649543973287148481}
   _rewardPool: {fileID: 11400000, guid: ae4ba2cbfbd78e843a6ab233d5228842, type: 2}
---- !u!114 &2814068480602122315
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2852514381633709213}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e4a0d98b7cdb494f8becb40efdea2d1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonEggNotifier
-  _eggInventorySystem: {fileID: 6649543973287148481}
-  _toast: {fileID: 0}
 --- !u!114 &3797004316217767523
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -169,3 +157,50 @@ MonoBehaviour:
   StepEntered:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7058177553212603923
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a48eb028986b0a4ba7c0357f53d4c7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_BuildingTooltipDriver
+  _presenter: {fileID: 0}
+  _hoveredBuildingSource: {fileID: 7394305190510001644}
+  _providers:
+  - {fileID: 2151442718162923406}
+  _placementController: {fileID: 0}
+  _hoverDelay: 0.3
+  _refreshInterval: 0.25
+--- !u!114 &7394305190510001644
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55955d2f972a61b49bf70d486a1f45be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GridCellHoveredBuildingSource
+  _gridMap: {fileID: 0}
+  _mouseSelectController: {fileID: 0}
+--- !u!114 &2151442718162923406
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2852514381633709213}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac35080a7cbf86849abf2ae015a83614, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonTooltipProvider
+  _buffSystem: {fileID: 6755297435032812545}
+  _resourceCatalog: {fileID: 11400000, guid: 3c68623cfd9e6d74b8c4e6e8fa62c090, type: 2}
