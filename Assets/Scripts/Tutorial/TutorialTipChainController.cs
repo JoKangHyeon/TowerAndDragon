@@ -271,22 +271,32 @@ public sealed class TutorialTipChainController : MonoBehaviour
     }
 
     /// <summary>
-    /// 대기하던 체인을 지금 열어도 되는지. 창을 여는 것이 트리거인 체인은 <b>그 창이 아직 열려 있어야</b> 한다 -
-    /// 기다리는 동안 플레이어가 그 창을 닫았으면 창 안을 설명하는 안내가 창 밖에서 뜬다.
+    /// 대기하던 체인을 지금 열어도 되는지. 기다리는 동안 상황이 끝났으면 안내가 엉뚱한 화면에서 뜬다 -
+    /// 창 안을 설명하는 안내가 창 밖에서 뜨거나, 이미 선택이 풀린 건물을 가리킨다.
+    /// 특히 뒤엣것은 행동형 단계라 Render가 입력 차단을 자동으로 켜므로, 플레이어가 그 사이 열어 둔
+    /// 다른 창이 딤에 덮여 닫지도 못하는 상태가 된다(메인성 팁이 실제로 그렇게 갇혔다).
     ///
-    /// 게다가 그 상태로 열면 러너가 붙잡을 창이 없다고 판단해(TutorialRunner.HoldsNoExclusiveMode)
-    /// 열기·닫기·단축키 관문을 통째로 풀어버린다. 안내는 떠 있는데 아무것도 막지 않는 상태가 된다.
+    /// <b>다시 만들 수 있는 상황만 검사한다.</b> 창 열기·건물 선택은 플레이어가 한 번 더 하면 되지만,
+    /// 건설은 그렇지 않다 - 농장을 이미 지은 사람에게 "또 지어야 팁을 준다"고 할 수는 없으므로
+    /// BuildingConstructed는 상황이 지나갔어도 그대로 연다.
     ///
-    /// 열지 않고 흘려보내되 _opened에는 넣지 않으므로, 다음에 그 창을 다시 열면 그때 제대로 시작된다.
+    /// 열지 않고 흘려보내되 _opened에는 넣지 않으므로, 다음에 같은 조건이 성립하면 그때 제대로 시작된다.
     /// 안내가 사라지는 것이 아니라 맞는 타이밍으로 미뤄지는 것이다.
     /// </summary>
     private bool IsTriggerContextValid(Chain chain)
     {
-        if (chain.Trigger.Condition != TutorialConditionType.ExclusiveModeOpened || _uiManager == null)
+        switch (chain.Trigger.Condition)
         {
-            return true;
-        }
+            case TutorialConditionType.ExclusiveModeOpened:
+                return _uiManager == null ||
+                       TutorialTargetMatcher.MatchesMode(_uiManager.CurrentOpenExclusiveMode, chain.Trigger.TargetMode);
 
-        return TutorialTargetMatcher.MatchesMode(_uiManager.CurrentOpenExclusiveMode, chain.Trigger.TargetMode);
+            case TutorialConditionType.BuildingSelectedOnGrid:
+                return _placementController == null ||
+                       chain.Trigger.MatchesBuilding(_placementController.SelectedBuilding);
+
+            default:
+                return true;
+        }
     }
 }

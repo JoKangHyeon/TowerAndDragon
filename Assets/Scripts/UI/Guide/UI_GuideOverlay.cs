@@ -11,7 +11,7 @@ using UnityEngine.UI;
 /// 단일 인스턴스로 쓰는 것을 전제한다 - 그래야 안내끼리 겹치지 않는다. 여러 가이드가 동시에 뜨려 하면
 /// 우선순위가 높은 쪽이 표시권을 잡고, 진 쪽은 Show가 false를 돌려받아 그리지 않는다(상태는 계속 전진).
 /// </summary>
-public class UI_GuideOverlay : MonoBehaviour
+public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
 {
     private const int DIM_PANEL_COUNT = 4;
     private const int RECT_CORNER_COUNT = 4;
@@ -47,6 +47,9 @@ public class UI_GuideOverlay : MonoBehaviour
     [Tooltip("읽고 넘기는 설명에 쓰는 확인 버튼. 말풍선 안(_bubbleRoot의 자식)에 두고, " +
              "행동을 기다리는 단계에서는 자동으로 숨는다. 없으면 설명이 시간으로만 넘어간다.")]
     [SerializeField] private Button _confirmButton;
+
+    [Tooltip("안내가 떠 있는 동안 밤으로 넘어가지 못하게 막는 데 쓴다. 비우면 막지 않는다.")]
+    [SerializeField] private CycleManager _cycleManager;
 
     [SerializeField] private Color _dimColor = new Color(0f, 0f, 0f, DEFAULT_DIM_ALPHA);
 
@@ -124,14 +127,35 @@ public class UI_GuideOverlay : MonoBehaviour
     public bool IsDisplaying(object owner) => HasOwner && ReferenceEquals(_owner, owner);
 
     /// <summary>
+    /// 지금 안내가 화면에 떠 있는지. 표시권만 보면 안 된다 - <see cref="Suspend"/>는 딤을 걷으면서
+    /// 표시권은 쥐고 있고, 대상이 사라지면 LateUpdate가 연출만 감춘다. 화면에 아무것도 없는 그 동안까지
+    /// 게임을 잠그면 안 되므로 <see cref="_visualsActive"/>를 함께 본다.
+    /// </summary>
+    public bool IsShowingGuide => HasOwner && _visualsActive;
+
+    /// <summary>
+    /// 이 소유자의 안내가 <b>실제로 화면에 떠 있는지</b>. 관문을 거는 쪽은 반드시 이것을 봐야 한다 -
+    /// <see cref="IsDisplaying"/>는 표시권만 보므로, LateUpdate가 대상을 잃고 연출만 감춘 상태
+    /// (표시권은 유지)에서도 참이다. 그 상태에서 관문을 걸면 화면에 아무 안내도 없는데 버튼과 단축키가
+    /// 조용히 죽는다 - 실제로 그렇게 만들어 게임 전체가 막힌 것처럼 보였다.
+    /// </summary>
+    public bool IsShowingFor(object owner) => IsShowingGuide && ReferenceEquals(_owner, owner);
+
+    /// <summary>
     /// 지금 딤이 대상 밖 클릭을 막고 있는지. 키보드 단축키는 딤을 통과하므로, 마우스와 같은 기준으로
     /// 막으려면 단축키 폴링 지점이 이것을 봐야 한다(<see cref="UIManager.CanUseShortcut"/>이 대신 물어준다).
-    ///
-    /// <see cref="_visualsActive"/>를 함께 보는 이유: <see cref="Suspend"/>는 딤을 걷으면서 표시권과
-    /// <see cref="_blocksInput"/>은 남긴다. 이것을 빼면 화면에 아무것도 없는 인계 대기 중에도 단축키가 잠긴다.
-    /// 대상이 사라져 LateUpdate가 연출을 감춘 경우도 같은 이유로 함께 풀린다.
     /// </summary>
-    public bool IsBlockingInput => HasOwner && _blocksInput && _visualsActive;
+    public bool IsBlockingInput => IsShowingGuide && _blocksInput;
+
+    /// <summary>
+    /// 안내가 떠 있는 동안에는 밤으로 넘어가지 않는다. 밤은 되돌릴 수 없는 데다 건설·인구 배치가 잠겨
+    /// 안내가 시키는 일을 아예 할 수 없게 되는데, 안내는 그대로 남아 무엇을 하라는 것인지 알 수 없어진다.
+    ///
+    /// 막는 주체를 안내별로 두지 않고 여기 하나로 모은 이유는 딤과 같다 - 러너마다 걸게 하면
+    /// 빠뜨리는 곳이 계속 생긴다(팁 체인과 새끼용 가이드가 실제로 빠져 있었다).
+    /// 화면에서 걷히면 곧바로 풀리므로, 부화를 기다리려고 창을 닫은 뒤에는 정상적으로 밤이 온다.
+    /// </summary>
+    bool IDayEndBlockQuery.CanEndDay() => !IsShowingGuide;
 
     /// <summary>
     /// 지금 안내가 가리키고 있는 UI 대상. 아무것도 안 가리키면 null이다.
@@ -198,12 +222,23 @@ public class UI_GuideOverlay : MonoBehaviour
     private void OnEnable()
     {
         StringTable.OnLanguageChanged += ApplyText;
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.AddDayEndBlocker(this);
+        }
     }
 
     private void OnDisable()
     {
         StringTable.OnLanguageChanged -= ApplyText;
         KillPulses();
+
+        // 끄면 밤 잠금도 같이 풀어준다 - 안 그러면 영영 막힌 채로 남는다.
+        if (_cycleManager != null)
+        {
+            _cycleManager.RemoveDayEndBlocker(this);
+        }
     }
 
     private void ApplyText()
@@ -298,19 +333,28 @@ public class UI_GuideOverlay : MonoBehaviour
             return false;
         }
 
-        // 대상 없이 화면을 덮는 것은 빠져나갈 길이 있을 때만 받는다 - 확인 버튼은 딤 위에 있어 계속 눌린다.
-        // 그 버튼조차 없으면 아무것도 누를 수 없게 되므로 거절한다.
-        // 단계가 버튼을 켜라고 해도 배선이 비어 있으면 실제로는 버튼이 없는 것과 같다 - 둘을 함께 본다.
-        // 조용히 사라지면 앵커가 여러 개인 안내에서 원인을 찾을 수 없으므로 반드시 남긴다.
+        // 확인 버튼은 딤 위에 있어 막아도 계속 눌린다. 단계가 켜라고 해도 배선이 비어 있으면
+        // 실제로는 버튼이 없는 것과 같으므로 둘을 함께 본다.
         bool hasEscape = showConfirmButton && _confirmButton != null;
         bool hasTarget = target != null || worldTarget != null;
-        if (_overlayRoot == null || (!hasTarget && blocksInput && !hasEscape))
+
+        if (_overlayRoot == null)
         {
-            Debug.LogWarning($"[UI_GuideOverlay] {locKey} 안내를 띄울 수 없다 - " +
-                             "_overlayRoot가 비었거나, 빠져나갈 버튼 없이 화면 전체를 막으려 했다.");
+            Debug.LogWarning($"[UI_GuideOverlay] {locKey} 안내를 띄울 수 없다 - _overlayRoot가 비었다.");
             Release(owner);
             return false;
         }
+
+        // 안내가 떠 있는 동안에는 유도한 곳 말고는 누를 수 없다. 호출부가 뭘 넘겼든 여기서 넓힌다 -
+        // 단계마다 판단하게 두었더니 빠뜨린 곳이 계속 나왔고, 그때마다 플레이어가 엉뚱한 버튼을 눌러
+        // 안내가 가리키던 창을 닫거나 밤으로 넘어가 안내만 남았다.
+        //
+        // 빠져나갈 길이 없을 때만 열어 둔다 - 구멍도 확인 버튼도 없는데 막으면 아무것도 누를 수 없다.
+        // 그리드를 클릭해 새끼용을 배치하는 단계가 그 경우로, 대상을 지정하지 않아 화면 전체가 통로다.
+        blocksInput = hasTarget || hasEscape;
+
+        // 막는 곳은 어둡게도 한다. 보이지 않는 벽에 막히면 플레이어는 게임이 멈춘 줄 안다.
+        dimsBackground = blocksInput;
 
         _owner = owner;
         _ownerPriority = priority;

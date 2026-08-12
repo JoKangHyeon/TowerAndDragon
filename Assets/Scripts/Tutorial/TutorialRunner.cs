@@ -201,6 +201,14 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             _heldExclusiveMode = _uiManager.CurrentOpenExclusiveMode;
             _uiManager.AddOpenQuery(this);
         }
+        else if (_uiManager != null)
+        {
+            // 관문을 걸지 않는 팁 체인도 창 열기만은 막는다 - 안내가 화면을 덮고 있는데 새 창이 열리면
+            // 그 창이 딤에 덮여 닫지도 못하고, 가리키던 대상은 창 뒤로 사라진다
+            // (타워 클릭 안내 중에 Tab으로 용 창을 열어 실제로 그렇게 갇혔다).
+            // 밤 진입·HUD는 그대로 열어 두므로 안내를 켠 대가로 게임이 잠기지는 않는다.
+            _uiManager.AddOpenQuery(this);
+        }
 
         if (_overlay != null)
         {
@@ -256,7 +264,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
     bool IExclusiveModeOpenQuery.CanOpen(MonoBehaviour mode)
     {
-        if (!_isRunning)
+        // mode가 null이면 "여는 것"이 아니라 CloseAllExcept(null) - 화면을 치우려는 쪽이다.
+        // 막으면 뒤에 시작하는 안내(챕터)가 화면을 정리하지 못해 제 딤에 남의 창이 덮인 채로 돈다.
+        if (mode == null || !_isRunning)
         {
             return true;
         }
@@ -265,6 +275,13 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (HoldsOpenedExclusiveModeOnly)
         {
             return _heldExclusiveMode == null || ReferenceEquals(mode, _heldExclusiveMode);
+        }
+
+        // 팁 체인은 말풍선이 실제로 떠 있는 동안만 막는다. 챕터와 달리 플레이어가 스스로 켠 안내라,
+        // 화면에서 걷힌 뒤(대상을 잃었거나 인계를 기다리는 중)까지 창을 잠그면 안 된다.
+        if (!_holdsGates && _overlay != null && !_overlay.IsShowingFor(this))
+        {
+            return true;
         }
 
         foreach (TutorialExclusiveModeKind unlocked in _unlockedModes)
@@ -311,7 +328,13 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// </summary>
     bool IShortcutBlockQuery.AllowsShortcut(MonoBehaviour mode)
     {
-        return _isRunning && IsStepRequestedShortcut(mode);
+        // 표시권을 가진 러너만 예외를 말할 수 있다. 러너는 둘 이상 동시에 돌 수 있는데(챕터 + 팁 체인),
+        // 진 쪽은 화면에 뜨지도 않은 채 살아 있다. 그 상태의 단계가 "이 창을 닫아라"이면
+        // 지금 화면을 쓰는 안내가 전 구간을 막고 있어도 그 키만 열려버린다
+        // (확인 클릭을 IsDisplaying으로 거르는 것과 같은 이유 - HandleConfirmClicked 참고).
+        return _isRunning &&
+               (_overlay == null || _overlay.IsShowingFor(this)) &&
+               IsStepRequestedShortcut(mode);
     }
 
     // 지금 단계가 명시적으로 "이 창을 닫아라"라고 시켰는지. 닫기 관문과 단축키 예외가 같은 판정을

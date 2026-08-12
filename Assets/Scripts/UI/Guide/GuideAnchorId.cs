@@ -89,4 +89,8 @@ public enum GuideAnchorId
     // 일일 퀘스트 목록 창. 패널 루트가 아니라 실제로 보이는 창(Window)에 붙인다 -
     // 루트는 높이가 0이라 그것을 가리키면 딤 구멍이 납작하게 뚫린다.
     TutorialObjectivePanel,
+
+    // 용 창 위쪽의 속성별 슬라임 보유량 줄(Panel_elementalResourceAmount).
+    // 다섯 속성이 한 줄에 붙어 있으므로 칸 하나가 아니라 줄 전체를 가리킨다.
+    DragonWindowSlimeStock,
 }

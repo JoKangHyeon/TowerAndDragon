@@ -149,6 +149,11 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 4411999803580549854, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
   m_PrefabInstance: {fileID: 1677085708}
   m_PrefabAsset: {fileID: 0}
+--- !u!224 &109876905 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 7674853893088412856, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 1677085708}
+  m_PrefabAsset: {fileID: 0}
 --- !u!224 &111705552 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 6666049023709900567, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
@@ -2208,6 +2213,11 @@ Transform:
   - {fileID: 949526655}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!224 &962619523 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 2442013627477979674, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 1677085708}
+  m_PrefabAsset: {fileID: 0}
 --- !u!224 &969538834 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 2923143168094864451, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -2456,6 +2466,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80a42836ddfa1764b952fb36229e47d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChunkYieldMultiplierComposite
+--- !u!114 &1057321766 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3821788185184956374, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 1677085708}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e7ff8a69af607e4699ecb2cb3a8cdf8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_BabyDragonManageWindow
 --- !u!1001 &1185758914
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2600,7 +2621,8 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 8359693986921846839, guid: 962c2eeb01b802d489e27603bb8e25db, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
@@ -6197,7 +6219,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6864070389072513261, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -50.00183
+      value: -50.001892
       objectReference: {fileID: 0}
     - target: {fileID: 6874002290473965843, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
@@ -8830,6 +8852,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 111705553}
     - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
+      propertyPath: _uiManager
+      value: 
+      objectReference: {fileID: 1677085709}
+    - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
       propertyPath: _gameManager
       value: 
       objectReference: {fileID: 1632594320}
@@ -8838,6 +8864,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1632594319}
     - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
+      propertyPath: _manageWindow
+      value: 
+      objectReference: {fileID: 1057321766}
+    - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
       propertyPath: _inventoryButton
       value: 
       objectReference: {fileID: 94955978}
@@ -8845,6 +8875,10 @@ PrefabInstance:
       propertyPath: _inventoryWindow
       value: 
       objectReference: {fileID: 819624967}
+    - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
+      propertyPath: _modeButtonsRect
+      value: 
+      objectReference: {fileID: 109876905}
     - target: {fileID: 3797004316217767523, guid: 091564ad9a5a8584792291ef54095c96, type: 3}
       propertyPath: _placementController
       value: 
@@ -9186,6 +9220,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8360983271326084270, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
+      propertyPath: _cycleManager
+      value: 
+      objectReference: {fileID: 1632594319}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -9288,6 +9326,14 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 668391600}
     - target: {fileID: 1700263342070194300, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _bindings.Array.size
+      value: 14
+      objectReference: {fileID: 0}
+    - target: {fileID: 1700263342070194300, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _bindings.Array.data[13].Id
+      value: 40
+      objectReference: {fileID: 0}
+    - target: {fileID: 1700263342070194300, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
       propertyPath: _bindings.Array.data[0].Target
       value: 
       objectReference: {fileID: 94955982}
@@ -9339,6 +9385,10 @@ PrefabInstance:
       propertyPath: _bindings.Array.data[12].Target
       value: 
       objectReference: {fileID: 949196127}
+    - target: {fileID: 1700263342070194300, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _bindings.Array.data[13].Target
+      value: 
+      objectReference: {fileID: 962619523}
     - target: {fileID: 2401732732663486626, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
       propertyPath: _gridMap
       value: 
