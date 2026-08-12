@@ -47,7 +47,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
     private readonly Dictionary<string, DotEntry> _dotStatuses = new();
     private readonly Dictionary<string, StackEntry> _stackStatuses = new();
     private readonly Dictionary<string, FreezeEntry> _freezeStatuses = new();
-    private readonly List<string> _expiredKeys = new(4);
+    private readonly List<string> _tickKeys = new(4);
 
     public bool IsActionBlocked => _freezeStatuses.Count > 0;
 
@@ -219,6 +219,20 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         TickStackStatuses(deltaTime);
     }
 
+    // Unity(Mono) 런타임의 Dictionary는 "기존 키에 값을 다시 대입"해도 내부 version이 올라가서
+    // 열려 있던 enumerator가 무효화된다(version을 올리지 않는 것은 .NET Core 3.0 이후 런타임 얘기다).
+    // 그래서 틱 처리 중에는 딕셔너리를 직접 순회하지 않고, 키만 버퍼에 복사한 뒤 그 버퍼를 돌면서
+    // 값을 갱신·삭제한다. 만료 항목도 그 자리에서 바로 지울 수 있다.
+    private void CollectKeys<TEntry>(Dictionary<string, TEntry> statuses)
+    {
+        _tickKeys.Clear();
+
+        foreach (string key in statuses.Keys)
+        {
+            _tickKeys.Add(key);
+        }
+    }
+
     private void TickStackStatuses (float deltaTime)
     {
         if (_stackStatuses.Count == 0)
@@ -226,14 +240,11 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             return;
         }
 
-        _expiredKeys.Clear();
+        CollectKeys(_stackStatuses);
 
-        foreach (var kvp in _stackStatuses)
+        foreach (string key in _tickKeys)
         {
-            string key = kvp.Key;
-            StackEntry entry = kvp.Value;
-
-            if (entry.IsInfinite)
+            if (!_stackStatuses.TryGetValue(key, out StackEntry entry) || entry.IsInfinite)
             {
                 continue;
             }
@@ -244,22 +255,15 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             // 마지막 타격 이휴 5초안에 3번을 채워야 빙결
             if (entry.RemainingSeconds <= 0f)
             {
-                _expiredKeys.Add(key);
+                _stackStatuses.Remove(key);
             }
             else
             {
                 _stackStatuses[key] = entry;
             }
         }
-
-        foreach (var key in _expiredKeys)
-        {
-            _stackStatuses.Remove(key);
-        }
     }
 
-    // 딕셔너리의 값을 갱신해도 버전이 올라가지 않으므로 직접 순회 가능.
-    // 만료된 키만 따로 모아서 삭제한다.
     private bool TickMoveSpeedStatuses(float deltaTime)
     {
         if (_moveSpeedStatuses.Count == 0)
@@ -267,15 +271,12 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             return false;
         }
 
-        _expiredKeys.Clear();
+        CollectKeys(_moveSpeedStatuses);
         bool anyExpired = false;
 
-        foreach (var kvp in _moveSpeedStatuses)
+        foreach (string key in _tickKeys)
         {
-            string key = kvp.Key;
-            MoveSpeedEntry entry = kvp.Value;
-
-            if (entry.IsInfinite)
+            if (!_moveSpeedStatuses.TryGetValue(key, out MoveSpeedEntry entry) || entry.IsInfinite)
             {
                 continue;
             }
@@ -284,18 +285,13 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
 
             if (entry.RemainingSeconds <= 0f)
             {
-                _expiredKeys.Add(key);
+                _moveSpeedStatuses.Remove(key);
                 anyExpired = true;
             }
             else
             {
                 _moveSpeedStatuses[key] = entry;
             }
-        }
-
-        foreach (var key in _expiredKeys)
-        {
-            _moveSpeedStatuses.Remove(key);
         }
 
         return anyExpired;
@@ -308,15 +304,12 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             return false;
         }
 
-        _expiredKeys.Clear();
+        CollectKeys(_freezeStatuses);
         bool anyExpired = false;
 
-        foreach (var kvp in _freezeStatuses)
+        foreach (string key in _tickKeys)
         {
-            string key = kvp.Key;
-            FreezeEntry entry = kvp.Value;
-
-            if (entry.IsInfinite)
+            if (!_freezeStatuses.TryGetValue(key, out FreezeEntry entry) || entry.IsInfinite)
             {
                 continue;
             }
@@ -325,18 +318,13 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
 
             if (entry.RemainingSeconds <= 0f)
             {
-                _expiredKeys.Add(key);
+                _freezeStatuses.Remove(key);
                 anyExpired = true;
             }
             else
             {
                 _freezeStatuses[key] = entry;
             }
-        }
-
-        foreach (var key in _expiredKeys)
-        {
-            _freezeStatuses.Remove(key);
         }
 
         return anyExpired;
@@ -349,12 +337,14 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             return;
         }
 
-        _expiredKeys.Clear();
+        CollectKeys(_dotStatuses);
 
-        foreach (var kvp in _dotStatuses)
+        foreach (string key in _tickKeys)
         {
-            string key = kvp.Key;
-            DotEntry entry = kvp.Value;
+            if (!_dotStatuses.TryGetValue(key, out DotEntry entry))
+            {
+                continue;
+            }
 
             entry.TickTimer += deltaTime;
 
@@ -376,17 +366,17 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
 
                 if (entry.RemainingSeconds <= 0f)
                 {
-                    _expiredKeys.Add(key);
+                    _dotStatuses.Remove(key);
                     continue;
                 }
             }
 
-            _dotStatuses[key] = entry;
-        }
-
-        foreach (var key in _expiredKeys)
-        {
-            _dotStatuses.Remove(key);
+            // 틱 데미지로 몬스터가 죽어 Clear()가 돌았다면 이 항목은 이미 사라진 상태다 -
+            // 조건 없이 되쓰면 지워진 상태이상을 되살린다.
+            if (_dotStatuses.ContainsKey(key))
+            {
+                _dotStatuses[key] = entry;
+            }
         }
     }
 

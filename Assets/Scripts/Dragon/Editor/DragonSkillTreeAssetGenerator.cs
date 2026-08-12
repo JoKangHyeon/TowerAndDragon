@@ -75,10 +75,11 @@ public static class DragonSkillTreeAssetGenerator
     private const int ULTIMATE_EXTRA_USE_PER_DAY = 1;
     private const int ULTIMATE_CONQUEST_DAYS_REDUCTION = 1;
 
-    // 상태이상 수치(예시, 밸런싱 대상). _R2는 랭크2 노드가 갈아끼우는 강화판이다.
+    // 상태이상 수치(예시, 밸런싱 대상). 빙결은 기본 3초에서 랭크마다 1초씩 증가한다.
     private const float ICE_SLOW_MULTIPLIER = 0.5f;
     private const float ICE_SLOW_DURATION = 3f;
     private const float ICE_FREEZE_DURATION = 3f;
+    private const float ICE_FREEZE_DURATION_R1 = 4f;
     private const float ICE_FREEZE_DURATION_R2 = 5f;
     private const float FIRE_BURN_DAMAGE_PER_TICK = 2f;
     private const float FIRE_BURN_DAMAGE_PER_TICK_R2 = 4f;
@@ -123,6 +124,7 @@ public static class DragonSkillTreeAssetGenerator
     {
         public MoveSpeedStatusSO IceSlow;
         public FreezeStatusSO IceFreeze;
+        public FreezeStatusSO IceFreezeRank1;
         public FreezeStatusSO IceFreezeStrong;
         public DamageOverTimeStatusSO FireBurn;
         public DamageOverTimeStatusSO FireBurnStrong;
@@ -386,8 +388,9 @@ public static class DragonSkillTreeAssetGenerator
         {
             IceSlow = CreateMoveSpeedStatus("DS_IceSlow", "dragon_ice_slow", ICE_SLOW_DURATION, ICE_SLOW_MULTIPLIER),
             IceFreeze = CreateFreezeStatus("DS_IceFreeze", "dragon_ice_freeze", ICE_FREEZE_DURATION),
+            IceFreezeRank1 = CreateFreezeStatus("DS_IceFreeze_R1", "dragon_ice_freeze", ICE_FREEZE_DURATION_R1),
 
-            // 랭크2가 갈아끼우는 강화판 - StatusId를 같게 둬야 재부여가 중첩이 아니라 갱신으로 처리된다.
+            // 랭크 상태의 StatusId를 같게 둬야 재부여가 중첩이 아니라 갱신으로 처리된다.
             IceFreezeStrong = CreateFreezeStatus("DS_IceFreeze_R2", "dragon_ice_freeze", ICE_FREEZE_DURATION_R2),
 
             FireBurn = CreateDotStatus("DS_FireBurn", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK),
@@ -603,11 +606,10 @@ public static class DragonSkillTreeAssetGenerator
                 {
                     so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
 
-                    // 랭크마다 다른 상태를 물려야 한다 - 예전에는 index를 무시해 R1·R2가 같은 에셋을
-                    // 가리켰고, 랭크를 올려도 지속시간이 그대로였다.
+                    // 랭크마다 다른 상태를 물려 기본 3초에서 R1 4초, R2 5초로 강화한다.
                     // 둘 다 켜져 있으면 DragonTreeManager.GetSkillStatusOverride가 높은 랭크를 고른다.
                     so.FindProperty("_status").objectReferenceValue =
-                        index == 0 ? statuses.IceFreeze : statuses.IceFreezeStrong;
+                        index == 0 ? statuses.IceFreezeRank1 : statuses.IceFreezeStrong;
                 });
 
             // 방벽 체력은 SkillSO 수치가 아니라 설치되는 건물의 체력이라 별도 효과다.
