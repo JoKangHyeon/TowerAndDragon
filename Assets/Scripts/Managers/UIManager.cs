@@ -24,6 +24,8 @@ public class UIManager : MonoBehaviour
     [Tooltip("한 번에 하나만 열려야 하는 UI 모드 목록(IExclusiveMode 구현체). 예: UI_BuildModeWindow, ConquestModeController.")]
     [SerializeField] private MonoBehaviour[] _exclusiveModeBehaviours;
 
+    [SerializeField] private InputActionReference _babyDragonInventoryToggleAction;
+
     [Tooltip("안내 딤이 떠 있는 동안 단축키를 막는 데 쓴다. 비우면 딤과 무관하게 늘 허용한다.")]
     [SerializeField] private UI_GuideOverlay _guideOverlay;
 
@@ -319,7 +321,7 @@ public class UIManager : MonoBehaviour
         if (_escapeAction.action.WasPerformedThisFrame()
             && !IsAnyWindowOpen
             && !_wasAnyWindowOpen
-            && CanUseShortcutByQueries(_escapeWindowBehaviour))
+            && CanUseShortcut(_escapeWindowBehaviour))
         {
             OpenExclusive(_escapeWindow);
         }
@@ -489,7 +491,7 @@ public class UIManager : MonoBehaviour
         // (공유 액션이면 GlobalInputBootstrap이 켜야 한다 - _escapeAction이 그 경우다).
         if (_babyDragonInventoryToggleAction != null)
         {
-            action.action.Enable();
+            _babyDragonInventoryToggleAction.action.Enable();
         }
     }
 
