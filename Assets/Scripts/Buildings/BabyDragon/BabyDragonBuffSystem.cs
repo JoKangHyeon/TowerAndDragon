@@ -309,6 +309,14 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
     {
         foreach (Building building in _gridMap.Buildings)
         {
+            // 운영 중단은 인구 배치를 막는 상태가 전부다(Building.IsSuspended 주석). 인구를 배치할 수
+            // 없는 건물은 정지시켜도 실제로 달라지는 게 없고 표식·툴팁만 잘못 뜬다 - 성은 3x3 전체가
+            // 통행로(건설 불가 지형) 위라 여기에 그대로 걸려 "운영 중단" 툴팁이 떴다.
+            if (!building.TryGetComponent(out IPopulationAllocationTarget population))
+            {
+                continue;
+            }
+
             IReadOnlyList<Vector3Int> footprint = _gridMap.GetFootprintCoords(building);
 
             if (footprint.Count == 0)
@@ -341,8 +349,7 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
 
             if (!stillUnlocked)
             {
-                IPopulationAllocationTarget population = building.GetComponent<IPopulationAllocationTarget>();
-                population?.TryUnassign(population.AssignedPopulation);
+                population.TryUnassign(population.AssignedPopulation);
             }
         }
     }

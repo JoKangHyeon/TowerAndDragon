@@ -46,7 +46,7 @@ public class BuildingEffectBadgeSystem : MonoBehaviour
     {
         modifiers = ResolveModifiers(building);
 
-        if (building == null || into == null)
+        if (building == null || into == null || !IsEffectDisplayTarget(building))
         {
             return false;
         }
@@ -152,11 +152,18 @@ public class BuildingEffectBadgeSystem : MonoBehaviour
         _badgesByBuilding.Remove(building);
     }
 
-    // 대상은 인구를 배치하는 건물(생산시설·타워)이다. 성·연구소처럼 지역 페널티를 받지 않는
-    // 건물까지 훑으면 빈 표식만 잔뜩 만든다.
+    /// <summary>
+    /// 표식과 그 설명 툴팁의 대상인지. 대상은 인구를 배치하는 건물(생산시설·타워)이다 -
+    /// 성·연구소처럼 지역 페널티를 받지 않는 건물까지 훑으면 빈 표식만 잔뜩 만든다.
+    ///
+    /// 툴팁(BuildingEffectHoverTooltip)도 이 판정을 함께 쓴다. 표식만 걸러내면 표식이 없는 건물에
+    /// 툴팁만 뜨고, 이름 출처가 없어(BuildingEffectTooltipBuilder.ResolveTitle) 제목 없는 툴팁이 된다.
+    /// </summary>
+    public static bool IsEffectDisplayTarget(Building building) => building is Factory or Tower;
+
     private void Attach(Building building)
     {
-        if (building is not (Factory or Tower) ||
+        if (!IsEffectDisplayTarget(building) ||
             !WiringGuard.Require(_badgePrefab, nameof(_badgePrefab), this))
         {
             return;
