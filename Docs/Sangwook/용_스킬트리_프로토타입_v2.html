@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>용 스킬트리 v2 — 하이브리드(분기+랭크) · 자원 희소성 테스트</title>
+<style>
+  :root{
+    --bg:#0e0a0a; --panel:#1a1414; --panel2:#221a19; --line:#3a2f2b; --ink:#e6ddd4; --muted:#8f8175;
+    --kin:#8fd14f; --lock:#4a3f39; --ok:#8fd14f; --warn:#e0603c; --gold:#e08a3c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Segoe UI","Malgun Gothic",sans-serif;padding:16px}
+  h1{font-size:19px;font-weight:600;text-align:center;letter-spacing:1px;color:#f3e9de}
+  .sub{text-align:center;color:var(--muted);font-size:12px;margin:4px 0 12px}
+  .wrap{max-width:1500px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px}
+  @media(max-width:1180px){.wrap{grid-template-columns:1fr}}
+
+  .stage{position:relative;border:1px solid var(--line);border-radius:12px;
+         background:radial-gradient(circle at 50% 44%,#1a1310,#0b0807 72%);overflow:hidden}
+  svg{display:block;width:100%;height:auto}
+  .node-g{cursor:pointer}
+  .attr-label{cursor:pointer}
+  .node-g text,.attr-label text{pointer-events:none;user-select:none}
+
+  .side{display:flex;flex-direction:column;gap:12px}
+  .card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:12px 13px}
+  .card h2{font-size:13px;color:#f3e9de;font-weight:600;margin-bottom:8px;letter-spacing:.5px}
+  .card h2 .hint{font-weight:400;color:var(--muted);font-size:10.5px;margin-left:6px}
+
+  .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;font-size:12px}
+  .btn{padding:6px 12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);
+       border-radius:6px;cursor:pointer;font-size:12px}
+  .btn:hover{border-color:var(--gold)}
+  .btn.primary{border-color:var(--gold);color:var(--gold)}
+  .btn.small{padding:3px 8px;font-size:11px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .chip{padding:3px 10px;border:1px solid var(--line);border-radius:13px;cursor:pointer;background:var(--panel2);font-size:11px;transition:.12s}
+  .chip.owned{color:#0e0a0a;font-weight:700}
+
+  .info{min-height:56px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+        background:var(--panel2);font-size:12px;line-height:1.55;color:var(--muted)}
+  .info b{color:#f3e9de}
+  .info .cost{color:var(--kin);font-weight:600}
+
+  /* 자원 예산 바 */
+  .pool{margin:7px 0}
+  .pool .lab{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px}
+  .pool .lab .amt{color:var(--muted)}
+  .pool .lab .amt.over{color:var(--warn);font-weight:700}
+  .bar{height:8px;border-radius:5px;background:#120d0c;overflow:hidden;border:1px solid #2a221f}
+  .bar>span{display:block;height:100%;transition:width .15s}
+  .pool input{width:52px;background:#120d0c;border:1px solid var(--line);color:var(--ink);
+        border-radius:4px;font-size:11px;padding:2px 4px;text-align:right}
+
+  .summary{font-size:12px;line-height:1.7}
+  .summary .tag{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;margin:2px 3px 2px 0;color:#0e0a0a;font-weight:600}
+  .summary .empty{color:var(--muted)}
+  .legend{color:var(--muted);font-size:11px;line-height:1.7;margin-top:6px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin:0 3px 0 8px}
+  .warnbox{color:var(--warn);font-size:11.5px;margin-top:6px;line-height:1.5}
+  .kbd{background:#120d0c;border:1px solid var(--line);border-radius:3px;padding:0 5px;font-size:10.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+  <h1>용 스킬트리 v2 — 하이브리드(분기 + 랭크)</h1>
+  <div class="sub">각성 → <b style="color:#e08a3c">2갈래 분기</b> + 각 노드 <b style="color:#e08a3c">랭크 강화</b> · 코스트는 <b style="color:#8fd14f">속성별 슬라임 + 특화(별도 풀)</b> · <b style="color:#e0603c">자원이 부족해 다 못 찍음 → 선택과 집중</b></div>
+
+<div class="wrap">
+  <!-- 좌: 트리 -->
+  <div>
+    <div class="stage"><svg id="tree" viewBox="0 0 1180 1020" role="img" aria-label="용 스킬트리 v2"></svg></div>
+    <div class="info" id="info" style="margin-top:10px">
+      노드 클릭 = <b>1랭크 강화</b>(자원 소모) · <span class="kbd">Shift+클릭</span> 또는 우클릭 = <b>1랭크 취소</b>(환급).
+      각성 후 <b>공격 갈래</b>(액티브·전투)와 <b>운영 갈래</b>(생산·방어)로 갈라집니다. 심화 노드는 새끼용 2, 궁극은 새끼용 4가 필요합니다.
+    </div>
+    <div class="legend">
+      <span class="dot" style="background:#e08a3c"></span>각성(루트)
+      <span class="dot" style="background:#c9603c"></span>공격 갈래
+      <span class="dot" style="background:#5aa0d0"></span>운영 갈래
+      <span class="dot" style="background:#d0b040"></span>궁극
+      <span class="dot" style="background:#8fd14f"></span>새끼용
+      <span class="dot" style="background:#4a3f39"></span>잠김
+      · 🔒 선행/보유/새끼용 수 미충족 · 해금은 영구, 효과는 <b>활성 속성</b>만 발동
+    </div>
+  </div>
+
+  <!-- 우: 컨트롤 패널 -->
+  <div class="side">
+    <div class="card">
+      <h2>새끼용 <span class="hint">랜덤 획득 시뮬 (주기당 1, 최대 4)</span></h2>
+      <div class="row">
+        <button class="btn primary" id="drawBtn">🥚 다음 주기 보스 처치 → 새끼용 획득</button>
+      </div>
+      <div class="row" style="color:var(--muted);font-size:11px">
+        보유 <b id="ownCount" style="color:var(--kin)">0</b>/4 · 해금 새끼용 노드 <b id="kinCount" style="color:var(--kin)">0</b>
+        <button class="btn small" id="clearOwn">비우기</button>
+      </div>
+      <div class="chips" id="ownRow"></div>
+      <div style="color:var(--muted);font-size:10.5px;margin-top:6px">칩 클릭 = 수동 토글(테스트용). 랜덤 획득이 "무엇을 집중할지"를 결정합니다.</div>
+    </div>
+
+    <div class="card">
+      <h2>활성 속성 <span class="hint">패시브는 활성 속성만 발동</span></h2>
+      <div class="chips" id="activeRow"></div>
+    </div>
+
+    <div class="card">
+      <h2>자원 예산 <span class="hint">보유 바이옴 = 획득량. 숫자 편집·프리셋으로 시나리오 테스트</span></h2>
+      <div class="row">
+        <button class="btn small" data-preset="focus">설원 집중</button>
+        <button class="btn small" data-preset="spread">고루 분산</button>
+        <button class="btn small" data-preset="rich">풍족(밸런스 참고)</button>
+      </div>
+      <div id="pools"></div>
+      <div class="warnbox" id="overWarn"></div>
+    </div>
+
+    <div class="card">
+      <h2>내 빌드 정체성 <span class="hint">투자한 속성·깊이 요약</span></h2>
+      <div class="summary" id="summary"></div>
+      <div class="row" style="margin-top:8px">
+        <span style="color:var(--muted);font-size:11px">총 강화 횟수 <b id="stepCount" style="color:var(--ink)">0</b></span>
+        <button class="btn small" id="resetBtn">전체 초기화</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   설정 상수 — 테스트용. 실제 밸런스는 여기 숫자만 바꿔 실험한다.
+   ========================================================================= */
+const MAX_OWNED = 4;                 // 주기 4회 → 새끼용 최대 4
+const GATE_KIN_DEEP = 2;             // 심화 노드 게이트: 새끼용 노드 N개
+const GATE_KIN_ULT  = 4;             // 궁극 게이트: 새끼용 노드 N개
+
+// 노드 종류별 랭크당 코스트 [{s:슬라임, sp:특화}], 배열 길이 = 최대 랭크
+const COST = {
+  awaken: [{s:5,  sp:0}],
+  branch: [{s:6,  sp:2}, {s:8,  sp:3}, {s:10, sp:4}],   // 갈래 노드 Lv1~3
+  ult:    [{s:15, sp:6}, {s:20, sp:8}],                 // 궁극 Lv1~2
+  kin:    [{s:5,  sp:2}, {s:7,  sp:2}, {s:9,  sp:3}],   // 새끼용 Lv1~3
+};
+
+// 자원 예산 프리셋 (속성별 [슬라임총량, 특화총량])
+const PRESETS = {
+  focus:  {얼음:[95,40], 불:[20,8],  시간:[20,8],  암석:[20,8],  생명:[22,0]},
+  spread: {얼음:[38,15], 불:[38,15], 시간:[38,15], 암석:[38,15], 생명:[42,0]},
+  rich:   {얼음:[70,28], 불:[70,28], 시간:[70,28], 암석:[70,28], 생명:[78,0]},
+};
+
+/* =========================================================================
+   속성 데이터 — 효과 텍스트는 로컬라이징/기획 §10 확정본 기반.
+   b1 = 공격(액티브) 갈래 / b2 = 운영(생산·방어) 갈래.
+   ========================================================================= */
+const ATTRS = [
+  {key:"생명", ang:0,   color:"#7fd14f", slime:"초원슬라임", spec:"기초자원",
+   passive:"당일 식량·목재·슬라임 생산↑ · 타워 최대 HP↑",
+   b1:{title:"재생", n1:{name:"성 회복 (액티브)", desc:"액티브 해금: 메인 성 HP 회복(~20). Lv↑ 회복량"},
+                     n2:{name:"생명의 숨결",      desc:"밤 동안 성 지속 회복 · 회복량 대폭↑"}},
+   b2:{title:"풍요", n1:{name:"풍요 강화",        desc:"식량·목재·슬라임 생산량↑"},
+                     n2:{name:"번식",            desc:"슬라임 추가 생산 · 새끼용 먹이 소모↓"}},
+   ult:{name:"만개", desc:"전 타워 지속 재생 + 생산 대폭↑ (속성 최종 강화)"},
+   kinA:{name:"생명 타워", desc:"타워형: 피해 + 주변 타워 힐 오라 (구현됨). Lv↑ 힐량"},
+   kinB:{name:"농장 강화", desc:"지역형: 주변 농장 생산↑. Lv↑ 배율"} },
+
+  {key:"얼음", ang:72,  color:"#5bc0e0", slime:"설원슬라임", spec:"눈결정",
+   passive:"모든 기본 타워 공격에 둔화 부여",
+   b1:{title:"제어", n1:{name:"빙결 (액티브)",  desc:"액티브 해금: 모든 적 5초 빙결. Lv↑ 지속·쿨감"},
+                     n2:{name:"한파",          desc:"빙결 종료 후 강한 둔화 잔류 · 빙결 중 추가 피해"}},
+   b2:{title:"서리", n1:{name:"서리 강화",      desc:"둔화율·지속 증가"},
+                     n2:{name:"빙판지대",      desc:"적 밀집 지점에 광역 둔화 장판"}},
+   ult:{name:"동결 지배", desc:"빙결·둔화 대폭 강화 + 빙결 적 처치 시 냉기 확산"},
+   kinA:{name:"슬로우 타워", desc:"타워형: 명중 시 둔화(구현됨). Lv↑ 둔화율·빙결확률"},
+   kinB:{name:"강 결빙",    desc:"지역형: 주변 강을 얼려 건물 배치 가능. Lv↑ 범위"} },
+
+  {key:"불",   ang:144, color:"#e0603c", slime:"용암슬라임", spec:"불꽃심장",
+   passive:"모든 타워 공격에 화상 부여",
+   b1:{title:"폭발", n1:{name:"화염 (액티브)",  desc:"액티브 해금: 적 경로에 강한 화염 피해. Lv↑ 피해·범위"},
+                     n2:{name:"대화재",        desc:"화염이 지속 장판화 · 범위 확대"}},
+   b2:{title:"연소", n1:{name:"연소 강화",      desc:"화상 틱 피해·중첩 증가"},
+                     n2:{name:"과열",          desc:"화상 걸린 적이 받는 모든 피해 증가"}},
+   ult:{name:"지옥불", desc:"화상 중첩 소모 시 광역 폭발 (속성 최종 강화)"},
+   kinA:{name:"화상 타워", desc:"타워형: 명중 시 화상(구현됨). Lv↑ 도트 피해"},
+   kinB:{name:"시야 증가", desc:"지역형: 주변 시야 범위 확대. Lv↑ 범위"} },
+
+  {key:"시간", ang:216, color:"#b07de0", slime:"사막슬라임", spec:"시간모래",
+   passive:"모든 타워 공격속도↑ · 재활성화 시간↓",
+   b1:{title:"재생", n1:{name:"즉시 재활성화 (액티브)", desc:"액티브 해금: 모든 타워 즉시 재활성화. Lv↑ 쿨감"},
+                     n2:{name:"시간 역행",             desc:"재활성화 시 임시 공속 폭증"}},
+   b2:{title:"가속", n1:{name:"가속 강화",            desc:"공속 증가폭 상승"},
+                     n2:{name:"연쇄 가속",            desc:"적 처치 시 주변 타워 순간 공속 버프"}},
+   ult:{name:"시간 지배", desc:"밤 시작 시 전 타워 오버드라이브 (속성 최종 강화)"},
+   kinA:{name:"시간 타워", desc:"타워형: 초고속 단일 공격(구현됨). Lv↑ 공속"},
+   kinB:{name:"점령 가속", desc:"지역형: 점령 소요일 감소. Lv↑ 감소일"} },
+
+  {key:"암석", ang:288, color:"#c9a24a", slime:"암석슬라임", spec:"현자돌",
+   passive:"석재·특화·RP 생산↑ · 메인 성 보호막",
+   b1:{title:"성벽", n1:{name:"성벽 (액티브)",  desc:"액티브 해금: 야간 성벽 생성 + 타워 보호막. Lv↑ 보호막"},
+                     n2:{name:"요새",          desc:"성벽 HP·보호막량↑ · 벽 반사 피해"}},
+   b2:{title:"채굴", n1:{name:"채굴 강화",      desc:"석재·특화 생산량↑"},
+                     n2:{name:"정제",          desc:"특화 자원 추가 생산 · 건물 유지비↓"}},
+   ult:{name:"불괴", desc:"성 보호막 상시 재생 + 성벽 상시화 (속성 최종 강화)"},
+   kinA:{name:"암석 타워", desc:"타워형: 광역 + 스턴(구현됨). Lv↑ 범위·스턴"},
+   kinB:{name:"광산 강화", desc:"지역형: 주변 광산 생산↑. Lv↑ 배율"} },
+];
+const ATTR_BY_KEY = Object.fromEntries(ATTRS.map(a=>[a.key,a]));
+
+/* =========================================================================
+   노드 그래프 생성
+   ========================================================================= */
+const CX=590, CY=470, NS="http://www.w3.org/2000/svg";
+const SVG=document.getElementById("tree");
+const rad=d=>(d-90)*Math.PI/180;
+const R_AWK=145, R_N1=232, R_N2=320, R_ULT=402, R_KIN=180, BR=13, KINOFF=31;
+
+const nodes={};
+const edges=[];
+const pos=(r,ang)=>({x:CX+r*Math.cos(rad(ang)), y:CY+r*Math.sin(rad(ang))});
+function addNode(n){ n.rank=0; nodes[n.id]=n; return n; }
+
+ATTRS.forEach(a=>{
+  const b=a.ang, k=a.key;
+  const awk=pos(R_AWK,b);
+  addNode({id:k+"_awk", attr:k, kind:"awaken", max:1, name:"각성", branch:"root",
+    desc:`활성 시 패시브: ${a.passive}`, x:awk.x, y:awk.y, color:a.color, prereq:[]});
+
+  // 공격 갈래 (b1) — 각도 -BR
+  const a11=pos(R_N1,b-BR), a12=pos(R_N2,b-BR);
+  addNode({id:k+"_b1n1", attr:k, kind:"branch", max:3, name:a.b1.n1.name, short:a.b1.title, branch:"atk",
+    desc:a.b1.n1.desc, x:a11.x, y:a11.y, color:"#c9603c", prereq:[k+"_awk"]});
+  addNode({id:k+"_b1n2", attr:k, kind:"branch", max:3, name:a.b1.n2.name, short:a.b1.title, branch:"atk",
+    desc:a.b1.n2.desc, x:a12.x, y:a12.y, color:"#c9603c", prereq:[k+"_b1n1"], gateKin:GATE_KIN_DEEP});
+  edges.push([k+"_awk",k+"_b1n1"],[k+"_b1n1",k+"_b1n2"]);
+
+  // 운영 갈래 (b2) — 각도 +BR
+  const a21=pos(R_N1,b+BR), a22=pos(R_N2,b+BR);
+  addNode({id:k+"_b2n1", attr:k, kind:"branch", max:3, name:a.b2.n1.name, short:a.b2.title, branch:"op",
+    desc:a.b2.n1.desc, x:a21.x, y:a21.y, color:"#5aa0d0", prereq:[k+"_awk"]});
+  addNode({id:k+"_b2n2", attr:k, kind:"branch", max:3, name:a.b2.n2.name, short:a.b2.title, branch:"op",
+    desc:a.b2.n2.desc, x:a22.x, y:a22.y, color:"#5aa0d0", prereq:[k+"_b2n1"], gateKin:GATE_KIN_DEEP});
+  edges.push([k+"_awk",k+"_b2n1"],[k+"_b2n1",k+"_b2n2"]);
+
+  // 궁극 — 두 갈래 심화 중 하나 이상 + 새끼용 4
+  const u=pos(R_ULT,b);
+  addNode({id:k+"_ult", attr:k, kind:"ult", max:2, name:a.ult.name, branch:"ult",
+    desc:a.ult.desc, x:u.x, y:u.y, color:"#d0b040", prereq:[k+"_b1n2","|",k+"_b2n2"], gateKin:GATE_KIN_ULT});
+  edges.push([k+"_b1n2",k+"_ult"],[k+"_b2n2",k+"_ult"]);
+
+  // 새끼용 슬롯 A/B
+  const kA=pos(R_KIN,b-KINOFF), kB=pos(R_KIN,b+KINOFF);
+  addNode({id:k+"_kinA", attr:k, kind:"kin", max:3, name:a.kinA.name, branch:"kin",
+    desc:a.kinA.desc, x:kA.x, y:kA.y, color:a.color, prereq:[k+"_awk"], needOwn:true});
+  addNode({id:k+"_kinB", attr:k, kind:"kin", max:3, name:a.kinB.name, branch:"kin",
+    desc:a.kinB.desc, x:kB.x, y:kB.y, color:a.color, prereq:[k+"_awk"], needOwn:true});
+  edges.push([k+"_awk",k+"_kinA"],[k+"_awk",k+"_kinB"]);
+
+  edges.push(["CENTER",k+"_awk"]);
+});
+
+/* =========================================================================
+   상태
+   ========================================================================= */
+let owned=new Set();
+let activeAttr=null;
+let steps=0;
+// 예산: 속성별 {slimeTotal, specTotal}
+const budget={};
+ATTRS.forEach(a=>budget[a.key]={s:0, sp:0});
+applyPreset("spread");
+
+/* ---- 판정 헬퍼 ---- */
+const kinNodeCount = ()=>Object.values(nodes).filter(n=>n.kind==="kin"&&n.rank>0).length;
+
+// prereq 배열은 AND, 단 "|" 토큰으로 감싼 그룹은 OR (궁극: b1n2 | b2n2)
+function prereqMet(n){
+  if(n.prereq.includes("|")){
+    return n.prereq.filter(p=>p!=="|").some(p=>nodes[p].rank>0);
+  }
+  return n.prereq.every(p=>nodes[p].rank>0);
+}
+const gateMet=n=>!n.gateKin || kinNodeCount()>=n.gateKin;
+const ownMet =n=>!n.needOwn || owned.has(n.attr);
+const eligible=n=>prereqMet(n)&&gateMet(n)&&ownMet(n);
+
+// 소모 자원 집계 (속성별). 생명은 특화가 없어 특화 코스트를 슬라임으로 접어넣는다.
+function spent(){
+  const out={}; ATTRS.forEach(a=>out[a.key]={s:0,sp:0});
+  Object.values(nodes).forEach(n=>{
+    const table=COST[n.kind];
+    const noSpec=n.attr==="생명";
+    for(let i=0;i<n.rank;i++){
+      out[n.attr].s+=table[i].s + (noSpec?table[i].sp:0);
+      out[n.attr].sp+=noSpec?0:table[i].sp;
+    }
+  });
+  return out;
+}
+
+// 다음 랭크 코스트
+const nextCost=n=> n.rank<n.max ? COST[n.kind][n.rank] : null;
+
+// prereq/게이트/보유가 깨지면 관련 랭크를 0으로 클램프 (반복 수렴)
+function resolve(){
+  let changed=true;
+  while(changed){
+    changed=false;
+    for(const n of Object.values(nodes)){
+      if(n.rank>0 && !eligible(n)){ n.rank=0; changed=true; }
+    }
+  }
+}
+
+/* =========================================================================
+   렌더링
+   ========================================================================= */
+function el(tag,attrs){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e; }
+function setInfo(html){ document.getElementById("info").innerHTML=html; }
+function pentPoints(r){ return ATTRS.map(a=>{const p=pos(r,a.ang);return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;}).join(" "); }
+
+function renderTree(){
+  SVG.innerHTML="";
+  // 간선
+  edges.forEach(([f,t])=>{
+    const A=f==="CENTER"?{x:CX,y:CY}:nodes[f];
+    const B=nodes[t];
+    const on=(f==="CENTER"?nodes[t].rank>0:(nodes[f].rank>0&&nodes[t].rank>0));
+    SVG.appendChild(el("line",{x1:A.x,y1:A.y,x2:B.x,y2:B.y,
+      stroke:on?B.color:"#332c28","stroke-width":on?3:2,"stroke-opacity":on?0.85:0.45}));
+  });
+  // 중앙 오각형
+  SVG.appendChild(el("polygon",{points:pentPoints(72),fill:"#160f0c",stroke:"#e08a3c","stroke-width":2,"stroke-opacity":0.8}));
+  let c=el("text",{x:CX,y:CY-3,"text-anchor":"middle","font-size":13,fill:"#e08a3c","font-weight":"600"});c.textContent="어미용";SVG.appendChild(c);
+  let c2=el("text",{x:CX,y:CY+14,"text-anchor":"middle","font-size":9,fill:"#8f8175"});c2.textContent="5속성";SVG.appendChild(c2);
+
+  // 속성 라벨(클릭 → 활성 속성)
+  ATTRS.forEach(a=>{
+    const lp=pos(52,a.ang);
+    const g=el("g",{class:"attr-label"});
+    if(activeAttr===a.key) g.appendChild(el("circle",{cx:lp.x,cy:lp.y-3,r:15,fill:"none",stroke:a.color,"stroke-width":2}));
+    const t=el("text",{x:lp.x,y:lp.y+1,"text-anchor":"middle","font-size":11,fill:a.color,"font-weight":"600"});
+    t.textContent=a.key;g.appendChild(t);
+    g.addEventListener("click",()=>{activeAttr=(activeAttr===a.key?null:a.key);render();
+      setInfo(`활성 속성: <b>${activeAttr??"없음"}</b> — 이 속성의 패시브만 발동(해금 상태는 영구 유지, 낮 1회 변경).`);});
+    SVG.appendChild(g);
+  });
+
+  // 노드
+  Object.values(nodes).forEach(n=>{
+    const un=n.rank>0, canUp=n.rank<n.max&&eligible(n);
+    const isRoot=n.kind==="awaken", isKin=n.kind==="kin", isUlt=n.kind==="ult";
+    const r=isKin?16:(isRoot?26:(isUlt?24:22));
+    const g=el("g",{class:"node-g"});
+    let fill,stroke;
+    if(un){ fill="#241a12"; stroke=n.color; }
+    else if(canUp){ fill="#1c1613"; stroke="#7a6a5c"; }
+    else { fill="#141010"; stroke="#4a3f39"; }
+    g.appendChild(el("circle",{cx:n.x,cy:n.y,r:r,fill:fill,stroke:stroke,
+      "stroke-width":un?3:2,"stroke-opacity":un?1:(canUp?0.9:0.5)}));
+
+    const nameFill=un?"#f3e9de":(canUp?"#c8bcae":"#6a5f57");
+    const nm=el("text",{x:n.x,y:n.y+(n.max>1?-1:3),"text-anchor":"middle","font-size":isKin?8.5:9.5,fill:nameFill,"font-weight":"600"});
+    nm.textContent=n.name.length>7?n.name.slice(0,7):n.name; g.appendChild(nm);
+
+    // 랭크 표시
+    if(n.max>1){
+      const rk=el("text",{x:n.x,y:n.y+10,"text-anchor":"middle","font-size":8.5,
+        fill:un?n.color:"#6a5f57","font-weight":"700"});
+      rk.textContent=`${n.rank}/${n.max}`; g.appendChild(rk);
+    }
+    // 배지
+    let badge=null;
+    if(!un && n.needOwn && !ownMet(n)) badge=`🔒 ${n.attr}보유`;
+    else if(!un && n.gateKin && !gateMet(n)) badge=`🔒 새끼용${n.gateKin}`;
+    else if(n.gateKin && !un) badge=`새끼용${n.gateKin}`;
+    if(badge){
+      const bt=el("text",{x:n.x,y:n.y+r+10,"text-anchor":"middle","font-size":8,
+        fill:badge.startsWith("🔒")?"#e0a04c":"#8f8175"});
+      bt.textContent=badge; g.appendChild(bt);
+    }
+    g.addEventListener("click",e=>{ if(e.shiftKey) rankDown(n); else rankUp(n); });
+    g.addEventListener("contextmenu",e=>{ e.preventDefault(); rankDown(n); });
+    g.addEventListener("mouseenter",()=>hover(n));
+    SVG.appendChild(g);
+  });
+}
+
+function renderOwn(){
+  const row=document.getElementById("ownRow"); row.innerHTML="";
+  ATTRS.forEach(a=>{
+    const chip=document.createElement("span");
+    chip.className="chip"+(owned.has(a.key)?" owned":"");
+    chip.textContent=a.key;
+    chip.style.borderColor=a.color;
+    chip.style.background=owned.has(a.key)?a.color:"var(--panel2)";
+    chip.style.color=owned.has(a.key)?"#0e0a0a":a.color;
+    chip.onclick=()=>{ owned.has(a.key)?owned.delete(a.key):owned.add(a.key); resolve(); render(); };
+    row.appendChild(chip);
+  });
+  document.getElementById("ownCount").textContent=owned.size;
+  document.getElementById("kinCount").textContent=kinNodeCount();
+}
+
+function renderActive(){
+  const row=document.getElementById("activeRow"); row.innerHTML="";
+  ATTRS.forEach(a=>{
+    const chip=document.createElement("span");
+    const on=activeAttr===a.key;
+    chip.className="chip"+(on?" owned":"");
+    chip.textContent=a.key;
+    chip.style.borderColor=a.color;
+    chip.style.background=on?a.color:"var(--panel2)";
+    chip.style.color=on?"#0e0a0a":a.color;
+    chip.onclick=()=>{ activeAttr=on?null:a.key; render(); };
+    row.appendChild(chip);
+  });
+}
+
+function renderPools(){
+  const box=document.getElementById("pools"); box.innerHTML="";
+  const sp=spent();
+  const overs=[];
+  ATTRS.forEach(a=>{
+    const bd=budget[a.key], used=sp[a.key];
+    [["s","slime",a.slime],["sp","spec",a.spec]].forEach(([field,cls,label])=>{
+      if(a.key==="생명"&&field==="sp") return; // 생명은 특화 없음(초원=기초자원)
+      const tot=bd[field], u=used[field];
+      const over=u>tot;
+      if(over) overs.push(`${label}`);
+      const pct=tot>0?Math.min(100,u/tot*100):0;
+      const wrap=document.createElement("div"); wrap.className="pool";
+      wrap.innerHTML=
+        `<div class="lab"><span style="color:${a.color}">${label}</span>`+
+        `<span class="amt ${over?'over':''}">${u} / <input type="number" min="0" value="${tot}" data-k="${a.key}" data-f="${field}"></span></div>`+
+        `<div class="bar"><span style="width:${pct}%;background:${over?'var(--warn)':a.color}"></span></div>`;
+      box.appendChild(wrap);
+    });
+  });
+  box.querySelectorAll("input").forEach(inp=>{
+    inp.addEventListener("change",()=>{ budget[inp.dataset.k][inp.dataset.f]=Math.max(0,parseInt(inp.value)||0); render(); });
+  });
+  document.getElementById("overWarn").innerHTML = overs.length
+    ? `⚠ 예산 초과: <b>${[...new Set(overs)].join(", ")}</b> — 이 빌드는 현재 보유 자원으로 완성 불가. 갈래를 줄이거나 다른 속성을 포기하세요.`
+    : "";
+}
+
+function renderSummary(){
+  const el2=document.getElementById("summary");
+  const parts=[];
+  ATTRS.forEach(a=>{
+    const k=a.key;
+    const awk=nodes[k+"_awk"].rank>0;
+    if(!awk) return;
+    const atk=nodes[k+"_b1n1"].rank+nodes[k+"_b1n2"].rank;
+    const op =nodes[k+"_b2n1"].rank+nodes[k+"_b2n2"].rank;
+    const ult=nodes[k+"_ult"].rank>0;
+    const kin=nodes[k+"_kinA"].rank+nodes[k+"_kinB"].rank;
+    let role;
+    if(ult) role="궁극";
+    else if(atk>=3&&op<=1) role="공격 특화";
+    else if(op>=3&&atk<=1) role="운영 특화";
+    else if(atk>0&&op>0) role="균형";
+    else if(atk>0) role="공격";
+    else if(op>0) role="운영";
+    else role="각성만";
+    const kinTag=kin>0?` +새끼용${kin}`:"";
+    parts.push(`<span class="tag" style="background:${a.color}">${k} · ${role}${kinTag}</span>`);
+  });
+  el2.innerHTML = parts.length ? parts.join("") : `<span class="empty">아직 아무 것도 해금하지 않았습니다. 속성 각성부터 시작하세요.</span>`;
+  document.getElementById("stepCount").textContent=steps;
+}
+
+function render(){ resolve(); renderTree(); renderOwn(); renderActive(); renderPools(); renderSummary(); }
+
+/* =========================================================================
+   상호작용
+   ========================================================================= */
+function hover(n){
+  const roleName={awaken:"각성",branch:n.branch==="atk"?"공격 갈래":"운영 갈래",ult:"궁극",kin:"새끼용"}[n.kind];
+  const nc=nextCost(n);
+  const a=ATTR_BY_KEY[n.attr];
+  const res = n.kind==="kin" ? `${a.slime}·${a.spec}` : (a.key==="생명"?a.slime:`${a.slime}·${a.spec}`);
+  let extra="";
+  if(n.gateKin) extra+=` · <b>선행: 새끼용 노드 ${n.gateKin}개</b>`;
+  if(n.needOwn) extra+=` · <b>${n.attr} 새끼용 보유 필요</b>`;
+  const noSpec=a.key==="생명";
+  const costTxt = nc
+    ? `다음 랭크(Lv${n.rank+1}): <span class="cost">${a.slime} ${nc.s+(noSpec?nc.sp:0)}${(!noSpec&&nc.sp)?` · ${a.spec} ${nc.sp}`:""}</span>`
+    : `<span class="cost">최대 랭크 도달</span>`;
+  setInfo(`<b>[${n.attr}] ${n.name}</b> <span style="color:#8f8175">(${roleName} · Lv ${n.rank}/${n.max})</span><br>${n.desc}${extra}<br>${costTxt}`);
+}
+
+function rankUp(n){
+  if(n.rank>=n.max){ hover(n); setInfo2("최대 랭크입니다."); return; }
+  if(!prereqMet(n)){ setInfo(`<b>[${n.attr}] ${n.name}</b> — 선행 노드를 먼저 해금하세요.`); return; }
+  if(!ownMet(n)){ setInfo(`<b>[${n.attr}] ${n.name}</b> — 잠김: <b>${n.attr} 새끼용</b>을 보유해야 합니다(우측 패널에서 획득/토글).`); return; }
+  if(!gateMet(n)){ setInfo(`<b>[${n.attr}] ${n.name}</b> — 잠김: 새끼용 노드 <b>${n.gateKin}개</b> 필요 (현재 ${kinNodeCount()}개).`); return; }
+  n.rank++; steps++; render(); hover(n);
+}
+function rankDown(n){
+  if(n.rank<=0) return;
+  n.rank--; steps=Math.max(0,steps-1); render(); hover(n);
+}
+function setInfo2(msg){ const i=document.getElementById("info"); i.innerHTML+=`<br><span style="color:#e0603c">${msg}</span>`; }
+
+/* 랜덤 새끼용 획득 (주기 진행) */
+document.getElementById("drawBtn").addEventListener("click",()=>{
+  if(owned.size>=MAX_OWNED){ setInfo(`이미 최대 <b>${MAX_OWNED}마리</b> 보유 중입니다(주기 4회).`); return; }
+  const pool=ATTRS.map(a=>a.key);            // 균등 랜덤(원하면 가중치 조정)
+  const pick=pool[Math.floor(Math.random()*pool.length)];
+  owned.add(pick);
+  resolve(); render();
+  const a=ATTR_BY_KEY[pick];
+  setInfo(`🥚 새끼용 <b style="color:${a.color}">${pick}</b> 획득! → <b>${pick}</b> 속성 새끼용 슬롯 활성화. `+
+          `이제 이 속성으로 <b>집중</b>하거나, 부족한 부분을 <b>보완</b>할지 선택하세요.`);
+});
+document.getElementById("clearOwn").addEventListener("click",()=>{ owned.clear(); resolve(); render(); });
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  Object.values(nodes).forEach(n=>n.rank=0); owned.clear(); activeAttr=null; steps=0; render();
+  setInfo("전체 초기화 완료.");
+});
+document.querySelectorAll("[data-preset]").forEach(b=>{
+  b.addEventListener("click",()=>{ applyPreset(b.dataset.preset); render();
+    setInfo(`자원 예산 프리셋 <b>${b.textContent}</b> 적용. 같은 빌드라도 보유 자원에 따라 완성 가능 여부가 달라집니다.`); });
+});
+function applyPreset(name){
+  const p=PRESETS[name]; ATTRS.forEach(a=>{ budget[a.key]={s:p[a.key][0], sp:p[a.key][1]}; });
+}
+
+render();
+</script>
+</body>
+</html>

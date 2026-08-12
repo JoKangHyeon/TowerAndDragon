@@ -9,5 +9,5 @@ public sealed class DragonSpawnStatusEffectSO : DragonSkillEffectSO
     [SerializeField] private StatusEffectSO _status;
 
     public override StatusEffectSO GetSpawnStatus(DragonType? activeAttribute) =>
-        IsActive(activeAttribute) ? _status : null;
+        IsEffective(activeAttribute) ? _status : null;
 }

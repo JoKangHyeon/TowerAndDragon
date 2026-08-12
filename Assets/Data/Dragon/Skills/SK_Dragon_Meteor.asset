@@ -12,16 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abb20de6553f0984ebcb58550924b914, type: 3}
   m_Name: SK_Dragon_Meteor
   m_EditorClassIdentifier: Assembly-CSharp::SkillSO
-  Type: 2
+  Type: 7
   NameStringKey: dragon_skill_meteor_name
   DescriptionStringKey: dragon_skill_meteor_desc
   Sprite: {fileID: 21300000, guid: c7275bc4f0d30494e892802f3e98069a, type: 3}
   DefaultCooltime: 60
-  DefaultUsePerDay: -1
-  DamagePercentOfCurrentHealth: 0.3
-  AreaRadius: 2
+  DefaultUsePerDay: 2
+  DamagePercentOfCurrentHealth: 0
+  FlatDamage: 40
+  AreaRadius: 1.5
   TargetLayers:
     serializedVersion: 2
     m_Bits: 128
   AppliedStatus: {fileID: 0}
   HealAmount: 0
+  BarricadePrefab: {fileID: 7533642852131008863, guid: 2f1da81e2e47bb048ae38987d1511d3c, type: 3}

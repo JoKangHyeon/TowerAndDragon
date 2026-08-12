@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5c0587c79a138d49bdefb422ba99a66, type: 3}
+  m_Name: DN_Fire_Ultimate_R1
+  m_EditorClassIdentifier: Assembly-CSharp::DragonSkillNodeData
+  _nodeId: dragon_fire_ultimate_r1
+  _nameLocKey: dragon_node_fire_ultimate_name
+  _descriptionLocKey: dragon_node_fire_ultimate_desc
+  _prerequisites:
+  - {fileID: 11400000, guid: 4dc28ab60bebd9a41a2ab6dd0592b005, type: 2}
+  _resourceCost:
+  - Type: 512
+    Amount: 20
+  - Type: 8
+    Amount: 8
+  _gates:
+  - {fileID: 11400000, guid: 202f7c16f1753534892f843e82e11570, type: 2}
+  _attribute: 1
+  _kind: 5
+  _rank: 1
+  _maxRank: 1
+  _effects:
+  - {fileID: 11400000, guid: c8c819f6bccbb6e42a13270efb0a9f83, type: 2}
+  - {fileID: 11400000, guid: 6a20e8ccc50e18541a0b5d7b03f2e2f1, type: 2}

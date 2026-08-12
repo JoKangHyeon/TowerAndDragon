@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5c0587c79a138d49bdefb422ba99a66, type: 3}
+  m_Name: DN_Stone_Active1_R2
+  m_EditorClassIdentifier: Assembly-CSharp::DragonSkillNodeData
+  _nodeId: dragon_stone_active1_r2
+  _nameLocKey: dragon_node_stone_active1_name
+  _descriptionLocKey: dragon_node_stone_active1_desc
+  _prerequisites:
+  - {fileID: 11400000, guid: aa45c364cbe147044aa42ffa5d7ede08, type: 2}
+  _resourceCost:
+  - Type: 256
+    Amount: 13
+  - Type: 64
+    Amount: 5
+  _gates: []
+  _attribute: 3
+  _kind: 1
+  _rank: 2
+  _maxRank: 2
+  _effects:
+  - {fileID: 11400000, guid: 4ce09aa3e6027bf49b0635aee17ecc1c, type: 2}
