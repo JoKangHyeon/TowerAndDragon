@@ -124,6 +124,16 @@ public class UI_GuideOverlay : MonoBehaviour
     public bool IsDisplaying(object owner) => HasOwner && ReferenceEquals(_owner, owner);
 
     /// <summary>
+    /// 지금 딤이 대상 밖 클릭을 막고 있는지. 키보드 단축키는 딤을 통과하므로, 마우스와 같은 기준으로
+    /// 막으려면 단축키 폴링 지점이 이것을 봐야 한다(<see cref="UIManager.CanUseShortcut"/>이 대신 물어준다).
+    ///
+    /// <see cref="_visualsActive"/>를 함께 보는 이유: <see cref="Suspend"/>는 딤을 걷으면서 표시권과
+    /// <see cref="_blocksInput"/>은 남긴다. 이것을 빼면 화면에 아무것도 없는 인계 대기 중에도 단축키가 잠긴다.
+    /// 대상이 사라져 LateUpdate가 연출을 감춘 경우도 같은 이유로 함께 풀린다.
+    /// </summary>
+    public bool IsBlockingInput => HasOwner && _blocksInput && _visualsActive;
+
+    /// <summary>
     /// 지금 안내가 가리키고 있는 UI 대상. 아무것도 안 가리키면 null이다.
     /// 스스로 자리를 계산해 두는 앵커(<see cref="MonsterPathGuideAnchor"/>)가 <b>자기가 쓰일 때만</b>
     /// 계산하도록 판단하는 데 쓴다 - 매 프레임 도는 계산이라 아무도 안 볼 때 돌면 그대로 낭비다.

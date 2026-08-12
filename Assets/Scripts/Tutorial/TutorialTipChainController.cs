@@ -255,10 +255,38 @@ public sealed class TutorialTipChainController : MonoBehaviour
                 continue;
             }
 
+            if (!IsTriggerContextValid(next))
+            {
+                Debug.Log(
+                    $"[TutorialTipChainController] {nextRunner.name}은 기다리는 동안 트리거 상황이 끝나 열지 않습니다 - " +
+                    "다음에 같은 조건이 다시 성립하면 그때 시작합니다.", nextRunner);
+                continue;
+            }
+
             Open(next);
             return;
         }
 
         ChainEnded.Invoke();
+    }
+
+    /// <summary>
+    /// 대기하던 체인을 지금 열어도 되는지. 창을 여는 것이 트리거인 체인은 <b>그 창이 아직 열려 있어야</b> 한다 -
+    /// 기다리는 동안 플레이어가 그 창을 닫았으면 창 안을 설명하는 안내가 창 밖에서 뜬다.
+    ///
+    /// 게다가 그 상태로 열면 러너가 붙잡을 창이 없다고 판단해(TutorialRunner.HoldsNoExclusiveMode)
+    /// 열기·닫기·단축키 관문을 통째로 풀어버린다. 안내는 떠 있는데 아무것도 막지 않는 상태가 된다.
+    ///
+    /// 열지 않고 흘려보내되 _opened에는 넣지 않으므로, 다음에 그 창을 다시 열면 그때 제대로 시작된다.
+    /// 안내가 사라지는 것이 아니라 맞는 타이밍으로 미뤄지는 것이다.
+    /// </summary>
+    private bool IsTriggerContextValid(Chain chain)
+    {
+        if (chain.Trigger.Condition != TutorialConditionType.ExclusiveModeOpened || _uiManager == null)
+        {
+            return true;
+        }
+
+        return TutorialTargetMatcher.MatchesMode(_uiManager.CurrentOpenExclusiveMode, chain.Trigger.TargetMode);
     }
 }
