@@ -18,8 +18,6 @@ public class BabyDragonTower : Tower, ITowerStaffing
     // 속성만으로 레코드를 되찾으면 같은 속성 두 마리가 서로 다른 모드일 때 뒤바뀔 수 있어 인스턴스 단위로 결속한다.
     public BabyDragon Record { get; private set; }
 
-    protected CycleManager _cycleManager;
-
     // 새끼용은 건물이 아니라 인구로 가동하지 않는 설치물이라 이동 예산(연구 기반 일일 횟수)과 무관하다.
     protected override bool UsesMoveGrant => false;
 
@@ -97,6 +95,11 @@ public class BabyDragonTower : Tower, ITowerStaffing
     }
 
     // 데이터상 그 모드를 쓸 수 없으면 무시한다(버튼도 같은 조건으로 비활성화되지만 방어적으로 한 번 더 확인).
+    //
+    // 낮/밤 판정은 여기서 하지 않는다 - Building/Tower는 CycleManager를 모르고, "낮에만 되는 조작"은
+    // BuildingPlacementController(IsDayForBuildActions·CanMoveNow·CanRemoveNow)와 그 UI 소비자가 판정하는
+    // 것이 이 프로젝트의 구조다. 모드 잠금(이슈 173)도 같은 자리인 UI_BabyDragonManageWindow가 담당한다.
+    // 새 호출부를 추가할 때는 그쪽에서 낮 여부를 확인해야 한다(현재 호출부는 그 창뿐).
     public void SetMode(BabyDragonMode mode)
     {
         if (Record == null || Record.Mode == mode)
