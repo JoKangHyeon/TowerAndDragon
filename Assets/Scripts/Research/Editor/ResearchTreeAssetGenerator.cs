@@ -21,6 +21,7 @@ using UnityEngine;
 public static class ResearchTreeAssetGenerator
 {
     private const string DATA_FOLDER = "Assets/Data/Research";
+    private const string LANDMARK_DATA_FOLDER = "Assets/Data/LandmarkData";
     private const string SHEET_EXPORT_FOLDER = "Docs";
 
     private struct NodeSpec
@@ -33,6 +34,11 @@ public static class ResearchTreeAssetGenerator
         public ResourceAmount[] ResourceCost;
         public string[] PrerequisiteIds;
         public string EffectAssetName; // null이면 효과 미구현(stub) - 로드맵 §8과 동일한 취급
+
+        // 역설계 노드 전용. 이 랜드마크를 점령해야 연구가 열린다. null이면 조건 없음.
+        // 에셋 경로는 LANDMARK_DATA_FOLDER 기준이다.
+        public string RequiredLandmarkAssetName;
+
         public string NameEn;
         public string NameKo;
         public string DescEn;
@@ -136,6 +142,21 @@ public static class ResearchTreeAssetGenerator
             NameEn = "[TBD] Elemental Specialization", NameKo = "[미정] 속성 특화 분기",
             DescEn = "[TBD] Strengthens per-element specialization effects.",
             DescKo = "[미정] 속성별 특화 효과 강화",
+        },
+        new NodeSpec
+        {
+            // 역설계 노드. 선행 노드가 아니라 "타워 원형 랜드마크 점령"이 해금 조건이다 -
+            // 맵에서 무언가를 찾아내야 열리는 첫 연구라 티어를 낮게 두고 선행도 비워 둔다.
+            // 어떤 타워를 해금할지(EffectAssetName)는 밸런스 사안이라 팀 확인 전까지 비워 둔다 -
+            // 효과가 비어 있어도 해금 조건·상태 전이는 그대로 동작한다(로드맵 §8 stub과 같은 취급).
+            NodeId = "tower_reverse_engineering", AssetName = "RN_TowerReverseEngineering",
+            Branch = ResearchBranch.Tower, Tier = 1, ResearchPointCost = 20,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 20)),
+            PrerequisiteIds = Array.Empty<string>(),
+            RequiredLandmarkAssetName = "LM_TowerPrototype",
+            NameEn = "[TBD] Reverse Engineering", NameKo = "[미정] 역설계",
+            DescEn = "[TBD] Analyze a captured tower prototype to unlock a new tower.",
+            DescKo = "[미정] 점령한 타워 원형을 분석해 새 타워를 해금한다.",
         },
         // ---------------- 생산 갈래 (로드맵 §5.2) ----------------
         new NodeSpec
@@ -401,6 +422,8 @@ public static class ResearchTreeAssetGenerator
             so.FindProperty("_researchPointCost").intValue = spec.ResearchPointCost;
 
             AssignObjectArray(so.FindProperty("_effects"), effects);
+            so.FindProperty("_requiredLandmark").objectReferenceValue =
+                ResolveRequiredLandmark(spec.RequiredLandmarkAssetName);
 
             SerializedProperty costProp = so.FindProperty("_resourceCost");
             costProp.arraySize = spec.ResourceCost.Length;
@@ -416,6 +439,27 @@ public static class ResearchTreeAssetGenerator
         AddLocRow(descLocKey, spec.DescEn, spec.DescKo);
 
         return node;
+    }
+
+    // 랜드마크 데이터도 효과 SO와 마찬가지로 이미 있는 에셋을 참조만 한다.
+    private static LandmarkDataSO ResolveRequiredLandmark(string landmarkAssetName)
+    {
+        if (string.IsNullOrEmpty(landmarkAssetName))
+        {
+            return null;
+        }
+
+        var landmark = AssetDatabase.LoadAssetAtPath<LandmarkDataSO>(
+            $"{LANDMARK_DATA_FOLDER}/{landmarkAssetName}.asset");
+
+        if (landmark == null)
+        {
+            Debug.LogWarning(
+                $"[ResearchTreeAssetGenerator] 랜드마크 에셋 '{landmarkAssetName}'을 찾지 못해 " +
+                $"조건을 비워 둡니다 - 역설계 노드가 랜드마크 없이 열립니다.");
+        }
+
+        return landmark;
     }
 
     // 이미 만들어져 있던 효과 SO(RE_*)는 그대로 재사용한다 - 새로 만들지 않는다.

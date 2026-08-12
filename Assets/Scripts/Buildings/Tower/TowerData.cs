@@ -9,6 +9,9 @@ public class TowerData : ScriptableObject
     //[Tooltip("스트링테이블 key. 코드에 직접 이름 문자열을 넣지 않는다.")]
     [SerializeField] private string _nameLocKey;
 
+    [Tooltip("켜면 연구로 해금하기 전까지 건설 메뉴에 나오지 않는다. 기본 타워는 꺼 둔다.")]
+    [SerializeField] private bool _requiresResearchUnlock;
+
     [Header("Population")]
     [SerializeField]
     [Min(1)]
@@ -38,6 +41,7 @@ public class TowerData : ScriptableObject
 
 
     public string NameLocKey => _nameLocKey;
+    public bool RequiresResearchUnlock => _requiresResearchUnlock;
     public int PopulationCapacity => _populationCapacity;
     public IReadOnlyList<ResourceAmount> BuildCost => _buildCost ?? System.Array.Empty<ResourceAmount>();
     public float MaxHealth => _maxHealth;

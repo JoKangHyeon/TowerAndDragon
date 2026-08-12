@@ -22,19 +22,21 @@ public class WorkerCountOverlayRenderer : MonoBehaviour
         _labelPool = new ComponentPool<WorkerCountLabel>(_labelPrefab, transform);
     }
 
-    // 대상 건물 목록을 받아 각 건물 위에 라벨을 하나씩 배치한다.
+    // 대상 목록(표시 위치 + 배치 대상)을 받아 위치마다 라벨을 하나씩 배치한다.
+    // 위치를 호출자가 정하는 이유: 배치 대상이 건물만이 아니다 - 랜드마크는 Building이 아니라
+    // 청크 중심에 라벨을 띄워야 하므로, 위치 계산을 아는 쪽(WorkerModeController)이 넘긴다.
     // labelColor는 조작 가능 여부(낮/밤)를 함께 알리기 위해 호출자가 정한다.
     public void Refresh(
-        IReadOnlyList<(Building Building, IPopulationAllocationTarget Target)> entries,
+        IReadOnlyList<(Vector3 WorldPosition, IPopulationAllocationTarget Target)> entries,
         Color labelColor)
     {
         for (int i = 0; i < entries.Count; i++)
         {
-            (Building building, IPopulationAllocationTarget target) = entries[i];
+            (Vector3 worldPosition, IPopulationAllocationTarget target) = entries[i];
 
             WorkerCountLabel label = _labelPool.Get(i);
 
-            label.transform.position = ResolveLabelPosition(building) + _labelOffset;
+            label.transform.position = worldPosition + _labelOffset;
 
             label.SetCount(target.AssignedPopulation, target.Capacity);
             label.SetColor(labelColor);
@@ -47,7 +49,7 @@ public class WorkerCountOverlayRenderer : MonoBehaviour
     // (성·타워·생산시설) 고정 오프셋을 쓰면 낮은 건물의 라벨이 옆 건물 위로 떠버린다.
     // Building이 스프라이트를 찾는 방식과 같게 자식까지 훑는다(BabyDragonTower처럼 스프라이트를
     // 자식으로 분리한 건물 지원). 스프라이트가 없으면 트랜스폼 위치로 대체한다.
-    private static Vector3 ResolveLabelPosition(Building building)
+    public static Vector3 ResolveLabelPosition(Building building)
     {
         var spriteRenderer = building.GetComponentInChildren<SpriteRenderer>();
 

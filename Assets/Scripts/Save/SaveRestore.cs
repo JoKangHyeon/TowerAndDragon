@@ -55,7 +55,13 @@ public static class SaveRestore
             context.DragonTreeManager.NotifyActiveAttributeChanged();
         }
 
-        // 7·8. 청크 상태와 진행 중 원정.
+        // 7. 랜드마크 수령 이력. 8번(영토 복원)보다 반드시 앞서야 한다 -
+        //    RestoreTerritory가 GridMap.OnChunkStateChanged를 발화시키고,
+        //    LandmarkManager가 그걸 받아 점령된 랜드마크를 수령하려 들기 때문이다.
+        //    이력을 먼저 넣어두지 않으면 불러올 때마다 알과 자원이 다시 지급된다.
+        context.LandmarkManager?.RestoreClaims(dto.Landmarks.ClaimedLandmarkIds);
+
+        // 8·9. 청크 상태와 진행 중 원정.
         if (context.ConquestManager != null)
         {
             context.ConquestManager.RestoreTerritory(
@@ -66,9 +72,25 @@ public static class SaveRestore
             context.ConquestManager.RestoreExpeditions(ToExpeditions(dto.Conquest));
         }
 
+        // 10. 랜드마크 배치 인구. 8번(영토 복원) 이후여야 한다 - 미점령 랜드마크에는
+        //     인구를 넣을 수 없으므로(LandmarkPopulation.CanChangePopulation),
+        //     점령 상태가 반영된 뒤에 배치해야 한다.
+        //     3번(총 인구)보다도 뒤다 - 가용 인구가 모자라면 조용히 실패한다.
+        if (context.LandmarkManager != null)
+        {
+            context.LandmarkManager.ClearAllOperations();
+
+            foreach (LandmarkOperationDto operation in dto.Landmarks.Operations)
+            {
+                context.LandmarkManager.RestoreOperation(
+                    operation.LandmarkId,
+                    operation.AssignedPopulation);
+            }
+        }
+
         // TODO(범위 밖): 여기에 건물 배치 복원이 들어간다. MapStateDto.Buildings 주석 참고.
 
-        // 9. 성 체력. 다른 복원값에 의존하지 않으므로 마지막에 둔다 -
+        // 11. 성 체력. 다른 복원값에 의존하지 않으므로 마지막에 둔다 -
         //    Castle.Start의 Initialize(만피)를 여기서 덮어쓰는 편이 읽기 쉽다.
         //    0 이하는 "기록 없음"(성이 연결되지 않은 씬에서 저장한 슬롯)이므로 만피를 유지한다.
         if (dto.Castle.CurrentHealth > 0f)
@@ -76,7 +98,7 @@ public static class SaveRestore
             context.Castle?.RestoreHealth(dto.Castle.CurrentHealth);
         }
 
-        // 10. ResumeDay는 호출자(SaveService)가 부른다 - 복원 실패 시 폴백 경로와 구분하기 위해
+        // 12. ResumeDay는 호출자(SaveService)가 부른다 - 복원 실패 시 폴백 경로와 구분하기 위해
         //     이 클래스는 상태 적용까지만 책임진다.
     }
 

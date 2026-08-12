@@ -41,6 +41,7 @@ public sealed class SaveGameDto
     public ConquestStateDto Conquest;
     public MapStateDto Map;
     public CastleStateDto Castle;
+    public LandmarkStateDto Landmarks;
 
     /// <summary>
     /// 복원 착수 전에 부르는 유일한 검증 지점. 한 번 복원을 시작하면 여러 매니저에 이미 쓴 뒤라
@@ -77,6 +78,9 @@ public sealed class SaveGameDto
         Map ??= new MapStateDto();
         Castle ??= new CastleStateDto();
 
+        // 랜드마크 도입 전에 저장된 슬롯에는 이 필드가 없다 - 빈 상태로 채워 하위 호환을 유지한다.
+        Landmarks ??= new LandmarkStateDto();
+
         Run.Normalize();
         Resources.Normalize();
         Population.Normalize();
@@ -85,6 +89,7 @@ public sealed class SaveGameDto
         Conquest.Normalize();
         Map.Normalize();
         Castle.Normalize();
+        Landmarks.Normalize();
         return true;
     }
 }
@@ -324,6 +329,44 @@ public sealed class ResourceCostDto
         Wood = cost.Wood,
         Stone = cost.Stone,
     };
+}
+
+/// <summary>
+/// 랜드마크 진행 상태. 수령 이력과 배치 인구를 나눠 담는 이유는 복원 시점이 다르기 때문이다 -
+/// 수령 이력은 영토 복원 "이전"에, 배치 인구는 "이후"에 적용해야 한다. SaveRestore.Apply 참고.
+/// </summary>
+public sealed class LandmarkStateDto
+{
+    /// <summary>보상을 이미 수령한 랜드마크의 LandmarkId.</summary>
+    public List<string> ClaimedLandmarkIds;
+
+    public List<LandmarkOperationDto> Operations;
+
+    public void Normalize()
+    {
+        ClaimedLandmarkIds ??= new List<string>();
+        ClaimedLandmarkIds.RemoveAll(string.IsNullOrWhiteSpace);
+
+        Operations ??= new List<LandmarkOperationDto>();
+        Operations.RemoveAll(operation =>
+            operation == null || string.IsNullOrWhiteSpace(operation.LandmarkId));
+
+        foreach (LandmarkOperationDto operation in Operations)
+        {
+            operation.Normalize();
+        }
+    }
+}
+
+public sealed class LandmarkOperationDto
+{
+    public string LandmarkId;
+    public int AssignedPopulation;
+
+    public void Normalize()
+    {
+        AssignedPopulation = Mathf.Max(0, AssignedPopulation);
+    }
 }
 
 public sealed class MapStateDto

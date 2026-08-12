@@ -18,6 +18,9 @@ public sealed class ResearchNodeData : ScriptableObject
     [SerializeField] private ResourceAmount[] _resourceCost;
     [SerializeField] private ResearchEffectSO[] _effects;
 
+    [Tooltip("역설계 연구 - 이 랜드마크를 점령해야 연구할 수 있다. 비워두면 조건 없음.")]
+    [SerializeField] private LandmarkDataSO _requiredLandmark;
+
     public string NodeId => _nodeId;
     public string NameLocKey => _nameLocKey;
     public string DescriptionLocKey => _descriptionLocKey;
@@ -30,4 +33,6 @@ public sealed class ResearchNodeData : ScriptableObject
         _resourceCost ?? System.Array.Empty<ResourceAmount>();
     public IReadOnlyList<ResearchEffectSO> Effects =>
         _effects ?? System.Array.Empty<ResearchEffectSO>();
+
+    public LandmarkDataSO RequiredLandmark => _requiredLandmark;
 }

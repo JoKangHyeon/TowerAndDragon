@@ -25,6 +25,7 @@ public static class SaveCapture
             Conquest = CaptureConquest(context.ConquestManager),
             Map = CaptureMap(context.ConquestManager, context.GridMap),
             Castle = CaptureCastle(context.Castle),
+            Landmarks = CaptureLandmarks(context.LandmarkManager),
         };
 
         dto.Meta = CaptureMeta(context, dto.Run, dto.Resources, slotIndex, isAutoSave);
@@ -235,6 +236,46 @@ public static class SaveCapture
         return dto;
     }
 
+    private static LandmarkStateDto CaptureLandmarks(LandmarkManager landmarkManager)
+    {
+        var dto = new LandmarkStateDto
+        {
+            ClaimedLandmarkIds = new List<string>(),
+            Operations = new List<LandmarkOperationDto>(),
+        };
+
+        if (landmarkManager == null)
+        {
+            return dto;
+        }
+
+        dto.ClaimedLandmarkIds = ToSortedList(landmarkManager.ClaimedLandmarkIds);
+
+        // 인구가 배치된 랜드마크만 기록한다 - 0명은 복원할 것이 없다.
+        foreach (Landmark landmark in landmarkManager.Landmarks)
+        {
+            if (landmark.Data == null || landmark.Population == null)
+            {
+                continue;
+            }
+
+            int assignedPopulation = landmark.Population.AssignedPopulation;
+
+            if (assignedPopulation <= 0)
+            {
+                continue;
+            }
+
+            dto.Operations.Add(new LandmarkOperationDto
+            {
+                LandmarkId = landmark.Data.LandmarkId,
+                AssignedPopulation = assignedPopulation,
+            });
+        }
+
+        return dto;
+    }
+
     // 같은 상태가 항상 같은 바이트로 저장되도록 정렬한다 - 수동 diff와 회귀 테스트가 쉬워진다.
     private static List<string> ToSortedList(IReadOnlyCollection<string> ids)
     {
@@ -263,6 +304,9 @@ public readonly struct SaveCaptureContext
     /// <summary>메인 성. 다른 매니저와 같이 선택적으로 취급한다(IsValid가 요구하지 않는다).</summary>
     public Castle Castle { get; }
 
+    /// <summary>랜드마크가 배치되지 않은 씬에서는 null일 수 있다.</summary>
+    public LandmarkManager LandmarkManager { get; }
+
     public SaveCaptureContext(
         GameManager gameManager,
         CycleManager cycleManager,
@@ -273,7 +317,8 @@ public readonly struct SaveCaptureContext
         ConquestManager conquestManager,
         GridMap gridMap,
         WaveCycleProgression waveCycleProgression,
-        Castle castle)
+        Castle castle,
+        LandmarkManager landmarkManager)
     {
         GameManager = gameManager;
         CycleManager = cycleManager;
@@ -285,6 +330,7 @@ public readonly struct SaveCaptureContext
         GridMap = gridMap;
         WaveCycleProgression = waveCycleProgression;
         Castle = castle;
+        LandmarkManager = landmarkManager;
     }
 
     public bool IsValid => GameManager != null && CycleManager != null && GameManager.CurrentRun != null;

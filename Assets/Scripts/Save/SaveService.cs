@@ -42,6 +42,9 @@ public sealed class SaveService : MonoBehaviour
     [SerializeField] private WaveCycleProgression _waveCycleProgression;
     [SerializeField] private Castle _castle;
 
+    [Tooltip("랜드마크 수령 이력과 배치 인구를 저장한다. 랜드마크가 없는 씬에서는 비워 둔다.")]
+    [SerializeField] private LandmarkManager _landmarkManager;
+
     [Tooltip("슬롯 목록에 띄울 점령 현황 썸네일을 찍는다. 비워 두면 썸네일 없이 저장한다.")]
     [SerializeField] private SaveThumbnailCapturer _thumbnailCapturer;
 
@@ -415,5 +418,6 @@ public sealed class SaveService : MonoBehaviour
         _conquestManager,
         _gridMap,
         _waveCycleProgression,
-        _castle);
+        _castle,
+        _landmarkManager);
 }

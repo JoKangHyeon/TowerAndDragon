@@ -8,4 +8,5 @@ public enum ResearchFailureReason
     PrerequisiteLocked,
     InsufficientResearchPoints,
     InsufficientResources,
+    LandmarkLocked,
 }

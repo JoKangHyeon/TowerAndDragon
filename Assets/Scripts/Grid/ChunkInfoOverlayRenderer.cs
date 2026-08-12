@@ -48,6 +48,10 @@ public class ChunkInfoOverlayRenderer : MonoBehaviour
     [SerializeField]
     private Sprite _populationIcon;
 
+    [Tooltip("청크 카드에 랜드마크 아이콘을 함께 띄우기 위해 참조한다. 비워두면 생략된다.")]
+    [SerializeField]
+    private LandmarkManager _landmarkManager;
+
     private ComponentPool<UI_ChunkInfoCard> _cardPool;
     private readonly List<(Sprite Icon, Color IconColor)> _resourceIconBuffer = new();
 
@@ -86,6 +90,16 @@ public class ChunkInfoOverlayRenderer : MonoBehaviour
     private void BuildResourceIconEntries(Vector2Int coord)
     {
         _resourceIconBuffer.Clear();
+
+        // 랜드마크를 자원 아이콘보다 앞에 둔다. 이 카드의 슬롯에는 라벨이 없어 아이콘이 곧 내용이므로,
+        // 스프라이트가 아직 없는 랜드마크는 아예 넣지 않는다 - 넣으면 LayoutGroup이 빈 칸만 벌린다.
+        if (_landmarkManager != null &&
+            _landmarkManager.TryGetLandmarkAt(coord, out Landmark landmark) &&
+            landmark.Data != null &&
+            landmark.Data.Icon != null)
+        {
+            _resourceIconBuffer.Add((landmark.Data.Icon, Color.white));
+        }
 
         ResourceType unlocked = _conquestManager.GetUnlockedResources(coord);
         foreach (ResourceType type in REWARD_RESOURCE_TYPES)

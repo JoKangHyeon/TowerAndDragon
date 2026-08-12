@@ -40,6 +40,10 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
     [SerializeField]
     private WorkerCountOverlayRenderer _countOverlay;
 
+    [Tooltip("랜드마크에도 인구를 배치할 수 있게 참조한다. 비워두면 건물만 대상이 된다.")]
+    [SerializeField]
+    private LandmarkManager _landmarkManager;
+
     [Tooltip("인구를 배치할 건물이 하나도 없을 때 안내 메시지를 띄운다. 없으면 조용히 진입만 막는다.")]
     [SerializeField]
     private UI_WarningWindow _warningWindow;
@@ -103,7 +107,7 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
     private readonly List<Vector3Int> _idleBuffer = new();
     private readonly List<Vector3Int> _hasRoomBuffer = new();
     private readonly List<Vector3Int> _fullBuffer = new();
-    private readonly List<(Building Building, IPopulationAllocationTarget Target)> _targetBuffer = new();
+    private readonly List<(Vector3 WorldPosition, IPopulationAllocationTarget Target)> _targetBuffer = new();
     private readonly List<Building> _tintedBuildings = new();
 
     private (List<Vector3Int> Coords, Color Color)[] _dayHighlightGroups;
@@ -237,6 +241,19 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
             }
         }
 
+        // 건물이 하나도 없어도 점령한 랜드마크가 있으면 진입할 수 있어야 한다 -
+        // RefreshOverlays가 그 랜드마크에 라벨을 띄우므로 "진입은 됐는데 아무것도 없는" 상태가 아니다.
+        if (_landmarkManager != null)
+        {
+            foreach (Landmark landmark in _landmarkManager.Landmarks)
+            {
+                if (IsAssignableLandmark(landmark))
+                {
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 
@@ -349,12 +366,40 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
 
         Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
         Building building = _gridMap.GetBuildingAt(hoveredCell);
-        if (building == null)
+
+        // 건물이 우선이다 - 랜드마크는 청크 전체가 판정 범위라, 그 안에 지은 건물까지
+        // 삼켜버리면 정작 건물에 인구를 넣을 수 없게 된다.
+        if (building != null)
+        {
+            target = building.GetComponent<IPopulationAllocationTarget>();
+            return target != null && target.IsInitialized;
+        }
+
+        return TryGetLandmarkTargetAt(hoveredCell, out target);
+    }
+
+    // 빈 칸을 클릭했을 때, 그 칸이 속한 청크의 랜드마크를 대상으로 삼는다.
+    // 랜드마크는 발자국이 없어 정확한 칸을 짚을 수 없으므로 청크 전체를 판정 범위로 쓴다.
+    private bool TryGetLandmarkTargetAt(Vector3Int cell, out IPopulationAllocationTarget target)
+    {
+        target = null;
+
+        if (_landmarkManager == null)
+        {
             return false;
+        }
 
-        target = building.GetComponent<IPopulationAllocationTarget>();
+        Chunk chunk = _gridMap.GetChunkAt(cell);
 
-        return target != null && target.IsInitialized;
+        if (chunk == null ||
+            !_landmarkManager.TryGetLandmarkAt(chunk.ChunkCoord, out Landmark landmark) ||
+            !IsAssignableLandmark(landmark))
+        {
+            return false;
+        }
+
+        target = landmark.Population;
+        return true;
     }
 
     // 인구를 넣을 수 있는 건물 전부를 배치 상태별 색으로 칠하고, 그 위에 배치/정원 숫자를 띄운다.
@@ -375,12 +420,14 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
 
             StaffingState state = ResolveState(target);
 
-            _targetBuffer.Add((building, target));
+            _targetBuffer.Add((WorkerCountOverlayRenderer.ResolveLabelPosition(building), target));
             AddFootprintCoords(building, ResolveBuffer(state));
 
             building.SetHighlighted(true, ResolveBuildingTint(state));
             _tintedBuildings.Add(building);
         }
+
+        AddLandmarkTargets();
 
         _mouseSelectController.HighlightCellGroups(HighlightGroups);
 
@@ -388,6 +435,39 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
         {
             _countOverlay.Refresh(_targetBuffer, _countLabelColor);
         }
+    }
+
+    // 랜드마크는 Building이 아니라 격자 칸을 차지하지 않으므로, 건물처럼 발자국을 칠하거나
+    // 스프라이트를 물들이지 않는다. 청크 중심에 배치/정원 라벨만 띄우고, 그 라벨이 곧
+    // "여기에 인구를 넣을 수 있다"는 표시가 된다.
+    private void AddLandmarkTargets()
+    {
+        if (_landmarkManager == null)
+        {
+            return;
+        }
+
+        foreach (Landmark landmark in _landmarkManager.Landmarks)
+        {
+            if (!IsAssignableLandmark(landmark))
+            {
+                continue;
+            }
+
+            _targetBuffer.Add((
+                _gridMap.GetChunkCenterWorld(landmark.ChunkCoord),
+                landmark.Population));
+        }
+    }
+
+    // 아직 점령하지 않은 랜드마크는 인구를 넣을 수 없으므로 표시도 하지 않는다
+    // (LandmarkPopulation.CanChangePopulation과 같은 기준).
+    private bool IsAssignableLandmark(Landmark landmark)
+    {
+        return landmark.IsConquered &&
+            landmark.Population != null &&
+            landmark.Population.IsInitialized &&
+            landmark.Population.Capacity > 0;
     }
 
     private enum StaffingState

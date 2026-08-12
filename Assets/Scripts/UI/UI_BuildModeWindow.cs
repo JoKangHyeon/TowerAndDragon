@@ -52,6 +52,10 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     [SerializeField]
     private CycleManager _cycleManager;
 
+    [Tooltip("연구로 해금되는 타워를 거르기 위해 참조한다. 비워두면 모든 타워가 그대로 보인다.")]
+    [SerializeField]
+    private ResearchManager _researchManager;
+
     [Header("패널 열림/닫힘 연출")]
     [SerializeField]
     private float _slideDuration = 0.5f;
@@ -219,6 +223,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
             _cycleManager.OnNightStart.AddListener(HandleNightStart);
         }
 
+        if (_researchManager != null)
+        {
+            _researchManager.NodeCompleted.AddListener(HandleResearchCompleted);
+        }
+
         _initialized = true;
     }
 
@@ -228,6 +237,41 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         {
             _cycleManager.OnNightStart.RemoveListener(HandleNightStart);
         }
+
+        if (_researchManager != null)
+        {
+            _researchManager.NodeCompleted.RemoveListener(HandleResearchCompleted);
+        }
+    }
+
+    // 타워 해금 연구가 끝나면 현재 탭을 다시 그려 새 슬롯이 즉시 나타나게 한다.
+    //
+    // 완료된 노드가 실제로 타워를 해금할 때만 다시 그린다. 모든 완료 노드에 반응하면
+    //  (1) SelectFilter가 OnTabSelected를 발화하는데 TutorialRunner가 이를 실제 탭 클릭으로 보고
+    //      단계를 넘겨버리고,
+    //  (2) 세이브 복원(ResearchManager.RestoreProgress)이 완료 노드마다 NodeCompleted를 재발화하므로
+    //      불러올 때 슬롯 전체가 완료 노드 수만큼 파괴·재생성된다.
+    private void HandleResearchCompleted(ResearchNodeData node)
+    {
+        if (_filterTabs.Length == 0 || node == null || !UnlocksAnyTower(node))
+        {
+            return;
+        }
+
+        SelectFilter(_currentFilterIndex);
+    }
+
+    private static bool UnlocksAnyTower(ResearchNodeData node)
+    {
+        foreach (ResearchEffectSO effect in node.Effects)
+        {
+            if (effect != null && effect.GetUnlockedTower() != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // 밤 시작 시 패널이 열려 있으면 닫는다.
@@ -440,6 +484,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
                 continue;
             }
 
+            if (!IsUnlocked(building))
+            {
+                continue;
+            }
+
             UI_BuildingSlot slot = Instantiate(slotPrefab, _slotContainer);
             slot.Setup(building, OnSlotSelected);
             slot.SetInteractable(isPlaceable);
@@ -447,6 +496,20 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         }
 
         OnSlotViewChanged?.Invoke();
+    }
+
+    // 연구로 해금해야 하는 타워인데 아직 해금되지 않았으면 슬롯 자체를 만들지 않는다.
+    // 잠긴 슬롯을 흐리게 보여주지 않는 이유: 역설계 타워는 해당 랜드마크를 점령하기 전까지
+    // 존재 자체가 스포일러이므로, 발견하는 재미를 남긴다.
+    // 연구 매니저가 없는 씬(튜토리얼·테스트)에서는 전부 노출한다.
+    private bool IsUnlocked(Building building)
+    {
+        if (_researchManager == null || building is not Tower tower)
+        {
+            return true;
+        }
+
+        return _researchManager.IsTowerUnlocked(tower.Data);
     }
 
     // 슬롯 클릭 시 해당 건물을 배치 대상으로 선택 (기존 building buttons에서 옮겨온 기능).

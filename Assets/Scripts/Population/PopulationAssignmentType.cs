@@ -9,4 +9,5 @@ public enum PopulationAssignmentType
     Production,
     Conquest,
     Research,
+    Landmark,
 }

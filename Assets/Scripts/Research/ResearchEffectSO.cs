@@ -54,4 +54,11 @@ public abstract class ResearchEffectSO : ScriptableObject
     {
         return 0;
     }
+
+    // 해금되는 타워. null이면 해금 효과가 아니다.
+    // DragonSkillEffectSO.GetUnlockedSkill과 같은 형태 - ResearchManager가 pull한다.
+    public virtual TowerData GetUnlockedTower()
+    {
+        return null;
+    }
 }

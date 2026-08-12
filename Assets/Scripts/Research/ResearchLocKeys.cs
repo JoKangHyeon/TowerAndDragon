@@ -30,6 +30,7 @@ public static class ResearchLocKeys
     public const string STATE_INSUFFICIENT_RP = "research_state_insufficient_rp";
     public const string STATE_INSUFFICIENT_RESOURCES = "research_state_insufficient_resources";
     public const string STATE_AVAILABLE = "research_state_available";
+    public const string STATE_LANDMARK_LOCKED = "research_state_landmark_locked";
 
     public static string ResolveStateLocKey(ResearchNodeState state)
     {
@@ -38,6 +39,7 @@ public static class ResearchLocKeys
             ResearchNodeState.Completed => STATE_COMPLETED,
             ResearchNodeState.UnavailablePhase => STATE_DAY_ONLY,
             ResearchNodeState.TierLocked => STATE_TIER_LOCKED,
+            ResearchNodeState.LandmarkLocked => STATE_LANDMARK_LOCKED,
             ResearchNodeState.PrerequisiteLocked => STATE_PREREQUISITE_LOCKED,
             ResearchNodeState.InsufficientResearchPoints => STATE_INSUFFICIENT_RP,
             ResearchNodeState.InsufficientResources => STATE_INSUFFICIENT_RESOURCES,

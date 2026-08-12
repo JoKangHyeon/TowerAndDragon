@@ -151,7 +151,9 @@ public class PopulationManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 기아 사망을 가용, 타워, 연구, 생산, 점령 인구 순서로 적용한다.
+    /// 기아 사망을 가용, 타워, 연구, 랜드마크, 생산, 점령 인구 순서로 적용한다.
+    /// 랜드마크가 생산보다 앞인 이유: 랜드마크 가동은 보너스라 끊겨도 회복되지만,
+    /// 생산 인구를 먼저 빼면 식량이 줄어 다음 날 기아가 더 커지는 악순환이 된다.
     /// 각 분류 안에서는 등록된 할당 순서대로 한 명씩 순환하여 감소시킨다.
     /// </summary>
     public bool TryApplyStarvation(
@@ -185,6 +187,12 @@ public class PopulationManager : MonoBehaviour
         );
         remainingDeaths -= researchPopulationLost;
 
+        int landmarkPopulationLost = ReduceAssignedPopulation(
+            PopulationAssignmentType.Landmark,
+            remainingDeaths
+        );
+        remainingDeaths -= landmarkPopulationLost;
+
         int productionPopulationLost = ReduceAssignedPopulation(
             PopulationAssignmentType.Production,
             remainingDeaths
@@ -201,6 +209,7 @@ public class PopulationManager : MonoBehaviour
             availablePopulationLost,
             towerPopulationLost,
             researchPopulationLost,
+            landmarkPopulationLost,
             productionPopulationLost,
             conquestPopulationLost
         );

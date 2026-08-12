@@ -41,6 +41,17 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public int ResearchPoints => _researchPoints;
 
+    /// <summary>
+    /// 랜드마크 보유 조회 슬롯. LandmarkResearchCoordinator가 대입한다
+    /// (GridMap.YieldMultiplierQuery와 같은 관용구).
+    ///
+    /// 이 슬롯이 비어 있어도 <b>랜드마크 조건이 없는 노드는 그대로 열린다</b> - 랜드마크를
+    /// 배치하지 않은 씬(튜토리얼·테스트)의 기존 연구는 영향을 받지 않는다.
+    /// 반대로 조건이 걸린 노드는 슬롯이 비어 있으면 잠긴 것으로 본다(fail-closed).
+    /// 배선을 빠뜨린 채 역설계 노드가 공짜로 열리는 것보다, 잠겨 있어 눈에 띄는 편이 낫다.
+    /// </summary>
+    public ILandmarkOwnershipQuery LandmarkOwnershipQuery { get; set; }
+
     /// <summary>세이브 캡처용 완료 노드 집합. DragonTreeManager.UnlockedIds와 대칭이다.</summary>
     public IReadOnlyCollection<string> CompletedNodeIds => _completedNodeIds;
 
@@ -171,6 +182,11 @@ public sealed class ResearchManager : MonoBehaviour,
             return ResearchNodeState.TierLocked;
         }
 
+        if (!IsRequiredLandmarkClaimed(node))
+        {
+            return ResearchNodeState.LandmarkLocked;
+        }
+
         foreach (ResearchNodeData prerequisite in node.Prerequisites)
         {
             if (prerequisite == null || !IsCompleted(prerequisite.NodeId))
@@ -190,6 +206,53 @@ public sealed class ResearchManager : MonoBehaviour,
         }
 
         return ResearchNodeState.Available;
+    }
+
+    /// <summary>
+    /// 이 타워를 건설 메뉴에 노출해도 되는지. 해금이 필요 없는 기본 타워는 항상 true다.
+    /// 해금 상태는 완료 노드에서 매번 파생시킨다 - 별도 집합을 캐시해두면 세이브 복원
+    /// (RestoreProgress)이나 노드 완료 때마다 동기화를 잊을 여지가 생긴다.
+    /// </summary>
+    public bool IsTowerUnlocked(TowerData towerData)
+    {
+        if (towerData == null || !towerData.RequiresResearchUnlock)
+        {
+            return true;
+        }
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null && effect.GetUnlockedTower() == towerData)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // 랜드마크 조건이 없는 노드(대부분)는 항상 통과한다. 조건이 있는데 조회 슬롯이 비어 있으면
+    // 판정할 방법이 없으므로 잠긴 것으로 본다 - 배선을 빠뜨린 채 역설계 노드가 열리는 편보다
+    // 닫혀 있는 편이 눈에 띄어 고치기 쉽다.
+    private bool IsRequiredLandmarkClaimed(ResearchNodeData node)
+    {
+        LandmarkDataSO requiredLandmark = node.RequiredLandmark;
+
+        if (requiredLandmark == null)
+        {
+            return true;
+        }
+
+        return LandmarkOwnershipQuery != null &&
+            LandmarkOwnershipQuery.IsClaimed(requiredLandmark.LandmarkId);
     }
 
     public bool TryResearch(
@@ -584,6 +647,7 @@ public sealed class ResearchManager : MonoBehaviour,
             ResearchNodeState.PrerequisiteLocked => ResearchFailureReason.PrerequisiteLocked,
             ResearchNodeState.InsufficientResearchPoints => ResearchFailureReason.InsufficientResearchPoints,
             ResearchNodeState.InsufficientResources => ResearchFailureReason.InsufficientResources,
+            ResearchNodeState.LandmarkLocked => ResearchFailureReason.LandmarkLocked,
             _ => ResearchFailureReason.None,
         };
     }

@@ -240,6 +240,7 @@ public sealed class ResearchLabDebugGUI : MonoBehaviour
             ResearchNodeState.InsufficientResearchPoints => "research_state_insufficient_rp",
             ResearchNodeState.InsufficientResources => "research_state_insufficient_resources",
             ResearchNodeState.Available => "research_state_available",
+            ResearchNodeState.LandmarkLocked => "research_state_landmark_locked",
             _ => "research_state_invalid",
         };
     }

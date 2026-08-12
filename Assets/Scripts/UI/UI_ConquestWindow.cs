@@ -120,6 +120,10 @@ public class UI_ConquestWindow : MonoBehaviour
     [SerializeField]
     private PopulationManager _populationManager;
 
+    [Tooltip("이 청크의 랜드마크를 보상 목록에 표시하기 위해 참조한다. 비워두면 랜드마크 행이 생략된다.")]
+    [SerializeField]
+    private LandmarkManager _landmarkManager;
+
     [SerializeField]
     private ConquestModeController _conquestModeController;
 
@@ -322,7 +326,10 @@ public class UI_ConquestWindow : MonoBehaviour
         held.Population = _populationManager != null ? _populationManager.AvailablePopulation : cost.Population;
 
         RebuildResourceSlots(held, cost);
-        RebuildRewardSlots(_conquestManager.GetPopulationReward(coord), _conquestManager.GetUnlockedResources(coord));
+        RebuildRewardSlots(
+            coord,
+            _conquestManager.GetPopulationReward(coord),
+            _conquestManager.GetUnlockedResources(coord));
 
         if (_durationInfoSlot != null)
         {
@@ -434,7 +441,10 @@ public class UI_ConquestWindow : MonoBehaviour
 
     // 이전에 생성된 보상 슬롯을 지우고 다시 생성한다.
     // 인구는 실제 지급 수량(populationReward > 0)을, 나머지 자원은 해금된 종류(unlockedResources)만 표시한다.
-    private void RebuildRewardSlots(int populationReward, ResourceType unlockedResources)
+    private void RebuildRewardSlots(
+        Vector2Int coord,
+        int populationReward,
+        ResourceType unlockedResources)
     {
         foreach (UI_ConquestRewardSlot slot in _spawnedRewardSlots)
         {
@@ -445,6 +455,10 @@ public class UI_ConquestWindow : MonoBehaviour
 
         if (_rewardSlotPrefab == null || _rewardSlotContainer == null)
             return;
+
+        // 랜드마크를 맨 앞에 둔다 - 자원·인구와 달리 그 청크에만 있는 보상이라 선택의 근거가 된다.
+        // 아이콘이 아직 없어도 UI_ConquestRewardSlot이 이름 라벨만으로 그려 준다.
+        SpawnLandmarkRewardSlot(coord);
 
         if (populationReward > 0)
         {
@@ -458,6 +472,23 @@ public class UI_ConquestWindow : MonoBehaviour
 
             SpawnRewardSlot(ResolveResourceIcon(type), Color.white, ResolveResourceName(type));
         }
+    }
+
+    // 이 청크에 랜드마크가 있으면 보상 목록 맨 앞에 이름을 띄운다.
+    // 랜드마크가 없는 청크(대부분)나 매니저가 없는 씬에서는 아무 것도 하지 않는다.
+    private void SpawnLandmarkRewardSlot(Vector2Int coord)
+    {
+        if (_landmarkManager == null ||
+            !_landmarkManager.TryGetLandmarkAt(coord, out Landmark landmark) ||
+            landmark.Data == null)
+        {
+            return;
+        }
+
+        SpawnRewardSlot(
+            landmark.Data.Icon,
+            Color.white,
+            StringTable.GetString(landmark.Data.NameLocKey));
     }
 
     private void SpawnRewardSlot(Sprite icon, Color iconColor, string label)
