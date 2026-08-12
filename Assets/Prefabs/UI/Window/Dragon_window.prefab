@@ -1973,7 +1973,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 900, y: 900}
+  m_SizeDelta: {x: 1800, y: 1800}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2371084394708254737
 GameObject:
@@ -2155,7 +2155,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UI_ScrollRectZoom
   _target: {fileID: 926967523853811762}
   _zoomStep: 0.1
-  _minZoom: 0.5
+  _minZoom: 0.3
   _maxZoom: 2
 --- !u!1 &2582060778834109138
 GameObject:
@@ -5782,20 +5782,17 @@ MonoBehaviour:
   _content: {fileID: 926967523853811762}
   _nodePrefab: {fileID: 3823415649673130364, guid: 1288cb1a5bbb9f146ad242efc473e7ca, type: 3}
   _edgePrefab: {fileID: 5283713490906096232, guid: 2f4292ae2b73a2841a17e25fd2114b3c, type: 3}
-  _attributeLabels:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  _attributeLabelPrefab: {fileID: 2694103377215540374, guid: b3f7c41d92a84e14ab5d6c0f3e71d9a2, type: 3}
   _detailsPanel: {fileID: 2578795187703994625}
-  _radiusAttributeLabel: 92
-  _radiusAwaken: 156
-  _radiusKin: 210
-  _kinAngleOffset: 24
-  _radiusActive: 236
-  _radiusEnhance: 316
-  _radiusUltimate: 396
+  _babyDragonCatalog: {fileID: 11400000, guid: 3493e5ed7926f4147ae5f74da9cbd871, type: 2}
+  _radiusAttributeLabel: 135
+  _radiusUnlock: 250
+  _radiusKin: 340
+  _kinAngleOffset: 22
+  _radiusBranch1: 490
+  _radiusBranch2: 650
+  _branchAngleOffset: 15
+  _radiusUltimate: 770
   _edgeLockedColor: {r: 0.2, g: 0.18, b: 0.16, a: 0.6}
 --- !u!1 &6286233475493676958
 GameObject:

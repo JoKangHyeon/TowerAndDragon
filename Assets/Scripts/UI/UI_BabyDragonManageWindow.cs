@@ -31,7 +31,10 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     private const string SKILL_TREE_LOC_KEY = "baby_dragon_manage_skill_tree";
     private const string REMOVE_LOC_KEY = "baby_dragon_manage_remove";
     private const string CLOSE_LOC_KEY = "baby_dragon_manage_close";
+    // 밤 잠금 안내는 두 가지다 - 재배치까지 잠긴 일반적인 경우와, 시간 새끼용 공격 모드처럼
+    // 밤 이동은 허용되어(Building.CanMoveAtNight) 모드 변경만 잠긴 경우.
     private const string NIGHT_LOCKED_LOC_KEY = "baby_dragon_manage_night_locked";
+    private const string NIGHT_LOCKED_MODE_ONLY_LOC_KEY = "baby_dragon_manage_night_locked_mode_only";
 
     [Header("Dependencies")]
     [SerializeField] private BuildingPlacementController _buildingPlacementController;
@@ -376,12 +379,14 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
             return;
         }
 
+        bool canRelocate = _buildingPlacementController != null &&
+            _buildingPlacementController.CanMoveNow(_boundTower);
+
         if (_relocateButton != null)
         {
             _relocateButton.gameObject.SetActive(
                 _buildingPlacementController == null || !_buildingPlacementController.IsMoving);
-            _relocateButton.interactable = _buildingPlacementController != null &&
-                _buildingPlacementController.CanMoveNow(_boundTower);
+            _relocateButton.interactable = canRelocate;
         }
 
         if (_removeButton != null)
@@ -390,35 +395,58 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
                 _buildingPlacementController.CanRemoveNow(_boundTower);
         }
 
+        // 모드는 낮에 정한 것으로 밤을 보낸다 - 밤에 바꿀 수 있으면 밤 방어를 공격 모드로 치른 뒤
+        // 아침 정산 직전에 버프 모드로 돌려 양쪽 이득을 다 챙길 수 있다(이슈 173).
         SetModeButtonState(_attackModeButton, _boundTower.Mode == BabyDragonMode.Attack, _boundTower.CanUseAttackMode);
         SetModeButtonState(_buffModeButton, _boundTower.Mode == BabyDragonMode.Buff, _boundTower.CanUseBuffMode);
 
         // 버튼이 회색인 이유(밤)를 알려준다(UI_PopulationAllocationWindow._nightLockedText와 동일한 이유).
+        // 시간 새끼용 공격 모드는 밤에도 재배치가 되므로, 그 경우엔 재배치까지 잠긴 것처럼 말하지 않는다.
         if (_nightLockedText != null)
         {
             _nightLockedText.gameObject.SetActive(!IsDay);
+            if (!IsDay)
+            {
+                _nightLockedText.text = StringTable.GetString(
+                    canRelocate ? NIGHT_LOCKED_MODE_ONLY_LOC_KEY : NIGHT_LOCKED_LOC_KEY);
+            }
         }
     }
 
-    // 지금 그 모드인 버튼은 눌러도 의미가 없어 비활성화한다 - 데이터상 쓸 수 없는 모드(isAvailable == false)도
-    // 같은 방식으로 비활성화되므로, 결과적으로 "회색 버튼 = 지금 이 모드이거나 애초에 못 씀"이 된다.
-    private static void SetModeButtonState(Button modeButton, bool isSelected, bool isAvailable)
+    // 지금 그 모드인 버튼은 눌러도 의미가 없어 비활성화한다 - 데이터상 쓸 수 없는 모드(isAvailable == false)와
+    // 밤(모드 잠금)도 같은 방식으로 비활성화되므로, 결과적으로
+    // "회색 버튼 = 지금 이 모드이거나, 애초에 못 쓰거나, 밤이라 잠김"이 된다.
+    private void SetModeButtonState(Button modeButton, bool isSelected, bool isAvailable)
     {
         if (modeButton != null)
         {
-            modeButton.interactable = isAvailable && !isSelected;
+            modeButton.interactable = isAvailable && !isSelected && IsDay;
         }
     }
 
+    // 버튼 비활성화는 표시일 뿐이라, 실제 차단은 클릭 처리에서 한 번 더 한다 -
+    // 밤이 시작된 프레임의 클릭이나 다른 경로로 들어온 호출까지 막는다.
     private void HandleAttackModeClicked()
     {
         SoundManager.Play(SoundId.UiButtonClick);
+
+        if (!IsDay)
+        {
+            return;
+        }
+
         _boundTower?.SetMode(BabyDragonMode.Attack);
     }
 
     private void HandleBuffModeClicked()
     {
         SoundManager.Play(SoundId.UiButtonClick);
+
+        if (!IsDay)
+        {
+            return;
+        }
+
         _boundTower?.SetMode(BabyDragonMode.Buff);
     }
 
@@ -473,7 +501,8 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
         SetLabel(_relocateButtonText, RELOCATE_LOC_KEY);
         SetLabel(_removeButtonText, REMOVE_LOC_KEY);
         SetLabel(_closeButtonText, CLOSE_LOC_KEY);
-        SetLabel(_nightLockedText, NIGHT_LOCKED_LOC_KEY);
+
+        // _nightLockedText는 상황에 따라 문구가 달라져 RefreshButtons가 채운다(정적 라벨이 아니다).
     }
 
     private static void SetLabel(TMP_Text text, string locKey)
