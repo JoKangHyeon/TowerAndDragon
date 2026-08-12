@@ -29,6 +29,10 @@ public class MonsterData : ScriptableObject
     [SerializeField] private bool _hasShield;
     [SerializeField] private float _shieldAmount;
 
+    [Header("Crowd Control Defense")]
+    [Tooltip("둔화·빙결·경직 등 모든 군중제어와 이동속도 변화 상태에 면역. 보스 몬스터가 켠다.")]
+    [SerializeField] private bool _isCrowdControlImmune;
+
     [Header("Elemental Defense")]
     [SerializeField] private MonsterElementRule _elementRule;
     [SerializeField] private DragonType _element;
@@ -55,6 +59,8 @@ public class MonsterData : ScriptableObject
 
     public bool HasShield => _hasShield;
     public float ShieldAmount => _shieldAmount;
+
+    public bool IsCrowdControlImmune => _isCrowdControlImmune;
 
     public MonsterElementRule ElementRule => _elementRule;
     public DragonType Element => _element;

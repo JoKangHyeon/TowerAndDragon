@@ -88,10 +88,13 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
 
     public void Apply(StatusEffectSO status, DragonType? element)
     {
+        if (status == null || IsImmuneTo(status))
+        {
+            return;
+        }
+
         switch (status)
         {
-            case null:
-                return;
             case FreezeStatusSO freeze:
                 ApplyFreeze(freeze);
                 break;
@@ -106,6 +109,15 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
                 break;
         }
     }
+
+    // 부여 시점에 단 한 곳에서 걸러낸다 - 이미 보관 중인 엔트리를 매 틱 다시 판정하지 않아도 되고,
+    // 스킬·타워·새끼용 등 모든 부여 경로가 결국 여기로 모이므로 누락이 생기지 않는다.
+    // PiercesCrowdControlImmunity가 켜진 상태(어미용 액티브 전역 빙결)는 면역을 뚫고 그대로 걸린다.
+    private bool IsImmuneTo(StatusEffectSO status) =>
+        status.IsCrowdControl &&
+        !status.PiercesCrowdControlImmunity &&
+        _monster != null &&
+        _monster.IsCrowdControlImmune;
 
     public void Clear()
     {

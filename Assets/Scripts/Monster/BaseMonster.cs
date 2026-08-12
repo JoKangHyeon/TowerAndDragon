@@ -47,6 +47,11 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
     public bool HasStatus(string statusId) => 
         _statusReceiver != null && _statusReceiver.HasStatus(statusId);
 
+    // 둔화·빙결 등 군중제어 상태를 아예 받지 않는다(보스). 속성 면역과 같이 데이터로 결정한다.
+    public bool IsCrowdControlImmune =>
+        _data != null &&
+        _data.IsCrowdControlImmune;
+
     public bool IsActionBlocked =>
         _statusReceiver != null &&
         _statusReceiver.IsActionBlocked;

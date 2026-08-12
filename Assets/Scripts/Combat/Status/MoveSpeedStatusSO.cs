@@ -12,4 +12,7 @@ public sealed class MoveSpeedStatusSO : StatusEffectSO
     [SerializeField] private float _speedMultiplier;
 
     public float SpeedMultiplier => _speedMultiplier;
+
+    // 둔화든 빙결이든 이동을 제약하므로 전부 군중제어로 취급한다.
+    public override bool IsCrowdControl => true;
 }
