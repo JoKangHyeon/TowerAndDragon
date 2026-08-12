@@ -106,6 +106,9 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("Panel_Skill/Text_info (TMP). 스킬 설명(SkillSO.DescriptionStringKey)을 표시한다.")]
     [SerializeField] private TextMeshProUGUI _skillInfoText;
 
+    [Tooltip("Panel_Skill/Lock - 아직 해금하지 않은 스킬을 가리는 덮개. 해금되면 꺼진다.")]
+    [SerializeField] private GameObject _skillLockPanel;
+
     [Tooltip("Popup_Dragon_Change - 실제 변경 로직은 이 팝업이 갖고 있다.")]
     [SerializeField] private UI_DragonChangePopup _changePopup;
 
@@ -246,6 +249,9 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleActiveAttributeChanged);
+
+            // 이 창 안의 스킬트리에서 해금이 일어나면 잠금 덮개를 즉시 걷어야 한다.
+            _dragonTreeManager.NodeUnlocked.AddListener(HandleNodeUnlocked);
         }
 
         if (_closeAction != null)
@@ -277,6 +283,7 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleActiveAttributeChanged);
+            _dragonTreeManager.NodeUnlocked.RemoveListener(HandleNodeUnlocked);
         }
 
         if (_closeAction != null)
@@ -310,6 +317,11 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     }
 
     private void HandleActiveAttributeChanged(DragonType attribute)
+    {
+        RenderMotherDragon();
+    }
+
+    private void HandleNodeUnlocked(ProgressionNodeData node)
     {
         RenderMotherDragon();
     }
@@ -676,6 +688,13 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
                 : string.Empty;
         }
 
+        // 아직 해금하지 않은 스킬은 덮개로 가린다. 스킬을 못 찾은 경우(속성 없음)도 잠금으로 본다 -
+        // 보여줄 내용이 없는데 빈 칸만 남기는 것보다 낫다.
+        if (_skillLockPanel != null)
+        {
+            _skillLockPanel.SetActive(!IsSkillUnlocked(skill));
+        }
+
         if (_skillIcon == null)
         {
             return;
@@ -690,6 +709,26 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         {
             _skillIcon.sprite = sprite;
         }
+    }
+
+    // 이 스킬을 지금 쓸 수 있는지 - 해금 여부와 현재 속성 일치를 모두 본다.
+    // AvailableActiveSkills가 그 두 조건을 이미 합쳐 놓은 단일 출처라 여기서 재구현하지 않는다.
+    private bool IsSkillUnlocked(SkillSO skill)
+    {
+        if (skill == null || _dragonTreeManager == null)
+        {
+            return false;
+        }
+
+        foreach (SkillSO available in _dragonTreeManager.AvailableActiveSkills)
+        {
+            if (available == skill)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private RunData CurrentRun => _gameManager != null ? _gameManager.CurrentRun : null;

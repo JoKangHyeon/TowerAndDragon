@@ -2,12 +2,15 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 // 빌드모드 창의 건물 슬롯 하나. 클릭하면 자신이 나타내는 건물을 선택하고,
 // 이름 텍스트에 건물 정보와 건설 비용을 표시한다.
+// 마우스를 올리면 알리기만 한다 - 정보 팝업을 띄울지는 UI_BuildModeWindow가 정한다
+// (UI_BabyDragonListSlot의 onHoverChanged와 같은 방식).
 [RequireComponent(typeof(Button))]
-public class UI_BuildingSlot : MonoBehaviour
+public class UI_BuildingSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     // 건설 비용 한 종류를 표시하는 칸(Stat/stat_resource_0N) 하나 - 인스펙터에서 4칸을 순서대로 연결한다.
     [Serializable]
@@ -40,16 +43,21 @@ public class UI_BuildingSlot : MonoBehaviour
 
     private Building _prefab;
     private Action<Building> _onSelected;
+    private Action<UI_BuildingSlot, bool> _onHoverChanged;
     private Button _button;
 
     /// <summary>이 슬롯이 나타내는 건물. 목록에서 특정 슬롯을 되찾을 때 쓴다.</summary>
     public Building Prefab => _prefab;
 
-    // 슬롯 생성 직후 스포너가 호출: 이 슬롯이 나타내는 건물과 클릭 콜백을 주입한다.
-    public void Setup(Building prefab, Action<Building> onSelected)
+    // 슬롯 생성 직후 스포너가 호출: 이 슬롯이 나타내는 건물과 클릭·호버 콜백을 주입한다.
+    public void Setup(
+        Building prefab,
+        Action<Building> onSelected,
+        Action<UI_BuildingSlot, bool> onHoverChanged = null)
     {
         _prefab = prefab;
         _onSelected = onSelected;
+        _onHoverChanged = onHoverChanged;
 
         _button = GetComponent<Button>();
         _button.onClick.RemoveAllListeners();
@@ -78,6 +86,16 @@ public class UI_BuildingSlot : MonoBehaviour
         {
             _populationCapacityText.text = prefab.PopulationCapacity.ToString();
         }
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        _onHoverChanged?.Invoke(this, true);
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        _onHoverChanged?.Invoke(this, false);
     }
 
     // 밤에는 건설을 시작할 수 없으므로 슬롯을 회색으로 비활성화한다(UI_BuildModeWindow가 매 재오픈마다 호출).
