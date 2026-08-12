@@ -186,7 +186,7 @@ MonoBehaviour:
   _uiManager: {fileID: 944163939}
   _countOverlay: {fileID: 37122976}
   _landmarkManager: {fileID: 1698710671}
-  _warningWindow: {fileID: 0}
+  _warningWindow: {fileID: 944163941}
   _assignAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _idleHighlightColor: {r: 1, g: 0, b: 0, a: 1}
@@ -566,6 +566,14 @@ PrefabInstance:
       propertyPath: _buffRangeIndicator
       value: 
       objectReference: {fileID: 528527941}
+    - target: {fileID: 2436635000165696940, guid: 10b9b7f42eef9204fbd4438fa8772147, type: 3}
+      propertyPath: _babyDragonBuffSystem
+      value: 
+      objectReference: {fileID: 936144406}
+    - target: {fileID: 2436635000165696940, guid: 10b9b7f42eef9204fbd4438fa8772147, type: 3}
+      propertyPath: _towerStatMultiplierComposite
+      value: 
+      objectReference: {fileID: 1652351645}
     - target: {fileID: 4853169533778136830, guid: 10b9b7f42eef9204fbd4438fa8772147, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -2888,13 +2896,25 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 914589612}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _exclusiveModeBehaviours.Array.size
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[0]'
       value: 
       objectReference: {fileID: 802675912}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-      propertyPath: '_exclusiveModeBehaviours.Array.data[4]'
+      propertyPath: '_exclusiveModeBehaviours.Array.data[2]'
+      value: 
+      objectReference: {fileID: 1500182005}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_exclusiveModeBehaviours.Array.data[3]'
       value: 
       objectReference: {fileID: 37122977}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_exclusiveModeBehaviours.Array.data[4]'
+      value: 
+      objectReference: {fileID: 914589615}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[5]'
       value: 
@@ -6417,6 +6437,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 698775030}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1500182005 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7546850575924265391, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 944163938}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d93a25ae51ef4c8488e136874f1ca4cb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_PopulationAllocationWindow
 --- !u!1 &1560119867
 GameObject:
   m_ObjectHideFlags: 0
@@ -7026,6 +7057,7 @@ MonoBehaviour:
   _cycleManager: {fileID: 914589611}
   _rangeIndicator: {fileID: 1494252251}
   _buffRangeIndicator: {fileID: 528527941}
+  _babyDragonBuffSystem: {fileID: 936144406}
   _penaltyMitigationTerrains: 
   _warningWindow: {fileID: 944163941}
   _iceUnlockableTerrain: 2
