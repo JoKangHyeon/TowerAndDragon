@@ -78,7 +78,6 @@ public static class DragonSkillTreeAssetGenerator
     // 상태이상 수치(예시, 밸런싱 대상). _R2는 랭크2 노드가 갈아끼우는 강화판이다.
     private const float ICE_SLOW_MULTIPLIER = 0.5f;
     private const float ICE_SLOW_DURATION = 3f;
-    private const float ICE_FREEZE_MULTIPLIER = 0f;
     private const float ICE_FREEZE_DURATION = 3f;
     private const float ICE_FREEZE_DURATION_R2 = 5f;
     private const float FIRE_BURN_DAMAGE_PER_TICK = 2f;
@@ -123,8 +122,8 @@ public static class DragonSkillTreeAssetGenerator
     private sealed class StatusAssets
     {
         public MoveSpeedStatusSO IceSlow;
-        public MoveSpeedStatusSO IceFreeze;
-        public MoveSpeedStatusSO IceFreezeStrong;
+        public FreezeStatusSO IceFreeze;
+        public FreezeStatusSO IceFreezeStrong;
         public DamageOverTimeStatusSO FireBurn;
         public DamageOverTimeStatusSO FireBurnStrong;
     }
@@ -386,14 +385,32 @@ public static class DragonSkillTreeAssetGenerator
         return new StatusAssets
         {
             IceSlow = CreateMoveSpeedStatus("DS_IceSlow", "dragon_ice_slow", ICE_SLOW_DURATION, ICE_SLOW_MULTIPLIER),
-            IceFreeze = CreateMoveSpeedStatus("DS_IceFreeze", "dragon_ice_freeze", ICE_FREEZE_DURATION, ICE_FREEZE_MULTIPLIER),
+            IceFreeze = CreateFreezeStatus("DS_IceFreeze", "dragon_ice_freeze", ICE_FREEZE_DURATION),
 
             // 랭크2가 갈아끼우는 강화판 - StatusId를 같게 둬야 재부여가 중첩이 아니라 갱신으로 처리된다.
-            IceFreezeStrong = CreateMoveSpeedStatus("DS_IceFreeze_R2", "dragon_ice_freeze", ICE_FREEZE_DURATION_R2, ICE_FREEZE_MULTIPLIER),
+            IceFreezeStrong = CreateFreezeStatus("DS_IceFreeze_R2", "dragon_ice_freeze", ICE_FREEZE_DURATION_R2),
 
             FireBurn = CreateDotStatus("DS_FireBurn", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK),
             FireBurnStrong = CreateDotStatus("DS_FireBurn_R2", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK_R2),
         };
+    }
+
+    // 빙결은 MoveSpeedStatusSO(배율 0)가 아니라 FreezeStatusSO여야 한다 - MonsterStatusReceiver의
+    // IsActionBlocked가 빙결 엔트리만 보고 판정하므로, 배율 0짜리 이동속도 상태로는 이동만 멈추고
+    // 공격은 계속한다. 이동속도 배율은 따로 두지 않는다(빙결이 하나라도 걸리면 수신부가 0으로 강제).
+    //
+    // 전역 빙결은 쿨다운으로 제한된 어미용 액티브 한 방이라 보스의 군중제어 면역을 관통한다 -
+    // 이 플래그를 생성기에서 켜지 않으면 생성기를 다시 돌릴 때 조용히 꺼진다.
+    private static FreezeStatusSO CreateFreezeStatus(string assetName, string statusId, float duration)
+    {
+        return CreateOrReplace<FreezeStatusSO>(
+            $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/{assetName}.asset",
+            so =>
+            {
+                so.FindProperty("_statusId").stringValue = statusId;
+                so.FindProperty("_durationSeconds").floatValue = duration;
+                so.FindProperty("_piercesCrowdControlImmunity").boolValue = true;
+            });
     }
 
     private static MoveSpeedStatusSO CreateMoveSpeedStatus(string assetName, string statusId, float duration, float multiplier)
@@ -585,7 +602,12 @@ public static class DragonSkillTreeAssetGenerator
                 return CreateOrReplace<DragonSkillStatusEffectSO>(path, so =>
                 {
                     so.FindProperty("_attribute").enumValueIndex = (int)attr.Type;
-                    so.FindProperty("_status").objectReferenceValue = statuses.IceFreezeStrong;
+
+                    // 랭크마다 다른 상태를 물려야 한다 - 예전에는 index를 무시해 R1·R2가 같은 에셋을
+                    // 가리켰고, 랭크를 올려도 지속시간이 그대로였다.
+                    // 둘 다 켜져 있으면 DragonTreeManager.GetSkillStatusOverride가 높은 랭크를 고른다.
+                    so.FindProperty("_status").objectReferenceValue =
+                        index == 0 ? statuses.IceFreeze : statuses.IceFreezeStrong;
                 });
 
             // 방벽 체력은 SkillSO 수치가 아니라 설치되는 건물의 체력이라 별도 효과다.
@@ -1096,6 +1118,23 @@ public static class DragonSkillTreeAssetGenerator
     private static T CreateOrReplace<T>(string assetPath, Action<SerializedObject> configure) where T : ScriptableObject
     {
         T existing = AssetDatabase.LoadAssetAtPath<T>(assetPath);
+
+        // 디스크의 에셋 타입이 T와 다르면 LoadAssetAtPath<T>가 null을 돌려주고, 아래 CreateAsset이
+        // 기존 에셋을 지우고 새로 만든다 - guid가 바뀌어 그 에셋을 참조하던 씬·프리팹·다른 에셋의
+        // 참조가 전부 조용히 끊긴다(이슈 #188). 손으로 타입을 바꾼 에셋을 덮어쓰기 전에 멈춘다.
+        if (existing == null)
+        {
+            var conflicting = AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath);
+
+            if (conflicting != null)
+            {
+                throw new InvalidOperationException(
+                    $"'{assetPath}'의 실제 타입은 {conflicting.GetType().Name}인데 생성기는 {typeof(T).Name}으로 만들려 합니다. " +
+                    "그대로 진행하면 에셋이 삭제·재생성되어 guid가 바뀌고 기존 참조가 끊깁니다. " +
+                    "생성기와 에셋 중 어느 쪽이 맞는지 정한 뒤 다시 실행하세요.");
+            }
+        }
+
         T instance = existing != null ? existing : ScriptableObject.CreateInstance<T>();
 
         var serializedObject = new SerializedObject(instance);
