@@ -14,15 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MonsterData
   _nameLocKey: monster_air_ranged
   _descriptionLocKey: monster_air_ranged_desc
+  _monsterType: 0
   _maxHealth: 50
   _moveSpeed: 4
   _movementType: 1
   _hasShield: 0
   _shieldAmount: 0
+  _isCrowdControlImmune: 0
   _elementRule: 0
   _element: 0
   _attack: {fileID: 11400000, guid: 7719620e054839244a653cf097cac66f, type: 2}
-  _enRouteTargetTypes: 1
+  _enRouteTargetTypes: -1
   _specialBehaviors: []
   _projectilePrefab: {fileID: 2874056009116883397, guid: 1e2cadb560ee9e847b794395858e68e1, type: 3}
   _projectileSpeed: 7
