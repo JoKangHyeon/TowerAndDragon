@@ -152,9 +152,32 @@ public class TowerAttack : MonoBehaviour
         _nextAttackTime = Time.time + GetAttackInterval();
     }
 
+    /// <summary>
+    /// 다음 발사까지의 실제 간격(초). 연구·오라·지형이 반영된 값이라 데이터 원본(Attack.Interval)과 다르다 -
+    /// 표시(툴팁)와 판정이 같은 값을 보게 하려고 노출한다. EffectiveRange와 같은 이유다.
+    ///
+    /// 아직 Setup 전이거나(데이터 없음) 지금 쏠 수 없으면 값이 성립하지 않으므로 false를 돌려준다 -
+    /// 발사 스케줄은 그 경우를 무한대로 표현하지만, 표시하는 쪽에 "∞초"는 숫자가 아니라 오류로 보인다.
+    /// </summary>
+    public bool TryGetEffectiveAttackInterval(out float interval)
+    {
+        interval = 0f;
+
+        // Attack 프로퍼티가 _towerData를 그대로 역참조하므로 간격을 구하기 전에 먼저 막는다.
+        if (_towerData == null || !_towerData.CanAttack)
+        {
+            return false;
+        }
+
+        interval = GetAttackInterval();
+
+        return !float.IsInfinity(interval);
+    }
+
     private float GetAttackInterval()
     {
-        float staffingRatio = _staffing.StaffingRatio;
+        // 인구 할당 생성에 실패한 타워는 구현체가 없다(CanAttackWithCurrentStaffing과 같은 이유).
+        float staffingRatio = _staffing != null ? _staffing.StaffingRatio : 0f;
 
         if (staffingRatio <= 0f)
         {
