@@ -8,7 +8,7 @@ public class UI_FactoryInfoPopup : UI_BuildSlotInfoPopup
 {
     // 생산량·설명 키는 건물 프리팹 이름에서 만든다
     // (BasicFactory_FarmField → buildMode_panel_factory_Production_farmField / _info_farmField).
-    private const string PRODUCTION_LOC_KEY_PREFIX = "buildMode_panel_factory_Production_";
+    private const string PRODUCTION_LOC_KEY_PREFIX = "buildMode_panel_factory_production_";
     private const string INFO_LOC_KEY_PREFIX = "buildMode_panel_factory_info_";
     private const string BASIC_FACTORY_PREFAB_PREFIX = "BasicFactory_";
     private const string FACTORY_PREFAB_PREFIX = "Factory_";

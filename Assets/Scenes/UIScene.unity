@@ -185,6 +185,7 @@ MonoBehaviour:
   _cycleManager: {fileID: 914589611}
   _uiManager: {fileID: 944163939}
   _countOverlay: {fileID: 37122976}
+  _landmarkManager: {fileID: 0}
   _warningWindow: {fileID: 1971629096}
   _assignAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
@@ -1163,6 +1164,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db3200645c162584daeae3f0b9ed9bd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
+  _cameraMoveAction: {fileID: 0}
+  _wasdSpeed: 12
+  _edgeScrollSpeed: 12
+  _dragSensitivity: 1
+  _edgeScrollEnabled: 1
+  _edgeScrollThreshold: 20
+  _zoomSpeed: 3
+  _minZoom: 3
+  _maxZoom: 18
+  _zoomSmoothing: 8
+  _moveSmoothTime: 0.08
+  _startFocusTarget: {fileID: 0}
+  _boundsTilemap: {fileID: 0}
+  _excludedBoundsTile: {fileID: 0}
+  _boundsMarginMin: {x: 0, y: 0}
+  _boundsMarginMax: {x: 0, y: 0}
+  _mapMin: {x: -60, y: -60}
+  _mapMax: {x: 60, y: 60}
 --- !u!1 &528527939
 GameObject:
   m_ObjectHideFlags: 0
@@ -2496,6 +2515,7 @@ MonoBehaviour:
   _gridMap: {fileID: 313449541}
   _waveCycleProgression: {fileID: 704850240}
   _castle: {fileID: 1161439827}
+  _landmarkManager: {fileID: 0}
   _thumbnailCapturer: {fileID: 914589627}
   _isAutoSaveEnabled: 1
   _debugForceContinue: 0
@@ -3283,6 +3303,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 899942509608974066, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 917089603654638806, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -3324,6 +3348,30 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 964012623477058911, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 982615071096605259, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 982615071096605259, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 982615071096605259, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 982615071096605259, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 982615071096605259, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 982615071096605259, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
@@ -4725,7 +4773,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.0009945023
+      value: -0.00036522018
       objectReference: {fileID: 0}
     - target: {fileID: 3531365243633958967, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -9239,7 +9287,10 @@ MonoBehaviour:
   _cycleManager: {fileID: 914589611}
   _rangeIndicator: {fileID: 1494252251}
   _buffRangeIndicator: {fileID: 528527941}
+  _babyDragonBuffSystem: {fileID: 0}
   _penaltyMitigationTerrains: 
+  _warningWindow: {fileID: 0}
+  _iceUnlockableTerrain: 2
   _moveHoldDuration: 2
   _dragThreshold: 10
   BuildingSelected:
