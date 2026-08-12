@@ -1115,24 +1115,23 @@ public class GridMap : MonoBehaviour
                 : CanConstructFootPrint(footprint, ignoreBuilding);
 
     // 새끼용은 비행 개체이므로 지형의 일반 건설 가능 여부를 무시한다.
-    // 다만 맵 밖 좌표, 다른 건물 점유, 미점령 청크는 그대로 제한해 배치 규칙의 안전장치는 유지한다.
+    // 다만 플레이어에게 보이는 통행로(Road), 맵 밖 좌표, 다른 건물 점유, 미점령 청크는 제한한다.
+    // 몬스터 스플라인은 실제 이동 중심선이라 화면의 넓은 길 타일과 일치하지 않을 수 있으므로
+    // 새끼용 배치 금지 기준으로 사용하지 않는다. MonsterPathQuery는 임시 방벽 판정에서만 사용한다.
     private bool CanConstructBabyDragonFootprint(List<Vector3Int> footprint, Building ignoreBuilding)
     {
-        if (MonsterPathQuery == null)
-            return false;
-
         foreach (Vector3Int coord in footprint)
         {
             if (!_cells.TryGetValue(coord, out GridCell cell))
+                return false;
+
+            if (cell.TerrainType == TerrainType.Road)
                 return false;
 
             if (cell.ExistTypeOnCell != ExistTypeOnCell.None && cell.OccupantBuilding != ignoreBuilding)
                 return false;
 
             if (!IsChunkConquered(coord))
-                return false;
-
-            if (MonsterPathQuery.IsOnMonsterPath(coord))
                 return false;
         }
 
