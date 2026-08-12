@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// 설정값(볼륨·해상도·전체화면·언어)의 단일 소유자.
@@ -20,6 +22,7 @@ public class SettingsService : MonoBehaviour
     private const string RESOLUTION_HEIGHT_PREF_KEY = "settings_resolution_height";
     private const string FULL_SCREEN_PREF_KEY = "settings_full_screen";
     private const string LANGUAGE_PREF_KEY = "settings_language";
+    private const string KEY_BINDINGS_PREF_KEY = "settings_key_bindings";
 
     // AudioMixer에 노출된 파라미터 이름. Assets/AudioMixer.mixer의 m_ExposedParameters와 일치해야 한다.
     private const string MASTER_VOLUME_MIXER_PARAM = "MasterVolume";
@@ -39,6 +42,12 @@ public class SettingsService : MonoBehaviour
 
     [Tooltip("볼륨 슬라이더가 조절할 믹서. Assets/AudioMixer.mixer를 지정한다.")]
     [SerializeField] private AudioMixer _audioMixer;
+
+    [Tooltip("키 바인딩을 저장·복원할 대상. Assets/InputSystem_Actions.inputactions를 지정한다.")]
+    [SerializeField] private InputActionAsset _inputActions;
+
+    /// <summary>키 바인딩이 바뀌었을 때(리바인딩·기본값 복원) 발화한다. UI가 표기를 다시 그린다.</summary>
+    public event Action OnKeyBindingsChanged;
 
     private readonly Dictionary<AudioChannel, float> _volumes = new();
     private readonly List<Vector2Int> _resolutions = new();
@@ -69,6 +78,7 @@ public class SettingsService : MonoBehaviour
         LoadVolumes();
         BuildResolutionList();
         LoadDisplay();
+        LoadKeyBindings();
     }
 
     private void Start()
@@ -143,9 +153,56 @@ public class SettingsService : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 지금 걸려 있는 바인딩 오버라이드를 저장한다. 리바인딩이 확정될 때마다 호출한다
+    /// (디스크 플러시는 다른 설정과 마찬가지로 <see cref="Save"/>가 몰아서 한다).
+    /// </summary>
+    public void SaveKeyBindings()
+    {
+        // 여기서 조용히 빠져나가면 리바인딩이 한 세션 내내 정상으로 보이다가 재시작에 전부 날아간다.
+        if (!WiringGuard.Require(_inputActions, nameof(_inputActions), this))
+        {
+            return;
+        }
+
+        PlayerPrefs.SetString(KEY_BINDINGS_PREF_KEY, _inputActions.SaveBindingOverridesAsJson());
+        OnKeyBindingsChanged?.Invoke();
+    }
+
+    /// <summary>모든 키를 에셋에 정의된 기본값으로 되돌린다.</summary>
+    public void ResetKeyBindings()
+    {
+        if (!WiringGuard.Require(_inputActions, nameof(_inputActions), this))
+        {
+            return;
+        }
+
+        _inputActions.RemoveAllBindingOverrides();
+        PlayerPrefs.DeleteKey(KEY_BINDINGS_PREF_KEY);
+        OnKeyBindingsChanged?.Invoke();
+    }
+
     public void Save()
     {
         PlayerPrefs.Save();
+    }
+
+    // 오버라이드는 에셋 자체에 얹히므로 다른 설정과 달리 Start까지 미룰 필요가 없다.
+    // 액션을 켜기 전(각 컴포넌트의 OnEnable 전)에 얹어 두는 편이 안전하다.
+    private void LoadKeyBindings()
+    {
+        if (!WiringGuard.Require(_inputActions, nameof(_inputActions), this))
+        {
+            return;
+        }
+
+        string json = PlayerPrefs.GetString(KEY_BINDINGS_PREF_KEY, string.Empty);
+        if (string.IsNullOrEmpty(json))
+        {
+            return;
+        }
+
+        _inputActions.LoadBindingOverridesFromJson(json);
     }
 
     private void LoadVolumes()

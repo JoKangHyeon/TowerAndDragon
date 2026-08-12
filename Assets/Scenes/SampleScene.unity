@@ -178,6 +178,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c96af9c411acf664a8631a55c37a886f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorkerModeController
+  _bulkModifierAction: {fileID: 6607914833914992100, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _fineModifierAction: {fileID: -7227978520168459255, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _gridMap: {fileID: 313449541}
   _mouseSelectController: {fileID: 250167905}
   _buildingPlacementController: {fileID: 1692054028}
@@ -1239,6 +1241,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc70f87391bb556438189252040bf4be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
+  _cameraZoomAction: {fileID: 5403002573186811895, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _cameraBookmarkAction: {fileID: -7252859598093481112, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _cameraBookmarkSaveModifierAction: {fileID: 5692209928381186351, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _wasdSpeed: 12
   _edgeScrollSpeed: 12
@@ -2469,8 +2474,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66bbc09ec1f09a34d8a66088b7fe2fcc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GlobalInputBootstrap
-  _confirmAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _alwaysEnabledActions:
+  - {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  - {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  - {fileID: -2993815270120332460, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  - {fileID: -4135133898669583911, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  - {fileID: 239636598373408673, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  - {fileID: 6607914833914992100, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  - {fileID: -7227978520168459255, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
 --- !u!114 &914589622
 MonoBehaviour:
   m_ObjectHideFlags: 0

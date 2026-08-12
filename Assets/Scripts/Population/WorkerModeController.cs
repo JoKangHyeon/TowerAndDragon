@@ -56,6 +56,14 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
     [SerializeField]
     private InputActionReference _closeAction;
 
+    [Tooltip("한 번에 최대치를 옮기는 보정키(Shift) - Player/BulkModifier.")]
+    [SerializeField]
+    private InputActionReference _bulkModifierAction;
+
+    [Tooltip("한 번에 묶음 단위로 옮기는 보정키(Ctrl) - Player/FineModifier.")]
+    [SerializeField]
+    private InputActionReference _fineModifierAction;
+
     [Tooltip("인구가 한 명도 없어 정지한 건물 색.")]
     [SerializeField]
     private Color _idleHighlightColor = Color.red;
@@ -119,13 +127,13 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
         _cycleManager != null &&
         _cycleManager.CurrentCycle == CycleManager.CycleState.Day;
 
-    private static bool IsShiftPressed =>
-        Keyboard.current != null &&
-        (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed);
+    // 보정키는 눌린 상태를 조회만 한다. 액션을 켜는 것은 GlobalInputBootstrap이 맡는다 -
+    // 이 컨트롤러는 자신의 활성 여부를 스스로 판단하는 구조라 액션 수명을 여기에 묶지 않는다.
+    private bool IsBulkModifierPressed =>
+        _bulkModifierAction != null && _bulkModifierAction.action.IsPressed();
 
-    private static bool IsCtrlPressed =>
-        Keyboard.current != null &&
-        (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed);
+    private bool IsFineModifierPressed =>
+        _fineModifierAction != null && _fineModifierAction.action.IsPressed();
 
     // 하이라이트 묶음은 버퍼를 그대로 물고 있으므로 한 번만 만들어 재사용한다.
     // Awake가 아니라 첫 사용 시점에 만들어, 초기화 순서와 무관하게 항상 준비된 상태를 보장한다.
@@ -347,12 +355,12 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
 
     // Shift는 최대치(호출자가 넘긴 남은 정원 또는 현재 배치 인원), Ctrl은 묶음 단위, 그 외 한 명.
     // 둘 다 눌렸으면 Shift가 우선한다.
-    private static int ResolveRequestedAmount(int maxAmount)
+    private int ResolveRequestedAmount(int maxAmount)
     {
-        if (IsShiftPressed)
+        if (IsBulkModifierPressed)
             return maxAmount;
 
-        return IsCtrlPressed ? POPULATION_STEP_BULK : POPULATION_STEP_SINGLE;
+        return IsFineModifierPressed ? POPULATION_STEP_BULK : POPULATION_STEP_SINGLE;
     }
 
     // 포인터 아래 건물이 인구를 넣을 수 있는 대상인지 판정한다.

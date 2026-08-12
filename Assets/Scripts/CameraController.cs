@@ -34,6 +34,15 @@ public class CameraController : MonoBehaviour
     [Header("Input Actions")]
     [SerializeField] private InputActionReference _cameraMoveAction;
 
+    [Tooltip("마우스 휠 줌 - Player/CameraZoom.")]
+    [SerializeField] private InputActionReference _cameraZoomAction;
+
+    [Tooltip("북마크 슬롯 키(1~5) - Player/CameraBookmark. 바인딩 순서가 곧 슬롯 번호다.")]
+    [SerializeField] private InputActionReference _cameraBookmarkAction;
+
+    [Tooltip("같이 누르면 복귀 대신 저장이 되는 보정키(Ctrl) - Player/CameraBookmarkSaveModifier.")]
+    [SerializeField] private InputActionReference _cameraBookmarkSaveModifierAction;
+
     [Header("이동 속도")]
     [SerializeField] private float _wasdSpeed      = 12f;
     [SerializeField] private float _edgeScrollSpeed = 12f;
@@ -132,16 +141,42 @@ public class CameraController : MonoBehaviour
         SnapTo(_startFocusTarget.position);
     }
 
+    // 카메라 전용 액션이라 카메라와 생명주기를 같이한다 - 카메라 조작이 꺼지면 줌·북마크도 같이 꺼져야 한다.
+    // (여러 곳이 공유하는 액션은 여기가 아니라 GlobalInputBootstrap이 켠다.)
     private void OnEnable()
     {
         if (_cameraMoveAction != null)
             _cameraMoveAction.action.Enable();
+
+        if (_cameraZoomAction != null)
+            _cameraZoomAction.action.Enable();
+
+        if (_cameraBookmarkSaveModifierAction != null)
+            _cameraBookmarkSaveModifierAction.action.Enable();
+
+        if (_cameraBookmarkAction != null)
+        {
+            _cameraBookmarkAction.action.Enable();
+            _cameraBookmarkAction.action.performed += OnBookmarkPerformed;
+        }
     }
 
     private void OnDisable()
     {
         if (_cameraMoveAction != null)
             _cameraMoveAction.action.Disable();
+
+        if (_cameraZoomAction != null)
+            _cameraZoomAction.action.Disable();
+
+        if (_cameraBookmarkSaveModifierAction != null)
+            _cameraBookmarkSaveModifierAction.action.Disable();
+
+        if (_cameraBookmarkAction != null)
+        {
+            _cameraBookmarkAction.action.performed -= OnBookmarkPerformed;
+            _cameraBookmarkAction.action.Disable();
+        }
     }
 
     private void Update()
@@ -150,7 +185,6 @@ public class CameraController : MonoBehaviour
         HandleEdgeScroll();
         HandleMouseLeftButtonDrag();
         HandleZoom();
-        HandleBookmarks();
 
         ClampTargetPosition();
         ApplyMovement();
@@ -248,13 +282,13 @@ public class CameraController : MonoBehaviour
         }
     }
 
-    /// 마우스 휠 — Orthographic Size 줌
+    /// 마우스 휠 — Orthographic Size 줌 (Player/CameraZoom Action)
     private void HandleZoom()
     {
-        if (Mouse.current == null) return;
+        if (_cameraZoomAction == null) return;
         if (IsPointerOverUI()) return;
 
-        float scroll = Mouse.current.scroll.ReadValue().y;
+        float scroll = _cameraZoomAction.action.ReadValue<Vector2>().y;
         if (Mathf.Abs(scroll) < SCROLL_DEADZONE) return;
 
         _targetZoom -= scroll * _zoomSpeed * SCROLL_TO_ZOOM_SCALE;
@@ -264,30 +298,28 @@ public class CameraController : MonoBehaviour
 
     /// 북마크 Ctrl 1 메인성 하나만 사용
     /// 일단 여러 북마크 가능하게 해놓고 후에 하나만 사용하는거로 변경 가능성 있음
-    private void HandleBookmarks()
+    /// 슬롯 번호는 눌린 키가 아니라 액션의 몇 번째 바인딩인지로 정한다 -
+    /// 설정에서 키를 바꿔도(1~5 → 다른 키) 슬롯 대응이 그대로 유지된다.
+    private void OnBookmarkPerformed(InputAction.CallbackContext context)
     {
-        if (Keyboard.current == null) return;
+        int slot = context.action.GetBindingIndexForControl(context.control);
+        if (slot < 0 || slot >= BOOKMARK_COUNT) return;
 
-        bool ctrl = Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.rightCtrlKey.isPressed;
+        bool isSaveRequested = _cameraBookmarkSaveModifierAction != null &&
+                               _cameraBookmarkSaveModifierAction.action.IsPressed();
 
-        for (int i = 0; i < BOOKMARK_COUNT; i++)
+        if (isSaveRequested)
         {
-            Key key = Key.Digit1 + i;
-            bool pressedThisFrame = Keyboard.current[key].wasPressedThisFrame;
-
-            if (ctrl && pressedThisFrame)
-            {
-                // 저장
-                _bookmarks[i] = _targetPos;
-                Debug.Log($"[Camera] Bookmark {i + 1} 저장: {_targetPos}");
-            }
-            else if (!ctrl && pressedThisFrame && _bookmarks[i].HasValue)
-            {
-                // 복귀 — 저장 시점보다 줌 아웃돼 있으면 그 위치가 이미 경계를 넘을 수 있다
-                _targetPos = ClampToMapBounds(_bookmarks[i].Value);
-                Debug.Log($"[Camera] Bookmark {i + 1} 복귀");
-            }
+            _bookmarks[slot] = _targetPos;
+            Debug.Log($"[Camera] Bookmark {slot + 1} 저장: {_targetPos}");
+            return;
         }
+
+        if (!_bookmarks[slot].HasValue) return;
+
+        // 복귀 — 저장 시점보다 줌 아웃돼 있으면 그 위치가 이미 경계를 넘을 수 있다
+        _targetPos = ClampToMapBounds(_bookmarks[slot].Value);
+        Debug.Log($"[Camera] Bookmark {slot + 1} 복귀");
     }
 
     // ─────────────────────────────────────────────

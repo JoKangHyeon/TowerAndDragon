@@ -57,6 +57,10 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("드롭다운을 열지 않고 다음 언어로 넘기는 화살표.")]
     [SerializeField] private Button _languageNextButton;
 
+    [Header("키")]
+    [Tooltip("우측 키 섹션. 줄은 이 컴포넌트가 액션 목록을 훑어 스스로 만든다.")]
+    [SerializeField] private UI_KeyBindingSection _keySection;
+
     [Header("저장 / 불러오기")]
     [Tooltip("슬롯 창을 저장 모드로 여는 버튼.")]
     [SerializeField] private Button _saveButton;
@@ -138,6 +142,12 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         foreach (UI_VolumeRow row in _volumeRows)
         {
             row.Construct(_settings, _volumeStep);
+        }
+
+        // 키 섹션도 같은 방식으로 주입한다 - SettingsService는 씬 참조라 프리팹 안에서 배선할 수 없다.
+        if (_keySection != null)
+        {
+            _keySection.Construct(_settings);
         }
     }
 
@@ -261,7 +271,17 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         RenderResolution();
         RenderFullScreen();
         RenderLanguage();
+        RenderKeyBindings();
         RenderSaveAvailability();
+    }
+
+    // 키 섹션은 자기 OnEnable에서도 한 번 그리지만, 언어가 바뀐 뒤에는 창이 켜진 채로 다시 그려야 한다.
+    private void RenderKeyBindings()
+    {
+        if (_keySection != null)
+        {
+            _keySection.Render();
+        }
     }
 
     // 저장은 낮에만 가능하다(SaveService 계약 2). 눌러 봐야 슬롯이 전부 잠긴 창만 열리는 버튼을
