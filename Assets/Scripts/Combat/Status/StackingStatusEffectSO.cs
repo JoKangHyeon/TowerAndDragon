@@ -20,4 +20,14 @@ public sealed class StackingStatusEffectSO : StatusEffectSO
 
     public int StacksToTrigger => _stacksToTrigger;
     public StatusEffectSO TriggeredStatus => _triggeredStatus;
+
+    // 스택 자체는 아무 제약도 걸지 않지만, 임계치에서 부여할 상태가 군중제어면 이 스택도 군중제어로 본다 -
+    // 면역 대상에게는 어차피 발동해도 무시되므로 스택을 쌓는 것부터 막는다.
+    // 스택 상태를 다시 가리키는 설정은 TriggerStack과 같은 규칙으로 제외해 무한 재귀를 막는다.
+    // null 판정은 패턴(is not null)이 아니라 Unity의 == 오버로드를 쓴다 - 에셋이 삭제돼 참조가
+    // 끊기면 패턴 매칭은 "null 아님"으로 보고 그대로 역참조하기 때문이다.
+    public override bool IsCrowdControl =>
+        _triggeredStatus != null &&
+        _triggeredStatus is not StackingStatusEffectSO &&
+        _triggeredStatus.IsCrowdControl;
 }
