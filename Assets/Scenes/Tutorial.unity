@@ -1381,6 +1381,7 @@ MonoBehaviour:
   _cycleManager: {fileID: 1632594319}
   _rangeIndicator: {fileID: 725960323}
   _buffRangeIndicator: {fileID: 1824245504}
+  _babyDragonBuffSystem: {fileID: 0}
   _penaltyMitigationTerrains: 
   _warningWindow: {fileID: 0}
   _iceUnlockableTerrain: 2
@@ -3825,6 +3826,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1514828930761917756, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1521450988358325637, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -5850,6 +5855,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6121953552163490696, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6121953552163490696, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -6521,6 +6530,26 @@ PrefabInstance:
       propertyPath: _buildingPlacementController
       value: 
       objectReference: {fileID: 668391600}
+    - target: {fileID: 7567071150058867486, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7567071150058867486, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7567071150058867486, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7567071150058867486, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7567071150058867486, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7595388284315508270, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _conquestManager
       value: 
@@ -8007,11 +8036,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6112932530198834023, guid: 88c349cd027eb884f9e36d7bde47287c, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -18
+      value: -300
       objectReference: {fileID: 0}
     - target: {fileID: 6112932530198834023, guid: 88c349cd027eb884f9e36d7bde47287c, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -100
+      value: -15
       objectReference: {fileID: 0}
     - target: {fileID: 6112932530198834023, guid: 88c349cd027eb884f9e36d7bde47287c, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -8526,10 +8555,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc70f87391bb556438189252040bf4be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
+  _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cameraZoomAction: {fileID: 5403002573186811895, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cameraBookmarkAction: {fileID: -7252859598093481112, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cameraBookmarkSaveModifierAction: {fileID: 5692209928381186351, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _wasdSpeed: 30
   _edgeScrollSpeed: 12
   _dragSensitivity: 1
@@ -8735,8 +8764,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c96af9c411acf664a8631a55c37a886f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorkerModeController
-  _bulkModifierAction: {fileID: 6607914833914992100, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _fineModifierAction: {fileID: -7227978520168459255, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _gridMap: {fileID: 168384008}
   _mouseSelectController: {fileID: 1967201578}
   _buildingPlacementController: {fileID: 668391600}
@@ -8744,9 +8771,12 @@ MonoBehaviour:
   _cycleManager: {fileID: 1632594319}
   _uiManager: {fileID: 1677085709}
   _countOverlay: {fileID: 2063666047}
+  _landmarkManager: {fileID: 0}
   _warningWindow: {fileID: 0}
   _assignAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _bulkModifierAction: {fileID: 6607914833914992100, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _fineModifierAction: {fileID: -7227978520168459255, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _idleHighlightColor: {r: 1, g: 0, b: 0, a: 1}
   _hasRoomHighlightColor: {r: 0, g: 1, b: 0, a: 1}
   _fullHighlightColor: {r: 0, g: 1, b: 1, a: 1}
