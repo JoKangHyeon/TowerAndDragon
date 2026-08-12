@@ -774,7 +774,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7475151901225264468, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
   m_PrefabInstance: {fileID: 2046588818}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1774990905}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26941716a71269f4bb95dbd977f72da9, type: 3}
@@ -1238,7 +1238,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cc70f87391bb556438189252040bf4be, type: 3}
+  m_Script: {fileID: 11500000, guid: db3200645c162584daeae3f0b9ed9bd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   _cameraZoomAction: {fileID: 5403002573186811895, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
@@ -1250,16 +1250,16 @@ MonoBehaviour:
   _dragSensitivity: 1
   _edgeScrollEnabled: 1
   _edgeScrollThreshold: 20
-  _zoomSpeed: 9
+  _zoomSpeed: 3
   _minZoom: 3
   _maxZoom: 18
   _zoomSmoothing: 8
   _moveSmoothTime: 0.08
-  _startFocusTarget: {fileID: 653192657}
-  _boundsTilemap: {fileID: 362517319}
-  _excludedBoundsTile: {fileID: 11400000, guid: 72c049b1c04abcf41a1152ba4c5fb4cb, type: 2}
-  _boundsMarginMin: {x: 1, y: 0.5}
-  _boundsMarginMax: {x: 1, y: 1.5}
+  _startFocusTarget: {fileID: 0}
+  _boundsTilemap: {fileID: 0}
+  _excludedBoundsTile: {fileID: 0}
+  _boundsMarginMin: {x: 0, y: 0}
+  _boundsMarginMax: {x: 0, y: 0}
   _mapMin: {x: -60, y: -60}
   _mapMax: {x: 60, y: 60}
 --- !u!1 &528527939
@@ -5092,7 +5092,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6864070389072513261, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -50.00006
+      value: -50
       objectReference: {fileID: 0}
     - target: {fileID: 6874002290473965843, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
@@ -7254,7 +7254,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1460990098537314003, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
   m_PrefabInstance: {fileID: 2046588818}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1774990905}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4045de5de46a3144b38fb3fd1b08f0e, type: 3}
@@ -7265,7 +7265,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5959431859424174035, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
   m_PrefabInstance: {fileID: 2046588818}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1774990905}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fd28d963bd980384eb4d90b507c17235, type: 3}
@@ -7276,12 +7276,35 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8324432385230451432, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
   m_PrefabInstance: {fileID: 2046588818}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1774990905}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: de5e6f79a7263774d9de71d0e1ea6e72, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ConqueredChunkBorderRenderer
+--- !u!1 &1774990905 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+  m_PrefabInstance: {fileID: 2046588818}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1774990910
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1774990905}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a6d486fef4c74bc4a89e6fa244841fbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterPathMap
+  _gridMap: {fileID: 313449541}
+  _portals:
+  - {fileID: 704850242}
+  - {fileID: 704850241}
+  - {fileID: 704850244}
+  - {fileID: 704850243}
 --- !u!1001 &2046588818
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7381,7 +7404,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1774990910}
   m_SourcePrefab: {fileID: 100100000, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
 --- !u!1 &2099483113
 GameObject:
