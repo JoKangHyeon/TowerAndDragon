@@ -47,6 +47,10 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     [SerializeField]
     private UI_TowerInfoPopup _towerInfoPopup;
 
+    [Tooltip("생산건물 슬롯에 마우스를 올렸을 때 뜨는 정보 창(Popup_Factory_Info). 배치 위치는 위와 같다.")]
+    [SerializeField]
+    private UI_FactoryInfoPopup _factoryInfoPopup;
+
     [SerializeField]
     private BuildingPlacementController _buildingPlacementController;
 
@@ -409,7 +413,7 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         SoundManager.Play(SoundId.UiWindowClose);
 
         _isOpen = false;
-        HideTowerInfo();
+        HideSlotInfo();
         if (_buildingPlacementController != null)
         {
             _buildingPlacementController.CancelAll();
@@ -464,7 +468,7 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
     private void RebuildSlots(UI_BuildingSlot slotPrefab, Building[] buildings)
     {
         // 슬롯이 파괴되면 OnPointerExit가 오지 않는다 - 남아 있던 팝업이 떠 있는 채로 굳지 않도록 먼저 닫는다.
-        HideTowerInfo();
+        HideSlotInfo();
 
         foreach (UI_BuildingSlot slot in _spawnedSlots)
         {
@@ -522,36 +526,45 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         return _researchManager.IsTowerUnlocked(tower.Data);
     }
 
-    // Show tower details only for tower slots.
-    // 슬롯 호버 - 타워 슬롯일 때만 정보 창을 그 슬롯 오른쪽에 띄운다.
-    // 생산건물·일반건물 슬롯도 같은 UI_BuildingSlot이라 여기서 걸러낸다.
+    // 슬롯 호버 - 건물 종류에 맞는 정보 창을 그 슬롯 오른쪽에 띄운다.
+    // 세 카테고리가 같은 UI_BuildingSlot을 쓰므로 어떤 건물인지는 여기서 가른다
+    // (정보 창이 없는 종류는 아무것도 띄우지 않는다).
     private void HandleSlotHoverChanged(UI_BuildingSlot slot, bool isHovered)
     {
-        if (_towerInfoPopup == null || slot == null)
+        // 두 창이 동시에 뜨지 않도록 항상 먼저 정리한다 - 타워에서 생산건물로 바로 옮겨가는 경우가 있다.
+        HideSlotInfo();
+
+        if (!isHovered || slot == null)
         {
             return;
         }
 
-        if (!isHovered)
+        if (slot.Prefab is Tower tower && tower.Data != null)
         {
-            HideTowerInfo();
+            if (_towerInfoPopup != null)
+            {
+                _towerInfoPopup.Show(tower.Data, (RectTransform)slot.transform);
+            }
+
             return;
         }
 
-        if (slot.Prefab is not Tower tower || tower.Data == null)
+        if (slot.Prefab is Factory factory && _factoryInfoPopup != null)
         {
-            HideTowerInfo();
-            return;
+            _factoryInfoPopup.Show(factory, (RectTransform)slot.transform);
         }
-
-        _towerInfoPopup.Show(tower.Data, (RectTransform)slot.transform);
     }
 
-    private void HideTowerInfo()
+    private void HideSlotInfo()
     {
         if (_towerInfoPopup != null)
         {
             _towerInfoPopup.Hide();
+        }
+
+        if (_factoryInfoPopup != null)
+        {
+            _factoryInfoPopup.Hide();
         }
     }
 
