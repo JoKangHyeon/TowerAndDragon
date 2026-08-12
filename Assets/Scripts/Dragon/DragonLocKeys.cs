@@ -3,6 +3,9 @@
 public static class DragonLocKeys
 {
     public const string UPGRADE_BUTTON = "dragon_upgrade_button";
+
+    // 슬롯 뷰의 랭크 뱃지("Lv {0}/{1}") - 랭크가 2 이상인 슬롯에만 표시한다.
+    public const string RANK_BADGE = "dragon_rank_badge";
     public const string UNKNOWN_RESOURCE = "dragon_unknown_resource";
     public const string RESOURCE_COST = "dragon_resource_cost";
 

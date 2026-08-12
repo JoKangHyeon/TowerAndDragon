@@ -68,7 +68,7 @@ public class UI_SkillIndicator : MonoBehaviour
         {
             if (_skillCooltimeFillImage != null)
             {
-                _skillCooltimeFillImage.fillAmount = 1f;
+                _skillCooltimeFillImage.fillAmount = _skill.CooltimeRatio;
             }
 
             if (_button != null)

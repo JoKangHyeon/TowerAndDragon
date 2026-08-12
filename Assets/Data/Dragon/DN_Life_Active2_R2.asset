@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5c0587c79a138d49bdefb422ba99a66, type: 3}
+  m_Name: DN_Life_Active2_R2
+  m_EditorClassIdentifier: Assembly-CSharp::DragonSkillNodeData
+  _nodeId: dragon_life_active2_r2
+  _nameLocKey: dragon_node_life_active2_name
+  _descriptionLocKey: dragon_node_life_active2_desc
+  _prerequisites:
+  - {fileID: 11400000, guid: e07f7cd927f7f6044a3d5ebacd18b022, type: 2}
+  _resourceCost:
+  - Type: 128
+    Amount: 13
+  _gates:
+  - {fileID: 11400000, guid: 0d81edee0251769428ba4b7aa654113b, type: 2}
+  _attribute: 4
+  _kind: 2
+  _rank: 2
+  _maxRank: 2
+  _effects:
+  - {fileID: 11400000, guid: bfef095736461c84092e355a37aaa01a, type: 2}

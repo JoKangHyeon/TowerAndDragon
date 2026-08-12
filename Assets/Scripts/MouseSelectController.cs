@@ -48,6 +48,9 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private RangeIndicator _buffRangeIndicator;
 
+    [SerializeField]
+    private BabyDragonBuffSystem _babyDragonBuffSystem;
+
     private Camera _cam;
     private bool _hasResolvedTowerStatMultiplierComposite;
     private ComponentPool<SpriteRenderer> _selectionHighlightPool;
@@ -572,12 +575,22 @@ public class MouseSelectController : MonoBehaviour
         }
 
         if (_selectedBuildingRef is BabyDragonTower babyDragon &&
-            babyDragon.DragonData != null &&
-            babyDragon.DragonData.BuffRadius > 0f)
+            babyDragon.DragonData != null)
         {
+            _babyDragonBuffSystem ??= Object.FindFirstObjectByType<BabyDragonBuffSystem>();
+            float radius = _babyDragonBuffSystem != null
+                ? _babyDragonBuffSystem.GetEffectiveBuffRadius(babyDragon)
+                : babyDragon.DragonData.BuffRadius;
+
+            if (radius <= 0f)
+            {
+                _buffRangeIndicator.Hide();
+                return;
+            }
+
             ShowBuffRange(
                 center,
-                babyDragon.DragonData.BuffRadius);
+                radius);
             return;
         }
 

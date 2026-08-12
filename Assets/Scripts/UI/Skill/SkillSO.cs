@@ -14,6 +14,10 @@ public class SkillSO:ScriptableObject
     [Header("체력비례 스킬 수치 - 현재 체력 기준 데미지")]
     [Range(0f, 1f)]
     public float DamagePercentOfCurrentHealth;
+
+    [Tooltip("현재 체력 비례가 아닌 고정 피해량(메테오 등). 0이면 사용하지 않는다.")]
+    [Min(0f)]
+    public float FlatDamage;
     [Tooltip("광역 스킬의 적용 반경.")]
     public float AreaRadius;
     [Tooltip("타겟팅 시 인식할 레이어 - 보통 Enemy 레이어.")]
@@ -26,6 +30,10 @@ public class SkillSO:ScriptableObject
     [Header("용 스킬트리 액티브 - 회복형 수치")]
     [Tooltip("발동 시 성에 즉시 회복시킬 체력량. 회복형이 아닌 스킬은 사용하지 않는다.")]
     public float HealAmount;
+
+    [Header("방벽 설치 스킬 전용")]
+    [Tooltip("설치될 방벽 프리팹 (StoneBarricade 컴포넌트 포함)")]
+    public GameObject BarricadePrefab;
 
     public Skill GetSkill()
     {
@@ -45,6 +53,8 @@ public class SkillSO:ScriptableObject
                 return new RepairTowersSkill(this);
             case SkillType.HEAL_CASTLE:
                 return new HealCastleSkill(this);
+            case SkillType.METEOR_BARRICADE:
+                return new MeteorBarricadeSkill(this);
             default:
                 return null;
         }

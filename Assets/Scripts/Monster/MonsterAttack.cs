@@ -13,10 +13,12 @@ public class MonsterAttack : MonoBehaviour
     [SerializeField] private Transform _firePoint;
 
     private MonsterData _data;
+    private BaseMonster _owner;
     private AttackSO _attack;
     private MonsterTargetType _enRouteTargetTypes;
     private MonsterMovement _movement;
     private IMonsterTarget _currentTarget;
+    private Collider2D _currentTargetCollider;
     private Castle _finalTarget;
     private ResolvedEnemyStatModifier _attackPowerModifier;
     private Animator _animator;
@@ -69,6 +71,7 @@ public class MonsterAttack : MonoBehaviour
         _animator= animator; 
 
         _data = data;
+        _owner = GetComponent<BaseMonster>();
         _attack = data.Attack;
         _enRouteTargetTypes = data.EnRouteTargetTypes;
         _movement = movement;
@@ -82,7 +85,10 @@ public class MonsterAttack : MonoBehaviour
 
     private void Update()
     {
-        if (!_isInitialized || !_isAutoAttackEnabled)
+        if (!_isInitialized ||
+            !_isAutoAttackEnabled ||
+            _owner == null ||
+            !_owner.CanAct)
         {
             return;
         }
@@ -99,7 +105,7 @@ public class MonsterAttack : MonoBehaviour
     private void UpdateEnRouteAttack()
     {
         if (_enRouteTargetTypes == MonsterTargetType.None ||
-        _movement == null)
+            _movement == null)
         {
             return;
         }
@@ -132,9 +138,15 @@ public class MonsterAttack : MonoBehaviour
 
         if (_currentTarget.IsDead ||
             _currentTarget.TargetTransform == null ||
-            !CanAttackTargetType(_currentTarget.TargetType))
+            !CanAttackTarget(_currentTarget))
         {
             return false;
+        }
+
+        if (_currentTargetCollider != null)
+        {
+            Vector3 closest = _currentTargetCollider.ClosestPoint(transform.position);
+            return (closest - transform.position).sqrMagnitude <= Range * Range;
         }
 
         return GetSqrDistance(_currentTarget.TargetTransform.position) <= Range * Range;
@@ -156,12 +168,13 @@ public class MonsterAttack : MonoBehaviour
             if (target == null ||
                 target.IsDead ||
                 target.TargetTransform == null ||
-                !CanAttackTargetType(target.TargetType))
+                !CanAttackTarget(target))
             {
                 continue;
             }
 
-            float sqrDistance = GetSqrDistance(target.TargetTransform.position);
+            Vector3 closestPoint = candidate.ClosestPoint(transform.position);
+            float sqrDistance = (closestPoint - transform.position).sqrMagnitude;
             if (sqrDistance >= closestSqrDistance)
             {
                 continue;
@@ -174,9 +187,15 @@ public class MonsterAttack : MonoBehaviour
         return closestTarget;
     }
 
-    private bool CanAttackTargetType(MonsterTargetType targetType)
+    private bool CanAttackTarget(IMonsterTarget target)
     {
-        return (_enRouteTargetTypes & targetType) != MonsterTargetType.None;
+        // 방벽(StoneBarricade)은 몬스터의 타겟 설정(EnRouteTargetTypes)과 무관하게
+        // 길을 물리적으로 가로막고 있으므로 무조건 공격해서 뚫고 지나가도록 합니다.
+        if (target is StoneBarricade)
+        {
+            return true;
+        }
+        return (_enRouteTargetTypes & target.TargetType) != MonsterTargetType.None;
     }
 
     private float GetSqrDistance(Vector3 targetPosition)
@@ -192,12 +211,14 @@ public class MonsterAttack : MonoBehaviour
         }
 
         _currentTarget = target;
+        _currentTargetCollider = target.TargetObject.GetComponentInChildren<Collider2D>();
         _movement.Stop();
     }
 
     private void ClearCurrentTarget()
     {
         _currentTarget = null;
+        _currentTargetCollider = null;
         _movement.Begin();
     }
 
@@ -208,6 +229,11 @@ public class MonsterAttack : MonoBehaviour
     /// </summary>
     private void Fire(IAttackTarget target)
     {
+        if (_owner == null || !_owner.CanAct)
+        {
+            return;
+        }
+
         AttackContext context = new AttackContext(
             gameObject,
             _attackPowerModifier,
@@ -282,7 +308,10 @@ public class MonsterAttack : MonoBehaviour
     // 범위 만큼 폭발
     public void ExecuteBlast(float radius)
     {
-        if (!_isInitialized || radius <= 0)
+        if (!_isInitialized || 
+            radius <= 0 ||
+            _owner == null ||
+            !_owner.CanAct)
         {
             return;
         }
@@ -303,7 +332,7 @@ public class MonsterAttack : MonoBehaviour
             IMonsterTarget target = candidate.GetComponentInParent<IMonsterTarget>();
 
 
-            if (target == null || target.IsDead || !CanAttackTargetType(target.TargetType) || !hitTargets.Add(target))
+            if (target == null || target.IsDead || !CanAttackTarget(target) || !hitTargets.Add(target))
             {
                 continue;
             }

@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5c0587c79a138d49bdefb422ba99a66, type: 3}
+  m_Name: DN_Ice_Active2_R2
+  m_EditorClassIdentifier: Assembly-CSharp::DragonSkillNodeData
+  _nodeId: dragon_ice_active2_r2
+  _nameLocKey: dragon_node_ice_active2_name
+  _descriptionLocKey: dragon_node_ice_active2_desc
+  _prerequisites:
+  - {fileID: 11400000, guid: a77c45aa0d6b8f541b75a63db4de589f, type: 2}
+  _resourceCost:
+  - Type: 2048
+    Amount: 13
+  - Type: 16
+    Amount: 5
+  _gates:
+  - {fileID: 11400000, guid: 97b9ba75a21651d4582db43e138c6ca1, type: 2}
+  _attribute: 0
+  _kind: 2
+  _rank: 2
+  _maxRank: 2
+  _effects:
+  - {fileID: 11400000, guid: 7ae977344ff7c5d458f89903bb210db9, type: 2}

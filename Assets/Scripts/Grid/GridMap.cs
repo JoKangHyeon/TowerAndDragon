@@ -45,6 +45,11 @@ public class GridMap : MonoBehaviour
     // null 이면 해제 없음 (fail-closed) 미배선 씬은 기존 도작 그대로
     public IConstructionOverrideQuery ConstructionOverrideQuery {get; set;}
 
+    // 몬스터 진격 경로 조회 - MonsterPathMap이 OnEnable에 자신을 등록한다.
+    // null이면 임시 장애물(방벽)을 어디에도 세울 수 없다(fail-closed) - 경로를 모르는 채
+    // 아무데나 세우게 두면 "길을 막는다"는 전제가 무너지기 때문(봉인석 조회원과 같은 방향).
+    public IMonsterPathQuery MonsterPathQuery { get; set; }
+
     // 전체 맵
     private Dictionary<Vector3Int, GridCell> _cells = new();
 
@@ -821,15 +826,15 @@ public class GridMap : MonoBehaviour
         }
     }
 
-    public void ConstructBuilding(Building prefab, Vector3Int anchor, int rotationSteps)
+    public bool ConstructBuilding(Building prefab, Vector3Int anchor, int rotationSteps)
     {
         if (prefab == null)
-            return;
+            return false;
 
         FootprintShape rotatedShape = prefab.BaseFootprintShape.Rotated(rotationSteps);
 
-        if (!TryGetFootprint(anchor, rotatedShape, out List<GridCell> footprint))
-            return;
+        if (!TryGetFootprint(anchor, rotatedShape, prefab, null, out List<GridCell> footprint))
+            return false;
 
         Vector3 baseOffset = prefab.transform.localPosition;
         Vector3 baseScale = prefab.transform.localScale;
@@ -857,6 +862,7 @@ public class GridMap : MonoBehaviour
 
         LastAddedBuilding = building;
         OnBuildingAdded?.Invoke(building);
+        return true;
     }
 
     // 회전 스텝에 따라 가로/세로 축의 짝홀이 서로 바뀌면서 생기는 어긋남(FootprintShape.ParityMismatch 차이)을
@@ -918,14 +924,27 @@ public class GridMap : MonoBehaviour
     }
 
     public bool TryGetFootprint(Vector3Int anchor, FootprintShape shape, out List<GridCell> footprint) =>
-        TryGetFootprint(anchor, shape, null, out footprint);
+        TryGetFootprint(anchor, shape, null, null, out footprint);
 
     public bool TryGetFootprint(Vector3Int anchor, FootprintShape shape, Building ignoreBuilding, out List<GridCell> footprint)
+        => TryGetFootprint(anchor, shape, ignoreBuilding, ignoreBuilding, out footprint);
+
+    private bool TryGetFootprint(
+        Vector3Int anchor,
+        FootprintShape shape,
+        Building candidateBuilding,
+        Building ignoreBuilding,
+        out List<GridCell> footprint)
     {
         footprint = new List<GridCell>();
-        foreach (Vector3Int coord in GetFootprintCoords(anchor, shape))
+        List<Vector3Int> footprintCoords = GetFootprintCoords(anchor, shape);
+
+        if (!CanConstructBuildingFootprint(footprintCoords, candidateBuilding, ignoreBuilding))
+            return false;
+
+        foreach (Vector3Int coord in footprintCoords)
         {
-            if (!CanConstructBuilding(coord, ignoreBuilding) || !_cells.TryGetValue(coord, out GridCell cell))
+            if (!_cells.TryGetValue(coord, out GridCell cell))
                 return false;
 
             footprint.Add(cell);
@@ -965,6 +984,69 @@ public class GridMap : MonoBehaviour
         foreach (Vector3Int coord in footprint)
         {
             if (!CanConstructBuilding(coord, ignoreBuilding))
+                return false;
+        }
+
+        return true;
+    }
+
+    // 전투 중 스킬로 설치되는 임시 장애물(암석 액티브의 방벽) 전용 판정.
+    //
+    // 일반 건설 판정(CanConstructBuildingFootprint)을 쓰면 안 된다 - 그쪽은 "지형이 건설 가능" +
+    // "청크가 점령 완료"를 요구하는데, 방벽은 정의상 몬스터가 지나오는 길목에 세우는 물건이라
+    // 그 두 조건이 거의 항상 거짓이다(길·미점령 지역). 실제로 그 판정을 쓰던 동안에는 메테오의
+    // 피해만 들어가고 방벽은 한 번도 설치되지 않았다.
+    //
+    // 원하는 지점 근처에서 실제로 방벽을 세울 수 있는 칸을 찾아 준다.
+    //
+    // 경로는 스플라인 한 줄을 구운 것이라 폭이 1칸뿐인데, 화면에 보이는 길은 그보다 넓고
+    // 플레이어는 길이 아니라 몬스터를 보고 조준한다 - 중심선을 정확히 찍으라고 요구하면
+    // 사실상 쓸 수 없는 스킬이 된다. 그래서 가까운 순서로 훑어 경로 칸으로 스냅시킨다.
+    // 스냅 대상이 CanPlaceTemporaryObstacle를 통과한 칸이므로, 결과는 반드시 경로 위다
+    // (경로를 넓히는 방식은 길 옆에 세워져 아무것도 막지 못하는 경우가 생겨 택하지 않았다).
+    public bool TryResolveTemporaryObstacleAnchor(
+        Vector3Int desired, FootprintShape shape, int maxSnapDistance, out Vector3Int anchor)
+    {
+        for (int distance = 0; distance <= maxSnapDistance; distance++)
+        {
+            for (int offsetX = -distance; offsetX <= distance; offsetX++)
+            {
+                for (int offsetY = -distance; offsetY <= distance; offsetY++)
+                {
+                    // 이미 더 가까운 거리에서 검사한 안쪽은 건너뛰고 이번 링의 테두리만 본다.
+                    if (Mathf.Max(Mathf.Abs(offsetX), Mathf.Abs(offsetY)) != distance)
+                        continue;
+
+                    var candidate = new Vector3Int(desired.x + offsetX, desired.y + offsetY, desired.z);
+
+                    if (CanPlaceTemporaryObstacle(candidate, shape))
+                    {
+                        anchor = candidate;
+                        return true;
+                    }
+                }
+            }
+        }
+
+        anchor = desired;
+        return false;
+    }
+
+    // 대신 성(Castle)이 RegisterFootprint로 우회할 때와 같은 최소 조건에, 방벽 고유의 조건인
+    // "몬스터 진격 경로 위일 것"을 더한다 - 길을 막는 물건이므로 길 밖에 세우는 건 의미가 없다.
+    public bool CanPlaceTemporaryObstacle(Vector3Int anchor, FootprintShape shape)
+    {
+        // 경로를 모르면 세우지 않는다(fail-closed) - 조회원이 없다고 아무데나 허용하면
+        // 배선을 빠뜨린 씬에서 조용히 "어디에나 설치 가능"으로 되돌아간다.
+        if (MonsterPathQuery == null)
+            return false;
+
+        foreach (Vector3Int coord in GetFootprintCoords(anchor, shape))
+        {
+            if (!_cells.TryGetValue(coord, out GridCell cell) || cell.HasBuilding)
+                return false;
+
+            if (!MonsterPathQuery.IsOnMonsterPath(coord))
                 return false;
         }
 
@@ -1024,11 +1106,38 @@ public class GridMap : MonoBehaviour
 
     // 호출자가 이미 footprint 좌표를 계산해 둔 경우, 재계산 없이 그 결과를 그대로 검사한다.
     public bool CanConstructBuildingFootprint(List<Vector3Int> footprint, Building building, Building ignoreBuilding) =>
-        building is Factory factory
+        building is BabyDragonTower
+            ? CanConstructBabyDragonFootprint(footprint, ignoreBuilding)
+            : building is Factory factory
             ? CanConstructResourceFootprint(footprint, factory.RequiredResourceNode, ignoreBuilding)
             : building is SealStone
                 ? CanConstructSealStoneFootprint(footprint, ignoreBuilding)
                 : CanConstructFootPrint(footprint, ignoreBuilding);
+
+    // 새끼용은 비행 개체이므로 지형의 일반 건설 가능 여부를 무시한다.
+    // 다만 맵 밖 좌표, 다른 건물 점유, 미점령 청크는 그대로 제한해 배치 규칙의 안전장치는 유지한다.
+    private bool CanConstructBabyDragonFootprint(List<Vector3Int> footprint, Building ignoreBuilding)
+    {
+        if (MonsterPathQuery == null)
+            return false;
+
+        foreach (Vector3Int coord in footprint)
+        {
+            if (!_cells.TryGetValue(coord, out GridCell cell))
+                return false;
+
+            if (cell.ExistTypeOnCell != ExistTypeOnCell.None && cell.OccupantBuilding != ignoreBuilding)
+                return false;
+
+            if (!IsChunkConquered(coord))
+                return false;
+
+            if (MonsterPathQuery.IsOnMonsterPath(coord))
+                return false;
+        }
+
+        return true;
+    }
 
     // 봉인석 전용 배치 판정 - CanConstructResourceFootprint와 동일한 구조(기본 풋프린트 게이트 위에
     // 건물별 추가 조건을 얹는다). 포탈 봉인 영역 소속 + 아직 그 포탈에 봉인석이 없음 + 연구 해금을 모두 요구한다.
