@@ -8,6 +8,8 @@ using UnityEngine.InputSystem;
 /// 게임 재생 속도(일시정지/배속)의 유일한 소유자. Time.timeScale을 이 스크립트에서만 바꾼다.
 /// - Speed_setting UI(일시정지/재생/배속 버튼)가 이 매니저를 호출한다.
 /// - GameManager의 게임오버/승리 이벤트를 받아 시간을 완전히 멈춘다.
+/// - 창이 열려 있는 동안의 정지(AddWindowPause/RemoveWindowPause)는 플레이어가 건 일시정지와
+///   별개로 관리한다. 창을 닫아도 플레이어가 걸어 둔 정지는 그대로 남는다.
 /// (싱글톤 아님 - SerializeField 주입 관례. GameManager와 같은 오브젝트에 형제 컴포넌트로 둔다.)
 /// </summary>
 public class GameSpeedManager : MonoBehaviour
@@ -38,10 +40,18 @@ public class GameSpeedManager : MonoBehaviour
     private bool _isSpeedLocked;
     private bool _isTimeStopped;
 
+    // 창(설정 창 등)이 열려 있는 동안 걸리는 정지. 플레이어가 직접 건 _isPaused와 반드시 분리해야
+    // 한다 - 밤에 일시정지해 둔 채 설정 창을 열었다 닫았다고 게임이 재개되면 안 된다.
+    // 창이 겹쳐 열릴 수 있어(설정 창 → 슬롯 창) 불리언이 아니라 개수로 센다.
+    private int _windowPauseCount;
+
     public bool IsPaused => _isPaused;
     public bool IsSpeedLocked => _isSpeedLocked;
     public bool IsFastForward => _fastIndex >= 0;
     public float CurrentScale => IsFastForward ? _fastScales[_fastIndex] : NORMAL_SCALE;
+
+    /// <summary>창 때문에 멈춰 있는가. 플레이어가 건 일시정지(IsPaused)와는 별개다.</summary>
+    public bool IsWindowPaused => _windowPauseCount > 0;
 
     // 배속 버튼이 꺼져 있을 때(x1) 라벨에 보여줄 "다음에 진입할" 배율. 배속 버튼 라벨은 항상
     // 순환 배열의 첫 배율을 정적으로 보여주는 게 아니라, 현재 진행 중이면 그 배율을, 아니면
@@ -54,7 +64,9 @@ public class GameSpeedManager : MonoBehaviour
     private void Awake()
     {
         // 플레이모드 재진입(도메인/씬 리로드 비활성) 시 이전 세션의 timeScale이 남아있을 수 있어 초기화한다.
-        Time.timeScale = NORMAL_SCALE;
+        // 창의 OnEnable이 이 Awake보다 먼저 돌아 창 정지를 걸어 뒀을 수 있으므로 그것까지 반영한다
+        // (여기서 SpeedChanged를 쏘지 않도록 Apply가 아니라 ApplyTimeScale을 쓴다).
+        ApplyTimeScale();
     }
 
     private void OnEnable()
@@ -97,6 +109,13 @@ public class GameSpeedManager : MonoBehaviour
     private void Update()
     {
         if (_togglePauseAction == null || _isSpeedLocked)
+        {
+            return;
+        }
+
+        // 창이 화면을 덮고 있는 동안에는 단축키로 정지 상태를 바꾸지 못하게 한다. 결과가 창에 가려
+        // 보이지 않는데다, 창을 닫은 뒤 자기도 모르게 정지/재개돼 있는 상황이 된다.
+        if (IsWindowPaused)
         {
             return;
         }
@@ -157,6 +176,30 @@ public class GameSpeedManager : MonoBehaviour
         Apply();
     }
 
+    /// <summary>
+    /// 창이 열려 있는 동안 시간을 멈춘다. 플레이어가 건 일시정지와 별개로 쌓이므로,
+    /// 창을 닫을 때 <see cref="RemoveWindowPause"/>로 정확히 한 번 되돌리면 원래 속도로 돌아간다.
+    /// 짝을 놓치지 않도록 창의 Open/Close가 아니라 OnEnable/OnDisable에 거는 것을 권장한다.
+    /// </summary>
+    public void AddWindowPause()
+    {
+        _windowPauseCount++;
+        Apply();
+    }
+
+    /// <summary><see cref="AddWindowPause"/>를 되돌린다.</summary>
+    public void RemoveWindowPause()
+    {
+        if (!IsWindowPaused)
+        {
+            Debug.LogError("[GameSpeedManager] 창 정지 해제가 설정보다 많이 호출되었습니다.", this);
+            return;
+        }
+
+        _windowPauseCount--;
+        Apply();
+    }
+
     /// <summary>단축키(Space) 전용 - 일시정지 상태를 토글한다.</summary>
     public void TogglePause()
     {
@@ -212,7 +255,13 @@ public class GameSpeedManager : MonoBehaviour
 
     private void Apply()
     {
-        Time.timeScale = (_isTimeStopped || _isPaused) ? PAUSED_SCALE : CurrentScale;
+        ApplyTimeScale();
         SpeedChanged?.Invoke();
+    }
+
+    // timeScale만 반영한다. 아직 이벤트를 쏘면 안 되는 시점(Awake)에서도 쓸 수 있도록 분리했다.
+    private void ApplyTimeScale()
+    {
+        Time.timeScale = (_isTimeStopped || _isPaused || IsWindowPaused) ? PAUSED_SCALE : CurrentScale;
     }
 }

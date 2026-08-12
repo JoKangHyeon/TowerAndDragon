@@ -178,8 +178,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c96af9c411acf664a8631a55c37a886f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorkerModeController
-  _bulkModifierAction: {fileID: 6607914833914992100, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _fineModifierAction: {fileID: -7227978520168459255, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _gridMap: {fileID: 313449541}
   _mouseSelectController: {fileID: 250167905}
   _buildingPlacementController: {fileID: 1692054028}
@@ -191,6 +189,8 @@ MonoBehaviour:
   _warningWindow: {fileID: 944163941}
   _assignAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _bulkModifierAction: {fileID: 6607914833914992100, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _fineModifierAction: {fileID: -7227978520168459255, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _idleHighlightColor: {r: 1, g: 0, b: 0, a: 1}
   _hasRoomHighlightColor: {r: 0, g: 1, b: 0, a: 1}
   _fullHighlightColor: {r: 0, g: 1, b: 1, a: 1}
@@ -1241,10 +1241,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc70f87391bb556438189252040bf4be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
+  _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cameraZoomAction: {fileID: 5403002573186811895, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cameraBookmarkAction: {fileID: -7252859598093481112, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cameraBookmarkSaveModifierAction: {fileID: 5692209928381186351, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _wasdSpeed: 12
   _edgeScrollSpeed: 12
   _dragSensitivity: 1
@@ -7193,7 +7193,7 @@ MonoBehaviour:
   _populationManager: {fileID: 914589617}
   _cycleManager: {fileID: 914589611}
   _landmarkRoot: {fileID: 0}
-  _markerPrefab: {fileID: 0}
+  _markerPrefab: {fileID: 5463914034256215830, guid: f7e42610e2099f84981c81348c9b2437, type: 3}
   _markerYOffset: 1
   OnLandmarkClaimed:
     m_PersistentCalls:

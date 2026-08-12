@@ -86,6 +86,12 @@ public static class SaveRestore
                     operation.LandmarkId,
                     operation.AssignedPopulation);
             }
+
+            // 8번의 영토 복원이 이미 같은 갱신을 유발하지만, GridMap은 점령지 집합이 실제로
+            // 바뀔 때만 이벤트를 쏜다. 복원 전후 점령지가 같은 경우(진행 중인 게임에 같은 슬롯을
+            // 다시 불러오는 등) 갱신이 한 번도 안 돌아 이미 수령한 랜드마크가 맵에 남으므로,
+            // 여기서 한 번 명시적으로 훑는다.
+            context.LandmarkManager.RefreshConquestState();
         }
 
         // TODO(범위 밖): 여기에 건물 배치 복원이 들어간다. MapStateDto.Buildings 주석 참고.

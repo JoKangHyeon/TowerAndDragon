@@ -9,6 +9,8 @@ using UnityEngine.UI;
 /// SettingsService에 연결한다. 값의 저장·적용은 전부 서비스가 하고, 이 창은 표시와 입력만 맡는다.
 /// 창 루트(전면 Image)에 부착해 바깥 클릭 닫기와 IExclusiveMode(UIManager.OpenExclusive) 조정을
 /// 겸한다 — UI_ResearchWindow와 같은 구조.
+/// 열려 있는 동안에는 게임이 멈춘다(GameSpeedManager의 창 정지). 아무 창도 열려 있지 않을 때
+/// Esc로 이 창을 여는 것은 UIManager가 맡는다 — 닫혀 있는 창은 스스로 입력을 받을 수 없다.
 /// 고정 라벨(섹션 제목 등)은 코드가 아니라 LocalizedText 컴포넌트로 번역한다.
 /// </summary>
 public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
@@ -161,6 +163,8 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
             _closeAction.action.performed += OnCloseActionPerformed;
         }
 
+        PauseGameWhileOpen();
+
         // 구독 직후 현재 값을 한 번 반영해 초기 발화를 놓쳐도 안전하게 한다.
         Render();
     }
@@ -173,7 +177,35 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         {
             _closeAction.action.performed -= OnCloseActionPerformed;
         }
+
+        ResumeGameOnClose();
     }
+
+    // 창이 열려 있는 동안 게임을 멈춘다. 여닫는 경로가 여럿이라(Esc·닫기 버튼·바깥 클릭·
+    // 다른 배타 모드 열기·슬롯 창으로 전환) Open/Close가 아니라 짝이 보장되는 OnEnable/OnDisable에 건다.
+    //
+    // GameSpeedManager의 창 정지는 플레이어가 건 일시정지와 별개로 쌓이므로, 밤에 정지해 둔 채로
+    // 설정 창을 열었다 닫아도 정지 상태가 그대로 남는다.
+    private void PauseGameWhileOpen()
+    {
+        GameSpeedManager gameSpeed = GameSpeed;
+        if (gameSpeed != null)
+        {
+            gameSpeed.AddWindowPause();
+        }
+    }
+
+    private void ResumeGameOnClose()
+    {
+        GameSpeedManager gameSpeed = GameSpeed;
+        if (gameSpeed != null)
+        {
+            gameSpeed.RemoveWindowPause();
+        }
+    }
+
+    // 타이틀 화면 인스턴스에는 UIManager도 게임도 없어 null이다 - 그쪽에서는 멈출 것이 없다.
+    private GameSpeedManager GameSpeed => _uiManager != null ? _uiManager.GameSpeed : null;
 
     public void OnCloseActionPerformed(InputAction.CallbackContext context)
     {

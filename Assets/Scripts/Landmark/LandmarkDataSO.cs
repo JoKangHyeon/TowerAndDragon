@@ -31,6 +31,9 @@ public sealed class LandmarkDataSO : ScriptableObject
     [Tooltip("점령 완료 시 한 번만 지급되는 보상.")]
     [SerializeField] private LandmarkRewardSO[] _conquestRewards;
 
+    [Tooltip("보상을 수령한 뒤 맵에서 사라질지. 용알 둥지처럼 1회성 보상만 있는 랜드마크에 켠다.")]
+    [SerializeField] private bool _despawnsOnClaim;
+
     [Tooltip("인구가 배치되어 있는 동안에만 적용되는 지속 효과.")]
     [SerializeField] private LandmarkEffectSO[] _operationEffects;
 
@@ -47,6 +50,10 @@ public sealed class LandmarkDataSO : ScriptableObject
 
     public IReadOnlyList<LandmarkEffectSO> OperationEffects =>
         _operationEffects ?? System.Array.Empty<LandmarkEffectSO>();
+
+    // 정원 0에서 추론하지 않는다 - "가동할 수 없다"와 "점령하면 사라진다"는 별개 개념이라,
+    // 추론해 버리면 보상 전용이면서 맵에 남는 랜드마크(기념물 등)를 만들 수 없다.
+    public bool DespawnsOnClaim => _despawnsOnClaim;
 
     // 정원이 0인 랜드마크에는 인구 할당 자체를 만들지 않는다.
     public bool IsOperable => _populationCapacity > 0;

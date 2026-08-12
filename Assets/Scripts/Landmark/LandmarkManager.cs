@@ -38,7 +38,6 @@ public sealed class LandmarkManager : MonoBehaviour, ILandmarkOwnershipQuery
     [SerializeField] private float _markerYOffset = 1f;
 
     private readonly List<Landmark> _landmarks = new();
-    private readonly List<LandmarkMarker> _markers = new();
     private readonly HashSet<string> _claimedLandmarkIds = new();
 
     // 랜드마크가 새로 수령되었을 때. 연구 UI·토스트가 갱신 시점으로 쓴다.
@@ -181,19 +180,28 @@ public sealed class LandmarkManager : MonoBehaviour, ILandmarkOwnershipQuery
         LandmarkMarker marker = Instantiate(_markerPrefab, parent);
         marker.transform.localPosition = new Vector3(0f, _markerYOffset, 0f);
         marker.Bind(landmark);
-        _markers.Add(marker);
+        landmark.BindMarker(marker);
     }
 
+    // 마커를 별도 리스트가 아니라 랜드마크에서 되짚어 간다 - 소멸한 랜드마크의 마커가
+    // 리스트에 남아 파괴된 오브젝트를 Refresh하는 사고를 구조적으로 막는다(Landmark.Marker 주석 참고).
     private void RefreshMarkers()
     {
-        foreach (LandmarkMarker marker in _markers)
+        foreach (Landmark landmark in _landmarks)
         {
-            marker.Refresh();
+            if (landmark.Marker != null)
+            {
+                landmark.Marker.Refresh();
+            }
         }
     }
 
-    // 청크 상태가 바뀔 때마다 랜드마크의 점령 여부를 다시 반영하고, 새로 점령된 것을 수령한다.
-    private void RefreshConquestState()
+    /// <summary>
+    /// 청크 상태가 바뀔 때마다 랜드마크의 상태를 다시 반영하고, 새로 점령된 것을 수령한다.
+    /// 세이브 복원도 이 경로를 한 번 거쳐야 한다(SaveRestore 참고) - 복원 전후 점령지가 같으면
+    /// GridMap이 OnChunkStateChanged를 쏘지 않아 여기가 한 번도 돌지 않을 수 있다.
+    /// </summary>
+    public void RefreshConquestState()
     {
         if (!_isReady)
         {
@@ -203,17 +211,37 @@ public sealed class LandmarkManager : MonoBehaviour, ILandmarkOwnershipQuery
         foreach (Landmark landmark in _landmarks)
         {
             Chunk chunk = _gridMap.GetChunk(landmark.ChunkCoord);
-            bool isConquered = chunk != null && chunk.CurrentState == ChunkState.Conquered;
+            landmark.SetState(chunk != null ? chunk.CurrentState : ChunkState.Hidden);
 
-            landmark.SetConquered(isConquered);
-
-            if (isConquered)
+            if (landmark.IsConquered)
             {
                 TryClaim(landmark);
             }
         }
 
+        DespawnClaimedLandmarks();
         RefreshMarkers();
+    }
+
+    // 소멸 조건을 "점령했을 때"가 아니라 "수령을 마쳤을 때"로 잡으면 실시간 점령과 세이브 복원이
+    // 한 경로로 처리된다. 복원은 RestoreClaims로 수령 이력만 되살리고 TryClaim을 타지 않으므로,
+    // 점령 시점에 지우는 방식으로 짜면 불러오기 후 이미 받은 둥지가 되살아난다.
+    private void DespawnClaimedLandmarks()
+    {
+        for (int i = _landmarks.Count - 1; i >= 0; i--)
+        {
+            Landmark landmark = _landmarks[i];
+
+            if (landmark.Data == null ||
+                !landmark.Data.DespawnsOnClaim ||
+                !IsClaimed(landmark.Data))
+            {
+                continue;
+            }
+
+            _landmarks.RemoveAt(i);
+            Destroy(landmark.gameObject);
+        }
     }
 
     /// <summary>

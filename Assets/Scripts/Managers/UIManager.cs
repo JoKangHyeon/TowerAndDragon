@@ -26,6 +26,13 @@ public class UIManager : MonoBehaviour
 
     [SerializeField] private InputActionReference _babyDragonInventoryToggleAction;
 
+    [Header("Esc - 기본 창")]
+    [Tooltip("아무 창도 열려 있지 않을 때 Esc로 여는 창(보통 UI_ConfigWindow). IExclusiveMode 구현체여야 한다.")]
+    [SerializeField] private MonoBehaviour _escapeWindowBehaviour;
+
+    [Tooltip("창을 닫는 키 - 보통 Esc. 각 창이 자기를 닫으려고 구독하는 것과 같은 액션을 넣는다.")]
+    [SerializeField] private InputActionReference _escapeAction;
+
     [Serializable]
     private struct ExclusiveModeShortcut
     {
@@ -142,6 +149,23 @@ public class UIManager : MonoBehaviour
     // 직전 프레임의 열림 상태. 닫힘 전이를 잡는 데만 쓴다(_exclusiveModes와 같은 인덱스).
     private bool[] _wasExclusiveModeOpen;
 
+    private IExclusiveMode _escapeWindow;
+
+    // Esc가 눌린 프레임에 그 Esc를 이미 어떤 창이 가져갔는지 판단할 때 보는 목록.
+    // _exclusiveModes 배열만으로는 부족하다 - 연구·용·저장 슬롯 창처럼 배열에 등록되지 않은 창도
+    // 자기 Esc 구독으로 스스로 닫히기 때문이다. 그래서 캔버스(이 컴포넌트의 자식) 안의
+    // IExclusiveMode를 전부 자동으로 모으고, 캔버스 밖의 모드는 배열에서 가져와 합친다.
+    private IExclusiveMode[] _escapeBlockingWindows;
+
+    // 직전 프레임 끝에 창이 하나라도 열려 있었는지. Esc 처리에만 쓴다 - 아래 TryOpenEscapeWindow 참고.
+    private bool _wasAnyWindowOpen;
+
+    /// <summary>
+    /// 게임 속도(일시정지)의 소유자. 창이 열려 있는 동안 시간을 멈추는 데 쓴다.
+    /// GameManager를 통해 얻으므로 창마다 GameSpeedManager를 따로 배선하지 않아도 된다.
+    /// </summary>
+    public GameSpeedManager GameSpeed => _gameManager != null ? _gameManager.GameSpeedManager : null;
+
     private void Awake()
     {
         // 게임오버 창은 시작 시 항상 꺼진 상태로 보장한다(씬 체크 상태와 무관).
@@ -150,6 +174,40 @@ public class UIManager : MonoBehaviour
 
         CacheExclusiveModes();
         CacheExclusiveModeShortcuts();
+        CacheEscapeWindow();
+        CacheEscapeBlockingWindows();
+    }
+
+    private void CacheEscapeBlockingWindows()
+    {
+        var windows = new List<IExclusiveMode>(GetComponentsInChildren<IExclusiveMode>(true));
+
+        // 캔버스 밖에 있는 모드(점령·인구배치·스킬 타겟팅 등)는 자동 수집에 걸리지 않는다.
+        foreach (IExclusiveMode mode in _exclusiveModes)
+        {
+            if (!windows.Contains(mode))
+            {
+                windows.Add(mode);
+            }
+        }
+
+        _escapeBlockingWindows = windows.ToArray();
+    }
+
+    // 인스펙터에는 MonoBehaviour로 받고(유니티가 인터페이스 필드를 직렬화하지 못하므로) 여기서 캐스팅한다.
+    private void CacheEscapeWindow()
+    {
+        if (_escapeWindowBehaviour == null)
+        {
+            return;
+        }
+
+        _escapeWindow = _escapeWindowBehaviour as IExclusiveMode;
+
+        if (_escapeWindow == null)
+        {
+            Debug.LogWarning($"[UIManager] {_escapeWindowBehaviour.name}은 IExclusiveMode를 구현하지 않아 Esc 대상에서 제외됩니다.");
+        }
     }
 
     // 배타 모드 창들은 열려있는 동안 자기 오브젝트를 스스로 비활성화하는 경우가 있어
@@ -188,6 +246,48 @@ public class UIManager : MonoBehaviour
         }
 
         DetectClosedExclusiveModes();
+        TryOpenEscapeWindow();
+    }
+
+    /// <summary>
+    /// 아무 창도 열려 있지 않을 때만 Esc가 기본 창(설정)을 연다. 창이 열려 있으면 그 창이 Esc를
+    /// 자기 몫으로 쓴다(각 창이 같은 액션을 직접 구독해 스스로 닫힌다).
+    /// 직전 프레임 상태(_wasAnyWindowOpen)까지 보는 이유: InputSystem의 performed 콜백은 Update보다
+    /// 먼저 돌아서, Esc로 창을 닫은 바로 그 프레임에 여기 오면 이미 "아무것도 안 열림"으로 보인다.
+    /// 그 한 프레임을 걸러내지 않으면 Esc로 창을 닫자마자 설정 창이 대신 열린다.
+    /// </summary>
+    private void TryOpenEscapeWindow()
+    {
+        if (_escapeWindow == null || _escapeAction == null)
+        {
+            return;
+        }
+
+        if (_escapeAction.action.WasPerformedThisFrame()
+            && !IsAnyWindowOpen
+            && !_wasAnyWindowOpen
+            && CanUseShortcutByQueries(_escapeWindowBehaviour))
+        {
+            OpenExclusive(_escapeWindow);
+        }
+
+        _wasAnyWindowOpen = IsAnyWindowOpen;
+    }
+
+    private bool IsAnyWindowOpen
+    {
+        get
+        {
+            foreach (IExclusiveMode window in _escapeBlockingWindows)
+            {
+                if (window.IsOpen)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     // 열림→닫힘으로 바뀐 모드를 알린다. 어느 경로로 닫혔든(ESC·버튼·다른 모드 열기) 여기를 지난다.
@@ -333,7 +433,7 @@ public class UIManager : MonoBehaviour
         }
 
         // 이 단축키는 다른 컴포넌트와 공유하지 않는 UIManager 전용 액션이라 여기서 직접 켠다
-        // (공유 액션이면 GlobalInputBootstrap이 켜야 한다).
+        // (공유 액션이면 GlobalInputBootstrap이 켜야 한다 - _escapeAction이 그 경우다).
         if (_babyDragonInventoryToggleAction != null)
         {
             _babyDragonInventoryToggleAction.action.Enable();
