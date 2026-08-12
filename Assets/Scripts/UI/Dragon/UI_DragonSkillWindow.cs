@@ -17,6 +17,9 @@ using UnityEngine.UI;
 // OnEnable에서 트리를 빌드·갱신한다.
 public class UI_DragonSkillWindow : MonoBehaviour
 {
+    // 속성 이름표를 피해 기준선을 시작할 여유. 이름표 높이의 절반보다 크게 잡는다.
+    private const float ATTRIBUTE_LABEL_CLEARANCE = 34f;
+
     [Header("Dependencies")]
     [SerializeField] private GameManager _gameManager;
     [SerializeField] private DragonTreeManager _dragonTreeManager;
@@ -26,27 +29,35 @@ public class UI_DragonSkillWindow : MonoBehaviour
     [SerializeField] private RectTransform _content;
     [SerializeField] private UI_DragonSkillNode _nodePrefab;
     [SerializeField] private RectTransform _edgePrefab;
-    [SerializeField] private TextMeshProUGUI[] _attributeLabels = new TextMeshProUGUI[5];
+    [Tooltip("속성 이름표. 5속성만큼 런타임에 찍어 방사형 기준선 위에 놓는다.")]
+    [SerializeField] private TextMeshProUGUI _attributeLabelPrefab;
     [SerializeField] private UI_DragonSkillDetailsPanel _detailsPanel;
 
+    [Tooltip("새끼용 노드에 얹을 속성별 알 아이콘의 출처. 비워 두면 아이콘 없이 테두리로만 구분한다.")]
+    [SerializeField] private BabyDragonDataCatalog _babyDragonCatalog;
+
+    // 노드가 커지고 라벨이 노드 바깥으로 나오면서, 반지름은 "노드 지름 + 라벨"이 겹치지 않을 만큼
+    // 벌려 둔다. 줄이려면 DragonSkillNodeStyleTable의 노드 지름도 같이 줄여야 한다.
     [Header("Radii")]
-    [SerializeField] private float _radiusAttributeLabel = 92f;
+    [SerializeField] private float _radiusAttributeLabel = 135f;
     // 구 이름을 남겨 프리팹에 이미 조정돼 있던 반지름 값을 잃지 않는다
     // (슬롯 구성이 바뀌면서 Awaken→Unlock, Active/Enhance→Branch1/2로 역할이 옮겨갔다).
     [FormerlySerializedAs("_radiusAwaken")]
-    [SerializeField] private float _radiusUnlock = 156f;
-    [SerializeField] private float _radiusKin = 210f;
-    [SerializeField] private float _kinAngleOffset = 24f;
+    [SerializeField] private float _radiusUnlock = 250f;
+    [SerializeField] private float _radiusKin = 340f;
+    [Tooltip("새끼용 두 갈래를 속성 기준선 양옆으로 벌리는 각도. 속성 간격(72도)의 절반을 넘기면 옆 속성의 새끼용과 붙는다.")]
+    [SerializeField] private float _kinAngleOffset = 22f;
     [FormerlySerializedAs("_radiusActive")]
-    [SerializeField] private float _radiusBranch1 = 250f;
+    [SerializeField] private float _radiusBranch1 = 490f;
     [FormerlySerializedAs("_radiusEnhance")]
-    [SerializeField] private float _radiusBranch2 = 330f;
+    [SerializeField] private float _radiusBranch2 = 650f;
     [Tooltip("액티브 갈래와 패시브 갈래를 속성 기준선 양옆으로 벌리는 각도.")]
-    [SerializeField] private float _branchAngleOffset = 14f;
-    [SerializeField] private float _radiusUltimate = 410f;
+    [SerializeField] private float _branchAngleOffset = 15f;
+    [SerializeField] private float _radiusUltimate = 770f;
 
     [Header("Colors")]
     // 속성 색은 DragonAttributePalette가 단일 출처다(창마다 따로 지정하면 값이 어긋난다).
+    [Tooltip("아직 못 산 연결선의 바탕색. 여기에 속성 색을 옅게 섞어 갈래마다 색이 남게 한다.")]
     [SerializeField] private Color _edgeLockedColor = new Color(0.2f, 0.18f, 0.16f, 0.6f);
 
     private static readonly DragonType[] ATTRIBUTES_IN_ORDER =
@@ -183,7 +194,7 @@ public class UI_DragonSkillWindow : MonoBehaviour
             DragonType attribute = ATTRIBUTES_IN_ORDER[i];
             float baseAngle = DragonSkillTreeLayout.AttributeBaseAngle(i);
 
-            PlaceAttributeLabel(i, attribute, baseAngle);
+            PlaceAttributeLabel(attribute, baseAngle);
 
             PlaceSlot(attribute, DragonNodeKind.ActiveUnlock, baseAngle, _radiusUnlock);
             PlaceSlot(attribute, DragonNodeKind.ActiveUp1, baseAngle - _branchAngleOffset, _radiusBranch1);
@@ -194,20 +205,22 @@ public class UI_DragonSkillWindow : MonoBehaviour
             PlaceSlot(attribute, DragonNodeKind.KinTower, baseAngle - _kinAngleOffset, _radiusKin);
             PlaceSlot(attribute, DragonNodeKind.KinArea, baseAngle + _kinAngleOffset, _radiusKin);
 
-            BuildEdges(attribute);
+            BuildEdges(attribute, baseAngle);
         }
 
         _built = true;
     }
 
-    private void PlaceAttributeLabel(int index, DragonType attribute, float baseAngle)
+    // 속성 이름표는 창 프리팹에 5개를 심어 두는 대신 여기서 찍는다 - 속성이 늘거나
+    // 각도 규칙이 바뀔 때 프리팹을 손대지 않아도 된다.
+    private void PlaceAttributeLabel(DragonType attribute, float baseAngle)
     {
-        if (_attributeLabels == null || index >= _attributeLabels.Length || _attributeLabels[index] == null)
+        if (_attributeLabelPrefab == null)
         {
             return;
         }
 
-        TextMeshProUGUI label = _attributeLabels[index];
+        TextMeshProUGUI label = Instantiate(_attributeLabelPrefab, _content);
         label.text = StringTable.GetString(DragonLocKeys.AttributeLocKey(attribute));
         label.color = ColorForAttribute(attribute);
         label.rectTransform.anchoredPosition = DragonSkillTreeLayout.PositionAt(baseAngle, _radiusAttributeLabel);
@@ -225,11 +238,18 @@ public class UI_DragonSkillWindow : MonoBehaviour
         Vector2 position = DragonSkillTreeLayout.PositionAt(angle, radius);
         _slotPositions[key] = position;
         view.GetComponent<RectTransform>().anchoredPosition = position;
+
+        // 트리 중심이 (0,0)이라 좌표 자체가 "바깥쪽" 방향이다 - 노드가 라벨을 그 방향으로 밀어낸다.
+        view.ApplyLayout(kind, position);
     }
 
-    private void BuildEdges(DragonType attribute)
+    private void BuildEdges(DragonType attribute, float baseAngle)
     {
-        CreateEdge(Vector2.zero, (attribute, DragonNodeKind.ActiveUnlock), attribute);
+        // 속성 기준선은 트리 중심이 아니라 속성 이름표 바로 바깥에서 시작한다 -
+        // 중심에서 그으면 선이 이름표를 관통해 글자를 읽기 어렵다.
+        Vector2 spokeStart = DragonSkillTreeLayout.PositionAt(
+            baseAngle, _radiusAttributeLabel + ATTRIBUTE_LABEL_CLEARANCE);
+        CreateEdge(spokeStart, (attribute, DragonNodeKind.ActiveUnlock), attribute);
 
         CreateEdgeBetween(attribute, DragonNodeKind.ActiveUnlock, DragonNodeKind.ActiveUp1);
         CreateEdgeBetween(attribute, DragonNodeKind.ActiveUp1, DragonNodeKind.ActiveUp2);
@@ -332,6 +352,7 @@ public class UI_DragonSkillWindow : MonoBehaviour
                 node,
                 state,
                 ColorForAttribute(node.Attribute),
+                KinIconFor(node),
                 BuildBadgeText(entry.Key, node, state),
                 HandleNodeClicked);
         }
@@ -360,7 +381,7 @@ public class UI_DragonSkillWindow : MonoBehaviour
             // 랭크 하나라도 샀으면 그 슬롯으로 오는 선을 켠다 - 대표 노드는 "다음 랭크"라
             // 그것만 보면 1랭크를 산 슬롯의 선이 계속 꺼져 있다.
             bool lit = CountUnlockedRanks(edge.DependentSlot) > 0;
-            image.color = lit ? ColorForAttribute(edge.Attribute) : _edgeLockedColor;
+            image.color = DragonSkillNodePalette.EdgeColor(lit, ColorForAttribute(edge.Attribute), _edgeLockedColor);
         }
     }
 
@@ -418,6 +439,18 @@ public class UI_DragonSkillWindow : MonoBehaviour
         }
 
         _detailsPanel.Show(ResolveCurrentNode(_selectedSlot.Value));
+    }
+
+    // 새끼용 노드에 얹을 속성별 알 아이콘. 어미용 노드는 아이콘 없이 "속성 색으로 찬 원"으로
+    // 구분되므로 null을 준다.
+    private Sprite KinIconFor(DragonSkillNodeData node)
+    {
+        if (_babyDragonCatalog == null || !DragonSkillNodeStyleTable.For(node.Kind).IsKin)
+        {
+            return null;
+        }
+
+        return _babyDragonCatalog.TryResolve(node.Attribute, out BabyDragonData data) ? data.EggSprite : null;
     }
 
     private Color ColorForAttribute(DragonType attribute) => DragonAttributePalette.ColorOf(attribute);
