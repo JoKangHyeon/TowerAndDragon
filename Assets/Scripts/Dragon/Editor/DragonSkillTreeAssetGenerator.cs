@@ -482,7 +482,7 @@ public static class DragonSkillTreeAssetGenerator
                 so.FindProperty("DamagePercentOfCurrentHealth").floatValue = 0f;
                 so.FindProperty("FlatDamage").floatValue = METEOR_FLAT_DAMAGE;
                 so.FindProperty("AreaRadius").floatValue = METEOR_AREA_RADIUS;
-                so.FindProperty("TargetLayers").intValue = LayerMask.GetMask("Enemy");
+                so.FindProperty("TargetLayers").intValue = LayerMask.GetMask(Defines.ENEMY_LAYER_NAME);
 
                 // 이 배선이 비어 있으면 MeteorBarricadeSkill이 방벽을 아예 설치하지 못한다.
                 so.FindProperty("BarricadePrefab").objectReferenceValue =

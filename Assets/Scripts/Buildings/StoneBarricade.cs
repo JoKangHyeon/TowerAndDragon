@@ -4,6 +4,7 @@ using UnityEngine;
 public class StoneBarricade : Building, IMonsterTarget
 {
     [SerializeField] private Health _health;
+    private CycleManager _cycleManager;
 
     [Tooltip("방벽의 기본 최대체력. 용 스킬트리의 방벽 강화 배율이 여기에 곱해진다.")]
     [SerializeField] [Min(1f)] private float _baseMaxHealth = 1f;
@@ -24,6 +25,19 @@ public class StoneBarricade : Building, IMonsterTarget
         if (_health != null)
         {
             _health.Died.AddListener(HandleDie);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (_health != null)
+        {
+            _health.Died.RemoveListener(HandleDie);
+        }
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnNightEnd.RemoveListener(HandleNightEnd);
         }
     }
 
@@ -65,12 +79,20 @@ public class StoneBarricade : Building, IMonsterTarget
 
     public void RegisterAutoDestroy(CycleManager cycleManager)
     {
-        if (cycleManager != null)
+        if (_cycleManager != null)
         {
-            cycleManager.OnNightEnd.AddListener((cycle) => 
-            {
-                if (!IsDead) HandleDie();
-            });
+            _cycleManager.OnNightEnd.RemoveListener(HandleNightEnd);
+        }
+
+        _cycleManager = cycleManager;
+        _cycleManager?.OnNightEnd.AddListener(HandleNightEnd);
+    }
+
+    private void HandleNightEnd(int _)
+    {
+        if (!IsDead)
+        {
+            HandleDie();
         }
     }
 }

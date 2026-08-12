@@ -104,7 +104,8 @@ public class MonsterAttack : MonoBehaviour
 
     private void UpdateEnRouteAttack()
     {
-        if (_movement == null)
+        if (_enRouteTargetTypes == MonsterTargetType.None ||
+            _movement == null)
         {
             return;
         }

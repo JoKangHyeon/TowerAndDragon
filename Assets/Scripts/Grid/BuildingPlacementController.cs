@@ -35,6 +35,9 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private RangeIndicator _buffRangeIndicator;
 
+    [SerializeField]
+    private BabyDragonBuffSystem _babyDragonBuffSystem;
+
     [Tooltip("버프 반경 안에서 이 지형들의 지역 페널티(생산·공속·유지비)를 전부 무효화한다. 얼음의 건설 해제와는 별개 메커니즘 - 시간=사막.")]
     [SerializeField] private TerrainType[] _penaltyMitigationTerrains;
     public IReadOnlyList<TerrainType> PenaltyMitigationTerrains => _penaltyMitigationTerrains;
@@ -801,12 +804,22 @@ public class BuildingPlacementController : MonoBehaviour
         }
 
         if (building is BabyDragonTower babyDragon &&
-            babyDragon.DragonData != null &&
-            babyDragon.DragonData.BuffRadius > 0f)
+            babyDragon.DragonData != null)
         {
+            _babyDragonBuffSystem ??= Object.FindFirstObjectByType<BabyDragonBuffSystem>();
+            float radius = _babyDragonBuffSystem != null
+                ? _babyDragonBuffSystem.GetEffectiveBuffRadius(babyDragon)
+                : babyDragon.DragonData.BuffRadius;
+
+            if (radius <= 0f)
+            {
+                _buffRangeIndicator.Hide();
+                return;
+            }
+
             ShowBuffRange(
                 babyDragon.transform.position,
-                babyDragon.DragonData.BuffRadius);
+                radius);
             return;
         }
 

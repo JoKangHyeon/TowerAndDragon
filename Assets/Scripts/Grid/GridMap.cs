@@ -400,8 +400,7 @@ public class GridMap : MonoBehaviour
         new Vector3Int(chunkCoord.x * Chunk.CHUNK_SIZE, chunkCoord.y * Chunk.CHUNK_SIZE, 0);
 
     // 지형상 건설 불가 셀이라도 해제 조회원이 허용하면 건설 가능으로 취급한다
-    private bool IsCellConstructible(GridCell cell, Building building = null) =>
-        building is BabyDragonTower ||
+    private bool IsCellConstructible(GridCell cell) =>
         cell.CanConstruct ||
         (ConstructionOverrideQuery != null &&
         ConstructionOverrideQuery.IsConstructionAllowed(cell.Coord, cell.TerrainType));
@@ -414,7 +413,7 @@ public class GridMap : MonoBehaviour
         IsChunkConquered (coord);
 
     public bool CanConstructBuilding(Vector3Int coord, Building ignoreBuilding) =>
-        _cells.TryGetValue(coord, out var cell) && IsCellConstructible(cell, ignoreBuilding) &&
+        _cells.TryGetValue(coord, out var cell) && IsCellConstructible(cell) &&
         (cell.ExistTypeOnCell == ExistTypeOnCell.None || cell.OccupantBuilding == ignoreBuilding) &&
         IsChunkConquered(coord);
 

@@ -48,7 +48,7 @@ public abstract class DragonSkillEffectSO : ScriptableObject
 
     // 상태이상처럼 배율을 곱할 수 없는 (객체를 반환하는 ) 효과용 -
     // 지금 상태에서 이 효과가 발동해야 하는지만 판정
-    protected bool IsEffective(DragonType? activeAttribute) => Scale(activeAttribute) > 0f;
+    protected bool IsEffective(DragonType? activeAttribute) => Scale(activeAttribute) >= 1f;
 
     public virtual float GetTowerAttackSpeedMultiplierBonus(DragonType? activeAttribute, TowerData towerData) => 0f;
     public virtual float GetTowerDamageMultiplierBonus(DragonType? activeAttribute, TowerData towerData) => 0f;
