@@ -64,6 +64,10 @@ public sealed class TutorialTipChainController : MonoBehaviour
     private int CurrentDayNumber =>
         _cycleManager == null ? FIRST_DAY_NUMBER : _cycleManager.CurrentDayNumber;
 
+    private bool IsDay =>
+        _cycleManager == null ||
+        _cycleManager.CurrentCycle == CycleManager.CycleState.Day;
+
     // 구독은 Awake에서 한다(CLAUDE.md 이벤트 초기화 규칙).
     private void Awake()
     {
@@ -187,6 +191,11 @@ public sealed class TutorialTipChainController : MonoBehaviour
 
     private void TryOpen(TutorialConditionType condition, Predicate<Chain> matches)
     {
+        if (!IsDay)
+        {
+            return;
+        }
+
         foreach (Chain chain in _chains)
         {
             if (chain.Runner == null ||

@@ -1,4 +1,3 @@
-using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
@@ -7,7 +6,7 @@ using UnityEngine.InputSystem;
 /// 새끼용 가이드(획득 → 인벤토리 → 부화 → 배치)의 단계 판정. 표시는 UI_GuideOverlay가 맡고
 /// 여기서는 "지금 어느 단계인지"와 "어디를 가리킬지"만 정한다.
 /// 진행도는 RunData.EnteredGuideSteps에 남겨 같은 런에서 같은 안내가 두 번 뜨지 않게 한다.
-/// 획득 토스트(BabyDragonEggNotifier)는 이 컨트롤러와 무관하게 매번 뜬다 - 안내는 1회성,
+/// 획득 알림(BabyDragonEggNotifier)은 이 컨트롤러와 무관하게 매번 뜬다 - 안내는 1회성,
 /// 알림은 상시라는 구분이다.
 /// </summary>
 public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShortcutBlockQuery,
@@ -27,10 +26,12 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
     // 배치가 끝난 뒤 순서대로 보여줄 마무리 문구. 확인 버튼으로 한 컷씩 넘긴다.
     private static readonly string[] COMPLETION_LOC_KEYS = { COMPLETED_LOC_KEY, MANAGE_HINT_LOC_KEY };
 
-    private const float DEFAULT_GUIDE_START_DELAY = 0f;
-
     [SerializeField] private GameManager _gameManager;
     [SerializeField] private DragonEggInventorySystem _eggInventorySystem;
+
+    [Tooltip("부화 알림을 실제로 확인한 뒤 배치 안내를 시작하는 데 쓴다. 비우면 장면에서 찾는다.")]
+    [SerializeField] private BabyDragonEggNotifier _eggNotifier;
+
     [Tooltip("알·새끼용 목록이 있는 용 창. 통합 전에는 별도 창(UI_DragonInventoryWindow)이었다.")]
     [SerializeField] private UI_DragonWindow _inventoryWindow;
     [SerializeField] private GridMap _gridMap;
@@ -42,9 +43,6 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
 
     [Tooltip("행동을 요구하는 안내 도중 밤으로 넘어가지 못하게 막는 데 쓴다. 비우면 막지 않는다.")]
     [SerializeField] private CycleManager _cycleManager;
-
-    [Tooltip("안내가 끝났을 때 남길 문구를 띄운다. 획득 토스트와 같은 오브젝트를 써도 된다.")]
-    [SerializeField] private UI_NotificationToast _toast;
 
     [Tooltip("HUD의 새끼용 인벤토리 버튼. OpenInventory 단계에서 이것만 남기고 화면을 덮는다.")]
     [SerializeField] private RectTransform _inventoryButton;
@@ -60,10 +58,6 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
 
     [Tooltip("관리창의 공격/버프 모드 버튼을 감싸는 영역(ModeButtons). 모드 안내가 가리킬 대상이다.")]
     [SerializeField] private RectTransform _modeButtonsRect;
-
-    [Tooltip("부화 토스트가 사라진 뒤 배치 안내를 시작하기까지의 추가 여유(초). " +
-             "0이면 토스트가 사라지는 즉시 다음 행동을 안내한다. 토스트 자체의 길이는 포함하지 않는다.")]
-    [SerializeField] private float _guideStartDelay = DEFAULT_GUIDE_START_DELAY;
 
     /// <summary>
     /// 새 단계에 들어섰다. 건너뛴 중간 단계까지 한 번에 지나갈 수 있으므로 인자는 "도달한 단계"다 -
@@ -181,10 +175,21 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
 
     private void OnEnable()
     {
+        EnsureEggNotifier();
+
         if (_eggInventorySystem != null)
         {
             _eggInventorySystem.OnEggGranted.AddListener(HandleEggGranted);
-            _eggInventorySystem.OnEggHatched.AddListener(HandleEggHatched);
+
+            if (_eggNotifier == null)
+            {
+                _eggInventorySystem.OnEggHatched.AddListener(HandleEggHatchedWithoutNotification);
+            }
+        }
+
+        if (_eggNotifier != null)
+        {
+            _eggNotifier.HatchNotificationDismissed += HandleHatchNotificationDismissed;
         }
 
         if (_inventoryWindow != null)
@@ -227,7 +232,12 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         if (_eggInventorySystem != null)
         {
             _eggInventorySystem.OnEggGranted.RemoveListener(HandleEggGranted);
-            _eggInventorySystem.OnEggHatched.RemoveListener(HandleEggHatched);
+            _eggInventorySystem.OnEggHatched.RemoveListener(HandleEggHatchedWithoutNotification);
+        }
+
+        if (_eggNotifier != null)
+        {
+            _eggNotifier.HatchNotificationDismissed -= HandleHatchNotificationDismissed;
         }
 
         if (_inventoryWindow != null)
@@ -329,8 +339,11 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         }
     }
 
-    private void HandleEggHatched(DragonType _) =>
-        AdvanceAfterHatchToastAsync().Forget();
+    private void HandleHatchNotificationDismissed(DragonType _) =>
+        Advance(BabyDragonGuideStep.PlaceDragon);
+
+    private void HandleEggHatchedWithoutNotification(DragonType _) =>
+        Advance(BabyDragonGuideStep.PlaceDragon);
 
     // 사용자가 방금 누른 결과라 즉시 반응해야 한다 - 지연시키면 조작이 먹지 않은 것처럼 보인다.
     //
@@ -355,22 +368,12 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         Advance(BabyDragonGuideStep.WaitHatch);
     }
 
-    /// <summary>
-    /// 부화 결과를 확인하기 전에 배치 안내가 덮이지 않도록 부화 토스트만 사라질 때까지 기다린다.
-    /// 알 획득은 다음 행동을 즉시 알려야 하므로 이 경로를 거치지 않는다.
-    /// </summary>
-    private async UniTaskVoid AdvanceAfterHatchToastAsync()
+    private void EnsureEggNotifier()
     {
-        // 토스트 길이를 여기에 베껴 두면 토스트만 고쳤을 때 조용히 어긋나므로 토스트에서 직접 읽는다.
-        float toastDuration = _toast == null ? 0f : _toast.TotalDuration;
-
-        // 토스트가 일시정지 중에도 진행되므로(UI_NotificationToast의 SetUpdate(true)) 여기도 실시간으로 센다.
-        await UniTask.WaitForSeconds(
-            toastDuration + _guideStartDelay,
-            ignoreTimeScale: true,
-            cancellationToken: this.GetCancellationTokenOnDestroy());
-
-        Advance(BabyDragonGuideStep.PlaceDragon);
+        if (_eggNotifier == null)
+        {
+            _eggNotifier = FindFirstObjectByType<BabyDragonEggNotifier>();
+        }
     }
 
     private void HandleBuildingAdded(Building building)
