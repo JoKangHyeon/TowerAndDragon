@@ -10,8 +10,6 @@ using UnityEngine;
 [RequireComponent(typeof(GridMap))]
 public class ConqueredChunkBorderRenderer : MonoBehaviour
 {
-    private const float CORNER_MIDPOINT_FACTOR = 0.5f;
-
     // 네 종류 선이 맞닿는 자리에서 어느 쪽이 위로 오는지가 렌더러 순서에 따라 불안정하게 결정되는 것을
     // 막기 위해 순서를 고정한다. 후보 청크는 정의상 점령지와 맞닿아 있어 초록 선과 같은 자리에 포개지는데,
     // 내 영토가 어디까지인지는 항상 읽혀야 하므로 초록을 가장 위에 둔다.
@@ -596,13 +594,6 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
         return worldPos;
     }
 
-    // 격자 꼭짓점 (x,y)는 셀 (x-1,y-1)과 셀 (x,y)의 중심을 잇는 대각선의 중점과 같다
-    // (아이소메트릭 격자는 두 기저벡터로 이루어진 평행사변형 격자이기 때문).
     // 표시용 y 오프셋을 더하지 않은 지면 좌표 - 인셋 방향 계산이 셀 중심과 같은 기준을 쓰기 위해 분리했다.
-    private Vector3 GetCornerGroundPosition(Vector2Int corner)
-    {
-        Vector3 diagonalCellCenter = _gridMap.ConvertGridToWorld(new Vector3Int(corner.x - 1, corner.y - 1, 0));
-        Vector3 cellCenter = _gridMap.ConvertGridToWorld(new Vector3Int(corner.x, corner.y, 0));
-        return (diagonalCellCenter + cellCenter) * CORNER_MIDPOINT_FACTOR;
-    }
+    private Vector3 GetCornerGroundPosition(Vector2Int corner) => _gridMap.GetCellCornerWorld(corner);
 }

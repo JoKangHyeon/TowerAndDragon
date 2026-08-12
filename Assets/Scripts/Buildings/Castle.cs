@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -105,22 +106,26 @@ public class Castle : Building, IAttackTarget
             return;
         }
 
-        int radius = _inactiveChunkRadius + bonusRadius;
+        int depth = _inactiveChunkRadius + bonusRadius;
 
-        for (int dx = -radius; dx <= radius; dx++)
+        // 정사각형 반경 대신 접경 단계 수로 넓힌다 - 청크가 임의 모양이라 좌표 거리는 의미가 없다.
+        _gridMap.CollectChunksWithinDepth(_homeChunkCoord, depth, _revealBuffer);
+
+        // Hidden인 청크만 남긴다 - SetChunkStatesBulk는 상태를 무조건 덮어쓰므로,
+        // 이미 점령한 청크가 섞이면 Visible로 강등되고 점령 테두리가 깨진다.
+        _revealBuffer.RemoveAll(chunkCoord =>
         {
-            for (int dy = -radius; dy <= radius; dy++)
-            {
-                Vector2Int neighborCoord = _homeChunkCoord + new Vector2Int(dx, dy);
-                Chunk neighbor = _gridMap.GetChunk(neighborCoord);
+            Chunk chunk = _gridMap.GetChunk(chunkCoord);
+            return chunk == null || chunk.CurrentState != ChunkState.Hidden;
+        });
 
-                if (neighbor != null && neighbor.CurrentState == ChunkState.Hidden)
-                {
-                    _gridMap.SetChunkState(neighborCoord, ChunkState.Visible);
-                }
-            }
-        }
+        // 청크마다 SetChunkState를 부르면 OnChunkStateChanged가 그 횟수만큼 발행되고 점령 테두리
+        // 렌더러가 매번 맵 전체를 다시 트레이싱한다 - 한 번에 몰아서 전환한다.
+        _gridMap.SetChunkStatesBulk(_revealBuffer, ChunkState.Visible);
     }
+
+    // 시야 확장 대상 청크 버퍼 - 연구로 시야가 늘 때마다 재호출되므로 재사용한다.
+    private readonly List<Vector2Int> _revealBuffer = new();
 
     // 튜토리얼이 배선한다 - 배선되지 않은 씬에서는 null로 남아 언제나 피해를 받는다(기존 동작 유지).
     public ICastleDamageBlockQuery DamageBlockQuery { get; set; }

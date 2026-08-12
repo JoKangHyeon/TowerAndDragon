@@ -24,6 +24,12 @@ public class GridMap : MonoBehaviour
     [SerializeField]
     private CellYieldOverrideTable _cellYieldOverrideTable;
 
+    // 셀→청크 소속 레이아웃 - 청크를 임의 모양으로 정의한다(ChunkLayoutEditorWindow로 저작).
+    // 다른 테이블들과 달리 선택이 아니라 필수다: 이게 비면 청크가 하나도 생기지 않아
+    // 초기 영토·점령·안개·건설 판정이 전부 무너진다.
+    [SerializeField]
+    private ChunkLayoutTable _chunkLayoutTable;
+
     // 청크 단위 연구 해금 조회 - 연구 시스템이 아직 없는 씬에서는 null로 두면 항상 터레인 기본값만으로 판정된다.
     public IChunkResearchUnlockQuery ResearchUnlockQuery { get; set; }
 
@@ -58,6 +64,19 @@ public class GridMap : MonoBehaviour
 
     // 청크
     private Dictionary<Vector2Int, Chunk> _chunks = new();
+
+    // 셀→청크 역인덱스. 청크가 직사각형이 아니므로 좌표 계산으로는 소속을 구할 수 없다 -
+    // 예전의 정수 나눗셈(ToChunkCoord)을 대체한다. ChunkLayoutTable이 채우고,
+    // 레이아웃이 빠뜨린 셀은 AssignUnmappedCellsToNearestChunk가 근접 청크에 흡수시킨다.
+    private readonly Dictionary<Vector3Int, Vector2Int> _cellToChunk = new();
+
+    // 청크 인접 그래프 - 셀이 실제로 맞닿아 있는지에서 파생한다(좌표 ±1 산술을 대체).
+    // Bordering: 변을 공유 / Surrounding: 변 또는 꼭짓점을 공유.
+    private readonly Dictionary<Vector2Int, List<Vector2Int>> _borderingChunks = new();
+    private readonly Dictionary<Vector2Int, List<Vector2Int>> _surroundingChunks = new();
+
+    // CollectChunksWithinDepth의 BFS 방문 집합 - 호출마다 새로 할당하지 않도록 재사용한다.
+    private readonly HashSet<Vector2Int> _depthVisitedBuffer = new();
 
     private Dictionary<Vector2Int, Vector3> _chunkCenterWorldCache = new();
     private Dictionary<Vector2Int, int> _chunkBaseYieldCache = new();
@@ -240,11 +259,15 @@ public class GridMap : MonoBehaviour
 
     private void GenerateChunks()
     {
+        BuildCellToChunkIndex();
+        AssignUnmappedCellsToNearestChunk();
+
         var grouped = new Dictionary<Vector2Int, List<GridCell>>();
 
         foreach (GridCell cell in _cells.Values)
         {
-            Vector2Int chunkCoord = ToChunkCoord(cell.Coord);
+            if (!_cellToChunk.TryGetValue(cell.Coord, out Vector2Int chunkCoord))
+                continue;
 
             if (!grouped.TryGetValue(chunkCoord, out List<GridCell> cellsInChunk))
             {
@@ -272,20 +295,164 @@ public class GridMap : MonoBehaviour
             _chunkCenterWorldCache[pair.Key] = sum / chunk.Cells.Count;
         }
 
+        BuildChunkAdjacency();
+
         Debug.Log($"[GridMap] 청크 생성 완료 - 청크 개수: {_chunks.Count}");
     }
 
-    private const int CHUNK_ORIGIN_OFFSET = ((Chunk.CHUNK_SIZE - 1) / 2);
+    // 레이아웃 에셋에서 셀→청크 소속을 읽어온다. 그리드에 실제로 존재하지 않는 좌표(타일이 지워진
+    // 자리에 지정만 남은 경우 등)는 버린다 - 유령 셀을 남기면 인접 그래프가 실재하지 않는 접촉을
+    // 만들어내고, 청크가 자기 셀 목록에 없는 좌표를 소유한 것처럼 보인다.
+    private void BuildCellToChunkIndex()
+    {
+        _cellToChunk.Clear();
 
-    private static Vector2Int ToChunkCoord(Vector3Int cellCoord) => 
-        new Vector2Int(
-            FloorDiv(cellCoord.x + CHUNK_ORIGIN_OFFSET, Chunk.CHUNK_SIZE),
-            FloorDiv(cellCoord.y + CHUNK_ORIGIN_OFFSET, Chunk.CHUNK_SIZE)
-        );
+        if (!WiringGuard.Require(_chunkLayoutTable, nameof(_chunkLayoutTable), this))
+            return;
 
-    
-    private static int FloorDiv(int value, int divisor) =>
-       (value >= 0) ? value / divisor : (value - divisor + 1) / divisor;
+        _chunkLayoutTable.BuildCellToChunkIndex(_cellToChunk);
+
+        var phantomCoords = new List<Vector3Int>();
+        foreach (Vector3Int coord in _cellToChunk.Keys)
+        {
+            if (!_cells.ContainsKey(coord))
+                phantomCoords.Add(coord);
+        }
+
+        foreach (Vector3Int coord in phantomCoords)
+        {
+            _cellToChunk.Remove(coord);
+        }
+
+        if (phantomCoords.Count > 0)
+            Debug.LogWarning($"[GridMap] 타일이 없는 좌표 지정 {phantomCoords.Count}개를 무시했습니다.");
+    }
+
+    // 레이아웃이 지정하지 않은 셀을, 이미 지정된 셀에서 상하좌우로 퍼져나가며 가장 가까운 청크에 흡수시킨다.
+    // 레거시 9×9 공식으로 폴백하지 않는 이유: 그러면 사라졌어야 할 정사각형 규칙이 런타임에 영원히 남고,
+    // 디자이너가 청크를 옮긴 자리마다 유령 청크가 새로 생긴다.
+    // 한 셀에 여러 청크가 같은 거리로 닿으면 좌표가 작은 청크가 이긴다 - 결과가 딕셔너리 순회 순서에
+    // 좌우되지 않아야 같은 레이아웃이 항상 같은 맵을 만든다.
+    private void AssignUnmappedCellsToNearestChunk()
+    {
+        int tableAssignedCount = _cellToChunk.Count;
+
+        var unassignedCoords = new List<Vector3Int>();
+        foreach (Vector3Int coord in _cells.Keys)
+        {
+            if (!_cellToChunk.ContainsKey(coord))
+                unassignedCoords.Add(coord);
+        }
+
+        var wave = new List<(Vector3Int Coord, Vector2Int ChunkCoord)>();
+        int absorbedCount = 0;
+
+        while (unassignedCoords.Count > 0)
+        {
+            wave.Clear();
+
+            foreach (Vector3Int coord in unassignedCoords)
+            {
+                if (TryResolveSmallestAdjacentChunk(coord, out Vector2Int chunkCoord))
+                    wave.Add((coord, chunkCoord));
+            }
+
+            // 남은 미지정 셀 중 지정된 셀과 맞닿은 것이 하나도 없다 = 완전히 고립된 섬이다.
+            if (wave.Count == 0)
+                break;
+
+            foreach ((Vector3Int coord, Vector2Int chunkCoord) in wave)
+            {
+                _cellToChunk[coord] = chunkCoord;
+            }
+
+            absorbedCount += wave.Count;
+            unassignedCoords.RemoveAll(coord => _cellToChunk.ContainsKey(coord));
+        }
+
+        Debug.Log($"[GridMap] 셀→청크 인덱스 - 테이블 지정 {tableAssignedCount}, 근접 폴백 {absorbedCount}");
+
+        if (unassignedCoords.Count > 0)
+            Debug.LogError($"[GridMap] 어느 청크와도 연결되지 않은 고립 셀 {unassignedCoords.Count}개 - 레이아웃을 확인하세요.");
+    }
+
+    // 이 셀과 상하좌우로 맞닿은 "이미 지정된" 셀들의 청크 중 좌표가 가장 작은 것.
+    private bool TryResolveSmallestAdjacentChunk(Vector3Int cellCoord, out Vector2Int smallestChunkCoord)
+    {
+        smallestChunkCoord = default;
+        bool hasCandidate = false;
+
+        foreach (Vector3Int direction in CellDirections.ORTHOGONAL)
+        {
+            if (!_cellToChunk.TryGetValue(cellCoord + direction, out Vector2Int candidate))
+                continue;
+
+            if (!hasCandidate || IsSmallerChunkCoord(candidate, smallestChunkCoord))
+            {
+                smallestChunkCoord = candidate;
+                hasCandidate = true;
+            }
+        }
+
+        return hasCandidate;
+    }
+
+    private static bool IsSmallerChunkCoord(Vector2Int left, Vector2Int right) =>
+        left.x != right.x ? left.x < right.x : left.y < right.y;
+
+    // 청크 인접을 셀 접촉에서 파생한다.
+    //
+    // 물(Default) 셀도 포함해 판정하는 것이 중요하다 - 예전의 좌표 ±1 산술에서는 바다를 사이에 둔
+    // 청크도 이웃이었고, "실제 지형이 얼마나 맞닿았는가"는 ConquestManager가 CountLandBorderContact로
+    // 따로 판정한다. 여기서 육지만으로 인접을 정하면 해협 건너 점령이 통째로 막히는 기획 변경이 된다.
+    private void BuildChunkAdjacency()
+    {
+        _borderingChunks.Clear();
+        _surroundingChunks.Clear();
+
+        foreach (Vector2Int chunkCoord in _chunks.Keys)
+        {
+            _borderingChunks[chunkCoord] = new List<Vector2Int>();
+            _surroundingChunks[chunkCoord] = new List<Vector2Int>();
+        }
+
+        var borderingPairs = new HashSet<(Vector2Int, Vector2Int)>();
+        var surroundingPairs = new HashSet<(Vector2Int, Vector2Int)>();
+
+        foreach (KeyValuePair<Vector3Int, Vector2Int> cellEntry in _cellToChunk)
+        {
+            AccumulateChunkContacts(cellEntry, CellDirections.ORTHOGONAL, borderingPairs, _borderingChunks);
+            AccumulateChunkContacts(cellEntry, CellDirections.ALL_EIGHT, surroundingPairs, _surroundingChunks);
+        }
+
+        Debug.Log($"[GridMap] 인접 그래프 - 변 공유 {borderingPairs.Count}변, 변+꼭짓점 {surroundingPairs.Count}변");
+    }
+
+    private void AccumulateChunkContacts(KeyValuePair<Vector3Int, Vector2Int> cellEntry, Vector3Int[] directions,
+        HashSet<(Vector2Int, Vector2Int)> registeredPairs, Dictionary<Vector2Int, List<Vector2Int>> adjacency)
+    {
+        foreach (Vector3Int direction in directions)
+        {
+            if (!_cellToChunk.TryGetValue(cellEntry.Key + direction, out Vector2Int neighborChunkCoord))
+                continue;
+
+            if (neighborChunkCoord == cellEntry.Value)
+                continue;
+
+            // 같은 청크 쌍은 수많은 셀에서 반복해 발견되므로, 무향 쌍을 정규화해 한 번만 등록한다.
+            if (!registeredPairs.Add(MakeChunkPair(cellEntry.Value, neighborChunkCoord)))
+                continue;
+
+            if (adjacency.TryGetValue(cellEntry.Value, out List<Vector2Int> ownNeighbors))
+                ownNeighbors.Add(neighborChunkCoord);
+
+            if (adjacency.TryGetValue(neighborChunkCoord, out List<Vector2Int> otherNeighbors))
+                otherNeighbors.Add(cellEntry.Value);
+        }
+    }
+
+    private static (Vector2Int, Vector2Int) MakeChunkPair(Vector2Int a, Vector2Int b) =>
+        IsSmallerChunkCoord(a, b) ? (a, b) : (b, a);
 
 
     public ChunkState GetCellState(Vector3Int coord)
@@ -313,6 +480,19 @@ public class GridMap : MonoBehaviour
         coord.z = 0;
         return coord;
     }
+
+    // 격자 꼭짓점 (x,y)는 셀 (x-1,y-1)과 셀 (x,y)의 중심을 잇는 대각선의 중점과 같다
+    // (아이소메트릭 격자는 두 기저벡터로 이루어진 평행사변형 격자이기 때문).
+    // 표시용 y 오프셋을 더하지 않은 지면 좌표다 - 셀 중심과 같은 기준을 써야 하는 계산(경계선 인셋 방향 등)이
+    // 있어서 오프셋은 호출자가 필요할 때만 더한다.
+    public Vector3 GetCellCornerWorld(Vector2Int corner)
+    {
+        Vector3 diagonalCellCenter = ConvertGridToWorld(new Vector3Int(corner.x - 1, corner.y - 1, 0));
+        Vector3 cellCenter = ConvertGridToWorld(new Vector3Int(corner.x, corner.y, 0));
+        return (diagonalCellCenter + cellCenter) * CORNER_MIDPOINT_FACTOR;
+    }
+
+    private const float CORNER_MIDPOINT_FACTOR = 0.5f;
 
     // 지형 타일에 심어둔 고저차(Y 오프셋)를 읽어온다 - Isometric Z As Y 레이아웃에서 셀의 Z좌표는
     // 정렬용으로만 쓰이고 높이는 SetTransformMatrix로 부여한 타일별 렌더 오프셋으로 표현된다.
@@ -388,12 +568,6 @@ public class GridMap : MonoBehaviour
     // 전장의 안개(FogOfWarRenderer)가 지형 타일 자체를 SetColor로 어둡게 틴트하기 위해 참조한다.
     public Tilemap TerrainTilemap => _tilemap;
 
-    // 청크 전체를 스프라이트 한 장으로 표현하는 렌더러(FogCloudRenderer 등)가 참조 - 청크의 정중앙 셀 좌표를
-    // 반환한다. ToChunkCoord(CHUNK_ORIGIN_OFFSET 기반)와 대응하는 역연산이며, CHUNK_SIZE가 홀수이므로
-    // 정중앙 셀이 항상 정확히 존재한다.
-    public Vector3Int GetChunkAnchorCell(Vector2Int chunkCoord) =>
-        new Vector3Int(chunkCoord.x * Chunk.CHUNK_SIZE, chunkCoord.y * Chunk.CHUNK_SIZE, 0);
-
     // 지형상 건설 불가 셀이라도 해제 조회원이 허용하면 건설 가능으로 취급한다
     private bool IsCellConstructible(GridCell cell) =>
         cell.CanConstruct ||
@@ -464,11 +638,17 @@ public class GridMap : MonoBehaviour
         return result;
     }
 
-    public Chunk GetChunkAt(Vector3Int cellCoord)
-    {
-        Vector2Int chunkCoord = ToChunkCoord(cellCoord);
-        return _chunks.TryGetValue(chunkCoord, out Chunk chunk) ? chunk : null;
-    }
+    public Chunk GetChunkAt(Vector3Int cellCoord) =>
+        _cellToChunk.TryGetValue(cellCoord, out Vector2Int chunkCoord) &&
+        _chunks.TryGetValue(chunkCoord, out Chunk chunk)
+            ? chunk
+            : null;
+
+    /// <summary>셀이 속한 청크 좌표. 그리드 밖이거나 어느 청크에도 속하지 않으면 false.
+    /// 실패했을 때 default(Vector2Int)를 그대로 쓰면 (0,0) 청크의 데이터가 잘못 적용되므로
+    /// 호출자는 반드시 반환값을 확인해야 한다.</summary>
+    public bool TryGetChunkCoord(Vector3Int cellCoord, out Vector2Int chunkCoord) =>
+        _cellToChunk.TryGetValue(cellCoord, out chunkCoord);
 
     public IEnumerable<Chunk> GetAllChunks() => _chunks.Values;
 
@@ -573,38 +753,71 @@ public class GridMap : MonoBehaviour
     public Vector3 GetChunkCenterWorld(Vector2Int chunkCoord) =>
         _chunkCenterWorldCache.TryGetValue(chunkCoord, out Vector3 center) ? center : Vector3.zero;
 
-    public IEnumerable<Chunk> GetAdjacentChunks(Vector2Int chunkCoord)
-    {
-        for (int dx = -1; dx <= 1; dx++)
-        {
-            for (int dy = -1; dy <= 1; dy++)
-            {
-                if (dx == 0 && dy == 0)
-                    continue;
+    /// <summary>변 또는 꼭짓점을 공유하는 이웃 청크 - 시야 확장용(예전의 8방향에 대응).</summary>
+    public IEnumerable<Chunk> GetSurroundingChunks(Vector2Int chunkCoord) =>
+        EnumerateAdjacentChunks(_surroundingChunks, chunkCoord);
 
-                Vector2Int neighborCoord = chunkCoord + new Vector2Int(dx, dy);
-                if (_chunks.TryGetValue(neighborCoord, out Chunk neighbor))
-                    yield return neighbor;
-            }
+    /// <summary>변을 공유하는 직접 접경 청크 - 점령 출격 가능 여부 판정 전용(예전의 4방향에 대응).
+    /// 꼭짓점만 스친 청크는 제외된다는 점이 GetSurroundingChunks와의 차이다.</summary>
+    public IEnumerable<Chunk> GetBorderingChunks(Vector2Int chunkCoord) =>
+        EnumerateAdjacentChunks(_borderingChunks, chunkCoord);
+
+    private IEnumerable<Chunk> EnumerateAdjacentChunks(
+        Dictionary<Vector2Int, List<Vector2Int>> adjacency, Vector2Int chunkCoord)
+    {
+        if (!adjacency.TryGetValue(chunkCoord, out List<Vector2Int> neighborCoords))
+            yield break;
+
+        foreach (Vector2Int neighborCoord in neighborCoords)
+        {
+            if (_chunks.TryGetValue(neighborCoord, out Chunk neighbor))
+                yield return neighbor;
         }
     }
 
-    // 점령 출격 가능 여부 판정 전용 - 상하좌우 4방향만 인접으로 취급한다 (시야 확장의 8방향 GetAdjacentChunks와는 별개).
-    private static readonly Vector2Int[] ORTHOGONAL_CHUNK_DIRECTIONS =
+    /// <summary>origin에서 접경을 depth단계까지 넓혀 만나는 청크 좌표를 result에 채운다(origin 자신은 제외).
+    /// 정사각형 반경을 대체한다 - 자유 형태 청크에서는 좌표 거리가 아니라 "몇 단계 접경인가"가 주변의 의미다.</summary>
+    public void CollectChunksWithinDepth(Vector2Int origin, int depth, List<Vector2Int> result)
     {
-        new Vector2Int(1, 0),
-        new Vector2Int(-1, 0),
-        new Vector2Int(0, 1),
-        new Vector2Int(0, -1),
-    };
+        result.Clear();
+        _depthVisitedBuffer.Clear();
+        _depthVisitedBuffer.Add(origin);
 
-    public IEnumerable<Chunk> GetOrthogonalAdjacentChunks(Vector2Int chunkCoord)
-    {
-        foreach (Vector2Int direction in ORTHOGONAL_CHUNK_DIRECTIONS)
+        int frontierStart = 0;
+        int frontierEnd = 0;
+
+        for (int step = 0; step < depth; step++)
         {
-            Vector2Int neighborCoord = chunkCoord + direction;
-            if (_chunks.TryGetValue(neighborCoord, out Chunk neighbor))
-                yield return neighbor;
+            if (step == 0)
+            {
+                AppendUnvisitedNeighbors(origin, result);
+            }
+            else
+            {
+                for (int i = frontierStart; i < frontierEnd; i++)
+                {
+                    AppendUnvisitedNeighbors(result[i], result);
+                }
+            }
+
+            frontierStart = frontierEnd;
+            frontierEnd = result.Count;
+
+            // 이번 단계에서 새로 넓어진 청크가 없으면 남은 단계를 돌 이유가 없다.
+            if (frontierStart == frontierEnd)
+                break;
+        }
+    }
+
+    private void AppendUnvisitedNeighbors(Vector2Int chunkCoord, List<Vector2Int> result)
+    {
+        if (!_surroundingChunks.TryGetValue(chunkCoord, out List<Vector2Int> neighborCoords))
+            return;
+
+        foreach (Vector2Int neighborCoord in neighborCoords)
+        {
+            if (_depthVisitedBuffer.Add(neighborCoord))
+                result.Add(neighborCoord);
         }
     }
 
@@ -786,9 +999,12 @@ public class GridMap : MonoBehaviour
     public bool CellSatisfiesResourceRequirement(Vector3Int coord, ResourceType requiredResourceNode) =>
         _cells.TryGetValue(coord, out GridCell cell) && SatisfiesResourceRequirement(cell, requiredResourceNode);
 
+    // 어느 청크에도 속하지 않은 셀은 청크 단위 연구 해금을 조회할 근거가 없으므로 정적 자원 플래그만 본다.
     private bool SatisfiesResourceRequirement(GridCell cell, ResourceType requiredResourceNode) =>
         cell.HasResourceNode(requiredResourceNode) ||
-        (ResearchUnlockQuery != null && ResearchUnlockQuery.IsUnlocked(ToChunkCoord(cell.Coord), requiredResourceNode));
+        (ResearchUnlockQuery != null &&
+         TryGetChunkCoord(cell.Coord, out Vector2Int chunkCoord) &&
+         ResearchUnlockQuery.IsUnlocked(chunkCoord, requiredResourceNode));
 
     private bool AllCellsSatisfyResourceRequirement(List<GridCell> cells, ResourceType requiredResourceNode)
     {
@@ -875,7 +1091,14 @@ public class GridMap : MonoBehaviour
 
         foreach (GridCell cell in footprint)
         {
-            Vector2Int chunkCoord = ToChunkCoord(cell.Coord);
+            // 어느 청크에도 속하지 않은 셀은 지역 배율을 적용할 근거가 없으므로 배율 1로 바로 더한다.
+            // 여기서 default(Vector2Int)를 버킷 키로 쓰면 (0,0) 청크의 배율이 엉뚱한 셀에 적용된다.
+            if (!TryGetChunkCoord(cell.Coord, out Vector2Int chunkCoord))
+            {
+                total += cell.GetYield(resourceType);
+                continue;
+            }
+
             _chunkYieldBuffer.TryGetValue(chunkCoord, out int chunkSubtotal);
             _chunkYieldBuffer[chunkCoord] = chunkSubtotal + cell.GetYield(resourceType);
         }

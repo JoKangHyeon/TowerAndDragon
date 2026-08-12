@@ -159,7 +159,7 @@ public class ConquestManager : MonoBehaviour
 
     private bool HasConqueredOrthogonalNeighbor(Vector2Int chunkCoord)
     {
-        foreach (Chunk neighbor in _gridMap.GetOrthogonalAdjacentChunks(chunkCoord))
+        foreach (Chunk neighbor in _gridMap.GetBorderingChunks(chunkCoord))
         {
             if (neighbor.CurrentState == ChunkState.Conquered)
                 return true;
@@ -274,20 +274,12 @@ public class ConquestManager : MonoBehaviour
 
     private void ExpandVisibility(Vector2Int chunkCoord)
     {
-        foreach (Chunk neighbor in _gridMap.GetAdjacentChunks(chunkCoord))
+        foreach (Chunk neighbor in _gridMap.GetSurroundingChunks(chunkCoord))
         {
             if (neighbor.CurrentState == ChunkState.Hidden)
                 _gridMap.SetChunkState(neighbor.ChunkCoord, ChunkState.Visible);
         }
     }
-
-    private static readonly Vector3Int[] CELL_ORTHOGONAL_DIRECTIONS =
-    {
-        new Vector3Int(1, 0, 0),
-        new Vector3Int(-1, 0, 0),
-        new Vector3Int(0, 1, 0),
-        new Vector3Int(0, -1, 0),
-    };
 
     // 청크 네 개가 만나는 꼭짓점에서는 육지 셀이 단 1칸만 우연히 맞닿는 경우가 있다(예: 대각선
     // 청크는 바다로 막혀 있는데 꼭짓점 셀 한 칸만 같은 육지 타입인 경우) - 이런 우연의 일치를
@@ -322,7 +314,7 @@ public class ConquestManager : MonoBehaviour
         if (sourceChunk == null)
             return;
 
-        foreach (Chunk neighbor in _gridMap.GetOrthogonalAdjacentChunks(chunkCoord))
+        foreach (Chunk neighbor in _gridMap.GetBorderingChunks(chunkCoord))
         {
             if (neighbor.CurrentState == ChunkState.Conquered)
                 continue;
@@ -363,7 +355,7 @@ public class ConquestManager : MonoBehaviour
         if (conqueredContact < MINIMUM_LAND_BORDER_CONTACT_CELLS)
             return false;
 
-        foreach (Chunk otherNeighbor in _gridMap.GetOrthogonalAdjacentChunks(scrapChunk.ChunkCoord))
+        foreach (Chunk otherNeighbor in _gridMap.GetBorderingChunks(scrapChunk.ChunkCoord))
         {
             if (otherNeighbor.ChunkCoord == conqueredChunk.ChunkCoord)
                 continue;
@@ -382,7 +374,7 @@ public class ConquestManager : MonoBehaviour
         int contactCount = 0;
         foreach (Vector3Int cellCoord in chunkA.LandCellCoords)
         {
-            foreach (Vector3Int direction in CELL_ORTHOGONAL_DIRECTIONS)
+            foreach (Vector3Int direction in CellDirections.ORTHOGONAL)
             {
                 if (chunkB.ContainsLandCell(cellCoord + direction))
                 {

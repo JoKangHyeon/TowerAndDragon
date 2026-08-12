@@ -1,11 +1,10 @@
 using System.Collections.Generic;
-using NUnit.Framework;
 using UnityEngine;
 
-public class Chunk 
+// 청크는 "ID 하나가 붙은 임의의 셀 집합"이다 - 크기나 모양에 대한 가정을 두지 않는다.
+// 어느 셀이 어느 청크에 속하는지는 ChunkLayoutTable이 정하고 GridMap이 조립한다.
+public class Chunk
 {
-    public const int CHUNK_SIZE = 9;
-    
     private readonly List<GridCell> _cells;
     public IReadOnlyList<GridCell> Cells => _cells;
 
