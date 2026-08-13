@@ -821,6 +821,8 @@ MonoBehaviour:
   _babyDragonBuffSystem: {fileID: 936144406}
   _terrainPenaltySystem: {fileID: 1652351659}
   _terrainUpkeepSystem: {fileID: 1356859336}
+  _towerUpkeepSystem: {fileID: 0}
+  _economyBalance: {fileID: 0}
   ForecastChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -5205,7 +5207,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.000019055562
+      value: -0.000056141747
       objectReference: {fileID: 0}
     - target: {fileID: 3531365243633958967, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -9433,6 +9435,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PopulationUpkeepSystem
   _resourceManager: {fileID: 914589613}
   _populationManager: {fileID: 914589617}
+  _economyBalance: {fileID: 0}
 --- !u!114 &1356859335
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9448,10 +9451,14 @@ MonoBehaviour:
   _cycleManager: {fileID: 914589611}
   _populationUpkeepSystem: {fileID: 1356859334}
   _terrainUpkeepSystem: {fileID: 1356859336}
+  _towerUpkeepSystem: {fileID: 0}
   SettlementCompleted:
     m_PersistentCalls:
       m_Calls: []
   TerrainSettlementCompleted:
+    m_PersistentCalls:
+      m_Calls: []
+  TowerSettlementCompleted:
     m_PersistentCalls:
       m_Calls: []
 --- !u!114 &1356859336
@@ -10305,6 +10312,7 @@ MonoBehaviour:
   _iceUnlockableTerrain: 2
   _moveHoldDuration: 2
   _dragThreshold: 10
+  _economyBalance: {fileID: 0}
   BuildingSelected:
     m_PersistentCalls:
       m_Calls: []
