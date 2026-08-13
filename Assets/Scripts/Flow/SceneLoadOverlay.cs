@@ -1,0 +1,190 @@
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+/// <summary>
+/// 씬 전환 동안 화면을 덮는 로딩 화면.
+///
+/// 측정 결과(콜드, 에디터): 비동기 로드 1486ms(2프레임) / 활성화 1271ms(13프레임) /
+/// Start+첫 프레임 1085ms = 총 3842ms에 프레임 16개, 즉 로딩 중에는 <b>4fps 남짓</b>으로만 그려진다.
+/// 그래서 진행바는 두지 않는다 - progress가 오를 시간이 없어 값이 튀기만 한다. 스피너는
+/// <see cref="UI_FrameSteppedSpinner"/>가 시간이 아니라 렌더된 프레임을 기준으로 돌려서, 느리더라도
+/// 순서가 유지되게 만든다(시간 기준으로 돌리면 위상이 건너뛰어 무작위 깜빡임이 된다).
+///
+/// 체감이 나아지는 이유는 비동기 로드가 아니라 이 오브젝트가 <see cref="Object.DontDestroyOnLoad"/>로
+/// 씬 교체를 넘어 살아남는 것이다. 로딩이 블록되는 동안에는 마지막으로 그려진 프레임이 화면에 남으므로,
+/// 그 프레임이 불투명한 로딩 화면이기만 하면 3.8초가 "멈춤"이 아니라 "로딩 중"으로 읽힌다.
+///
+/// <b>배치 규칙</b>
+///  - 씬의 <b>루트</b> 오브젝트여야 한다. DontDestroyOnLoad는 루트에만 걸린다.
+///  - 자체 Canvas를 <c>ScreenSpaceOverlay</c>로 둔다. 씬 교체로 원래 카메라가 사라지므로
+///    카메라가 필요한 렌더 모드는 로딩 도중 화면이 비어 버린다.
+///  - sortingOrder는 새 씬의 UI보다 높게. 새 씬이 뜬 뒤에도 페이드 아웃이 끝날 때까지 위에 있어야 한다.
+///  - EventSystem을 포함하지 않는다. 새 씬의 것과 둘이 되면 입력이 어긋난다.
+///
+/// SetActive로 여닫지 않고 CanvasGroup 알파로만 감춘다 - 비활성으로 저장된 오브젝트의 Awake가
+/// 첫 SetActive(true) 안에서 도는 함정(CLAUDE.md의 _isOpen 가드)을 아예 만들지 않기 위해서다.
+/// </summary>
+public sealed class SceneLoadOverlay : MonoBehaviour
+{
+    private const string LOADING_MESSAGE_LOC_KEY = "loading_message";
+
+    private const float DEFAULT_FADE_IN_DURATION = 0.2f;
+    private const float DEFAULT_FADE_OUT_DURATION = 0.3f;
+
+    // 페이드가 끝난 불투명한 화면이 실제로 한 번 그려지게 한다. 이걸 빼면 로드 블록이
+    // 페이드 중간 프레임에서 시작해 반투명한 화면이 몇 초간 얼어붙는다.
+    private const int FRAMES_BEFORE_LOAD = 1;
+
+    // 새 씬의 Start와 첫 렌더가 끝난 뒤에 걷는다. 바로 걷으면 아직 아무것도 그려지지 않은 씬이 보인다.
+    private const int FRAMES_AFTER_LOAD = 2;
+
+    private const float HIDDEN_ALPHA = 0f;
+    private const float VISIBLE_ALPHA = 1f;
+
+    [SerializeField] private CanvasGroup _canvasGroup;
+
+    [Tooltip("로딩 문구. key는 코드에서 넣으므로 인스펙터에서 비워 둬도 된다.")]
+    [SerializeField] private LocalizedText _messageLabel;
+
+    [SerializeField] private float _fadeInDuration = DEFAULT_FADE_IN_DURATION;
+    [SerializeField] private float _fadeOutDuration = DEFAULT_FADE_OUT_DURATION;
+
+    private bool _isLoading;
+
+    private void Awake()
+    {
+        if (_messageLabel != null)
+        {
+            _messageLabel.SetKey(LOADING_MESSAGE_LOC_KEY);
+        }
+
+        // 참조를 잃으면 Hide()가 돌지 않아, 불투명하고 클릭까지 먹는 로딩 화면에 덮인 채 타이틀이 뜬다.
+        // 같은 오브젝트에서 한 번 더 찾아 그 상태를 피한다 - 아래 WiringGuard는 CanvasGroup이
+        // 아예 없을 때만 걸린다.
+        if (_canvasGroup == null)
+        {
+            TryGetComponent(out _canvasGroup);
+        }
+
+        if (!WiringGuard.Require(_canvasGroup, nameof(_canvasGroup), this))
+        {
+            return;
+        }
+
+        Hide();
+    }
+
+    /// <summary>
+    /// 로딩 화면을 띄우고 씬을 연다. 씬 로드는 되돌릴 수 없으므로 두 번 불려도 한 번만 나간다.
+    /// 완료를 기다릴 곳이 없으면 <c>.Forget()</c>으로 부른다.
+    /// </summary>
+    public async UniTask LoadAsync(string sceneName)
+    {
+        if (_isLoading)
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(sceneName))
+        {
+            Debug.LogError("[SceneLoadOverlay] 열 씬 이름이 비어 있습니다.", this);
+            return;
+        }
+
+        _isLoading = true;
+
+        // 배선이 빠졌다고 타이틀에 갇히면 안 된다. 로딩 화면 없이라도 씬은 열어 준다
+        // (원인은 Awake의 WiringGuard가 이미 콘솔에 남겼다).
+        if (_canvasGroup == null)
+        {
+            SceneManager.LoadScene(sceneName);
+            return;
+        }
+
+        CancellationToken token = this.GetCancellationTokenOnDestroy();
+
+        // 페이드가 도는 동안 타이틀 버튼이 다시 눌리지 않게 먼저 막는다.
+        _canvasGroup.blocksRaycasts = true;
+
+        // 어디서 실패해도 불투명한 화면을 걷어야 한다. 안 걷으면 클릭까지 먹는 검은 화면만 남아
+        // 타이틀로 돌아갈 길이 없다.
+        bool hasCompleted = false;
+
+        try
+        {
+            await FadeAsync(VISIBLE_ALPHA, _fadeInDuration, token);
+            await UniTask.DelayFrame(FRAMES_BEFORE_LOAD, cancellationToken: token);
+
+            // 씬이 Build Settings에 없거나 빌드에서 항목이 비활성이면 null이 돌아온다.
+            AsyncOperation operation = SceneManager.LoadSceneAsync(sceneName);
+
+            if (operation == null)
+            {
+                Debug.LogError(
+                    $"[SceneLoadOverlay] '{sceneName}' 씬을 열 수 없습니다. Build Settings 등록을 확인하세요.", this);
+                return;
+            }
+
+            // 로드가 시작된 뒤에 건다 - 실패했는데 걸어 두면 오버레이만 DontDestroyOnLoad 씬에 남는다.
+            DontDestroyOnLoad(gameObject);
+
+            await operation.ToUniTask(cancellationToken: token);
+            await UniTask.DelayFrame(FRAMES_AFTER_LOAD, cancellationToken: token);
+            await FadeAsync(HIDDEN_ALPHA, _fadeOutDuration, token);
+
+            hasCompleted = true;
+        }
+        finally
+        {
+            // 취소는 이 오브젝트가 파괴됐다는 뜻이므로 아무것도 만지지 않는다.
+            if (this != null)
+            {
+                if (hasCompleted)
+                {
+                    // blocksRaycasts는 여기까지 켜 둔 채로 끝낸다 - 반쯤 투명한 새 씬에 클릭이 떨어지면
+                    // 플레이어가 누른 적 없는 버튼이 눌린다. 파괴가 곧 해제다.
+                    Destroy(gameObject);
+                }
+                else
+                {
+                    // 실패했으면 화면을 되돌리고 다시 시도할 수 있게 남겨 둔다.
+                    Hide();
+                    _isLoading = false;
+                }
+            }
+        }
+    }
+
+    private void Hide()
+    {
+        _canvasGroup.alpha = HIDDEN_ALPHA;
+        _canvasGroup.blocksRaycasts = false;
+    }
+
+    // DOTween 대신 직접 보간한다 - 이 페이드는 씬 교체를 넘어 이어지고, 트윈은 SetLink한 오브젝트와
+    // 생명주기가 얽혀 그 경계에서 다루기가 번거롭다.
+    // unscaledDeltaTime을 쓰는 이유: timeScale이 0인 상태(GameSpeedManager의 정지)에서도 페이드는 돌아야 한다.
+    private async UniTask FadeAsync(float targetAlpha, float duration, CancellationToken token)
+    {
+        float startAlpha = _canvasGroup.alpha;
+
+        if (duration <= 0f)
+        {
+            _canvasGroup.alpha = targetAlpha;
+            return;
+        }
+
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            _canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, elapsed / duration);
+            await UniTask.Yield(token);
+        }
+
+        _canvasGroup.alpha = targetAlpha;
+    }
+}

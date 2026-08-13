@@ -9,6 +9,9 @@ using UnityEngine.UI;
 /// 새 게임과 이어하기의 차이는 SaveLoadRequest뿐이다. 요청을 남기면 게임 씬의
 /// SaveService.Awake가 소비하고 GameManager.Start가 복원 경로로, 없으면 StartNewRun으로 간다.
 /// 여기서 세이브를 직접 읽거나 게임 상태를 만들지 않는다.
+///
+/// 새 게임만 튜토리얼 여부를 묻는다 - 이어하기·불러오기는 UI_TutorialPromptPanel을 거치지 않으므로
+/// "튜토리얼을 봤는가"를 어디에도 저장하지 않아도 된다.
 /// </summary>
 public class UI_TitleWindow : MonoBehaviour
 {
@@ -23,9 +26,12 @@ public class UI_TitleWindow : MonoBehaviour
     [SerializeField] private UI_ConfigWindow _configWindow;
     [SerializeField] private UI_LoadGameWindow _loadGameWindow;
 
+    [Tooltip("새 게임을 누르면 여는 튜토리얼 진행 여부 확인 창.")]
+    [SerializeField] private UI_TutorialPromptPanel _tutorialPromptPanel;
+
     [Header("씬")]
     [Tooltip("새 게임·이어하기로 진입할 씬. Build Settings에 등록돼 있어야 한다.")]
-    [SerializeField] private string _gameSceneName = "SampleScene";
+    [SerializeField] private string _gameSceneName = SceneNames.SAMPLE_GAME;
 
     private void Awake()
     {
@@ -58,6 +64,11 @@ public class UI_TitleWindow : MonoBehaviour
         {
             _loadGameWindow.Construct(_gameSceneName);
         }
+
+        if (_tutorialPromptPanel != null)
+        {
+            _tutorialPromptPanel.Construct(_gameSceneName);
+        }
     }
 
     // 세이브 유무 판정과 BGM은 Start에서 한다(CLAUDE.md 이벤트 초기화 규칙 - 첫 발화는 Awake가 아니다).
@@ -83,13 +94,22 @@ public class UI_TitleWindow : MonoBehaviour
         }
     }
 
+    // 여는 소리는 UI_TutorialPromptPanel.Open()이 낸다 - 여기서 또 내면 겹친다(OpenLoadWindow와 같은 이유).
     private void StartNewGame()
     {
-        SoundManager.Play(SoundId.UiButtonClick);
-
         // 이전에 눌렀던 이어하기 요청이 소비되지 않고 남아 있을 수 있다.
+        // 튜토리얼로 가든 본게임으로 가든 요청이 비어 있어야 하므로, 창을 열기 전에 지운다.
         SaveLoadRequest.Clear();
-        LoadGameScene();
+
+        if (_tutorialPromptPanel == null)
+        {
+            Debug.LogWarning("[UI_TitleWindow] 튜토리얼 확인 창이 없어 본게임으로 바로 넘어갑니다.", this);
+            SoundManager.Play(SoundId.UiButtonClick);
+            LoadGameScene();
+            return;
+        }
+
+        _tutorialPromptPanel.Open();
     }
 
     private void ContinueMostRecent()
