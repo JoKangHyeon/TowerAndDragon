@@ -776,11 +776,8 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         // 갇힌 단계에서는 행동형에도 확인 버튼을 띄운다 - 그것이 유일한 빠져나갈 길이다.
         bool showsConfirmButton = _activeStep.ShowsConfirmButton || _isStalled;
 
-        // 행동형은 대상이 있으면 데이터 설정과 무관하게 대상 밖을 자동 차단한다. 이 규칙을 에셋마다
-        // 수동으로 켜게 두면 한 단계가 빠졌을 때 다른 탭·건물을 눌러 튜토리얼 순서가 무너진다.
-        bool blocksInput = (_activeStep.BlocksInput || _activeStep.Kind == TutorialStepKind.WaitForAction) &&
-                           (hasTarget || showsConfirmButton);
-
+        // 딤과 입력 차단은 넘기지 않는다 - 오버레이가 대상·확인 버튼 유무로 스스로 정한다.
+        // 여기서 단계별로 판단하게 두었더니 한 단계가 빠졌을 때 다른 탭·건물을 눌러 순서가 무너졌다.
         if (worldTarget != null)
         {
             _overlay.ShowWorldTarget(
@@ -788,25 +785,20 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 GuidePriority.DAY_ONE_TUTORIAL,
                 worldTarget,
                 _activeStep.MessageLocKey,
-                blocksInput,
                 _activeStep.BlocksTargetInteraction,
                 showsConfirmButton,
-                _activeStep.BubbleSlot,
-                _activeStep.DimsBackground);
+                _activeStep.BubbleSlot);
             return;
         }
 
-        // 대상을 못 찾았을 때 입력까지 막으면 오버레이가 아무것도 그리지 않는다 - 문구만이라도 띄운다.
         _overlay.Show(
             this,
             GuidePriority.DAY_ONE_TUTORIAL,
             target,
             _activeStep.MessageLocKey,
-            blocksInput,
             _activeStep.BlocksTargetInteraction,
             showsConfirmButton,
-            _activeStep.BubbleSlot,
-            _activeStep.DimsBackground);
+            _activeStep.BubbleSlot);
     }
 
     private Renderer ResolveWorldTarget(TutorialStepSO step)

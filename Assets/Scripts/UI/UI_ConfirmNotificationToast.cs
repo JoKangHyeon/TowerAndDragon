@@ -1,6 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -22,7 +22,10 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
     private const float DEFAULT_CARD_HEIGHT = 140f;
     private const float DEFAULT_CARD_SPACING = 10f;
     private const float DEFAULT_BOTTOM_MARGIN = 20f;
-    private const float INITIAL_SLIDE_MAX_FRAME_DELTA = 0.1f;
+    // 씬이 뜬 직후의 로딩 끊김 동안에는 슬라이드가 몇 프레임 만에 끝나버려 애니메이션이 보이지 않는다.
+    // 프레임 시간이 안정될 때까지 기다리게 했더니 저사양에서 그 조건이 영영 참이라 알림이 아예 안 나왔다 -
+    // 성능과 무관하게 끝나도록 프레임 수로 센다.
+    private const int INITIAL_SLIDE_GATE_FRAME_COUNT = 3;
     private const string PATH_SEPARATOR = "/";
 
     [Tooltip("복제할 알림 카드 원본. 런타임에는 템플릿으로만 사용한다.")]
@@ -119,7 +122,6 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
     private string _messageTextPath;
     private string _confirmButtonPath;
     private Tween _claimListMoveTween;
-    private Coroutine _initialSlideGateCoroutine;
     private bool _isInitialSlideGateOpen;
 
     private float CardStep => _cardHeight + _cardSpacing;
@@ -154,6 +156,11 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
         RepositionClaimList(false);
     }
 
+    private void Start()
+    {
+        OpenInitialSlideGateAsync().Forget();
+    }
+
     private void OnEnable()
     {
         StringTable.OnLanguageChanged += RefreshLocalizedText;
@@ -179,12 +186,6 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
 
         _claimListMoveTween?.Kill();
         _claimListMoveTween = null;
-
-        if (_initialSlideGateCoroutine != null)
-        {
-            StopCoroutine(_initialSlideGateCoroutine);
-            _initialSlideGateCoroutine = null;
-        }
 
         _initialSlideWaitingCards.Clear();
         _pendingMessages.Clear();
@@ -369,25 +370,22 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
             return;
         }
 
+        // 게이트는 Start에서 무조건 열리므로 여기서는 줄만 세운다.
         _initialSlideWaitingCards.Add(card);
-
-        if (_initialSlideGateCoroutine == null)
-        {
-            _initialSlideGateCoroutine = StartCoroutine(OpenInitialSlideGate());
-        }
     }
 
-    private IEnumerator OpenInitialSlideGate()
+    private async UniTaskVoid OpenInitialSlideGateAsync()
     {
-        yield return null;
+        await UniTask.DelayFrame(
+            INITIAL_SLIDE_GATE_FRAME_COUNT,
+            cancellationToken: this.GetCancellationTokenOnDestroy());
 
-        while (Time.unscaledDeltaTime > INITIAL_SLIDE_MAX_FRAME_DELTA)
-        {
-            yield return null;
-        }
+        OpenInitialSlideGate();
+    }
 
+    private void OpenInitialSlideGate()
+    {
         _isInitialSlideGateOpen = true;
-        _initialSlideGateCoroutine = null;
 
         ActiveCard[] waitingCards = _initialSlideWaitingCards.ToArray();
         _initialSlideWaitingCards.Clear();

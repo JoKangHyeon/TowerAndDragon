@@ -79,9 +79,6 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     private bool _blocksInput;
     private bool _blocksTargetInteraction;
     private bool _showConfirmButton;
-
-    // 딤 패널을 실제로 어둡게 칠할지. 꺼도 패널은 남으므로 blocksInput은 그대로 동작한다.
-    private bool _dimsBackground = true;
     private bool _visualsActive;
     private Canvas _canvas;
 
@@ -264,22 +261,17 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
 
     /// <summary>
     /// 말풍선을 띄운다. target을 주면 그 대상만 남기고 화면을 어둡게 덮고, target이 없으면 말풍선만 띄운다.
-    /// blocksInput은 "어둡게"와 별개로 "대상 외 클릭을 막을지"만 정한다.
     /// 문구는 로컬 키로만 받는다 - 이 컴포넌트는 문자열 리터럴을 갖지 않는다.
     /// 더 높은 우선순위가 표시권을 쥐고 있으면 아무것도 그리지 않고 false를 돌려준다 - 호출자는 그냥 넘어가면 된다.
     /// showConfirmButton은 읽고 넘기는 설명에서만 켠다 - 행동을 기다리는 단계에 버튼이 있으면
     /// 그 행동을 건너뛰고 눌러버릴 수 있다.
+    /// 딤과 입력 차단은 인자로 받지 않는다 - <see cref="ShowInternal"/>이 대상·확인 버튼 유무로 스스로 정한다.
     /// </summary>
-    /// <param name="dimsBackground">
-    /// 배경을 어둡게 깔지. 끄면 말풍선과 대상 테두리만 남고 화면은 그대로 보인다 -
-    /// X 버튼처럼 누구나 아는 대상이나, 흐름을 끊지 않고 한 줄만 알리고 싶을 때 쓴다.
-    /// 어둡게 하지 않는 것과 클릭을 막는 것은 별개다(blocksInput이 따로 정한다).
-    /// </param>
     // 기본값을 두지 않는다 - params 배열 앞의 선택 인자는 호출부가 인자를 빠뜨렸을 때 조용히
     // 엉뚱한 자리에 묶일 수 있다. 호출부가 매번 밝히게 한다.
-    public bool Show(object owner, int priority, RectTransform target, string locKey, bool blocksInput,
+    public bool Show(object owner, int priority, RectTransform target, string locKey,
         bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot,
-        bool dimsBackground, params object[] args)
+        params object[] args)
     {
         return ShowInternal(
             owner,
@@ -287,11 +279,9 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
             target,
             null,
             locKey,
-            blocksInput,
             blocksTargetInteraction,
             showConfirmButton,
             bubbleSlot,
-            dimsBackground,
             args);
     }
 
@@ -299,9 +289,9 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     /// 월드 오브젝트를 클릭하게 하는 안내. 렌더러의 월드 바운드를 화면 사각형으로 투영해
     /// UI 대상과 같은 딤 구멍을 만들므로, 해당 오브젝트 밖의 UI와 월드 클릭을 함께 막을 수 있다.
     /// </summary>
-    public bool ShowWorldTarget(object owner, int priority, Renderer target, string locKey, bool blocksInput,
+    public bool ShowWorldTarget(object owner, int priority, Renderer target, string locKey,
         bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot,
-        bool dimsBackground, params object[] args)
+        params object[] args)
     {
         return ShowInternal(
             owner,
@@ -309,17 +299,15 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
             null,
             target,
             locKey,
-            blocksInput,
             blocksTargetInteraction,
             showConfirmButton,
             bubbleSlot,
-            dimsBackground,
             args);
     }
 
     private bool ShowInternal(object owner, int priority, RectTransform target, Renderer worldTarget,
-        string locKey, bool blocksInput, bool blocksTargetInteraction, bool showConfirmButton,
-        GuideBubbleSlot bubbleSlot, bool dimsBackground, params object[] args)
+        string locKey, bool blocksTargetInteraction, bool showConfirmButton,
+        GuideBubbleSlot bubbleSlot, params object[] args)
     {
         if (owner == null)
         {
@@ -345,31 +333,28 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
             return false;
         }
 
-        // 안내가 떠 있는 동안에는 유도한 곳 말고는 누를 수 없다. 호출부가 뭘 넘겼든 여기서 넓힌다 -
-        // 단계마다 판단하게 두었더니 빠뜨린 곳이 계속 나왔고, 그때마다 플레이어가 엉뚱한 버튼을 눌러
-        // 안내가 가리키던 창을 닫거나 밤으로 넘어가 안내만 남았다.
-        //
-        // 빠져나갈 길이 없을 때만 열어 둔다 - 구멍도 확인 버튼도 없는데 막으면 아무것도 누를 수 없다.
-        // 그리드를 클릭해 새끼용을 배치하는 단계가 그 경우로, 대상을 지정하지 않아 화면 전체가 통로다.
-        blocksInput = hasTarget || hasEscape;
-
-        // 막는 곳은 어둡게도 한다. 보이지 않는 벽에 막히면 플레이어는 게임이 멈춘 줄 안다.
-        dimsBackground = blocksInput;
-
         _owner = owner;
         _ownerPriority = priority;
         _target = target;
         _worldTarget = worldTarget;
         _expectsTarget = hasTarget;
-        _blocksInput = blocksInput;
+
+        // 안내가 떠 있는 동안에는 유도한 곳 말고는 누를 수 없다. 호출부에 맡기지 않고 여기서 정한다 -
+        // 단계마다 판단하게 두었더니 빠뜨린 곳이 계속 나왔고, 그때마다 플레이어가 엉뚱한 버튼을 눌러
+        // 안내가 가리키던 창을 닫거나 밤으로 넘어가 안내만 남았다.
+        //
+        // 빠져나갈 길이 없을 때만 열어 둔다 - 구멍도 확인 버튼도 없는데 막으면 아무것도 누를 수 없다.
+        // 그리드를 클릭해 새끼용을 배치하는 단계가 그 경우로, 대상을 지정하지 않아 화면 전체가 통로다.
+        //
+        // 딤도 같은 값을 쓴다(ApplyDim). 막는 곳은 어둡게 해야 한다 - 보이지 않는 벽에 막히면 멈춘 줄 안다.
+        _blocksInput = hasTarget || hasEscape;
+
         _blocksTargetInteraction = blocksTargetInteraction;
         _showConfirmButton = showConfirmButton;
-        _dimsBackground = dimsBackground;
         _currentLocKey = locKey;
         _currentArgs = args;
         ApplyText();
-        ApplyDimColor();
-        ApplyDimRaycast();
+        ApplyDim();
         ApplyBubbleSlot(bubbleSlot);
 
         SetVisualsActive(true);
@@ -642,33 +627,19 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
         blocker.SetActive(false);
     }
 
-    // 어둡게 깔지 여부. 투명하게만 만들고 패널 자체는 남긴다 - blocksInput이 켜져 있으면
-    // 보이지 않아도 클릭은 계속 막아야 하기 때문이다(막는 것은 ApplyDimRaycast가 정한다).
-    private void ApplyDimColor()
+    // 어둡게 칠하는 것과 클릭을 막는 것은 같은 값을 쓴다 - 막지 않는 단계를 어둡게 하면 멈춘 줄 알고,
+    // 어둡지 않은데 막으면 보이지 않는 벽이 된다. 막지 않을 때도 패널 자체는 투명하게 남겨 둔다.
+    private void ApplyDim()
     {
         if (_dimImages == null)
         {
             return;
         }
 
-        Color color = _dimsBackground ? _dimColor : Color.clear;
+        Color color = _blocksInput ? _dimColor : Color.clear;
         foreach (Image image in _dimImages)
         {
             image.color = color;
-        }
-    }
-
-    // 딤은 "보이는 것"과 "막는 것"이 별개다. 대상이 있으면 늘 어둡게 깔되, 막을지는 단계가 정한다 -
-    // 알 슬롯처럼 눌러도 반응이 없는 대상을 강조할 때 막아버리면 플레이어가 빠져나갈 길이 없다.
-    private void ApplyDimRaycast()
-    {
-        if (_dimImages == null)
-        {
-            return;
-        }
-
-        foreach (Image image in _dimImages)
-        {
             image.raycastTarget = _blocksInput;
         }
     }

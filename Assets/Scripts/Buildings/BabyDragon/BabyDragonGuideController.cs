@@ -65,6 +65,13 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
     /// </summary>
     public UnityEvent<BabyDragonGuideStep> StepEntered = new();
 
+    /// <summary>
+    /// 알 확인 안내(WaitHatch)를 읽고 인벤토리를 닫았다. 부화·배치는 며칠 뒤지만 이것은 1일차에 끝나므로,
+    /// "용의 알을 받아 확인한다" 목표가 완료를 판정하는 시점이다.
+    /// 알을 받기 전에 인벤토리를 열었다 닫은 것은 여기 해당하지 않는다 - 그 경로로는 이 안내에 도달하지 못한다.
+    /// </summary>
+    public UnityEvent EggCheckGuideFinished = new();
+
     // 아직 시작 전이면 값이 없다 - 첫 알을 얻는 순간 OpenInventory로 들어간다.
     private BabyDragonGuideStep? _currentStep;
 
@@ -506,9 +513,9 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         switch (_currentStep.Value)
         {
             case BabyDragonGuideStep.OpenInventory:
-                // 유일하게 입력을 막는 단계 - 버튼 한 번 누르면 끝나는 행동이라 막아도 갇히지 않는다.
-                ShowGuide(_inventoryButton, OPEN_INVENTORY_LOC_KEY, blocksInput: true,
-                    dimsBackground: true, showConfirmButton: false, ResolveToggleKeyLabel());
+                // HUD 버튼 하나만 통로로 남는다 - 한 번 누르면 끝나는 행동이라 막혀도 갇히지 않는다.
+                ShowGuide(_inventoryButton, OPEN_INVENTORY_LOC_KEY,
+                    showConfirmButton: false, ResolveToggleKeyLabel());
                 break;
 
             case BabyDragonGuideStep.WaitHatch:
@@ -518,7 +525,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
                     // 안내를 본 뒤 창을 닫았다면 이 단계에서 가르칠 것은 끝났다.
                     // 부화까지 며칠이 걸리는 동안 창을 열 때마다 같은 말을 다시 띄우면,
                     // 이미 읽은 안내가 지워지지 않고 계속 따라다닌다.
-                    _hasFinishedWaitHatchGuide |= _hasShownWaitHatchGuide;
+                    FinishWaitHatchGuideIfShown();
                     _overlay.Release(this);
                     break;
                 }
@@ -541,18 +548,18 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
                 // 딤을 걷는다. 그리드를 덮은 채로 "타일을 클릭하라"고 하면 어디를 눌러야 할지 가려진다.
                 if (IsPlacingBabyDragon)
                 {
-                    ShowGuide(null, PLACE_DRAGON_TILE_LOC_KEY, blocksInput: false);
+                    ShowGuide(null, PLACE_DRAGON_TILE_LOC_KEY, showConfirmButton: false);
                     break;
                 }
 
                 // 부화는 WaitHatch에서 창을 닫아둔 상태로 맞이하므로, 여기서 다시 열도록 HUD 버튼을 강조한다.
-                // 딤을 깔았으면 입력도 함께 막는다 - 어두운데 다른 버튼이 눌리면 플레이어는 막힌 줄 알고
-                // 엉뚱한 조작을 한다(이 안내 중에 건설 버튼이 눌려 농장이 지어지고 팁 체인이 겹쳤다).
-                // 구멍이 HUD 버튼이라 그건 눌리고, 토글 키도 AllowsShortcut이 예외로 통과시킨다.
+                // 대상이 있으니 오버레이가 그 밖을 막는다 - 이 안내 중에 건설 버튼이 눌려 농장이 지어지고
+                // 팁 체인이 겹친 적이 있다. 구멍이 HUD 버튼이라 그건 눌리고,
+                // 토글 키도 AllowsShortcut이 예외로 통과시킨다.
                 if (!IsInventoryOpen)
                 {
-                    ShowGuide(_inventoryButton, REOPEN_INVENTORY_LOC_KEY, blocksInput: true,
-                        dimsBackground: true, showConfirmButton: false, ResolveToggleKeyLabel());
+                    ShowGuide(_inventoryButton, REOPEN_INVENTORY_LOC_KEY,
+                        showConfirmButton: false, ResolveToggleKeyLabel());
                     break;
                 }
 
@@ -561,11 +568,10 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
                 break;
 
             case BabyDragonGuideStep.Completed:
-                // 가리킬 대상이 없다 - 딤 없이 말풍선만 띄우고 확인 버튼으로 넘긴다.
+                // 가리킬 대상이 없다 - 화면을 통째로 덮고 말풍선과 확인 버튼만 남긴다.
                 if (_completionIndex < COMPLETION_LOC_KEYS.Length)
                 {
-                    ShowGuide(null, COMPLETION_LOC_KEYS[_completionIndex],
-                        blocksInput: false, dimsBackground: false, showConfirmButton: true);
+                    ShowGuide(null, COMPLETION_LOC_KEYS[_completionIndex], showConfirmButton: true);
                     break;
                 }
 
@@ -575,7 +581,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
             case BabyDragonGuideStep.ChangeMode:
                 // 관리창이 열려야 가리킬 버튼이 생긴다. 닫혀 있으면 조용히 물러나 플레이어가 새끼용을
                 // 클릭할 때까지 기다린다 - 그때 Update가 열림을 잡아 다시 그린다.
-                // 딤을 깔지 않는 이유: 안내를 보면서 그 버튼을 바로 눌러볼 수 있어야 한다.
+                // 구멍이 모드 버튼이라 안내를 보면서 그 버튼을 바로 눌러볼 수 있다.
                 if (_hasReadModeHint || _modeButtonsRect == null ||
                     _manageWindow == null || !_manageWindow.IsOpen)
                 {
@@ -583,8 +589,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
                     break;
                 }
 
-                ShowGuide(_modeButtonsRect, MODE_HINT_LOC_KEY,
-                    blocksInput: false, dimsBackground: false, showConfirmButton: true);
+                ShowGuide(_modeButtonsRect, MODE_HINT_LOC_KEY, showConfirmButton: true);
                 break;
 
             default:
@@ -593,16 +598,32 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         }
     }
 
+    // Render는 창이 열리고 닫힐 때마다 도므로 전이할 때 한 번만 알린다 - 매번 발화하면
+    // 같은 완료가 반복해서 흘러간다. 복원(RestoreFromRunData)은 이 길을 타지 않는다 -
+    // 이미 끝난 안내를 다시 알릴 이유가 없고, 목표 완료는 RunData에 남아 있다.
+    private void FinishWaitHatchGuideIfShown()
+    {
+        if (_hasFinishedWaitHatchGuide || !_hasShownWaitHatchGuide)
+        {
+            return;
+        }
+
+        _hasFinishedWaitHatchGuide = true;
+        EggCheckGuideFinished.Invoke();
+    }
+
     // 표시권을 못 잡으면(1일차 튜토리얼이 화면을 쓰는 중) 그냥 넘어간다 - 단계는 이미 전진해 있고,
     // 튜토리얼이 놓을 때 DisplayReleased로 Render가 다시 돌아 그 시점의 단계부터 유도한다.
-    private void ShowGuide(RectTransform target, string locKey, bool blocksInput,
-        bool dimsBackground = true, bool showConfirmButton = false, params object[] args)
+    //
+    // 기본값을 두지 않는다 - params 배열 앞의 선택 인자는 호출부가 빠뜨렸을 때 조용히 엉뚱한 자리에 묶인다.
+    private void ShowGuide(RectTransform target, string locKey, bool showConfirmButton, params object[] args)
     {
         GuideBubbleSlot slot = ResolveBubbleSlot(locKey);
 
         // 새끼용 안내는 전부 눌러보게 하는 단계라 대상을 막지 않는다.
-        _overlay.Show(this, GuidePriority.BABY_DRAGON_GUIDE, target, locKey, blocksInput,
-            blocksTargetInteraction: false, showConfirmButton, slot, dimsBackground, args);
+        // 딤과 입력 차단은 넘기지 않는다 - 오버레이가 대상·확인 버튼 유무로 스스로 정한다.
+        _overlay.Show(this, GuidePriority.BABY_DRAGON_GUIDE, target, locKey,
+            blocksTargetInteraction: false, showConfirmButton, slot, args);
     }
 
     // 말풍선 자리는 그 단계가 무엇을 가리지 말아야 하는지로 정한다.
@@ -726,7 +747,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         // 여기서 다시 정하면 규칙이 두 곳으로 갈린다.
         if (!_inventoryWindow.IsBabyTabShown)
         {
-            ShowGuide(_inventoryWindow.BabyTabRect, SWITCH_TAB_LOC_KEY, blocksInput: true);
+            ShowGuide(_inventoryWindow.BabyTabRect, SWITCH_TAB_LOC_KEY, showConfirmButton: false);
             return;
         }
 
@@ -736,7 +757,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         if (_inventoryWindow.TryGetFirstBabyDragonFocusButtonRect(out RectTransform slotRect) ||
             _inventoryWindow.TryGetFirstBabyDragonSlotRect(out slotRect))
         {
-            ShowGuide(slotRect, slotLocKey, blocksInput: true);
+            ShowGuide(slotRect, slotLocKey, showConfirmButton: false);
             return;
         }
 
@@ -762,14 +783,14 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         // 새끼용 탭으로 옮기라는 유도가 먼저다 - 알을 보여주고 나서 닫게 해야 순서가 맞는다.
         if (!_inventoryWindow.IsBabyTabShown)
         {
-            ShowGuide(_inventoryWindow.BabyTabRect, SWITCH_TAB_LOC_KEY, blocksInput: true);
+            ShowGuide(_inventoryWindow.BabyTabRect, SWITCH_TAB_LOC_KEY, showConfirmButton: false);
             return;
         }
 
         // 1컷 - 알 슬롯. 아직 안 그려졌으면 기다리지 않고 닫기 안내로 넘어간다(창은 어차피 닫아야 한다).
         if (!_hasReadEggSlotInfo && _inventoryWindow.TryGetFirstEggSlotRect(out RectTransform eggRect))
         {
-            ShowGuide(eggRect, WAIT_HATCH_LOC_KEY, blocksInput: true, showConfirmButton: true);
+            ShowGuide(eggRect, WAIT_HATCH_LOC_KEY, showConfirmButton: true);
             return;
         }
 
@@ -785,6 +806,6 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
 
         // 여는 법으로 알려준 토글 키를 닫는 문구에도 함께 적는다 - 같은 키로 여닫는 것이 당연한데
         // 한쪽만 알려주면 플레이어는 그 키가 닫기에는 안 듣는 줄 안다(실제로 막혀 있기도 했다).
-        ShowGuide(exitRect, CLOSE_INVENTORY_LOC_KEY, true, true, false, ResolveToggleKeyLabel());
+        ShowGuide(exitRect, CLOSE_INVENTORY_LOC_KEY, showConfirmButton: false, ResolveToggleKeyLabel());
     }
 }
