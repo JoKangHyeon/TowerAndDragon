@@ -28,8 +28,11 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
         Save,
     }
 
-    [Tooltip("세이브 슬롯 한 줄 프리팹(Slot_SaveSlot).")]
+    [Tooltip("세이브 슬롯 한 줄 프리팹(Slot_SaveSlot). 수동 저장 슬롯(1번부터)에 쓴다.")]
     [SerializeField] private UI_SaveSlotItem _slotPrefab;
+
+    [Tooltip("자동저장 슬롯(0번) 전용 프리팹(Slot_SaveSlot_Auto). 자동저장 표시와 테두리가 붙어 있다.")]
+    [SerializeField] private UI_SaveSlotItem _autoSlotPrefab;
 
     [Tooltip("생성된 슬롯이 들어갈 부모.")]
     [SerializeField] private Transform _slotContainer;
@@ -50,6 +53,10 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private InputActionReference _closeAction;
 
     private ComponentPool<UI_SaveSlotItem> _slotPool;
+
+    // 자동저장 슬롯은 한 줄뿐이지만, 목록에서 빠지는 경우까지 같은 방식으로 처리하려고 풀로 둔다.
+    private ComponentPool<UI_SaveSlotItem> _autoSlotPool;
+
     private readonly List<UI_SaveSlotItem> _slots = new();
 
     // 슬롯을 고른 뒤 열 씬. 타이틀 화면이 Construct로 넣어 준다(UI_VolumeRow와 같은 주입 방식) -
@@ -80,6 +87,12 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
     private void Awake()
     {
         _slotPool = new ComponentPool<UI_SaveSlotItem>(_slotPrefab, _slotContainer);
+
+        // 전용 프리팹이 비어 있으면 자동저장 줄만 사라지는 대신 예전처럼 같은 프리팹으로 그린다
+        // (자동저장 표시는 UI_SaveSlotItem이 뱃지 참조가 없으면 알아서 건너뛴다).
+        UI_SaveSlotItem autoPrefab =
+            WiringGuard.Require(_autoSlotPrefab, nameof(_autoSlotPrefab), this) ? _autoSlotPrefab : _slotPrefab;
+        _autoSlotPool = new ComponentPool<UI_SaveSlotItem>(autoPrefab, _slotContainer);
 
         if (_closeButton != null)
         {
@@ -198,9 +211,22 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
         IReadOnlyList<SaveSlotInfo> slots = SaveSlotQuery.GetSlots();
         _slots.Clear();
 
+        int autoSlotCount = 0;
+        int manualSlotCount = 0;
+
         for (int i = 0; i < slots.Count; i++)
         {
-            UI_SaveSlotItem item = _slotPool.Get(i);
+            // 프리팹은 슬롯 번호로 가른다. 메타의 IsAutoSave는 저장된 적이 있어야 켜지므로,
+            // 비어 있는 0번 줄이 수동 저장 슬롯 모양으로 그려져 버린다.
+            bool isAutoSlot = slots[i].SlotIndex == SaveService.AUTO_SAVE_SLOT_INDEX;
+
+            UI_SaveSlotItem item = isAutoSlot
+                ? _autoSlotPool.Get(autoSlotCount++)
+                : _slotPool.Get(manualSlotCount++);
+
+            // 두 풀이 같은 부모를 공유해 생성 순서만으로는 줄 순서가 보장되지 않는다.
+            item.transform.SetSiblingIndex(i);
+
             item.Setup(
                 slots[i],
                 IsSlotSelectable(slots[i]),
@@ -210,7 +236,8 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
             _slots.Add(item);
         }
 
-        _slotPool.DeactivateFrom(slots.Count);
+        _autoSlotPool.DeactivateFrom(autoSlotCount);
+        _slotPool.DeactivateFrom(manualSlotCount);
 
         if (_slotContainer is RectTransform containerRect)
         {
