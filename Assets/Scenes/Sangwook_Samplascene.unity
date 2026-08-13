@@ -896,6 +896,8 @@ MonoBehaviour:
   _babyDragonBuffSystem: {fileID: 936144406}
   _terrainPenaltySystem: {fileID: 1652351659}
   _terrainUpkeepSystem: {fileID: 1356859336}
+  _towerUpkeepSystem: {fileID: 0}
+  _economyBalance: {fileID: 0}
   ForecastChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -6223,6 +6225,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PopulationUpkeepSystem
   _resourceManager: {fileID: 914589613}
   _populationManager: {fileID: 914589617}
+  _economyBalance: {fileID: 0}
 --- !u!114 &1356859335
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6238,10 +6241,14 @@ MonoBehaviour:
   _cycleManager: {fileID: 914589611}
   _populationUpkeepSystem: {fileID: 1356859334}
   _terrainUpkeepSystem: {fileID: 1356859336}
+  _towerUpkeepSystem: {fileID: 0}
   SettlementCompleted:
     m_PersistentCalls:
       m_Calls: []
   TerrainSettlementCompleted:
+    m_PersistentCalls:
+      m_Calls: []
+  TowerSettlementCompleted:
     m_PersistentCalls:
       m_Calls: []
 --- !u!114 &1356859336
@@ -7106,6 +7113,7 @@ MonoBehaviour:
   _iceUnlockableTerrain: 2
   _moveHoldDuration: 2
   _dragThreshold: 10
+  _economyBalance: {fileID: 0}
   BuildingSelected:
     m_PersistentCalls:
       m_Calls: []
