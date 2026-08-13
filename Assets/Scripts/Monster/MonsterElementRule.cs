@@ -5,5 +5,7 @@ public enum MonsterElementRule
     // 설정한 속성의 공격만 허용한다.
     OnlyMatchingElement,
     // 설정한 속성의 공격만 차단한다.
-    ImmuneToMatchingElement
+    ImmuneToMatchingElement,
+    // 모든 속성의 공격 차단.
+    AllImmune
 }
