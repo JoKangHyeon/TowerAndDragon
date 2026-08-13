@@ -98,4 +98,9 @@ public enum TutorialConditionType
     // 정산 안내는 정산될 것이 있을 때만 뜻이 있다 - 아무것도 안 지은 플레이어에게
     // "자원이 들어왔습니다"라고 하면 화면과 말이 어긋난다.
     DayStartedWithStaffedProduction,
+
+    // BabyDragonGuideController.EggCheckGuideFinished - 알 확인 안내를 읽고 인벤토리를 닫았다.
+    // ExclusiveModeClosed로는 대체할 수 없다 - 알을 받기 전에 인벤토리를 한 번 열었다 닫기만 해도
+    // 통과해 안내가 시작되기도 전에 목표가 완료됐다.
+    BabyDragonEggChecked,
 }

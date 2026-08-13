@@ -11,7 +11,7 @@ using UnityEngine.UI;
 /// 단일 인스턴스로 쓰는 것을 전제한다 - 그래야 안내끼리 겹치지 않는다. 여러 가이드가 동시에 뜨려 하면
 /// 우선순위가 높은 쪽이 표시권을 잡고, 진 쪽은 Show가 false를 돌려받아 그리지 않는다(상태는 계속 전진).
 /// </summary>
-public class UI_GuideOverlay : MonoBehaviour
+public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
 {
     private const int DIM_PANEL_COUNT = 4;
     private const int RECT_CORNER_COUNT = 4;
@@ -48,6 +48,9 @@ public class UI_GuideOverlay : MonoBehaviour
              "행동을 기다리는 단계에서는 자동으로 숨는다. 없으면 설명이 시간으로만 넘어간다.")]
     [SerializeField] private Button _confirmButton;
 
+    [Tooltip("안내가 떠 있는 동안 밤으로 넘어가지 못하게 막는 데 쓴다. 비우면 막지 않는다.")]
+    [SerializeField] private CycleManager _cycleManager;
+
     [SerializeField] private Color _dimColor = new Color(0f, 0f, 0f, DEFAULT_DIM_ALPHA);
 
     [Tooltip("구멍을 대상보다 이만큼 넓게 뚫는다.")]
@@ -76,9 +79,6 @@ public class UI_GuideOverlay : MonoBehaviour
     private bool _blocksInput;
     private bool _blocksTargetInteraction;
     private bool _showConfirmButton;
-
-    // 딤 패널을 실제로 어둡게 칠할지. 꺼도 패널은 남으므로 blocksInput은 그대로 동작한다.
-    private bool _dimsBackground = true;
     private bool _visualsActive;
     private Canvas _canvas;
 
@@ -122,6 +122,37 @@ public class UI_GuideOverlay : MonoBehaviour
     /// 로그에는 다 지나간 것으로 남고 화면에는 아무것도 뜨지 않는다.
     /// </summary>
     public bool IsDisplaying(object owner) => HasOwner && ReferenceEquals(_owner, owner);
+
+    /// <summary>
+    /// 지금 안내가 화면에 떠 있는지. 표시권만 보면 안 된다 - <see cref="Suspend"/>는 딤을 걷으면서
+    /// 표시권은 쥐고 있고, 대상이 사라지면 LateUpdate가 연출만 감춘다. 화면에 아무것도 없는 그 동안까지
+    /// 게임을 잠그면 안 되므로 <see cref="_visualsActive"/>를 함께 본다.
+    /// </summary>
+    public bool IsShowingGuide => HasOwner && _visualsActive;
+
+    /// <summary>
+    /// 이 소유자의 안내가 <b>실제로 화면에 떠 있는지</b>. 관문을 거는 쪽은 반드시 이것을 봐야 한다 -
+    /// <see cref="IsDisplaying"/>는 표시권만 보므로, LateUpdate가 대상을 잃고 연출만 감춘 상태
+    /// (표시권은 유지)에서도 참이다. 그 상태에서 관문을 걸면 화면에 아무 안내도 없는데 버튼과 단축키가
+    /// 조용히 죽는다 - 실제로 그렇게 만들어 게임 전체가 막힌 것처럼 보였다.
+    /// </summary>
+    public bool IsShowingFor(object owner) => IsShowingGuide && ReferenceEquals(_owner, owner);
+
+    /// <summary>
+    /// 지금 딤이 대상 밖 클릭을 막고 있는지. 키보드 단축키는 딤을 통과하므로, 마우스와 같은 기준으로
+    /// 막으려면 단축키 폴링 지점이 이것을 봐야 한다(<see cref="UIManager.CanUseShortcut"/>이 대신 물어준다).
+    /// </summary>
+    public bool IsBlockingInput => IsShowingGuide && _blocksInput;
+
+    /// <summary>
+    /// 안내가 떠 있는 동안에는 밤으로 넘어가지 않는다. 밤은 되돌릴 수 없는 데다 건설·인구 배치가 잠겨
+    /// 안내가 시키는 일을 아예 할 수 없게 되는데, 안내는 그대로 남아 무엇을 하라는 것인지 알 수 없어진다.
+    ///
+    /// 막는 주체를 안내별로 두지 않고 여기 하나로 모은 이유는 딤과 같다 - 러너마다 걸게 하면
+    /// 빠뜨리는 곳이 계속 생긴다(팁 체인과 새끼용 가이드가 실제로 빠져 있었다).
+    /// 화면에서 걷히면 곧바로 풀리므로, 부화를 기다리려고 창을 닫은 뒤에는 정상적으로 밤이 온다.
+    /// </summary>
+    bool IDayEndBlockQuery.CanEndDay() => !IsShowingGuide;
 
     /// <summary>
     /// 지금 안내가 가리키고 있는 UI 대상. 아무것도 안 가리키면 null이다.
@@ -188,12 +219,23 @@ public class UI_GuideOverlay : MonoBehaviour
     private void OnEnable()
     {
         StringTable.OnLanguageChanged += ApplyText;
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.AddDayEndBlocker(this);
+        }
     }
 
     private void OnDisable()
     {
         StringTable.OnLanguageChanged -= ApplyText;
         KillPulses();
+
+        // 끄면 밤 잠금도 같이 풀어준다 - 안 그러면 영영 막힌 채로 남는다.
+        if (_cycleManager != null)
+        {
+            _cycleManager.RemoveDayEndBlocker(this);
+        }
     }
 
     private void ApplyText()
@@ -219,22 +261,17 @@ public class UI_GuideOverlay : MonoBehaviour
 
     /// <summary>
     /// 말풍선을 띄운다. target을 주면 그 대상만 남기고 화면을 어둡게 덮고, target이 없으면 말풍선만 띄운다.
-    /// blocksInput은 "어둡게"와 별개로 "대상 외 클릭을 막을지"만 정한다.
     /// 문구는 로컬 키로만 받는다 - 이 컴포넌트는 문자열 리터럴을 갖지 않는다.
     /// 더 높은 우선순위가 표시권을 쥐고 있으면 아무것도 그리지 않고 false를 돌려준다 - 호출자는 그냥 넘어가면 된다.
     /// showConfirmButton은 읽고 넘기는 설명에서만 켠다 - 행동을 기다리는 단계에 버튼이 있으면
     /// 그 행동을 건너뛰고 눌러버릴 수 있다.
+    /// 딤과 입력 차단은 인자로 받지 않는다 - <see cref="ShowInternal"/>이 대상·확인 버튼 유무로 스스로 정한다.
     /// </summary>
-    /// <param name="dimsBackground">
-    /// 배경을 어둡게 깔지. 끄면 말풍선과 대상 테두리만 남고 화면은 그대로 보인다 -
-    /// X 버튼처럼 누구나 아는 대상이나, 흐름을 끊지 않고 한 줄만 알리고 싶을 때 쓴다.
-    /// 어둡게 하지 않는 것과 클릭을 막는 것은 별개다(blocksInput이 따로 정한다).
-    /// </param>
     // 기본값을 두지 않는다 - params 배열 앞의 선택 인자는 호출부가 인자를 빠뜨렸을 때 조용히
     // 엉뚱한 자리에 묶일 수 있다. 호출부가 매번 밝히게 한다.
-    public bool Show(object owner, int priority, RectTransform target, string locKey, bool blocksInput,
+    public bool Show(object owner, int priority, RectTransform target, string locKey,
         bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot,
-        bool dimsBackground, params object[] args)
+        params object[] args)
     {
         return ShowInternal(
             owner,
@@ -242,11 +279,9 @@ public class UI_GuideOverlay : MonoBehaviour
             target,
             null,
             locKey,
-            blocksInput,
             blocksTargetInteraction,
             showConfirmButton,
             bubbleSlot,
-            dimsBackground,
             args);
     }
 
@@ -254,9 +289,9 @@ public class UI_GuideOverlay : MonoBehaviour
     /// 월드 오브젝트를 클릭하게 하는 안내. 렌더러의 월드 바운드를 화면 사각형으로 투영해
     /// UI 대상과 같은 딤 구멍을 만들므로, 해당 오브젝트 밖의 UI와 월드 클릭을 함께 막을 수 있다.
     /// </summary>
-    public bool ShowWorldTarget(object owner, int priority, Renderer target, string locKey, bool blocksInput,
+    public bool ShowWorldTarget(object owner, int priority, Renderer target, string locKey,
         bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot,
-        bool dimsBackground, params object[] args)
+        params object[] args)
     {
         return ShowInternal(
             owner,
@@ -264,17 +299,15 @@ public class UI_GuideOverlay : MonoBehaviour
             null,
             target,
             locKey,
-            blocksInput,
             blocksTargetInteraction,
             showConfirmButton,
             bubbleSlot,
-            dimsBackground,
             args);
     }
 
     private bool ShowInternal(object owner, int priority, RectTransform target, Renderer worldTarget,
-        string locKey, bool blocksInput, bool blocksTargetInteraction, bool showConfirmButton,
-        GuideBubbleSlot bubbleSlot, bool dimsBackground, params object[] args)
+        string locKey, bool blocksTargetInteraction, bool showConfirmButton,
+        GuideBubbleSlot bubbleSlot, params object[] args)
     {
         if (owner == null)
         {
@@ -288,16 +321,14 @@ public class UI_GuideOverlay : MonoBehaviour
             return false;
         }
 
-        // 대상 없이 화면을 덮는 것은 빠져나갈 길이 있을 때만 받는다 - 확인 버튼은 딤 위에 있어 계속 눌린다.
-        // 그 버튼조차 없으면 아무것도 누를 수 없게 되므로 거절한다.
-        // 단계가 버튼을 켜라고 해도 배선이 비어 있으면 실제로는 버튼이 없는 것과 같다 - 둘을 함께 본다.
-        // 조용히 사라지면 앵커가 여러 개인 안내에서 원인을 찾을 수 없으므로 반드시 남긴다.
+        // 확인 버튼은 딤 위에 있어 막아도 계속 눌린다. 단계가 켜라고 해도 배선이 비어 있으면
+        // 실제로는 버튼이 없는 것과 같으므로 둘을 함께 본다.
         bool hasEscape = showConfirmButton && _confirmButton != null;
         bool hasTarget = target != null || worldTarget != null;
-        if (_overlayRoot == null || (!hasTarget && blocksInput && !hasEscape))
+
+        if (_overlayRoot == null)
         {
-            Debug.LogWarning($"[UI_GuideOverlay] {locKey} 안내를 띄울 수 없다 - " +
-                             "_overlayRoot가 비었거나, 빠져나갈 버튼 없이 화면 전체를 막으려 했다.");
+            Debug.LogWarning($"[UI_GuideOverlay] {locKey} 안내를 띄울 수 없다 - _overlayRoot가 비었다.");
             Release(owner);
             return false;
         }
@@ -307,15 +338,23 @@ public class UI_GuideOverlay : MonoBehaviour
         _target = target;
         _worldTarget = worldTarget;
         _expectsTarget = hasTarget;
-        _blocksInput = blocksInput;
+
+        // 안내가 떠 있는 동안에는 유도한 곳 말고는 누를 수 없다. 호출부에 맡기지 않고 여기서 정한다 -
+        // 단계마다 판단하게 두었더니 빠뜨린 곳이 계속 나왔고, 그때마다 플레이어가 엉뚱한 버튼을 눌러
+        // 안내가 가리키던 창을 닫거나 밤으로 넘어가 안내만 남았다.
+        //
+        // 빠져나갈 길이 없을 때만 열어 둔다 - 구멍도 확인 버튼도 없는데 막으면 아무것도 누를 수 없다.
+        // 그리드를 클릭해 새끼용을 배치하는 단계가 그 경우로, 대상을 지정하지 않아 화면 전체가 통로다.
+        //
+        // 딤도 같은 값을 쓴다(ApplyDim). 막는 곳은 어둡게 해야 한다 - 보이지 않는 벽에 막히면 멈춘 줄 안다.
+        _blocksInput = hasTarget || hasEscape;
+
         _blocksTargetInteraction = blocksTargetInteraction;
         _showConfirmButton = showConfirmButton;
-        _dimsBackground = dimsBackground;
         _currentLocKey = locKey;
         _currentArgs = args;
         ApplyText();
-        ApplyDimColor();
-        ApplyDimRaycast();
+        ApplyDim();
         ApplyBubbleSlot(bubbleSlot);
 
         SetVisualsActive(true);
@@ -588,33 +627,19 @@ public class UI_GuideOverlay : MonoBehaviour
         blocker.SetActive(false);
     }
 
-    // 어둡게 깔지 여부. 투명하게만 만들고 패널 자체는 남긴다 - blocksInput이 켜져 있으면
-    // 보이지 않아도 클릭은 계속 막아야 하기 때문이다(막는 것은 ApplyDimRaycast가 정한다).
-    private void ApplyDimColor()
+    // 어둡게 칠하는 것과 클릭을 막는 것은 같은 값을 쓴다 - 막지 않는 단계를 어둡게 하면 멈춘 줄 알고,
+    // 어둡지 않은데 막으면 보이지 않는 벽이 된다. 막지 않을 때도 패널 자체는 투명하게 남겨 둔다.
+    private void ApplyDim()
     {
         if (_dimImages == null)
         {
             return;
         }
 
-        Color color = _dimsBackground ? _dimColor : Color.clear;
+        Color color = _blocksInput ? _dimColor : Color.clear;
         foreach (Image image in _dimImages)
         {
             image.color = color;
-        }
-    }
-
-    // 딤은 "보이는 것"과 "막는 것"이 별개다. 대상이 있으면 늘 어둡게 깔되, 막을지는 단계가 정한다 -
-    // 알 슬롯처럼 눌러도 반응이 없는 대상을 강조할 때 막아버리면 플레이어가 빠져나갈 길이 없다.
-    private void ApplyDimRaycast()
-    {
-        if (_dimImages == null)
-        {
-            return;
-        }
-
-        foreach (Image image in _dimImages)
-        {
             image.raycastTarget = _blocksInput;
         }
     }

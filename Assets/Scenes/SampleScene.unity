@@ -1241,27 +1241,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db3200645c162584daeae3f0b9ed9bd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
-  _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _cameraZoomAction: {fileID: 5403002573186811895, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _cameraBookmarkAction: {fileID: -7252859598093481112, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _cameraBookmarkSaveModifierAction: {fileID: 5692209928381186351, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _wasdSpeed: 12
-  _edgeScrollSpeed: 12
-  _dragSensitivity: 1
-  _edgeScrollEnabled: 1
-  _edgeScrollThreshold: 20
-  _zoomSpeed: 3
-  _minZoom: 3
-  _maxZoom: 18
-  _zoomSmoothing: 8
-  _moveSmoothTime: 0.08
-  _startFocusTarget: {fileID: 0}
-  _boundsTilemap: {fileID: 0}
-  _excludedBoundsTile: {fileID: 0}
-  _boundsMarginMin: {x: 0, y: 0}
-  _boundsMarginMax: {x: 0, y: 0}
-  _mapMin: {x: -60, y: -60}
-  _mapMax: {x: 60, y: 60}
 --- !u!1 &528527939
 GameObject:
   m_ObjectHideFlags: 0
@@ -3096,11 +3075,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 847331761833541772, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: -10
       objectReference: {fileID: 0}
     - target: {fileID: 847331761833541772, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -100
       objectReference: {fileID: 0}
     - target: {fileID: 886288427214306516, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -3176,11 +3155,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 982615071096605259, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 982615071096605259, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 982615071096605259, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_SizeDelta.x
@@ -3196,7 +3175,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 982615071096605259, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 1037778812811091464, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -5102,6 +5081,10 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6882898113726626769, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _inputActions
+      value: 
+      objectReference: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     - target: {fileID: 6896203630947583999, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
