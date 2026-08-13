@@ -2909,8 +2909,12 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 914589612}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _exclusiveModeShortcuts.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _exclusiveModeBehaviours.Array.size
-      value: 5
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[0]'
@@ -2931,7 +2935,11 @@ PrefabInstance:
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[5]'
       value: 
-      objectReference: {fileID: 914589615}
+      objectReference: {fileID: 944163942}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _exclusiveModeShortcuts.Array.data[3].Action
+      value: 
+      objectReference: {fileID: 1961000633486905275, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _exclusiveModeShortcuts.Array.data[0].TargetBehaviour
       value: 
@@ -2940,6 +2948,10 @@ PrefabInstance:
       propertyPath: _exclusiveModeShortcuts.Array.data[1].TargetBehaviour
       value: 
       objectReference: {fileID: 37122977}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _exclusiveModeShortcuts.Array.data[3].TargetBehaviour
+      value: 
+      objectReference: {fileID: 944163942}
     - target: {fileID: 521314989582398888, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -5918,6 +5930,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7b8234ec3124a14a9a0f2e0d0003b0a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI_WarningWindow
+--- !u!114 &944163942 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2473110274389148054, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 944163938}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4dd7d67a4a6d56447b2dbefa25831a64, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_DragonWindow
 --- !u!114 &987628432 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6444730923389697932, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
