@@ -263,6 +263,15 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             _closeAction.action.performed += OnCloseActionPerformed;
         }
 
+        // 낮/밤이 바뀌면 속성 변경 버튼을 잠그거나 풀어야 한다. OnCycleChanged 하나면 충분하다 -
+        // 낮 진입(EnterDay: StartDay·ResumeDay 양쪽)과 밤 진입에서 모두 발화한다.
+        // 이 스크립트 호스트는 창을 닫아도 계속 활성이라, 이 구독은 씬 수명 내내 유지된다.
+        CycleManager cycle = Cycle;
+        if (cycle != null)
+        {
+            cycle.OnCycleChanged.AddListener(HandleCycleChanged);
+        }
+
         // 알 획득·부화·배치·철거를 반영한다. 창이 닫혀 있는 동안은 구독하지 않아도
         // 다시 열릴 때 아래 RebuildLists()가 현재 상태로 다시 그린다.
         RunData run = CurrentRun;
@@ -273,6 +282,8 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 
         // ActiveAttributeChanged는 런 생성 시 발화되지 않는다(NotifyActiveAttributeChanged /
         // HandleDayStart에서만 발화) - 구독 직후 한 번 수동으로 현재 값을 반영한다.
+        // OnCycleChanged도 마찬가지로 첫 낮이 이미 시작된 뒤에는 다시 오지 않으므로
+        // RenderMotherDragon 안의 RenderChangeButton으로 현재 주기를 한 번 반영한다.
         RenderMotherDragon();
         RebuildLists();
     }
@@ -295,10 +306,37 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             _closeAction.action.performed -= OnCloseActionPerformed;
         }
 
+        CycleManager cycle = Cycle;
+        if (cycle != null)
+        {
+            cycle.OnCycleChanged.RemoveListener(HandleCycleChanged);
+        }
+
         RunData run = CurrentRun;
         if (run != null)
         {
             run.OnInventoryChanged.RemoveListener(RebuildLists);
+        }
+    }
+
+    // 밤이 되면 속성 변경을 잠근다 - 낮에 고른 속성으로 그 밤을 치르는 것이 규칙이라,
+    // 웨이브 구성을 보고 속성을 갈아끼우지 못하게 한다(새끼용 모드 잠금과 같은 이유 - 이슈 173).
+    // 팝업이 떠 있는 채로 밤이 시작되면 버튼을 회색으로 만들어도 카드가 그대로 눌리므로, 팝업부터 닫는다.
+    private void HandleCycleChanged(CycleManager.CycleState state)
+    {
+        if (state != CycleManager.CycleState.Day && _changePopup != null)
+        {
+            _changePopup.Close();
+        }
+
+        RenderChangeButton();
+    }
+
+    private void RenderChangeButton()
+    {
+        if (_changeButton != null)
+        {
+            _changeButton.interactable = IsDay;
         }
     }
 
@@ -560,12 +598,21 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     // Button_change 하나로 속성 변경 팝업을 열고 닫는다.
     // 팝업에는 바깥 클릭 blocker가 없어, 카드를 고르지 않고 무르려면 이 버튼이 유일한 수단이다.
     // (팝업은 버튼을 가리지 않는 위치에 떠서 두 번째 클릭이 버튼에 닿는다.)
-    // 속성 변경에는 횟수 제한이 없으므로 여는 조건도 따로 없다.
+    // 낮이면 횟수 제한 없이 몇 번이든 열 수 있고, 밤에는 아예 열리지 않는다.
+    // 버튼 비활성화(RenderChangeButton)는 표시일 뿐이라 여기서 한 번 더 막는다 -
+    // 밤이 시작된 프레임의 클릭이나 다른 경로로 들어온 호출까지 잡는다
+    // (UI_BabyDragonManageWindow.HandleAttackModeClicked와 같은 이중 가드).
     private void ToggleChangePopup()
     {
+        // 닫는 것은 밤에도 허용한다 - 잠기기 전에 열어 둔 팝업을 무를 수단이 남아야 한다.
         if (_changePopup.IsOpen)
         {
             _changePopup.Close();
+            return;
+        }
+
+        if (!IsDay)
+        {
             return;
         }
 
@@ -613,6 +660,10 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         DragonType? attribute = _dragonTreeManager != null ? _dragonTreeManager.ActiveAttribute : null;
 
         RenderMotherSkill(attribute);
+
+        // 어미용 탭을 다시 그릴 때마다 주기를 반영한다 - 창을 열거나 탭을 바꾼 시점이
+        // 밤이면 변경 버튼이 이미 잠겨 있어야 한다.
+        RenderChangeButton();
 
         // RunData/CurrentDragon이 아직 없거나 매니저가 주입되지 않은 시점 -
         // 프리팹의 자리표시 문구("Dragon Name")가 그대로 보이지 않도록 비워둔다.
@@ -736,6 +787,20 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     }
 
     private RunData CurrentRun => _gameManager != null ? _gameManager.CurrentRun : null;
+
+    private CycleManager Cycle => _gameManager != null ? _gameManager.CycleManager : null;
+
+    /// <summary>속성 변경을 허용하는 시간대인지. 주기를 알 수 없으면 낮으로 본다
+    /// (BuildingPlacementController.IsDayForBuildActions와 같은 fail-open 규약) -
+    /// 이 창은 GameManager가 없는 UI 전용 씬에도 들어 있어, 반대로 잡으면 그 씬에서 버튼이 영구히 회색이 된다.</summary>
+    private bool IsDay
+    {
+        get
+        {
+            CycleManager cycle = Cycle;
+            return cycle == null || cycle.CurrentCycle == CycleManager.CycleState.Day;
+        }
+    }
 
     // 슬롯은 전부 프리팹에서 새로 만들어 컨테이너(Content) 아래에 넣는다.
     // 컨테이너를 프리팹의 부모에서 파생시키면 안 된다 - 프리팹 에셋은 부모가 없어(null)

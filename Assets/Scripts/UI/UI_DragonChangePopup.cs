@@ -101,12 +101,25 @@ public class UI_DragonChangePopup : MonoBehaviour
     private Dragon CurrentDragon =>
         _gameManager != null ? _gameManager.CurrentRun?.CurrentDragon : null;
 
+    /// <summary>속성을 바꿀 수 있는 시간대인지. 주기를 알 수 없으면 낮으로 본다
+    /// (UI_DragonWindow.IsDay와 같은 fail-open 규약).</summary>
+    private bool IsDay
+    {
+        get
+        {
+            CycleManager cycle = _gameManager != null ? _gameManager.CycleManager : null;
+            return cycle == null || cycle.CurrentCycle == CycleManager.CycleState.Day;
+        }
+    }
+
     // 카드 클릭 = 그 속성으로 즉시 변경 + 팝업 닫기. 별도 확인 버튼은 없다(프리팹에 존재하지 않는다).
-    // 변경 횟수 제한은 없으므로 실패하는 경우는 같은 속성을 고른 때뿐이고, 그 카드는 애초에 숨겨져 있다.
+    // 낮에는 변경 횟수 제한이 없으므로 실패하는 경우는 같은 속성을 고른 때뿐이고, 그 카드는 애초에 숨겨져 있다.
+    // 밤에는 UI_DragonWindow가 이 팝업을 열지도 않고 열려 있으면 닫지만, 실제 변경을 막는 최종 가드는 여기다 -
+    // 다른 경로로 들어온 호출이나 밤이 시작된 프레임의 클릭까지 잡는다.
     private void SelectAttribute(DragonType attribute)
     {
         Dragon dragon = CurrentDragon;
-        if (dragon == null)
+        if (dragon == null || !IsDay)
         {
             Close();
             return;
