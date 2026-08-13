@@ -122,7 +122,10 @@ public sealed class TutorialEndingSequencer : MonoBehaviour
             }
         }
 
-        await _panel.HideAsync(token);
+        // 패널을 걷기 전에 알린다. 받는 쪽(TutorialToGameHandoff)이 로딩 화면으로 덮은 뒤에 걷혀야
+        // 튜토리얼 맵이 다시 드러나지 않는다 - 순서를 뒤집으면 패널 fade-out 내내 맵이 보인다.
+        // 씬을 옮기는 일은 여전히 여기서 하지 않는다. 알리는 시점만 컷씬 내용이 끝난 순간으로 옮긴 것이다.
         _endingCompleted.Invoke();
+        await _panel.HideAsync(token);
     }
 }

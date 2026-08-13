@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -8,7 +9,7 @@ using UnityEngine.UI;
 /// 포기의 뜻은 "안내만 끄기"가 아니라 <b>튜토리얼을 끝내고 본게임을 새로 시작</b>이다.
 /// 튜토리얼 씬은 3일짜리 축소판이고 마지막 밤은 이길 수 없게 짜여 있어, 안내만 꺼 두면
 /// 플레이어는 목적지가 없는 맵에 남는다. 그래서 엔딩이 끝났을 때와 같은 곳으로 보낸다 -
-/// <see cref="TutorialToGameHandoff"/>와 같은 한 줄이고, 정적 상태를 아무것도 세팅하지 않는 것이 계약이다
+/// <see cref="TutorialToGameHandoff"/>와 같은 경로이고, 정적 상태를 아무것도 세팅하지 않는 것이 계약이다
 /// (SaveLoadRequest가 비어 있어야 GameManager가 처음 게임을 켠 것과 같은 경로로 간다).
 ///
 /// <b>배치 규칙:</b> 이 패널은 <see cref="UI_GuideOverlay"/>의 딤보다 <b>뒤 형제</b>여야 한다.
@@ -28,6 +29,9 @@ public sealed class UI_TutorialQuitPanel : MonoBehaviour
 
     [Tooltip("팝업만 닫고 튜토리얼을 계속한다.")]
     [SerializeField] private Button _cancelButton;
+
+    [Tooltip("본게임 씬을 여는 동안 화면을 덮는 로딩 화면. 비어 있으면 로딩 화면 없이 바로 넘어간다.")]
+    [SerializeField] private SceneLoadOverlay _loadOverlay;
 
     // 씬 로드는 되돌릴 수 없으므로 두 번 눌려도 한 번만 나간다(TutorialToGameHandoff와 같은 방어).
     private bool _hasRequested;
@@ -102,6 +106,13 @@ public sealed class UI_TutorialQuitPanel : MonoBehaviour
 
         _hasRequested = true;
         Debug.Log("[UI_TutorialQuitPanel] 튜토리얼을 중도 포기하고 본게임으로 넘어갑니다.", this);
-        SceneManager.LoadScene(SceneNames.SAMPLE_GAME);
+
+        if (!WiringGuard.Optional(_loadOverlay, nameof(_loadOverlay), this))
+        {
+            SceneManager.LoadScene(SceneNames.SAMPLE_GAME);
+            return;
+        }
+
+        _loadOverlay.LoadAsync(SceneNames.SAMPLE_GAME).Forget();
     }
 }

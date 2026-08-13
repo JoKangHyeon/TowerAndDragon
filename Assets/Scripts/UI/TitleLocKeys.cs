@@ -10,6 +10,10 @@ public static class TitleLocKeys
     public const string CONFIG = "title_config";
     public const string QUIT = "title_quit";
 
+    public const string TUTORIAL_PROMPT_MESSAGE = "title_tutorial_prompt_message";
+    public const string TUTORIAL_PROMPT_PROCEED = "title_tutorial_prompt_proceed";
+    public const string TUTORIAL_PROMPT_SKIP = "title_tutorial_prompt_skip";
+
     public const string LOAD_WINDOW_HEADER = "title_load_window_header";
     public const string LOAD_SLOT_DELETE = "title_load_slot_delete";
 

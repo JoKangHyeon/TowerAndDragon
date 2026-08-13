@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -12,6 +13,9 @@ using UnityEngine.SceneManagement;
 public sealed class TutorialToGameHandoff : MonoBehaviour
 {
     [SerializeField] private TutorialEndingSequencer _sequencer;
+
+    [Tooltip("본게임 씬을 여는 동안 화면을 덮는 로딩 화면. 비어 있으면 로딩 화면 없이 바로 넘어간다.")]
+    [SerializeField] private SceneLoadOverlay _loadOverlay;
 
     // 씬 로드는 되돌릴 수 없으므로 두 번 불려도 한 번만 나간다.
     private bool _hasRequested;
@@ -43,6 +47,15 @@ public sealed class TutorialToGameHandoff : MonoBehaviour
         }
 
         _hasRequested = true;
-        SceneManager.LoadScene(SceneNames.SAMPLE_GAME);
+
+        // 시퀀서가 컷씬 패널을 걷은 뒤에 이 이벤트가 오므로, 여기서 덮기 전까지 튜토리얼 맵이 잠깐 보인다.
+        // 그 깜빡임을 줄이려면 씬의 오버레이 인스턴스에서 페이드 인 시간을 0으로 둔다.
+        if (!WiringGuard.Optional(_loadOverlay, nameof(_loadOverlay), this))
+        {
+            SceneManager.LoadScene(SceneNames.SAMPLE_GAME);
+            return;
+        }
+
+        _loadOverlay.LoadAsync(SceneNames.SAMPLE_GAME).Forget();
     }
 }
