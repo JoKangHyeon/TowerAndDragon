@@ -9,7 +9,7 @@ using UnityEngine.Rendering;
 // 입력 처리 패턴(포인터-오버-UI 가드)을 따른다.
 // _selectAction("Confirm")은 BuildingPlacementController._placeAction과 같은 공유 액션이며
 // GlobalInputBootstrap이 한 번만 Enable한다 - 이 컨트롤러는 스스로 Enable/Disable하지 않는다.
-public class ConquestModeController : MonoBehaviour, IExclusiveMode
+public class ConquestModeController : MonoBehaviour, IExclusiveMode, IExclusiveModeEntryGuard
 {
     [SerializeField]
     private GridMap _gridMap;
@@ -460,6 +460,12 @@ public class ConquestModeController : MonoBehaviour, IExclusiveMode
 
     private static Vector2 PointerScreenPosition() =>
         Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
+
+    /// <summary>
+    /// 밤에는 점령 모드를 켤 수 없다. 판정과 경고 표시는 낮밤·경고창을 아는 <see cref="UI_ConquestWindow"/>가
+    /// 갖고 있으므로 그대로 넘긴다 - 창이 연결되지 않은 씬에서는 막지 않는다.
+    /// </summary>
+    public bool CanEnterNow() => _conquestUI == null || _conquestUI.CanEnterConquestMode();
 
     bool IExclusiveMode.IsOpen => IsActive;
     void IExclusiveMode.Open() => SetConquestModeActive(true);

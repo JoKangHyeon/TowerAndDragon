@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using DG.Tweening;
 
 // 건물 배치 및 철거, 재이동 디버깅용 -> 추후 수정될 수 있음
-public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
+public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeEntryGuard
 {
     // 필터 탭 하나. 선택되면 Menu_Focus가 활성, 아니면 Menu_Default가 활성이 된다.
     // 이 탭(카테고리)이 가진 건물들이 선택 시 슬롯 목록으로 생성된다.
@@ -336,16 +336,24 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
+    /// <summary>
+    /// 밤에는 건설 모드를 켤 수 없다 - 버튼·단축키 어느 경로로 열려 해도 이 판정을 지난다.
+    /// 경고 메시지는 띄우지 않는다: Warning_window에 건설용 메시지 오브젝트가 없다.
+    /// CycleManager가 없는 씬(튜토리얼·테스트)에서는 막지 않는다.
+    /// </summary>
+    public bool CanEnterNow() =>
+        _cycleManager == null || _cycleManager.CurrentCycle != CycleManager.CycleState.Night;
+
     // BuildMode 버튼 토글. 열 때는 UIManager를 거쳐 다른 배타 모드(점령 등)를 정리한다.
     public void ToggleFromEntryPoint()
     {
         // 클릭음을 내지 않는다 - 창을 여닫는 제스처는 OpenBuildPanel/CloseBuildPanel의 창음만 낸다.
         EnsureInitialized();
 
-        // 밤에는 건설 모드를 켤 수 없다(창이 아예 열리지 않는다). 닫기는 현재 UI 관문이 허용할 때만 받는다.
-        // 경고 메시지는 띄우지 않는다 - Warning_window에 건설용 메시지 오브젝트가 없다.
-        if (!_isOpen && _cycleManager != null &&
-            _cycleManager.CurrentCycle == CycleManager.CycleState.Night)
+        // 열 수 없는 때(밤)는 열지 않는다. 닫기는 현재 UI 관문이 허용할 때만 받는다.
+        // UIManager를 지나는 경로는 OpenExclusive가 같은 판정을 하므로, 이 검사는 UIManager가 없는
+        // 씬(아래 else 분기)까지 덮기 위한 것이다.
+        if (!_isOpen && !CanEnterNow())
         {
             return;
         }

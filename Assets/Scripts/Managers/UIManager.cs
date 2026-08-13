@@ -467,7 +467,15 @@ public class UIManager : MonoBehaviour
 
     private bool CanOpen(IExclusiveMode target)
     {
-        return CanOpenByQueries(target as MonoBehaviour);
+        if (!CanOpenByQueries(target as MonoBehaviour))
+        {
+            return false;
+        }
+
+        // 모드 자신의 진입 조건(밤 금지 등)은 마지막에 본다 - 거절할 때 경고창을 띄우는 구현이 있어서,
+        // 안내가 이미 막은 창까지 물으면 열리지도 않을 모드의 경고가 대신 뜬다.
+        // 단축키가 버튼용 진입점을 건너뛰고 Open()으로 직행하므로, 밤 가드가 사는 곳도 여기다.
+        return target is not IExclusiveModeEntryGuard guard || guard.CanEnterNow();
     }
 
     /// <summary>

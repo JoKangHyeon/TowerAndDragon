@@ -12,7 +12,7 @@ using UnityEngine.InputSystem;
 // 모드 진입/입력 처리 구조는 ConquestModeController와 동일하다.
 // _assignAction("Confirm")은 BuildingPlacementController._placeAction과 같은 공유 액션이며
 // GlobalInputBootstrap이 한 번만 Enable한다 - 이 컨트롤러는 스스로 Enable/Disable하지 않는다.
-public class WorkerModeController : MonoBehaviour, IExclusiveMode
+public class WorkerModeController : MonoBehaviour, IExclusiveMode, IExclusiveModeEntryGuard
 {
     private const int POPULATION_STEP_SINGLE = 1;
     private const int POPULATION_STEP_BULK = 5;
@@ -210,22 +210,32 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode
             return;
         }
 
-        // 인구를 넣을 수 있는 건물이 하나도 없으면 모드에 들어가도 칠할 건물도 누를 대상도 없다 -
-        // 아무 반응 없이 켜졌다 꺼지는 대신 이유를 알려주고 진입하지 않는다.
-        if (!HasAnyPopulationTarget())
-        {
-            _warningWindow?.Show(UI_WarningWindow.MessageId.WorkerMode);
-            return;
-        }
-
+        // 진입 관문은 OpenExclusive가 CanEnterNow로 물어본다 - 단축키와 같은 한 곳에서 판정된다.
+        // UIManager가 없는 씬에서만 여기서 직접 묻는다.
         if (_uiManager != null)
         {
             _uiManager.OpenExclusive(this);
         }
-        else
+        else if (CanEnterNow())
         {
             SetWorkerModeActive(true);
         }
+    }
+
+    /// <summary>
+    /// 밤에도 진입은 허용한다 - 배치 현황을 보는 것 자체는 막을 이유가 없고 조작만 잠긴다(<see cref="IsDay"/>).
+    /// 다만 인구를 넣을 수 있는 건물이 하나도 없으면 칠할 건물도 누를 대상도 없으므로,
+    /// 아무 반응 없이 켜졌다 꺼지는 대신 이유를 알려주고 진입하지 않는다.
+    /// </summary>
+    public bool CanEnterNow()
+    {
+        if (HasAnyPopulationTarget())
+        {
+            return true;
+        }
+
+        _warningWindow?.Show(UI_WarningWindow.MessageId.WorkerMode);
+        return false;
     }
 
     // 인구를 넣을 수 있는 건물이 하나라도 있는지. 판정 기준은 RefreshOverlays가 대상으로 삼는 것과 같다

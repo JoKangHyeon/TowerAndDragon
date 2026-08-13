@@ -234,22 +234,34 @@ public class UI_ConquestWindow : MonoBehaviour
             return;
         }
 
-        // 밤에는 점령 모드를 켤 수 없다(창이 아예 열리지 않는다). 끄는 것은 항상 허용.
-        if (nextActive && _cycleManager != null && _cycleManager.CurrentCycle == CycleManager.CycleState.Night)
-        {
-            if (_warningWindow != null)
-            {
-                _warningWindow.Show(UI_WarningWindow.MessageId.Claim);
-            }
-
-            return;
-        }
-
         // 켤 때는 UIManager를 거쳐 다른 배타 모드(건설 등)를 정리한다. 끌 때는 바로 끈다.
+        // 밤 금지 판정은 여기서 하지 않는다 - OpenExclusive가 CanEnterConquestMode를 물으므로
+        // 단축키로 켜는 경로와 같은 한 곳에서 판정된다(여기서 또 물으면 경고창이 두 번 뜬다).
         if (nextActive)
             _uiManager.OpenExclusive(_conquestModeController);
         else
             _conquestModeController.SetConquestModeActive(false);
+    }
+
+    /// <summary>
+    /// 지금 점령 모드에 들어갈 수 있는지 - 밤에는 켤 수 없고, 그 이유를 경고창으로 알린다.
+    /// 낮밤과 경고창을 아는 것이 이 창이라 판정도 여기 두고, 모드 쪽(ConquestModeController)이
+    /// <see cref="IExclusiveModeEntryGuard"/>로 넘겨받는다. 그래서 버튼도 단축키도 이 판정을 지난다.
+    /// CycleManager가 없는 씬(튜토리얼·테스트)에서는 막지 않는다.
+    /// </summary>
+    public bool CanEnterConquestMode()
+    {
+        if (_cycleManager == null || _cycleManager.CurrentCycle != CycleManager.CycleState.Night)
+        {
+            return true;
+        }
+
+        if (_warningWindow != null)
+        {
+            _warningWindow.Show(UI_WarningWindow.MessageId.Claim);
+        }
+
+        return false;
     }
 
     /// <summary>점령 컨트롤러가 직접 받는 ESC도 튜토리얼 닫기 관문을 거치게 한다.</summary>
