@@ -10,21 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 809865e60fe22fd489822f264ce13c71, type: 3}
-  m_Name: MD_Ground_Immune_Ice
+  m_Name: MD_Ground_Sniper
   m_EditorClassIdentifier: Assembly-CSharp::MonsterData
-  _nameLocKey: monster_ground_element_immune_ice
-  _descriptionLocKey: monster_ground_element_immune_ice_desc
+  _nameLocKey: monster_ground_sniper
+  _descriptionLocKey: monster_ground_sniper_desc
   _monsterType: 0
-  _maxHealth: 80
+  _maxHealth: 30
   _moveSpeed: 2
   _movementType: 0
   _hasShield: 0
   _shieldAmount: 0
   _isCrowdControlImmune: 0
-  _elementRule: 2
+  _elementRule: 0
   _element: 0
-  _attack: {fileID: 11400000, guid: b19ac6cb35544fe4db5e83512a64c396, type: 2}
-  _enRouteTargetTypes: 0
+  _attack: {fileID: 11400000, guid: 46613cf6c96a73d4693fc00ba7c1758d, type: 2}
+  _enRouteTargetTypes: -1
   _specialBehaviors: []
-  _projectilePrefab: {fileID: 0}
-  _projectileSpeed: 0
+  _projectilePrefab: {fileID: 2874056009116883397, guid: 1e2cadb560ee9e847b794395858e68e1, type: 3}
+  _projectileSpeed: 15

@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: TD_TimeTower
   m_EditorClassIdentifier: Assembly-CSharp::ElementalTowerData
   _nameLocKey: Time Tower
+  _requiresResearchUnlock: 0
   _populationCapacity: 7
   _buildCost:
   - Type: 2
@@ -20,10 +21,11 @@ MonoBehaviour:
   - Type: 4
     Amount: 50
   - Type: 32
-    Amount: 60
+    Amount: 50
   _maxHealth: 120
   _reviveDelay: 20
   _attack: {fileID: 0}
+  _targetMovementFilter: 0
   _projectilePrefab: {fileID: 0}
   _projectileSpeed: 0
   _dragonType: 2
