@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,6 +8,10 @@ using UnityEngine.UI;
 // 원정이 완료되면 ActiveExpeditions에서 빠지므로, 재빌드 시 해당 슬롯이 자동으로 사라진다.
 public class UI_ClaimListWindow : MonoBehaviour
 {
+    private const int UNINITIALIZED_SLOT_COUNT = -1;
+
+    public event Action LayoutChanged;
+
     [SerializeField]
     private ConquestManager _conquestManager;
 
@@ -25,6 +30,7 @@ public class UI_ClaimListWindow : MonoBehaviour
     private ComponentPool<UI_ClaimListSlot> _slotPool;
     private ConquestManager _subscribedConquestManager;
     private readonly HashSet<Vector2Int> _knownChunkCoords = new();
+    private int _layoutSlotCount = UNINITIALIZED_SLOT_COUNT;
 
     private void Awake()
     {
@@ -95,16 +101,24 @@ public class UI_ClaimListWindow : MonoBehaviour
         _knownChunkCoords.Clear();
         _knownChunkCoords.UnionWith(currentChunkCoords);
 
+        bool hasLayoutChanged = _layoutSlotCount != expeditions.Count;
+        _layoutSlotCount = expeditions.Count;
+
+        if (hasLayoutChanged)
+        {
+            if (_slotContainer is RectTransform containerRect)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
+            }
+
+            Canvas.ForceUpdateCanvases();
+            LayoutChanged?.Invoke();
+        }
+
         if (newSlots.Count == 0)
         {
             return;
         }
-
-        if (_slotContainer is RectTransform containerRect)
-        {
-            LayoutRebuilder.ForceRebuildLayoutImmediate(containerRect);
-        }
-        Canvas.ForceUpdateCanvases();
 
         foreach (UI_ClaimListSlot slot in newSlots)
         {

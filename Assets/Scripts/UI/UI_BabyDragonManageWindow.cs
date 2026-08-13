@@ -95,6 +95,12 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     private BabyDragonTower _boundTower;
     private bool _wasSuppressed;
 
+    /// <summary>
+    /// 패널이 열려 있는지. 이 창은 열림 이벤트를 발행하지 않고 Update 폴링으로 여닫히므로,
+    /// 창 안의 버튼을 가리켜야 하는 안내(BabyDragonGuideController)가 상태로 확인한다.
+    /// </summary>
+    public bool IsOpen => _isOpen;
+
     private bool IsDay =>
         _cycleManager == null || _cycleManager.CurrentCycle == CycleManager.CycleState.Day;
 

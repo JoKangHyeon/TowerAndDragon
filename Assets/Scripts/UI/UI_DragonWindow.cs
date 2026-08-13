@@ -164,6 +164,10 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     public RectTransform BabyTabRect =>
         _babyTabButton == null ? null : (RectTransform)_babyTabButton.transform;
 
+    /// <summary>창을 닫는 X 버튼. "창을 닫고 하루를 보내라"고 시키는 안내가 가리킬 대상이다.</summary>
+    public RectTransform ExitButtonRect =>
+        _exitButton == null ? null : (RectTransform)_exitButton.transform;
+
     private DragonTab _currentTab = DragonTab.Mother;
     private bool _isOpen;
 

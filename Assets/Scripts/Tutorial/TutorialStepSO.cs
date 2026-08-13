@@ -33,9 +33,9 @@ public sealed class TutorialStepSO : ScriptableObject
              "알 목록과 새끼용 목록이 한 패널에 함께 있으므로 어느 쪽인지 단계가 정한다.")]
     [SerializeField] private TutorialDynamicTargetKind _dynamicTarget = TutorialDynamicTargetKind.None;
 
-    [Tooltip("설명형 단계에서도 대상 외 클릭을 막을지. 행동형 단계는 지정 대상이 있으면 항상 자동으로 막는다. " +
-             "대상이 없으면 막을 수 없다 - 막으면 아무것도 누를 수 없게 된다.")]
-    [SerializeField] private bool _blocksInput;
+    // 딤과 대상 외 클릭 차단은 데이터로 두지 않는다 - UI_GuideOverlay가 대상·확인 버튼 유무로 스스로 정한다.
+    // 단계마다 켜고 끄게 두었더니 빠뜨린 곳이 계속 나왔고, 그때마다 플레이어가 엉뚱한 버튼을 눌러
+    // 안내가 가리키던 창이 닫혔다.
 
     [Tooltip("가리키기만 하고 대상 클릭은 막을지. 눌러보게 하는 게 아니라 '이런 게 있다'만 알리는 설명형에 쓴다. " +
              "되돌릴 수 없는 조작(하루 1회뿐인 어미용 속성 변경 등)을 설명 중에 소모하지 않게 한다.")]
@@ -43,11 +43,6 @@ public sealed class TutorialStepSO : ScriptableObject
 
     [Tooltip("말풍선을 띄울 자리. 타일을 클릭해야 하는 단계는 말풍선이 그리드를 가리므로 Top/Bottom으로 옮긴다.")]
     [SerializeField] private GuideBubbleSlot _bubbleSlot = GuideBubbleSlot.Default;
-
-    [Tooltip("배경을 어둡게 깔지. 끄면 말풍선만 남고 화면이 그대로 보인다 - " +
-             "몬스터 경로선처럼 UI가 아닌 것을 보여주며 설명할 때 쓴다(어둡게 하면 그것까지 묻힌다).")]
-    [SerializeField] private bool _dimsBackground = true;
-
 
     [Header("완료 조건 (WaitForAction 전용)")]
     [SerializeField] private TutorialConditionType _condition = TutorialConditionType.None;
@@ -79,10 +74,8 @@ public sealed class TutorialStepSO : ScriptableObject
     public GuideAnchorId AnchorId => _anchorId;
     public Building TargetBuildingSlot => _targetBuildingSlot;
     public TutorialDynamicTargetKind DynamicTarget => _dynamicTarget;
-    public bool BlocksInput => _blocksInput;
     public bool BlocksTargetInteraction => _blocksTargetInteraction;
     public GuideBubbleSlot BubbleSlot => _bubbleSlot;
-    public bool DimsBackground => _dimsBackground;
     public TutorialConditionType Condition => _condition;
     public TutorialExclusiveModeKind TargetMode => _targetMode;
     public TutorialBuildingKind TargetBuilding => _targetBuilding;
@@ -105,18 +98,6 @@ public sealed class TutorialStepSO : ScriptableObject
         if (string.IsNullOrWhiteSpace(_messageLocKey))
         {
             Debug.LogWarning($"[TutorialStepSO] {name}: 문구 키(_messageLocKey)가 비어 있습니다.", this);
-        }
-
-        bool hasTarget = _anchorId != GuideAnchorId.None ||
-                         _targetBuildingSlot != null ||
-                         _dynamicTarget != TutorialDynamicTargetKind.None;
-
-        // 대상이 없어도 확인 버튼이 있으면 화면 전체를 막아도 된다 - 그 버튼이 빠져나갈 길이다.
-        if (_blocksInput && !hasTarget && !ShowsConfirmButton)
-        {
-            Debug.LogWarning(
-                $"[TutorialStepSO] {name}: 빠져나갈 버튼도 가릴 대상도 없는데 입력을 막으려 합니다 - " +
-                "아무것도 누를 수 없게 됩니다.", this);
         }
 
         if (_kind == TutorialStepKind.WaitForAction && _condition == TutorialConditionType.None)

@@ -59,6 +59,10 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     [SerializeField] private UI_DragonWindow _dragonWindow;
     [SerializeField] private DragonEggInventorySystem _eggInventorySystem;
 
+    [Tooltip("알 확인 안내가 끝난 시점을 완료 조건으로 쓰는 목표에 필요하다. " +
+             "이 컨트롤러와 다른 프리팹에 있으므로 씬에서 연결해야 한다.")]
+    [SerializeField] private BabyDragonGuideController _babyDragonGuideController;
+
     [Tooltip("어미용 속성 변경을 완료 조건으로 쓰는 목표에 필요하다.")]
     [SerializeField] private DragonTreeManager _dragonTreeManager;
 
@@ -168,6 +172,11 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
             _eggInventorySystem.OnEggGranted.AddListener(HandleEggGranted);
         }
 
+        if (_babyDragonGuideController != null)
+        {
+            _babyDragonGuideController.EggCheckGuideFinished.AddListener(HandleEggCheckGuideFinished);
+        }
+
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleAttributeChanged);
@@ -230,6 +239,11 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
             _eggInventorySystem.OnEggGranted.RemoveListener(HandleEggGranted);
         }
 
+        if (_babyDragonGuideController != null)
+        {
+            _babyDragonGuideController.EggCheckGuideFinished.RemoveListener(HandleEggCheckGuideFinished);
+        }
+
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleAttributeChanged);
@@ -281,8 +295,30 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
             Debug.LogWarning("[TutorialObjectiveController] GameManager 참조가 없어 목표 완료가 기록되지 않습니다.", this);
         }
 
+        WarnIfEggCheckObjectiveUnwired();
         RebuildVisibleObjectives();
         ScheduleWorkerModeNudgeCheck();
+    }
+
+    // 배선을 빼먹으면 그 목표만 영영 체크되지 않고 아무 에러도 나지 않는다 - 씬 참조라 실제로 자주 빠진다.
+    private void WarnIfEggCheckObjectiveUnwired()
+    {
+        if (_babyDragonGuideController != null)
+        {
+            return;
+        }
+
+        foreach (TutorialObjectiveSO objective in _objectives)
+        {
+            if (objective != null &&
+                objective.CompletionTrigger.Condition == TutorialConditionType.BabyDragonEggChecked)
+            {
+                Debug.LogWarning(
+                    "[TutorialObjectiveController] BabyDragonGuideController 참조가 없어 " +
+                    $"'{objective.ObjectiveId}' 목표가 완료되지 않습니다.", this);
+                return;
+            }
+        }
     }
 
     private void ScheduleWorkerModeNudgeCheck()
@@ -418,6 +454,9 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
 
     private void HandleEggGranted(DragonType _) =>
         TryCompleteMatching(TutorialConditionType.DragonEggGranted, null);
+
+    private void HandleEggCheckGuideFinished() =>
+        TryCompleteMatching(TutorialConditionType.BabyDragonEggChecked, null);
 
     // 어느 속성으로 바꿨는지는 묻지 않는다 - 목표는 "바꿔본다"이지 특정 속성이 아니다.
     private void HandleAttributeChanged(DragonType attribute)

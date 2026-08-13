@@ -17,7 +17,7 @@ using UnityEngine.Events;
 /// 진 쪽은 DisplayReleased를 듣고 자기 차례에 다시 그린다(HandleConfirmClicked · HandleDisplayReleased).
 /// </summary>
 public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDayEndBlockQuery,
-    IHudControlBlockQuery, IBuildModeInteractionQuery
+    IHudControlBlockQuery, IBuildModeInteractionQuery, IShortcutBlockQuery
 {
     private const float DEFAULT_HAND_OVER_DELAY = 1.5f;
     private const float DEFAULT_STALL_ESCAPE_SECONDS = 45f;
@@ -155,6 +155,15 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             _placementController.AddInteractionQuery(this);
         }
 
+        // 단축키 관문만은 _holdsGates와 무관하게 언제나 건다. 아래 분기에 묶으면 팁 체인 러너가
+        // (둘 다 꺼져 있어) 어느 쪽에도 걸리지 않아 관문에 등록조차 되지 않는데, 그동안 딤은
+        // 마우스를 막고 있으므로 키보드로만 창을 여닫을 수 있는 상태가 된다.
+        // 등록해도 창 열기·밤 진입은 건드리지 않으므로 팁 체인이 게임을 잠그지는 않는다.
+        if (_uiManager != null)
+        {
+            _uiManager.AddShortcutQuery(this);
+        }
+
         // 창 열림·밤 시작 판정은 Start가 아니라 여기서 건다 - Start끼리는 순서가 보장되지 않아
         // 첫 단계가 뜨기 전에 플레이어가 앞질러 갈 수 있으면 안 된다.
         //
@@ -190,6 +199,14 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         else if (_holdsOpenedExclusiveMode && _uiManager != null)
         {
             _heldExclusiveMode = _uiManager.CurrentOpenExclusiveMode;
+            _uiManager.AddOpenQuery(this);
+        }
+        else if (_uiManager != null)
+        {
+            // 관문을 걸지 않는 팁 체인도 창 열기만은 막는다 - 안내가 화면을 덮고 있는데 새 창이 열리면
+            // 그 창이 딤에 덮여 닫지도 못하고, 가리키던 대상은 창 뒤로 사라진다
+            // (타워 클릭 안내 중에 Tab으로 용 창을 열어 실제로 그렇게 갇혔다).
+            // 밤 진입·HUD는 그대로 열어 두므로 안내를 켠 대가로 게임이 잠기지는 않는다.
             _uiManager.AddOpenQuery(this);
         }
 
@@ -247,7 +264,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
     bool IExclusiveModeOpenQuery.CanOpen(MonoBehaviour mode)
     {
-        if (!_isRunning)
+        // mode가 null이면 "여는 것"이 아니라 CloseAllExcept(null) - 화면을 치우려는 쪽이다.
+        // 막으면 뒤에 시작하는 안내(챕터)가 화면을 정리하지 못해 제 딤에 남의 창이 덮인 채로 돈다.
+        if (mode == null || !_isRunning)
         {
             return true;
         }
@@ -256,6 +275,13 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (HoldsOpenedExclusiveModeOnly)
         {
             return _heldExclusiveMode == null || ReferenceEquals(mode, _heldExclusiveMode);
+        }
+
+        // 팁 체인은 말풍선이 실제로 떠 있는 동안만 막는다. 챕터와 달리 플레이어가 스스로 켠 안내라,
+        // 화면에서 걷힌 뒤(대상을 잃었거나 인계를 기다리는 중)까지 창을 잠그면 안 된다.
+        if (!_holdsGates && _overlay != null && !_overlay.IsShowingFor(this))
+        {
+            return true;
         }
 
         foreach (TutorialExclusiveModeKind unlocked in _unlockedModes)
@@ -270,22 +296,6 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     }
 
     /// <summary>
-    /// 패널 토글 단축키는 버튼 유도를 건너뛰므로 튜토리얼 중에는 막는다. 닫기 안내에서는
-    /// ESC뿐 아니라 해당 패널의 토글 키로도 닫을 수 있다는 문구에 맞춰 다시 허용한다.
-    /// 붙잡은 창이 없는 안내도 허용한다 - 열기를 막지 않으면서 닫기만 막으면 갇힌다.
-    /// </summary>
-    bool IExclusiveModeOpenQuery.CanUseShortcut(MonoBehaviour mode)
-    {
-        if (!_isRunning || _activeStep == null || HoldsNoExclusiveMode)
-        {
-            return true;
-        }
-
-        return _activeStep.Condition == TutorialConditionType.ExclusiveModeClosed &&
-               MatchesMode(mode, _activeStep.TargetMode);
-    }
-
-    /// <summary>
     /// 키보드 단축키는 오버레이의 입력 차단을 통과하므로, 안내가 정확히 이 창을 닫으라고
     /// 요구하는 단계가 아니면 막는다. 버튼은 오버레이가 현재 유도 대상만 통과시킨다.
     /// 붙잡은 창이 없는 안내는 예외다 - CanOpen이 열기를 허용하므로 닫기도 같이 풀어야 한다.
@@ -297,7 +307,43 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             return true;
         }
 
-        return _activeStep.Condition == TutorialConditionType.ExclusiveModeClosed &&
+        return IsStepRequestedShortcut(mode);
+    }
+
+    /// <summary>
+    /// 1일차 강제 안내는 딤이 없는 설명 단계에서도 단축키를 막는다 - 순서대로 따라오게 하는 것이
+    /// 목적이라 읽는 동안 창을 열어보는 것까지 막아야 한다.
+    ///
+    /// 팁 체인(<see cref="_holdsGates"/>가 꺼진 러너)은 여기서 막지 않는다. 플레이어가 스스로 켠
+    /// 안내라 게임을 잠글 이유가 없고, 딤이 떠 있는 동안에는 오버레이가 마우스와 함께 알아서 막는다.
+    /// </summary>
+    bool IShortcutBlockQuery.BlocksShortcuts()
+    {
+        return _isRunning && _holdsGates;
+    }
+
+    /// <summary>
+    /// 막힌 상태에서도 지금 단계가 시킨 키 하나는 통과시킨다. 닫기 안내에서는 ESC뿐 아니라
+    /// 해당 패널의 토글 키로도 닫을 수 있다는 문구에 맞춰야 한다.
+    /// </summary>
+    bool IShortcutBlockQuery.AllowsShortcut(MonoBehaviour mode)
+    {
+        // 표시권을 가진 러너만 예외를 말할 수 있다. 러너는 둘 이상 동시에 돌 수 있는데(챕터 + 팁 체인),
+        // 진 쪽은 화면에 뜨지도 않은 채 살아 있다. 그 상태의 단계가 "이 창을 닫아라"이면
+        // 지금 화면을 쓰는 안내가 전 구간을 막고 있어도 그 키만 열려버린다
+        // (확인 클릭을 IsDisplaying으로 거르는 것과 같은 이유 - HandleConfirmClicked 참고).
+        return _isRunning &&
+               (_overlay == null || _overlay.IsShowingFor(this)) &&
+               IsStepRequestedShortcut(mode);
+    }
+
+    // 지금 단계가 명시적으로 "이 창을 닫아라"라고 시켰는지. 닫기 관문과 단축키 예외가 같은 판정을
+    // 써야 그 규칙이 한 곳에서 관리된다 - 본문을 복제해 두면 한쪽만 고쳐져 갈라진다.
+    // mode가 null인 단축키(일시정지 등)는 MatchesMode가 어떤 종류에도 걸리지 않아 자연히 거절된다.
+    private bool IsStepRequestedShortcut(MonoBehaviour mode)
+    {
+        return _activeStep != null &&
+               _activeStep.Condition == TutorialConditionType.ExclusiveModeClosed &&
                MatchesMode(mode, _activeStep.TargetMode);
     }
 
@@ -605,6 +651,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (_uiManager != null)
         {
             _uiManager.RemoveOpenQuery(this);
+            _uiManager.RemoveShortcutQuery(this);
         }
 
         if (_cycleManager != null)
@@ -729,11 +776,8 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         // 갇힌 단계에서는 행동형에도 확인 버튼을 띄운다 - 그것이 유일한 빠져나갈 길이다.
         bool showsConfirmButton = _activeStep.ShowsConfirmButton || _isStalled;
 
-        // 행동형은 대상이 있으면 데이터 설정과 무관하게 대상 밖을 자동 차단한다. 이 규칙을 에셋마다
-        // 수동으로 켜게 두면 한 단계가 빠졌을 때 다른 탭·건물을 눌러 튜토리얼 순서가 무너진다.
-        bool blocksInput = (_activeStep.BlocksInput || _activeStep.Kind == TutorialStepKind.WaitForAction) &&
-                           (hasTarget || showsConfirmButton);
-
+        // 딤과 입력 차단은 넘기지 않는다 - 오버레이가 대상·확인 버튼 유무로 스스로 정한다.
+        // 여기서 단계별로 판단하게 두었더니 한 단계가 빠졌을 때 다른 탭·건물을 눌러 순서가 무너졌다.
         if (worldTarget != null)
         {
             _overlay.ShowWorldTarget(
@@ -741,25 +785,20 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 GuidePriority.DAY_ONE_TUTORIAL,
                 worldTarget,
                 _activeStep.MessageLocKey,
-                blocksInput,
                 _activeStep.BlocksTargetInteraction,
                 showsConfirmButton,
-                _activeStep.BubbleSlot,
-                _activeStep.DimsBackground);
+                _activeStep.BubbleSlot);
             return;
         }
 
-        // 대상을 못 찾았을 때 입력까지 막으면 오버레이가 아무것도 그리지 않는다 - 문구만이라도 띄운다.
         _overlay.Show(
             this,
             GuidePriority.DAY_ONE_TUTORIAL,
             target,
             _activeStep.MessageLocKey,
-            blocksInput,
             _activeStep.BlocksTargetInteraction,
             showsConfirmButton,
-            _activeStep.BubbleSlot,
-            _activeStep.DimsBackground);
+            _activeStep.BubbleSlot);
     }
 
     private Renderer ResolveWorldTarget(TutorialStepSO step)

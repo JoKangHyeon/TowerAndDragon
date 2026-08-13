@@ -26,6 +26,9 @@ public class UIManager : MonoBehaviour
 
     [SerializeField] private InputActionReference _babyDragonInventoryToggleAction;
 
+    [Tooltip("안내 딤이 떠 있는 동안 단축키를 막는 데 쓴다. 비우면 딤과 무관하게 늘 허용한다.")]
+    [SerializeField] private UI_GuideOverlay _guideOverlay;
+
     [Header("Esc - 기본 창")]
     [Tooltip("아무 창도 열려 있지 않을 때 Esc로 여는 창(보통 UI_ConfigWindow). IExclusiveMode 구현체여야 한다.")]
     [SerializeField] private MonoBehaviour _escapeWindowBehaviour;
@@ -91,17 +94,69 @@ public class UIManager : MonoBehaviour
         return true;
     }
 
-    private bool CanUseShortcutByQueries(MonoBehaviour target)
+    // 단축키 관문. _openQueries와 목록을 따로 두는 이유는 거는 조건이 다르기 때문이다 -
+    // 창 열기 관문은 1일차 강제 안내만 걸지만(플레이어가 스스로 연 팁 체인까지 걸면 안내를 켠 대가로
+    // 게임이 잠긴다), 단축키는 그 팁 체인이 도는 동안에도 막혀야 한다. 딤이 마우스를 막고 있는데
+    // 키보드만 통과해 건설·점령·워커 창을 여닫을 수 있었다.
+    private readonly List<IShortcutBlockQuery> _shortcutQueries = new();
+
+    /// <summary>단축키 관문을 건다. 같은 대상을 두 번 넣어도 한 번만 등록된다.</summary>
+    public void AddShortcutQuery(IShortcutBlockQuery query)
     {
-        foreach (IExclusiveModeOpenQuery query in _openQueries)
+        if (query != null && !_shortcutQueries.Contains(query))
         {
-            if (query != null && !query.CanUseShortcut(target))
+            _shortcutQueries.Add(query);
+        }
+    }
+
+    /// <summary>등록을 뗀다. 자기가 넣은 것만 빼므로 남의 관문은 건드리지 않는다.</summary>
+    public void RemoveShortcutQuery(IShortcutBlockQuery query)
+    {
+        _shortcutQueries.Remove(query);
+    }
+
+    /// <summary>
+    /// 지금 이 단축키를 받아도 되는지. <b>새 단축키를 추가하면 폴링 지점에서 이것부터 물을 것</b> -
+    /// 그러지 않으면 키보드만 안내의 딤을 통과해 마우스로는 막아둔 조작이 키로는 된다.
+    /// <paramref name="mode"/>가 null이면 배타 모드와 무관한 단축키다(일시정지 등).
+    ///
+    /// 기본 차단은 딤 여부로 정하고(마우스와 같은 기준), 그 위에 관문들이 두 방향으로 덧붙인다 -
+    /// 딤이 없어도 계속 막아야 하는 안내가 있고, 막힌 중에도 지금 단계가 시킨 키는 통과해야 한다.
+    /// </summary>
+    public bool CanUseShortcut(MonoBehaviour mode)
+    {
+        if (!IsShortcutBlocked())
+        {
+            return true;
+        }
+
+        foreach (IShortcutBlockQuery query in _shortcutQueries)
+        {
+            if (query != null && query.AllowsShortcut(mode))
             {
-                return false;
+                return true;
             }
         }
 
-        return true;
+        return false;
+    }
+
+    private bool IsShortcutBlocked()
+    {
+        if (_guideOverlay != null && _guideOverlay.IsBlockingInput)
+        {
+            return true;
+        }
+
+        foreach (IShortcutBlockQuery query in _shortcutQueries)
+        {
+            if (query != null && query.BlocksShortcuts())
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool CanCloseByQueries(MonoBehaviour target)
@@ -224,7 +279,7 @@ public class UIManager : MonoBehaviour
 
             // 튜토리얼의 버튼 유도를 단축키로 건너뛰지 못하게 한다. 실제 HUD 버튼은
             // OpenExclusive를 직접 호출하므로 이 관문과 무관하게 현재 안내대로 작동한다.
-            if (!CanUseShortcutByQueries(mode as MonoBehaviour))
+            if (!CanUseShortcut(mode as MonoBehaviour))
             {
                 continue;
             }
@@ -266,7 +321,7 @@ public class UIManager : MonoBehaviour
         if (_escapeAction.action.WasPerformedThisFrame()
             && !IsAnyWindowOpen
             && !_wasAnyWindowOpen
-            && CanUseShortcutByQueries(_escapeWindowBehaviour))
+            && CanUseShortcut(_escapeWindowBehaviour))
         {
             OpenExclusive(_escapeWindow);
         }
