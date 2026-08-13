@@ -10,21 +10,22 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 809865e60fe22fd489822f264ce13c71, type: 3}
-  m_Name: MD_Ground_Immune_Ice
+  m_Name: MD_Ground_ShieldGenerator
   m_EditorClassIdentifier: Assembly-CSharp::MonsterData
-  _nameLocKey: monster_ground_element_immune_ice
-  _descriptionLocKey: monster_ground_element_immune_ice_desc
-  _monsterType: 0
+  _nameLocKey: monster_ground_shieldgenerator
+  _descriptionLocKey: monster_ground_shieldgenerator_desc
+  _monsterType: 1
   _maxHealth: 80
   _moveSpeed: 2
   _movementType: 0
   _hasShield: 0
   _shieldAmount: 0
   _isCrowdControlImmune: 0
-  _elementRule: 2
+  _elementRule: 0
   _element: 0
   _attack: {fileID: 11400000, guid: b19ac6cb35544fe4db5e83512a64c396, type: 2}
-  _enRouteTargetTypes: 0
-  _specialBehaviors: []
+  _enRouteTargetTypes: -1
+  _specialBehaviors:
+  - {fileID: 11400000, guid: eacadffb35ea61143969632598607ed5, type: 2}
   _projectilePrefab: {fileID: 0}
   _projectileSpeed: 0

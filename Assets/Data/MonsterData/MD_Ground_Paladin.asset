@@ -10,19 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 809865e60fe22fd489822f264ce13c71, type: 3}
-  m_Name: MD_Ground_Only_LIfe
+  m_Name: MD_Ground_Paladin
   m_EditorClassIdentifier: Assembly-CSharp::MonsterData
-  _nameLocKey: monster_ground_element_only_life
-  _descriptionLocKey: monster_ground_element_only_life_desc
-  _maxHealth: 40
+  _nameLocKey: monster_ground_paladin
+  _descriptionLocKey: monster_ground_paladin_desc
+  _monsterType: 1
+  _maxHealth: 120
   _moveSpeed: 2
   _movementType: 0
   _hasShield: 0
   _shieldAmount: 0
-  _elementRule: 1
-  _element: 4
+  _isCrowdControlImmune: 0
+  _elementRule: 0
+  _element: 0
   _attack: {fileID: 11400000, guid: b19ac6cb35544fe4db5e83512a64c396, type: 2}
   _enRouteTargetTypes: 0
-  _specialBehaviors: []
+  _specialBehaviors:
+  - {fileID: 11400000, guid: 158483db67dbcf4428b8b82ed17b3e49, type: 2}
+  - {fileID: 11400000, guid: b44eb5f5772fd2244b3cfef3e3b2f091, type: 2}
   _projectilePrefab: {fileID: 0}
   _projectileSpeed: 0

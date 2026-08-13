@@ -13,15 +13,17 @@ MonoBehaviour:
   m_Name: TD_StoneTower
   m_EditorClassIdentifier: Assembly-CSharp::ElementalTowerData
   _nameLocKey: Stone Tower
+  _requiresResearchUnlock: 0
   _populationCapacity: 7
   _buildCost:
   - Type: 4
     Amount: 60
   - Type: 64
-    Amount: 50
+    Amount: 30
   _maxHealth: 120
   _reviveDelay: 20
   _attack: {fileID: 11400000, guid: 64d7e8903584c4205b3d64051d4425d0, type: 2}
+  _targetMovementFilter: 0
   _projectilePrefab: {fileID: 2874056009116883397, guid: 6372dd2ccf53148e0b34551fd42de403, type: 3}
   _projectileSpeed: 5
   _dragonType: 3

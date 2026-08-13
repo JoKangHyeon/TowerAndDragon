@@ -88,6 +88,9 @@ public class MonsterData : ScriptableObject
                 !attackElement.HasValue ||
                 attackElement.Value != _element,
 
+            MonsterElementRule.AllImmune =>
+                !attackElement.HasValue,
+
             _ => true,
         };
     }

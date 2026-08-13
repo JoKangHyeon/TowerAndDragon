@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: TD_IceTower
   m_EditorClassIdentifier: Assembly-CSharp::ElementalTowerData
   _nameLocKey: Ice Tower
+  _requiresResearchUnlock: 0
   _populationCapacity: 7
   _buildCost:
   - Type: 2
@@ -20,10 +21,11 @@ MonoBehaviour:
   - Type: 4
     Amount: 50
   - Type: 16
-    Amount: 50
+    Amount: 30
   _maxHealth: 120
   _reviveDelay: 20
   _attack: {fileID: 11400000, guid: c36cb6ae4b5234534bbc333602efeb6e, type: 2}
+  _targetMovementFilter: 0
   _projectilePrefab: {fileID: 2874056009116883397, guid: 38af852f1edcb409b86dc0c03eddafad, type: 3}
   _projectileSpeed: 10
   _dragonType: 0
