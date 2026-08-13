@@ -24,6 +24,11 @@ public class GridMap : MonoBehaviour
     [SerializeField]
     private CellYieldOverrideTable _cellYieldOverrideTable;
 
+    // 셀 기본 생산량의 기준선·대각선 계수. 밸런싱 대상이라 상수가 아니라 에셋에서 읽는다.
+    // 미연결이면 모든 셀의 생산량이 0이 되므로 필수 참조로 다룬다(WiringGuard.Require).
+    [SerializeField]
+    private EconomyBalanceData _economyBalance;
+
     // 셀→청크 소속 레이아웃 - 청크를 임의 모양으로 정의한다(ChunkLayoutEditorWindow로 저작).
     // 다른 테이블들과 달리 선택이 아니라 필수다: 이게 비면 청크가 하나도 생기지 않아
     // 초기 영토·점령·안개·건설 판정이 전부 무너진다.
@@ -190,8 +195,6 @@ public class GridMap : MonoBehaviour
     // 성 좌표 기준 대각선·거리 공식 상수 - "대각선 지역은 경로에서 멀어 진격·방어 이점이 없는 대신
     // 자원이 풍부하다(리스크→리워드)"는 기획(Docs/기획종합_v2.md 8장)을 셀 좌표 단위로 직접 계산한다.
     private static readonly Vector2 CASTLE_POSITION = new Vector2(3f, 3f);
-    private const int BASELINE_YIELD = 5;
-    private const float DIAGONAL_BONUS_FACTOR = 0.4f;
     private const float DEGREES_PER_QUADRANT = 90f;
     private const float DEGREES_PER_DIAGONAL_STEP = 45f;
 
@@ -200,13 +203,21 @@ public class GridMap : MonoBehaviour
     // 거리는 셀의 정확한 좌표로 연속적으로 계산되므로 같은 청크 안에서도 셀마다 값이 자연히 달라진다.
     private void ApplyCellYields()
     {
+        if (!WiringGuard.Require(_economyBalance, nameof(_economyBalance), this))
+        {
+            return;
+        }
+
+        int baselineYield = _economyBalance.BaselineCellYield;
+        float diagonalBonusFactor = _economyBalance.DiagonalBonusFactor;
+
         foreach (Chunk chunk in _chunks.Values)
         {
             int chunkBaseYieldSum = 0;
 
             foreach (GridCell cell in chunk.Cells)
             {
-                int baseYield = CalculateDistanceYield(cell.Coord);
+                int baseYield = CalculateDistanceYield(cell.Coord, baselineYield, diagonalBonusFactor);
                 cell.SetBaseYield(baseYield);
                 chunkBaseYieldSum += baseYield;
 
@@ -224,21 +235,23 @@ public class GridMap : MonoBehaviour
         }
     }
 
-    private static int CalculateDistanceYield(Vector3Int cellCoord)
+    // 기준선·대각선 계수는 밸런싱 대상이라 상수가 아니라 EconomyBalanceData에서 받아온다
+    // (호출부인 ApplyCellYields가 에셋에서 한 번 읽어 넘긴다 - 셀마다 에셋을 다시 뒤지지 않기 위함).
+    private static int CalculateDistanceYield(Vector3Int cellCoord, int baselineYield, float diagonalBonusFactor)
     {
         Vector2 offset = new Vector2(cellCoord.x, cellCoord.y) - CASTLE_POSITION;
         float distance = offset.magnitude;
         if (distance < Mathf.Epsilon)
-            return BASELINE_YIELD;
+            return baselineYield;
 
         float angleFromCardinal = Mathf.Abs(Mathf.Repeat(Mathf.Atan2(offset.y, offset.x) * Mathf.Rad2Deg, DEGREES_PER_QUADRANT));
         if (angleFromCardinal > DEGREES_PER_DIAGONAL_STEP)
             angleFromCardinal = DEGREES_PER_QUADRANT - angleFromCardinal;
 
         float diagonalFactor = angleFromCardinal / DEGREES_PER_DIAGONAL_STEP;
-        int bonus = Mathf.RoundToInt(diagonalFactor * distance * DIAGONAL_BONUS_FACTOR);
+        int bonus = Mathf.RoundToInt(diagonalFactor * distance * diagonalBonusFactor);
 
-        return BASELINE_YIELD + bonus;
+        return baselineYield + bonus;
     }
 
     private static readonly ResourceType[] ALL_RESOURCE_FLAGS =

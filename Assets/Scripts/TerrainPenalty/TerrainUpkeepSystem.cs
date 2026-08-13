@@ -21,6 +21,10 @@ public class TerrainUpkeepSystem : MonoBehaviour
     private readonly List<TerrainUpkeepRules.FacilityUpkeep> _upkeeps = new();
     private readonly List<int> _deactivationTargets = new();
 
+    // 인구 해제 직전에 대상 시설을 옮겨 담는 버퍼 - CollectFacilities가 건드리지 않아야 하므로
+    // _facilities와 반드시 별개로 유지한다. 이유는 DeactivateForShortfall 주석 참고.
+    private readonly List<IPopulationAllocationTarget> _deactivationBuffer = new();
+
     public bool TrySettle(out TerrainUpkeepResult result)
     {
         result = default;
@@ -54,8 +58,10 @@ public class TerrainUpkeepSystem : MonoBehaviour
     /// 실제 정산(TrySettle)과 같은 경로(CollectFacilities + AccumulateRequirement)를 그대로 쓰므로
     /// 예측치와 실제 차감액이 어긋나지 않는다 (Factory.AccumulateProjectedProduction과 같은 구조).
     ///
-    /// 재사용 버퍼(_facilities·_upkeeps)를 TrySettle과 공유하지만, 둘 다 메인 스레드에서만 돌고
-    /// 서로 중첩 호출되지 않으므로 안전하다.
+    /// 재사용 버퍼(_facilities·_upkeeps)를 TrySettle과 공유한다. 둘 다 메인 스레드에서만 돌지만
+    /// **중첩 호출은 실제로 일어난다** - TrySettle의 인구 해제가 PopulationChanged를 발화시키고,
+    /// 그 리스너인 ResourceForecast가 다시 이 메서드를 부른다. 그래서 이 메서드는 언제 불려도
+    /// 버퍼를 새로 채우기만 하고, 순회 중 재구축에 대한 방어는 DeactivateForShortfall이 담당한다.
     /// </summary>
     public void AccumulateProjectedUpkeep(IDictionary<ResourceType, int> into)
     {
@@ -125,12 +131,21 @@ public class TerrainUpkeepSystem : MonoBehaviour
             stoneShortfall,
             _deactivationTargets);
 
-        int deactivatedCount = 0;
+        // 인구를 해제하기 전에 대상을 별도 버퍼로 옮긴다. TryUnassign은 PopulationChanged를 발화시키고,
+        // 그 리스너(ResourceForecast)가 AccumulateProjectedUpkeep -> CollectFacilities로 _facilities를
+        // 비우고 다시 채운다. _facilities[index]를 순회 도중에 읽으면 인덱스가 어긋나 엉뚱한 시설을
+        // 해제하거나 범위를 벗어난다.
+        _deactivationBuffer.Clear();
 
         foreach (int index in _deactivationTargets)
         {
-            IPopulationAllocationTarget target = _facilities[index];
+            _deactivationBuffer.Add(_facilities[index]);
+        }
 
+        int deactivatedCount = 0;
+
+        foreach (IPopulationAllocationTarget target in _deactivationBuffer)
+        {
             if (!target.TryUnassign(target.AssignedPopulation))
             {
                 Debug.LogWarning(

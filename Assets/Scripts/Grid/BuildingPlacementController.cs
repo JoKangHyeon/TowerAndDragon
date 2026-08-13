@@ -59,9 +59,10 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private float _dragThreshold = 10f;
 
-    // 건물 철거 시 건설 비용 중 돌려주는 비율 - 낮밤 사이클이 한 번도 돌지 않은 당일 철거는 전액, 그 외엔 일부만 환급.
-    private const float DEMOLISH_REFUND_RATIO_SAME_DAY = 1f;
-    private const float DEMOLISH_REFUND_RATIO_LATE = 0.7f;
+    // 건물 철거 시 돌려주는 비율의 출처(밸런싱 대상이라 상수가 아니라 에셋에서 읽는다).
+    // 미연결이면 환급하지 않는다 - 되돌려줄 비율을 모르는 채 임의 값으로 자원을 주지 않기 위함.
+    [SerializeField]
+    private EconomyBalanceData _economyBalance;
 
     private Building _selectedBuilding;
     private Vector3Int? _selectedExistingBuildingCoord;
@@ -309,14 +310,19 @@ public class BuildingPlacementController : MonoBehaviour
         NotifySelectedBuildingChanged();
     }
 
-    // 건설 비용을 환급한다 - 낮밤 사이클이 한 번도 돌지 않은 당일 건설/철거는 전액, 그 외엔 DEMOLISH_REFUND_RATIO_LATE만큼.
+    // 건설 비용을 환급한다 - 낮밤 사이클이 한 번도 돌지 않은 당일 건설/철거는 전액, 그 외엔 일부만.
     private void RefundBuildCost(Building building)
     {
         if (_resourceManager == null)
             return;
 
+        if (!WiringGuard.Require(_economyBalance, nameof(_economyBalance), this))
+            return;
+
         bool isSameDay = _cycleManager != null && building.ConstructedCycle == _cycleManager.CurrentCycleNumber;
-        float refundRatio = isSameDay ? DEMOLISH_REFUND_RATIO_SAME_DAY : DEMOLISH_REFUND_RATIO_LATE;
+        float refundRatio = isSameDay
+            ? _economyBalance.DemolishRefundRatioSameDay
+            : _economyBalance.DemolishRefundRatioLate;
 
         IReadOnlyList<ResourceAmount> cost = building.BuildCost;
         var refund = new ResourceAmount[cost.Count];

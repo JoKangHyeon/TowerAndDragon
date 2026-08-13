@@ -69,6 +69,9 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("하루 예상 증감 표기용. 각 자원 보유량 옆에 (+증가) 또는 (-감소)로 노출한다.")]
     [FormerlySerializedAs("_productionForecast")]
     [SerializeField] private ResourceForecast _resourceForecast;
+    [Tooltip("인구 1명당 식량 소모량의 출처. PopulationUpkeepSystem·ResourceForecast와 같은 에셋을 " +
+        "연결해야 표시값과 실제 차감액이 어긋나지 않는다.")]
+    [SerializeField] private EconomyBalanceData _economyBalance;
     [Tooltip("하루 순증가 글씨 색(연두색).")]
     [SerializeField] private Color _productionColor = PRODUCTION_COLOR_DEFAULT;
     [Tooltip("자원 칸 툴팁을 그릴 표시기. 각 자원 행의 UI_TooltipTrigger에 주입한다.")]
@@ -394,6 +397,11 @@ public class UI_IngameWindow : MonoBehaviour
             return default;
         }
 
+        if (!WiringGuard.Require(_economyBalance, nameof(_economyBalance), this))
+        {
+            return default;
+        }
+
         // 순증감이 아니라 '생산량'을 넘긴다 - Calculate가 요구량을 다시 빼므로,
         // 순증감을 넘기면 인구 유지비가 두 번 차감된다.
         int projectedFoodProduction = _resourceForecast != null
@@ -403,7 +411,8 @@ public class UI_IngameWindow : MonoBehaviour
         return PopulationUpkeepRules.Calculate(
             state.MaxPopulation,
             _resourceManager.GetAmount(ResourceType.Food),
-            projectedFoodProduction
+            projectedFoodProduction,
+            _economyBalance.FoodUpkeepPerPopulation
         );
     }
 

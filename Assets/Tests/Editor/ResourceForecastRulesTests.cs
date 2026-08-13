@@ -2,6 +2,9 @@ using NUnit.Framework;
 
 public class ResourceForecastRulesTests
 {
+    // 알파 기준값(EB_EconomyBalance_Alpha). 이 값이 1일 때 부족 식량과 아사 인원이 1:1로 대응한다.
+    private const int FOOD_PER_POPULATION = 1;
+
     [TestCase(20, 0, 20)]
     [TestCase(20, 35, -15)]
     [TestCase(20, 20, 0)]
@@ -84,11 +87,12 @@ public class ResourceForecastRulesTests
         PopulationUpkeepPreview preview = PopulationUpkeepRules.Calculate(
             population,
             currentFood,
-            foodProduction);
+            foodProduction,
+            FOOD_PER_POPULATION);
 
         int netChange = ResourceForecastRules.NetChange(
             foodProduction,
-            PopulationUpkeepRules.GetRequiredFood(population));
+            PopulationUpkeepRules.GetRequiredFood(population, FOOD_PER_POPULATION));
 
         Assert.That(
             ResourceForecastRules.Shortage(currentFood, netChange),

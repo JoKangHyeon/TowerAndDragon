@@ -1075,6 +1075,8 @@ MonoBehaviour:
   _babyDragonBuffSystem: {fileID: 1790075015}
   _terrainPenaltySystem: {fileID: 0}
   _terrainUpkeepSystem: {fileID: 0}
+  _towerUpkeepSystem: {fileID: 1891719887}
+  _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
   ForecastChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -1387,6 +1389,7 @@ MonoBehaviour:
   _iceUnlockableTerrain: 2
   _moveHoldDuration: 2
   _dragThreshold: 10
+  _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
   BuildingSelected:
     m_PersistentCalls:
       m_Calls: []
@@ -8196,6 +8199,7 @@ GameObject:
   - component: {fileID: 1891719881}
   - component: {fileID: 1891719886}
   - component: {fileID: 1891719885}
+  - component: {fileID: 1891719887}
   m_Layer: 0
   m_Name: PopulationSystem
   m_TagString: Untagged
@@ -8275,10 +8279,14 @@ MonoBehaviour:
   _cycleManager: {fileID: 1632594319}
   _populationUpkeepSystem: {fileID: 1891719886}
   _terrainUpkeepSystem: {fileID: 0}
+  _towerUpkeepSystem: {fileID: 1891719887}
   SettlementCompleted:
     m_PersistentCalls:
       m_Calls: []
   TerrainSettlementCompleted:
+    m_PersistentCalls:
+      m_Calls: []
+  TowerSettlementCompleted:
     m_PersistentCalls:
       m_Calls: []
 --- !u!114 &1891719886
@@ -8295,6 +8303,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PopulationUpkeepSystem
   _resourceManager: {fileID: 1632594327}
   _populationManager: {fileID: 1632594324}
+  _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
+--- !u!114 &1891719887
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1891719880}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e7ada73fd9d5434a9d626e66be12533, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::TowerUpkeepSystem
+  _gridMap: {fileID: 168384008}
+  _resourceManager: {fileID: 1632594327}
+  _towerUpkeepData: {fileID: 11400000, guid: ce2ee1c1994dd0748b094b4582885829, type: 2}
 --- !u!1 &1921787126
 GameObject:
   m_ObjectHideFlags: 0

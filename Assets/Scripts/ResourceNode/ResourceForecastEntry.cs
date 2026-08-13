@@ -10,6 +10,9 @@ public enum ResourceForecastSource
     /// <summary>설원·암석 등 지역 자재 유지비(TerrainUpkeepSystem).</summary>
     TerrainUpkeep,
 
+    /// <summary>가동 중인 타워의 자재 유지비(TowerUpkeepSystem).</summary>
+    TowerUpkeep,
+
     /// <summary>새끼용이 매일 아침 먹는 슬라임(BabyDragonFeedingSystem).</summary>
     BabyDragonFeed,
 }

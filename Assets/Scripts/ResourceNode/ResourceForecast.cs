@@ -7,8 +7,8 @@ using UnityEngine.Events;
 /// <summary>
 /// '다음 정산에서 자원이 얼마나 늘고 줄지'를 자원 종류별로 집계한다.
 /// - 생산: 각 Factory가 OnDayStart에 쓰는 것과 같은 공식(Factory.AccumulateProjectedProduction)
-/// - 소모: 인구 식량 유지비(PopulationUpkeepRules)와 지역 자재 유지비(TerrainUpkeepSystem),
-///   그리고 새끼용 먹이 슬라임(BabyDragonFeedProjection)
+/// - 소모: 인구 식량 유지비(PopulationUpkeepRules), 지역 자재 유지비(TerrainUpkeepSystem),
+///   타워 자재 유지비(TowerUpkeepSystem), 새끼용 먹이 슬라임(BabyDragonFeedProjection)
 /// 실제 정산은 DailySettlementManager가 OnDayStartUpkeep에 수행하고, 이 클래스는 같은 규칙으로
 /// 예상치만 계산해 UI에 제공한다. 건물 추가/제거·인구 배치·버프·지형 페널티 변경 시 다시 계산하고
 /// ForecastChanged로 알린다.
@@ -31,19 +31,29 @@ public class ResourceForecast : MonoBehaviour
     [Tooltip("지역(설원·암석) 자재 유지비 예상 소모량을 가져온다. 미연결이면 자재 유지비를 0으로 본다.")]
     [SerializeField] private TerrainUpkeepSystem _terrainUpkeepSystem;
 
+    [Tooltip("가동 중인 타워의 자재 유지비 예상 소모량을 가져온다. 미연결이면 타워 유지비를 0으로 본다.")]
+    [SerializeField] private TowerUpkeepSystem _towerUpkeepSystem;
+
+    [Tooltip("인구 1명당 식량 소모량의 출처. PopulationUpkeepSystem과 같은 에셋을 연결해야 " +
+        "예상치와 실제 차감액이 어긋나지 않는다.")]
+    [SerializeField] private EconomyBalanceData _economyBalance;
+
     /// <summary>예상 증감이 바뀌었을 때 발화. UI가 구독해 표기를 갱신한다.</summary>
     public UnityEvent ForecastChanged;
 
     private readonly Dictionary<ResourceType, int> _production = new();
     private readonly Dictionary<ResourceType, int> _consumption = new();
 
-    // 툴팁 내역용 평탄 목록. 자원 12종 × 출처 4종이라 선형 스캔으로 충분하고, 자원별 리스트를
+    // 툴팁 내역용 평탄 목록. 자원 12종 × 출처 5종이라 선형 스캔으로 충분하고, 자원별 리스트를
     // 따로 두는 것보다 재계산 때 할당이 없다.
     private readonly List<ResourceForecastEntry> _entries = new();
 
     // 지역 유지비를 받아올 때만 쓰는 임시 버퍼. 소모 합계(_consumption)에 출처별로 나눠 담기 위해
     // 한 번 거쳐 간다.
     private readonly Dictionary<ResourceType, int> _terrainUpkeepBuffer = new();
+
+    // 타워 유지비를 받아올 때만 쓰는 임시 버퍼. 지역 유지비 버퍼와 같은 용도다.
+    private readonly Dictionary<ResourceType, int> _towerUpkeepBuffer = new();
 
     // 새끼용 먹이를 받아올 때만 쓰는 임시 버퍼. 지역 유지비 버퍼와 같은 용도다.
     private readonly Dictionary<ResourceType, int> _babyDragonFeedBuffer = new();
@@ -160,6 +170,7 @@ public class ResourceForecast : MonoBehaviour
         AccumulateProduction();
         AccumulatePopulationUpkeep();
         AccumulateTerrainUpkeep();
+        AccumulateTowerUpkeep();
         AccumulateBabyDragonFeed();
 
         ForecastChanged?.Invoke();
@@ -186,15 +197,19 @@ public class ResourceForecast : MonoBehaviour
         }
     }
 
-    // 식량은 최대 인구 1명당 1씩 걷힌다(PopulationUpkeepSystem이 실제로 쓰는 값과 같은 출처).
+    // 식량은 최대 인구 1명당 EconomyBalanceData.FoodUpkeepPerPopulation씩 걷힌다
+    // (PopulationUpkeepSystem이 실제로 쓰는 값과 같은 출처).
     private void AccumulatePopulationUpkeep()
     {
-        if (!WiringGuard.Require(_populationManager, nameof(_populationManager), this))
+        if (!WiringGuard.Require(_populationManager, nameof(_populationManager), this) ||
+            !WiringGuard.Require(_economyBalance, nameof(_economyBalance), this))
         {
             return;
         }
 
-        int requiredFood = PopulationUpkeepRules.GetRequiredFood(_populationManager.MaxPopulation);
+        int requiredFood = PopulationUpkeepRules.GetRequiredFood(
+            _populationManager.MaxPopulation,
+            _economyBalance.FoodUpkeepPerPopulation);
         AddConsumption(ResourceType.Food, ResourceForecastSource.PopulationUpkeep, requiredFood);
     }
 
@@ -211,6 +226,22 @@ public class ResourceForecast : MonoBehaviour
         foreach (KeyValuePair<ResourceType, int> pair in _terrainUpkeepBuffer)
         {
             AddConsumption(pair.Key, ResourceForecastSource.TerrainUpkeep, pair.Value);
+        }
+    }
+
+    private void AccumulateTowerUpkeep()
+    {
+        if (!WiringGuard.Optional(_towerUpkeepSystem, nameof(_towerUpkeepSystem), this))
+        {
+            return;
+        }
+
+        _towerUpkeepBuffer.Clear();
+        _towerUpkeepSystem.AccumulateProjectedUpkeep(_towerUpkeepBuffer);
+
+        foreach (KeyValuePair<ResourceType, int> pair in _towerUpkeepBuffer)
+        {
+            AddConsumption(pair.Key, ResourceForecastSource.TowerUpkeep, pair.Value);
         }
     }
 

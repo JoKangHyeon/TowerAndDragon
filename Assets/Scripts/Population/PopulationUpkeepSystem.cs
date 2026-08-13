@@ -9,6 +9,9 @@ public class PopulationUpkeepSystem : MonoBehaviour
     [SerializeField] private ResourceManager _resourceManager;
     [SerializeField] private PopulationManager _populationManager;
 
+    // 인구 1명당 식량 소모량의 출처. 미연결이면 유지비를 걷지 않는다(정산 자체를 건너뛴다).
+    [SerializeField] private EconomyBalanceData _economyBalance;
+
     public bool TrySettle(out PopulationUpkeepResult result)
     {
         result = default;
@@ -18,10 +21,16 @@ public class PopulationUpkeepSystem : MonoBehaviour
             return false;
         }
 
+        if (!WiringGuard.Require(_economyBalance, nameof(_economyBalance), this))
+        {
+            return false;
+        }
+
         PopulationUpkeepPreview preview = PopulationUpkeepRules.Calculate(
             _populationManager.MaxPopulation,
             _resourceManager.GetAmount(ResourceType.Food),
-            0
+            0,
+            _economyBalance.FoodUpkeepPerPopulation
         );
         int consumedFood = _resourceManager.ConsumeUpTo(
             ResourceType.Food,

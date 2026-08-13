@@ -10,6 +10,7 @@ public static class ResourceLocKeys
     public const string SOURCE_PRODUCTION = "resource_forecast_production";
     public const string SOURCE_POPULATION_UPKEEP = "resource_forecast_population_upkeep";
     public const string SOURCE_TERRAIN_UPKEEP = "resource_forecast_terrain_upkeep";
+    public const string SOURCE_TOWER_UPKEEP = "resource_forecast_tower_upkeep";
     public const string SOURCE_BABY_DRAGON_FEED = "resource_forecast_baby_dragon_feed";
 
     // 이대로 날을 넘겼을 때 벌어질 일. 자원마다 결과가 다르다.
@@ -28,6 +29,7 @@ public static class ResourceLocKeys
             ResourceForecastSource.Production => SOURCE_PRODUCTION,
             ResourceForecastSource.PopulationUpkeep => SOURCE_POPULATION_UPKEEP,
             ResourceForecastSource.TerrainUpkeep => SOURCE_TERRAIN_UPKEEP,
+            ResourceForecastSource.TowerUpkeep => SOURCE_TOWER_UPKEEP,
             ResourceForecastSource.BabyDragonFeed => SOURCE_BABY_DRAGON_FEED,
             _ => SOURCE_PRODUCTION,
         };

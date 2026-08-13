@@ -13,12 +13,14 @@ MonoBehaviour:
   m_Name: TD_Arrow
   m_EditorClassIdentifier: Assembly-CSharp::TowerData
   _nameLocKey: Arrow Tower
+  _requiresResearchUnlock: 0
   _populationCapacity: 5
   _buildCost:
   - Type: 2
-    Amount: 2
+    Amount: 25
   _maxHealth: 100
   _reviveDelay: 20
   _attack: {fileID: 11400000, guid: 905c76c029788f344b513db54a34d8c7, type: 2}
+  _targetMovementFilter: 0
   _projectilePrefab: {fileID: 2874056009116883397, guid: c13a7b1d583d7cf46bbf1358248fe5e1, type: 3}
   _projectileSpeed: 10

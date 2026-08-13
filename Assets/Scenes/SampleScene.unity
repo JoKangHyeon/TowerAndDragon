@@ -896,6 +896,8 @@ MonoBehaviour:
   _babyDragonBuffSystem: {fileID: 936144406}
   _terrainPenaltySystem: {fileID: 1652351659}
   _terrainUpkeepSystem: {fileID: 1356859336}
+  _towerUpkeepSystem: {fileID: 1356859337}
+  _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
   ForecastChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -6145,6 +6147,7 @@ GameObject:
   - component: {fileID: 1356859334}
   - component: {fileID: 1356859335}
   - component: {fileID: 1356859336}
+  - component: {fileID: 1356859337}
   m_Layer: 0
   m_Name: PopulationSystem
   m_TagString: Untagged
@@ -6223,6 +6226,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PopulationUpkeepSystem
   _resourceManager: {fileID: 914589613}
   _populationManager: {fileID: 914589617}
+  _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
 --- !u!114 &1356859335
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6238,10 +6242,14 @@ MonoBehaviour:
   _cycleManager: {fileID: 914589611}
   _populationUpkeepSystem: {fileID: 1356859334}
   _terrainUpkeepSystem: {fileID: 1356859336}
+  _towerUpkeepSystem: {fileID: 1356859337}
   SettlementCompleted:
     m_PersistentCalls:
       m_Calls: []
   TerrainSettlementCompleted:
+    m_PersistentCalls:
+      m_Calls: []
+  TowerSettlementCompleted:
     m_PersistentCalls:
       m_Calls: []
 --- !u!114 &1356859336
@@ -6259,6 +6267,21 @@ MonoBehaviour:
   _gridMap: {fileID: 313449541}
   _resourceManager: {fileID: 914589613}
   _terrainPenaltySystem: {fileID: 1652351659}
+--- !u!114 &1356859337
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1356859329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e7ada73fd9d5434a9d626e66be12533, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerUpkeepSystem
+  _gridMap: {fileID: 313449541}
+  _resourceManager: {fileID: 914589613}
+  _towerUpkeepData: {fileID: 11400000, guid: ce2ee1c1994dd0748b094b4582885829, type: 2}
 --- !u!114 &1368852691 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7988158261880957332, guid: e091b5dd15ea87a4da8ffc0996241271, type: 3}
@@ -7106,6 +7129,7 @@ MonoBehaviour:
   _iceUnlockableTerrain: 2
   _moveHoldDuration: 2
   _dragThreshold: 10
+  _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
   BuildingSelected:
     m_PersistentCalls:
       m_Calls: []

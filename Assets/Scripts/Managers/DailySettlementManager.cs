@@ -16,11 +16,17 @@ public class DailySettlementManager : MonoBehaviour
     [Tooltip("설원·암석 지역 시설의 자재 유지비. 미연결이면 지역 유지비를 소비하지 않는다.")]
     [SerializeField] private TerrainUpkeepSystem _terrainUpkeepSystem;
 
+    [Tooltip("가동 중인 타워의 자재 유지비. 미연결이면 타워 유지비를 소비하지 않는다.")]
+    [SerializeField] private TowerUpkeepSystem _towerUpkeepSystem;
+
     public UnityEvent<int, PopulationUpkeepResult> SettlementCompleted;
 
     // 씬 YAML에 이 필드 항목이 없는 기존 인스턴스에서도 null이 되지 않도록 인라인 초기화한다
     // (CycleManager.OnDayStartUpkeep과 같은 이유).
     public UnityEvent<int, TerrainUpkeepResult> TerrainSettlementCompleted = new();
+
+    // 위와 같은 이유로 인라인 초기화한다.
+    public UnityEvent<int, TowerUpkeepResult> TowerSettlementCompleted = new();
 
     private void OnEnable()
     {
@@ -48,6 +54,7 @@ public class DailySettlementManager : MonoBehaviour
 
         SettleFood(currentDay);
         SettleTerrain(currentDay);
+        SettleTower(currentDay);
     }
 
     private void SettleFood(int currentDay)
@@ -72,5 +79,19 @@ public class DailySettlementManager : MonoBehaviour
         }
 
         TerrainSettlementCompleted?.Invoke(currentDay, result);
+    }
+
+    // 지역 유지비 다음에 실행한다 - 앞 단계에서 인구가 줄면(기아·시설 비활성화) 그만큼 타워
+    // 유지비도 줄어드는 게 자연스럽고, 반대 순서면 이미 사라질 인구 몫까지 먼저 걷게 된다
+    // (식량 → 지역 순서를 정한 것과 같은 이유).
+    private void SettleTower(int currentDay)
+    {
+        if (_towerUpkeepSystem == null ||
+            !_towerUpkeepSystem.TrySettle(out TowerUpkeepResult result))
+        {
+            return;
+        }
+
+        TowerSettlementCompleted?.Invoke(currentDay, result);
     }
 }
