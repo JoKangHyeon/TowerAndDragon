@@ -51,6 +51,13 @@ public sealed class SceneLoadOverlay : MonoBehaviour
     [SerializeField] private float _fadeInDuration = DEFAULT_FADE_IN_DURATION;
     [SerializeField] private float _fadeOutDuration = DEFAULT_FADE_OUT_DURATION;
 
+    [Tooltip("화면이 불투명해진 뒤 최소 몇 초를 띄워 둘지. 로딩이 그보다 빨리 끝나면 남은 시간을 더 기다린다. " +
+             "0이면 제한 없이 로딩이 끝나는 즉시 걷는다.\n" +
+             "로딩 구간에는 프레임이 거의 없어 연출이 끊기므로, 씬이 이미 준비된 뒤의 매끄러운 구간을 " +
+             "확보하려면 이 값을 올린다. 그만큼 대기가 길어진다.")]
+    [Min(0f)]
+    [SerializeField] private float _minimumDisplaySeconds;
+
     private bool _isLoading;
 
     private void Awake()
@@ -117,6 +124,11 @@ public sealed class SceneLoadOverlay : MonoBehaviour
             await FadeAsync(VISIBLE_ALPHA, _fadeInDuration, token);
             await UniTask.DelayFrame(FRAMES_BEFORE_LOAD, cancellationToken: token);
 
+            // 최소 표시 시간은 여기서부터 센다 - 페이드 인은 아직 화면이 비쳐 보이는 구간이라
+            // "로딩 화면을 보여준 시간"으로 치면 실제로 덮여 있는 시간이 그만큼 짧아진다.
+            // 로딩이 블록되는 동안 프레임이 멈춰도 unscaledTime은 실제 경과만큼 뛰므로 그대로 반영된다.
+            float opaqueSinceUnscaledTime = Time.unscaledTime;
+
             // 씬이 Build Settings에 없거나 빌드에서 항목이 비활성이면 null이 돌아온다.
             AsyncOperation operation = SceneManager.LoadSceneAsync(sceneName);
 
@@ -132,6 +144,7 @@ public sealed class SceneLoadOverlay : MonoBehaviour
 
             await operation.ToUniTask(cancellationToken: token);
             await UniTask.DelayFrame(FRAMES_AFTER_LOAD, cancellationToken: token);
+            await WaitForMinimumDisplayAsync(opaqueSinceUnscaledTime, token);
             await FadeAsync(HIDDEN_ALPHA, _fadeOutDuration, token);
 
             hasCompleted = true;
@@ -155,6 +168,20 @@ public sealed class SceneLoadOverlay : MonoBehaviour
                 }
             }
         }
+    }
+
+    // 씬이 이미 준비된 뒤에도 잠시 더 덮어 둔다. 이 구간은 프레임이 정상이라 시계·스피너가 매끄럽게 돌고,
+    // 마지막 인상이 끊긴 화면이 아니게 된다.
+    private async UniTask WaitForMinimumDisplayAsync(float opaqueSinceUnscaledTime, CancellationToken token)
+    {
+        float remainingSeconds = _minimumDisplaySeconds - (Time.unscaledTime - opaqueSinceUnscaledTime);
+
+        if (remainingSeconds <= 0f)
+        {
+            return;
+        }
+
+        await UniTask.WaitForSeconds(remainingSeconds, ignoreTimeScale: true, cancellationToken: token);
     }
 
     private void Hide()
