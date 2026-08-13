@@ -59,14 +59,13 @@ public class UI_SaveSlotItem : MonoBehaviour
     }
 
     /// <summary>
-    /// 슬롯 한 줄을 그린다. 선택 가능 여부와 덮어쓰기 확인 상태는 창이 계산해서 내려준다 -
-    /// 같은 슬롯이라도 저장 모드냐 불러오기 모드냐에 따라 판정이 달라지는데, 그 규칙은
-    /// 창이 알고 슬롯은 모른다.
+    /// 슬롯 한 줄을 그린다. 선택 가능 여부는 창이 계산해서 내려준다 - 같은 슬롯이라도
+    /// 저장 모드냐 불러오기 모드냐에 따라 판정이 달라지는데, 그 규칙은 창이 알고 슬롯은 모른다.
+    /// 덮어쓰기·삭제 확인은 이 줄이 아니라 창의 확인 팝업(UI_SlotConfirmPopup)이 맡는다.
     /// </summary>
     public void Setup(
         SaveSlotInfo info,
         bool isSelectable,
-        bool isPendingOverwrite,
         Action<int> onSelected,
         Action<int> onDeleted)
     {
@@ -80,7 +79,7 @@ public class UI_SaveSlotItem : MonoBehaviour
                 StringTable.GetString(TitleLocKeys.LOAD_SLOT_NUMBER), info.SlotIndex);
         }
 
-        RenderState(info, isSelectable, isPendingOverwrite);
+        RenderState(info, isSelectable);
         RenderThumbnail(info);
     }
 
@@ -103,7 +102,7 @@ public class UI_SaveSlotItem : MonoBehaviour
         _thumbnail = null;
     }
 
-    private void RenderState(SaveSlotInfo info, bool isSelectable, bool isPendingOverwrite)
+    private void RenderState(SaveSlotInfo info, bool isSelectable)
     {
         // 표시(뱃지·일차)는 슬롯에 데이터가 있느냐로 갈리고, 선택 가능 여부는 창이 정한다.
         // 저장 모드에서는 빈 슬롯도 눌러야 하므로 둘을 같은 값으로 묶으면 안 된다.
@@ -127,7 +126,7 @@ public class UI_SaveSlotItem : MonoBehaviour
 
         if (_timestampText != null)
         {
-            _timestampText.text = ResolveTimestampLabel(info, isPendingOverwrite);
+            _timestampText.text = ResolveTimestampLabel(info);
         }
 
         if (_dayText != null)
@@ -142,15 +141,8 @@ public class UI_SaveSlotItem : MonoBehaviour
         }
     }
 
-    private static string ResolveTimestampLabel(SaveSlotInfo info, bool isPendingOverwrite)
+    private static string ResolveTimestampLabel(SaveSlotInfo info)
     {
-        // 확인 대기 중에는 저장 시각 대신 확인 문구를 띄운다 - 덮어쓰기 확인용 별도 창을 두지 않고,
-        // "무엇을 지우게 되는지" 보이는 그 자리에서 되묻는다.
-        if (isPendingOverwrite)
-        {
-            return StringTable.GetString(SaveLocKeys.SLOT_OVERWRITE_CONFIRM);
-        }
-
         if (info.IsEmpty)
         {
             return StringTable.GetString(SaveLocKeys.SLOT_EMPTY);

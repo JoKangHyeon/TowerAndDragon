@@ -28,11 +28,20 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
         Save,
     }
 
-    [Tooltip("세이브 슬롯 한 줄 프리팹(Slot_SaveSlot).")]
+    [Tooltip("세이브 슬롯 한 줄 프리팹(Slot_SaveSlot). 수동 저장 슬롯(1번부터)에 쓴다.")]
     [SerializeField] private UI_SaveSlotItem _slotPrefab;
+
+    [Tooltip("자동저장 슬롯(0번) 전용 프리팹(Slot_SaveSlot_Auto). 자동저장 표시와 테두리가 붙어 있다.")]
+    [SerializeField] private UI_SaveSlotItem _autoSlotPrefab;
 
     [Tooltip("생성된 슬롯이 들어갈 부모.")]
     [SerializeField] private Transform _slotContainer;
+
+    [Tooltip("슬롯 삭제 확인 팝업(Popup_SaveDelete). 미연결이면 삭제 버튼이 예전처럼 바로 지운다.")]
+    [SerializeField] private UI_SlotConfirmPopup _deletePopup;
+
+    [Tooltip("덮어쓰기 확인 팝업(Popup_SaveChange). 미연결이면 데이터가 있는 슬롯도 바로 덮어쓴다.")]
+    [SerializeField] private UI_SlotConfirmPopup _overwritePopup;
 
     [Tooltip("창 제목. 모드에 따라 key를 바꿔 끼운다.")]
     [SerializeField] private LocalizedText _headerLabel;
@@ -50,6 +59,10 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private InputActionReference _closeAction;
 
     private ComponentPool<UI_SaveSlotItem> _slotPool;
+
+    // 자동저장 슬롯은 한 줄뿐이지만, 목록에서 빠지는 경우까지 같은 방식으로 처리하려고 풀로 둔다.
+    private ComponentPool<UI_SaveSlotItem> _autoSlotPool;
+
     private readonly List<UI_SaveSlotItem> _slots = new();
 
     // 슬롯을 고른 뒤 열 씬. 타이틀 화면이 Construct로 넣어 준다(UI_VolumeRow와 같은 주입 방식) -
@@ -61,9 +74,6 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
     private SaveService _saveService;
 
     private WindowMode _mode = WindowMode.Load;
-
-    // 덮어쓰기 확인 대기 중인 슬롯. 확인 창을 따로 두지 않고 같은 슬롯을 한 번 더 누르게 한다.
-    private int _pendingOverwriteSlotIndex = SavePaths.INVALID_SLOT_INDEX;
 
     // 마지막 저장 시도의 결과 문구. null이면 상태 줄은 모드 기본 안내로 돌아간다.
     private string _statusLocKey;
@@ -80,6 +90,12 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
     private void Awake()
     {
         _slotPool = new ComponentPool<UI_SaveSlotItem>(_slotPrefab, _slotContainer);
+
+        // 전용 프리팹이 비어 있으면 자동저장 줄만 사라지는 대신 예전처럼 같은 프리팹으로 그린다
+        // (자동저장 표시는 UI_SaveSlotItem이 뱃지 참조가 없으면 알아서 건너뛴다).
+        UI_SaveSlotItem autoPrefab =
+            WiringGuard.Require(_autoSlotPrefab, nameof(_autoSlotPrefab), this) ? _autoSlotPrefab : _slotPrefab;
+        _autoSlotPool = new ComponentPool<UI_SaveSlotItem>(autoPrefab, _slotContainer);
 
         if (_closeButton != null)
         {
@@ -116,10 +132,11 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
             _closeAction.action.performed -= OnCloseActionPerformed;
         }
 
-        // 확인 대기 상태를 창 밖으로 들고 나가지 않는다 - 다시 열었을 때 한 번 눌렀던 슬롯이
-        // 곧바로 덮어써지면 안 된다.
-        _pendingOverwriteSlotIndex = SavePaths.INVALID_SLOT_INDEX;
         _statusLocKey = null;
+
+        // 확인 팝업도 같이 접는다. 팝업은 이 창의 자식이라 창을 끄면 화면에서는 사라지지만
+        // activeSelf가 그대로 남아, 창을 다시 열면 지난번 확인 창이 그대로 떠 있는 것처럼 보인다.
+        CloseConfirmPopups();
 
         // 창이 닫혀 있는 동안 슬롯 수만큼의 텍스처를 들고 있을 이유가 없다.
         ReleaseThumbnails();
@@ -166,8 +183,11 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
     private void OpenInMode(WindowMode mode)
     {
         _mode = mode;
-        _pendingOverwriteSlotIndex = SavePaths.INVALID_SLOT_INDEX;
         _statusLocKey = null;
+
+        // 모드를 바꿔 다시 열 때 직전 모드의 확인 팝업이 남아 있으면 안 된다
+        // (이미 켜져 있는 창을 다시 여는 경로에서는 OnDisable을 거치지 않는다).
+        CloseConfirmPopups();
 
         bool wasAlreadyActive = gameObject.activeSelf;
         Open();
@@ -198,19 +218,32 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
         IReadOnlyList<SaveSlotInfo> slots = SaveSlotQuery.GetSlots();
         _slots.Clear();
 
+        int autoSlotCount = 0;
+        int manualSlotCount = 0;
+
         for (int i = 0; i < slots.Count; i++)
         {
-            UI_SaveSlotItem item = _slotPool.Get(i);
+            // 프리팹은 슬롯 번호로 가른다. 메타의 IsAutoSave는 저장된 적이 있어야 켜지므로,
+            // 비어 있는 0번 줄이 수동 저장 슬롯 모양으로 그려져 버린다.
+            bool isAutoSlot = slots[i].SlotIndex == SaveService.AUTO_SAVE_SLOT_INDEX;
+
+            UI_SaveSlotItem item = isAutoSlot
+                ? _autoSlotPool.Get(autoSlotCount++)
+                : _slotPool.Get(manualSlotCount++);
+
+            // 두 풀이 같은 부모를 공유해 생성 순서만으로는 줄 순서가 보장되지 않는다.
+            item.transform.SetSiblingIndex(i);
+
             item.Setup(
                 slots[i],
                 IsSlotSelectable(slots[i]),
-                slots[i].SlotIndex == _pendingOverwriteSlotIndex,
                 HandleSlotSelected,
                 HandleSlotDeleted);
             _slots.Add(item);
         }
 
-        _slotPool.DeactivateFrom(slots.Count);
+        _autoSlotPool.DeactivateFrom(autoSlotCount);
+        _slotPool.DeactivateFrom(manualSlotCount);
 
         if (_slotContainer is RectTransform containerRect)
         {
@@ -295,18 +328,20 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
             return;
         }
 
-        // 지울 것이 있는 슬롯은 같은 자리를 한 번 더 눌러야 저장한다. 다른 슬롯을 누르면
-        // 확인 대상이 그쪽으로 옮겨 가므로, 잘못 누른 확인이 저장으로 이어지지 않는다.
-        if (HasDataInSlot(slotIndex) && _pendingOverwriteSlotIndex != slotIndex)
+        // 지울 것이 있는 슬롯은 덮어쓰기 확인을 먼저 받는다. 확인 팝업이 없으면(구 배선)
+        // 예전처럼 곧바로 덮어쓴다.
+        if (HasDataInSlot(slotIndex) && _overwritePopup != null)
         {
-            _pendingOverwriteSlotIndex = slotIndex;
             _statusLocKey = null;
-            Refresh();
+            _overwritePopup.Open(slotIndex, SaveToSlot);
             return;
         }
 
-        _pendingOverwriteSlotIndex = SavePaths.INVALID_SLOT_INDEX;
+        SaveToSlot(slotIndex);
+    }
 
+    private void SaveToSlot(int slotIndex)
+    {
         // 잠금은 저장을 시작하기 전에 걸고 화면에도 바로 반영한다 - 쓰기가 끝날 때까지
         // 남은 슬롯이 눌리는 상태로 보이면 안 된다.
         _isSavingSlot = true;
@@ -356,17 +391,36 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
         SceneManager.LoadScene(_gameSceneName);
     }
 
+    // 삭제 버튼은 지우지 않고 확인만 띄운다. 실제 삭제는 팝업이 YES를 돌려줄 때 DeleteSlot이 한다.
     private void HandleSlotDeleted(int slotIndex)
+    {
+        if (!WiringGuard.Require(_deletePopup, nameof(_deletePopup), this))
+        {
+            DeleteSlot(slotIndex);
+            return;
+        }
+
+        _deletePopup.Open(slotIndex, DeleteSlot);
+    }
+
+    private void DeleteSlot(int slotIndex)
     {
         if (SaveSlotQuery.TryDelete(slotIndex))
         {
-            // 지워진 슬롯에는 덮어쓸 것이 없다.
-            if (_pendingOverwriteSlotIndex == slotIndex)
-            {
-                _pendingOverwriteSlotIndex = SavePaths.INVALID_SLOT_INDEX;
-            }
-
             Refresh();
+        }
+    }
+
+    private void CloseConfirmPopups()
+    {
+        if (_deletePopup != null)
+        {
+            _deletePopup.Close();
+        }
+
+        if (_overwritePopup != null)
+        {
+            _overwritePopup.Close();
         }
     }
 
