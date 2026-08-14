@@ -678,7 +678,7 @@ public class BuildingPlacementController : MonoBehaviour
 
         if (!_gridMap.CanConstructBuildingFootprint(footprint, _selectedBuilding, null))
         {
-            WarnIfBlockedByIceUnlockableTerrain(footprint);
+            WarnPlacementBlocked(footprint, _selectedBuilding, null);
             return false;
         }
 
@@ -705,27 +705,54 @@ public class BuildingPlacementController : MonoBehaviour
         return true;
     }
 
-    // 풋프린트 중 "얼음 새끼용이라면 풀 수 있었을 지형"(용암) 때문에 막힌 칸이 있으면 그 이유를 알린다.
-    // 호버 미리보기의 빨간 타일은 용암·절벽·물·미점령·점유를 전부 같은 색으로 보여줘서 "무엇을 하면
-    // 되는지"를 알려주지 못한다. 반대로 절벽·물처럼 어떤 새끼용으로도 풀 수 없는 지형에서 이 문구가
-    // 뜨면 안 되므로, 지형이 막은 경우(IsBlockedByTerrain)로 좁힌 뒤 지형 종류까지 확인한다.
-    private void WarnIfBlockedByIceUnlockableTerrain(List<Vector3Int> footprint)
+    // 배치가 막혔을 때 그 이유를 알린다. 신축과 이동이 같은 함수를 쓴다 - 플레이어 입장에선 둘 다
+    // 똑같이 "여기엔 못 놓는다"이므로 안내도 같아야 한다.
+    //
+    // 미리보기는 배치 가능 여부만 초록/빨강으로 보여주므로, 왜 막혔는지는 이 안내가 유일한 창구다.
+    // ignoreBuilding은 호출부에서 받는다 - 이동은 자기가 점유한 칸도 유효해야 해서 자기 자신을 넘긴다.
+    private void WarnPlacementBlocked(List<Vector3Int> footprint, Building building, Building ignoreBuilding)
     {
         if (_warningWindow == null)
         {
             return;
         }
 
-        foreach (Vector3Int coord in footprint)
+        PlacementBlockReason reason =
+            _gridMap.GetPlacementBlockReason(footprint, building, ignoreBuilding, out Vector3Int blockedCoord);
+
+        switch (reason)
         {
-            if (_gridMap.IsBlockedByTerrain(coord) &&
-                _gridMap.GetTerrainType(coord) == _iceUnlockableTerrain)
-            {
-                _warningWindow.Show(UI_WarningWindow.MessageId.VolcanoConstruction);
-                return;
-            }
+            case PlacementBlockReason.BlockedByTerrain:
+                _warningWindow.Show(ResolveTerrainMessage(blockedCoord));
+                break;
+
+            case PlacementBlockReason.Occupied:
+                _warningWindow.Show(UI_WarningWindow.MessageId.CellOccupied);
+                break;
+
+            case PlacementBlockReason.NotConquered:
+                _warningWindow.Show(UI_WarningWindow.MessageId.ChunkNotConquered);
+                break;
+
+            case PlacementBlockReason.MissingResourceNode:
+                _warningWindow.Show(UI_WarningWindow.MessageId.ResourceNodeRequired);
+                break;
+
+            case PlacementBlockReason.NotSealSite:
+                _warningWindow.Show(UI_WarningWindow.MessageId.SealSiteRequired);
+                break;
+
+            // OutOfGrid와 None은 안내하지 않는다 - 맵 밖은 플레이어가 취할 행동이 없고,
+            // None은 이 진단이 모르는 사유(봉인석 영역 등)라 틀린 문구를 띄우느니 침묵한다.
         }
     }
+
+    // 실제로 막은 칸이 "얼음 새끼용이라면 풀 수 있었을 지형"(용암)인지에 따라 문구를 나눈다.
+    // 절벽·물처럼 어떤 새끼용으로도 풀 수 없는 지형에서 얼음 안내가 뜨면 거짓말이 되기 때문이다.
+    private UI_WarningWindow.MessageId ResolveTerrainMessage(Vector3Int blockedCoord) =>
+        _gridMap.GetTerrainType(blockedCoord) == _iceUnlockableTerrain
+            ? UI_WarningWindow.MessageId.VolcanoConstruction
+            : UI_WarningWindow.MessageId.TerrainNotConstructible;
 
     // 건물 종류별 건설 비용 데이터를 조회 - UI_BuildingSlot.ResolveName과 동일한 타입 분기 패턴.
     // 아직 비용이 정의되지 않은 건물(예: Tower)은 빈 배열을 돌려줘 비용 없이 취급된다.
@@ -757,9 +784,13 @@ public class BuildingPlacementController : MonoBehaviour
 
         if (!_gridMap.MoveBuilding(prevCoord, anchor, _mouseSelectController.PreviewRotationSteps))
         {
-            // 플레이어 입장에선 새로 짓는 것과 옮기는 것이 똑같이 "용암에 못 놓는다"이므로 같은 안내를 준다.
-            WarnIfBlockedByIceUnlockableTerrain(
-                _gridMap.GetFootprintCoords(anchor, _mouseSelectController.CurrentFootprintShape));
+            // 플레이어 입장에선 새로 짓는 것과 옮기는 것이 똑같이 "여기엔 못 놓는다"이므로 같은 안내를 준다.
+            // MoveBuilding은 자기가 점유 중인 칸을 비워둔 것으로 보고 판정하므로(TryGetFootprint에
+            // 자기 자신을 넘긴다) 안내도 같은 기준을 쓰도록 ignoreBuilding에 자기 자신을 넘긴다.
+            WarnPlacementBlocked(
+                _gridMap.GetFootprintCoords(anchor, _mouseSelectController.CurrentFootprintShape),
+                building,
+                building);
             return false;
         }
 

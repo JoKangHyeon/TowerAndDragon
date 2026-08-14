@@ -592,17 +592,15 @@ public class GridMap : MonoBehaviour
         (ConstructionOverrideQuery != null &&
         ConstructionOverrideQuery.IsConstructionAllowed(cell.Coord, cell.TerrainType));
 
+    // 판정과 실패 사유 진단을 GetCellBlockReason 한 곳에서 낸다 - 조건을 양쪽에 따로 쓰면
+    // 한쪽에만 조건이 추가됐을 때 안내가 조용히 엉뚱한 사유를 가리킨다.
     public bool CanConstructBuilding(Vector3Int coord) =>
-        _cells.TryGetValue(coord, out var cell) && 
-        IsCellConstructible(cell) && 
-        cell.ExistTypeOnCell == 
-        ExistTypeOnCell.None &&
-        IsChunkConquered (coord);
+        CanConstructBuilding(coord, null);
 
+    // building: null - 생산시설의 자원 노드 요건은 보지 않는다(이 판정의 원래 동작 그대로).
     public bool CanConstructBuilding(Vector3Int coord, Building ignoreBuilding) =>
-        _cells.TryGetValue(coord, out var cell) && IsCellConstructible(cell) &&
-        (cell.ExistTypeOnCell == ExistTypeOnCell.None || cell.OccupantBuilding == ignoreBuilding) &&
-        IsChunkConquered(coord);
+        GetCellBlockReason(coord, building: null, ignoreBuilding: ignoreBuilding, ignoresTerrain: false) ==
+        PlacementBlockReason.None;
 
     // 성 같은 고정 구조물은 RegisterFootprint()로 이 검사를 우회해 배치한다(점령 상태와 무관하게 등록).
     private bool IsChunkConquered(Vector3Int coord)
@@ -626,12 +624,6 @@ public class GridMap : MonoBehaviour
 
     public bool IsNaturallyConstructible (Vector3Int coord) =>
         _cells.TryGetValue(coord, out GridCell cell) && cell.CanConstruct;
-
-    // 지형 때문에(해제 조회원까지 따져도) 건설이 막힌 셀인지. 실패 사유를 되물어 경고 문구를 고르는
-    // 용도다 - 점유·미점령 같은 다른 사유와 구분해야 하기 때문에 IsNaturallyConstructible로는 부족하다
-    // (얼음 새끼용이 이미 풀어준 셀까지 "지형 탓"으로 잡아버린다).
-    public bool IsBlockedByTerrain(Vector3Int coord) =>
-        _cells.TryGetValue(coord, out GridCell cell) && !IsCellConstructible(cell);
 
     // 디버그 오버레이/로그 전용 원시 지형 생산력 - 자원 종류·연구 강화와 무관한 순수 값이다.
     public int GetBaseYield(Vector3Int coord) =>
@@ -1131,10 +1123,6 @@ public class GridMap : MonoBehaviour
         return true;
     }
 
-    // 단일 셀이 자원 요건을 만족하는지 외부에서 조회할 수 있도록 공개한 버전(MouseSelectController 풋프린트 미리보기에서 셀별 색상 구분에 사용).
-    public bool CellSatisfiesResourceRequirement(Vector3Int coord, ResourceType requiredResourceNode) =>
-        _cells.TryGetValue(coord, out GridCell cell) && SatisfiesResourceRequirement(cell, requiredResourceNode);
-
     // 어느 청크에도 속하지 않은 셀은 청크 단위 연구 해금을 조회할 근거가 없으므로 정적 자원 플래그만 본다.
     private bool SatisfiesResourceRequirement(GridCell cell, ResourceType requiredResourceNode) =>
         cell.HasResourceNode(requiredResourceNode) ||
@@ -1167,6 +1155,88 @@ public class GridMap : MonoBehaviour
             : building is SealStone
                 ? CanConstructSealStoneFootprint(footprint, ignoreBuilding)
                 : CanConstructFootPrint(footprint, ignoreBuilding);
+
+    // 배치가 실패한 뒤 "왜 실패했는지"만 되묻는 진단. CanConstructBuildingFootprint가 false를 준
+    // 다음에만 부른다 - 가능/불가 판정은 여전히 그쪽이 담당하고, 여기 결과는 문구를 고르는 데만 쓴다.
+    // 그래서 이 함수가 사유를 못 짚어 None을 돌려줘도(봉인석 영역 등 여기서 모르는 조건) 배치 동작은
+    // 달라지지 않고 안내만 생략된다.
+    // blockedCoord - 사유를 만든 칸. 호출부가 그 칸의 지형을 되물어 문구를 나누는 데 쓴다
+    // (여기서 이미 찾아낸 칸을 돌려주지 않으면 호출부가 풋프린트를 한 번 더 훑게 된다).
+    public PlacementBlockReason GetPlacementBlockReason(
+        List<Vector3Int> footprint, Building building, Building ignoreBuilding, out Vector3Int blockedCoord)
+    {
+        // 새끼용은 비행 개체라 지형 건설 가능 여부를 무시한다(CanConstructBabyDragonFootprint와 같은 기준).
+        // 이걸 빼면 용암 위에 새끼용을 놓을 때 "건설할 수 없는 땅"이라는 거짓 안내가 나간다.
+        bool ignoresTerrain = building is BabyDragonTower;
+        var reason = PlacementBlockReason.None;
+        blockedCoord = default;
+
+        foreach (Vector3Int coord in footprint)
+        {
+            PlacementBlockReason cellReason =
+                GetCellBlockReason(coord, building, ignoreBuilding, ignoresTerrain);
+
+            if (IsHigherPriority(cellReason, reason))
+            {
+                reason = cellReason;
+                blockedCoord = coord;
+            }
+        }
+
+        // 봉인석의 자리 조건은 "풋프린트 전체가 같은 포탈 영역"이라 칸 단위로 나눠 볼 수 없다
+        // (CanConstructSealStoneFootprint와 같은 이유로 TryResolveOpenSite에 통째로 넘긴다).
+        // 칸 단위 사유가 하나도 없을 때만 본다 - 지형·점유가 이미 막았다면 그쪽이 더 앞선 안내다.
+        // 해금 여부(IsUnlocked)는 건설창이 슬롯을 비활성화해 막으므로 여기서 보지 않는다.
+        if (reason == PlacementBlockReason.None &&
+            building is SealStone &&
+            (SealStonePlacementQuery == null ||
+             !SealStonePlacementQuery.TryResolveOpenSite(footprint, out _)))
+        {
+            reason = PlacementBlockReason.NotSealSite;
+        }
+
+        return reason;
+    }
+
+    // PlacementBlockReason의 선언 순서가 곧 안내 우선순위다(앞설수록 높음).
+    // None은 "막힌 게 없다"라서 항상 가장 낮다.
+    private static bool IsHigherPriority(PlacementBlockReason candidate, PlacementBlockReason current)
+    {
+        if (candidate == PlacementBlockReason.None)
+            return false;
+
+        return current == PlacementBlockReason.None || candidate < current;
+    }
+
+    // 배치 가능 판정(CanConstructBuilding)과 실패 사유 진단이 함께 쓰는 단일 출처.
+    // building을 넘기면 그 건물 고유의 조건(생산시설의 자원 노드)까지 본다.
+    private PlacementBlockReason GetCellBlockReason(
+        Vector3Int coord, Building building, Building ignoreBuilding, bool ignoresTerrain)
+    {
+        if (!_cells.TryGetValue(coord, out GridCell cell))
+            return PlacementBlockReason.OutOfGrid;
+
+        // 새끼용은 지형 건설 가능 여부를 무시하지만 길(Road)만은 막힌다
+        // (CanConstructBabyDragonFootprint와 같은 기준). 이 예외를 빼면 미점령 청크의 길에서
+        // "먼저 점령하라"고 안내하게 되는데, 점령해도 끝내 놓을 수 없는 자리라 헛수고를 시킨다.
+        bool terrainBlocks = ignoresTerrain
+            ? cell.TerrainType == TerrainType.Road
+            : !IsCellConstructible(cell);
+
+        if (terrainBlocks)
+            return PlacementBlockReason.BlockedByTerrain;
+
+        if (cell.ExistTypeOnCell != ExistTypeOnCell.None && cell.OccupantBuilding != ignoreBuilding)
+            return PlacementBlockReason.Occupied;
+
+        if (!IsChunkConquered(coord))
+            return PlacementBlockReason.NotConquered;
+
+        if (building is Factory factory && !SatisfiesResourceRequirement(cell, factory.RequiredResourceNode))
+            return PlacementBlockReason.MissingResourceNode;
+
+        return PlacementBlockReason.None;
+    }
 
     // 새끼용은 비행 개체이므로 지형의 일반 건설 가능 여부를 무시한다.
     // 다만 플레이어에게 보이는 통행로(Road), 맵 밖 좌표, 다른 건물 점유, 미점령 청크는 제한한다.
@@ -1209,11 +1279,6 @@ public class GridMap : MonoBehaviour
 
         return SealStonePlacementQuery.IsUnlocked;
     }
-
-    // 단일 셀이 봉인석 영역에 속하는지 외부에서 조회할 수 있도록 공개한 버전
-    // (CellSatisfiesResourceRequirement와 같은 목적 - MouseSelectController 미리보기 셀별 색상 구분에 사용).
-    public bool CellIsSealSite(Vector3Int coord) =>
-        SealStonePlacementQuery != null && SealStonePlacementQuery.CellIsSealSite(coord);
 
     public List<Vector3Int> GetOccupiedCoords(Vector3Int coord)
     {
