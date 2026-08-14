@@ -187,6 +187,7 @@ MonoBehaviour:
   _countOverlay: {fileID: 37122976}
   _landmarkManager: {fileID: 0}
   _warningWindow: {fileID: 1971629096}
+  _villagerDispatch: {fileID: 1356859337}
   _assignAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _bulkModifierAction: {fileID: 0}
@@ -533,6 +534,97 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!1 &163258688
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 163258690}
+  - component: {fileID: 163258689}
+  m_Layer: 0
+  m_Name: Square
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!212 &163258689
+SpriteRenderer:
+  serializedVersion: 2
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 163258688}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 1, y: 1}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_SpriteSortPoint: 0
+--- !u!4 &163258690
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 163258688}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &186235708 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6081676269779260075, guid: e091b5dd15ea87a4da8ffc0996241271, type: 3}
@@ -2522,6 +2614,8 @@ MonoBehaviour:
   _waveCycleProgression: {fileID: 704850240}
   _castle: {fileID: 1161439827}
   _landmarkManager: {fileID: 0}
+  _buildingCatalog: {fileID: 0}
+  _babyDragonPlacementCoordinator: {fileID: 0}
   _thumbnailCapturer: {fileID: 914589627}
   _isAutoSaveEnabled: 1
   _debugForceContinue: 0
@@ -6650,6 +6744,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 914589613}
     - target: {fileID: 5354572978010979659, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _villagerDispatch
+      value: 
+      objectReference: {fileID: 1356859337}
+    - target: {fileID: 5354572978010979659, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _populationManager
       value: 
       objectReference: {fileID: 914589617}
@@ -7555,7 +7653,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6864070389072513261, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -49.999878
+      value: -50
       objectReference: {fileID: 0}
     - target: {fileID: 6874002290473965843, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
@@ -7957,6 +8055,10 @@ PrefabInstance:
       propertyPath: _resourceManager
       value: 
       objectReference: {fileID: 914589613}
+    - target: {fileID: 7546850575924265391, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _villagerDispatch
+      value: 
+      objectReference: {fileID: 1356859337}
     - target: {fileID: 7546850575924265391, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _populationManager
       value: 
@@ -9389,6 +9491,7 @@ GameObject:
   - component: {fileID: 1356859334}
   - component: {fileID: 1356859335}
   - component: {fileID: 1356859336}
+  - component: {fileID: 1356859337}
   m_Layer: 0
   m_Name: PopulationSystem
   m_TagString: Untagged
@@ -9508,6 +9611,47 @@ MonoBehaviour:
   _gridMap: {fileID: 313449541}
   _resourceManager: {fileID: 914589613}
   _terrainPenaltySystem: {fileID: 1652351659}
+--- !u!114 &1356859337
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1356859329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f6c466e4ce2e604aaad063812200a6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VillagerDispatchSystem
+  _gridMap: {fileID: 313449541}
+  _populationManager: {fileID: 914589617}
+  _conquestManager: {fileID: 1721790482}
+  _cycleManager: {fileID: 914589611}
+  _landmarkManager: {fileID: 0}
+  _appearancePools:
+  - Appearance: 1
+    Prefabs:
+    - {fileID: 8530332446029054838, guid: 5b129bd1788f3d443901e6071dabd726, type: 3}
+    - {fileID: 8417502329417195272, guid: eaeeca9d59739c44badb9d33f7e41ac8, type: 3}
+    - {fileID: 1151122358958166380, guid: 3bf62a8f267d04e4b9449937ab13794a, type: 3}
+    - {fileID: 2623045603609409182, guid: df9c4cc4822477c498f2239a7c2f5798, type: 3}
+  - Appearance: 0
+    Prefabs:
+    - {fileID: 8530332446029054838, guid: 5b129bd1788f3d443901e6071dabd726, type: 3}
+    - {fileID: 8417502329417195272, guid: eaeeca9d59739c44badb9d33f7e41ac8, type: 3}
+    - {fileID: 1151122358958166380, guid: 3bf62a8f267d04e4b9449937ab13794a, type: 3}
+    - {fileID: 2623045603609409182, guid: df9c4cc4822477c498f2239a7c2f5798, type: 3}
+  - Appearance: 2
+    Prefabs:
+    - {fileID: 8530332446029054838, guid: 5b129bd1788f3d443901e6071dabd726, type: 3}
+    - {fileID: 8417502329417195272, guid: eaeeca9d59739c44badb9d33f7e41ac8, type: 3}
+    - {fileID: 1151122358958166380, guid: 3bf62a8f267d04e4b9449937ab13794a, type: 3}
+    - {fileID: 2623045603609409182, guid: df9c4cc4822477c498f2239a7c2f5798, type: 3}
+  _villagerRoot: {fileID: 0}
+  _moveSpeed: 2.5
+  _cheerSeconds: 1.5
+  _spreadRadius: 0.45
+  _maxActiveVillagers: 60
 --- !u!114 &1368852691 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7988158261880957332, guid: e091b5dd15ea87a4da8ffc0996241271, type: 3}
@@ -10702,3 +10846,4 @@ SceneRoots:
   - {fileID: 649848423}
   - {fileID: 1162929304}
   - {fileID: 944163938}
+  - {fileID: 163258690}
