@@ -752,9 +752,9 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
             return;
         }
 
-        // 새끼용은 슬롯 전체가 아니라 슬롯 안의 위치 표시 버튼을 눌러야 배치가 시작된다 -
-        // 슬롯을 통째로 가리키면 어디를 눌러야 하는지 알 수 없다(폐기한 27단계 챕터의 day2_select_dragon이
-        // 가리키던 대상이 이 버튼이다). 아직 안 그려졌으면 슬롯으로 물러난다.
+        // 새끼용은 슬롯 전체가 버튼이라(Icon_Focus는 지금 어느 동작인지 보여주는 그림일 뿐) 슬롯을
+        // 통째로 가리킨다 - 오버레이가 구멍 밖을 막으므로 구멍은 실제 클릭 범위와 같아야 한다.
+        // 아래 두 호출이 지금은 같은 rect를 돌려주지만, 슬롯이 아직 안 그려졌을 때를 위해 물러날 곳을 남긴다.
         if (_inventoryWindow.TryGetFirstBabyDragonFocusButtonRect(out RectTransform slotRect) ||
             _inventoryWindow.TryGetFirstBabyDragonSlotRect(out slotRect))
         {

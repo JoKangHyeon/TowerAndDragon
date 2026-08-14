@@ -117,6 +117,12 @@ public class BuildingPlacementController : MonoBehaviour
     public bool CanMoveNow(Building building) =>
         building != null && building.IsMoveable && (IsDayForBuildActions || building.CanMoveAtNight);
 
+    // 건설 슬롯 interactable 판정에 쓴다 - 낮(시점) AND 건설 비용 지불 가능(보유 자원) 둘 다 만족해야 한다.
+    // 비용 판정은 SelectBuilding이 쓰는 CanAffordBuildCost를 그대로 부른다 - 판정을 따로 쓰면
+    // 눌리는 슬롯인데 고스트가 뜨지 않는 어긋남이 생긴다.
+    public bool CanBuildNow(Building building) =>
+        building != null && IsDayForBuildActions && CanAffordBuildCost(building);
+
     // 점령 모드 등 다른 모드가 켜져 있을 때 이 컨트롤러의 클릭 처리를 막는다.
     // (컴포넌트를 비활성화하면 공유 입력 액션까지 Disable되므로, 입력만 선택적으로 억제한다.)
     public bool InputSuppressed { get; set; }
