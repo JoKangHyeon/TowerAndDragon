@@ -2329,12 +2329,7 @@ MonoBehaviour:
     CurrentCycle: 0
     CurrentDragon:
       CurrentType: 4
-    BabyDragons:
-    - DragonName: 
-      DragonType: 4
-      IsInTower: 0
-      Mode: 0
-      IsModeInitialized: 0
+    BabyDragons: []
     DragonEggs: []
     BossDragonEggRewards: []
     EnteredGuideSteps: 
@@ -4716,6 +4711,14 @@ PrefabInstance:
       propertyPath: _buildingPlacementController
       value: 
       objectReference: {fileID: 1692054028}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _filterTabs.Array.data[1].Buildings.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[1].Buildings.Array.data[1]'
+      value: 
+      objectReference: {fileID: 3085158866344032203, guid: 234281619f70977409c9e4d5f49f92f4, type: 3}
     - target: {fileID: 5669120966225515351, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
