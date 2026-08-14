@@ -29,6 +29,7 @@ public sealed class LandmarkManager : MonoBehaviour, ILandmarkOwnershipQuery
     [SerializeField] private CycleManager _cycleManager;
 
     [Tooltip("랜드마크 시각물을 담을 부모. 비우면 이 오브젝트 아래에 만든다.")]
+    [WiringOptional]
     [SerializeField] private Transform _landmarkRoot;
 
     [Header("마커")]

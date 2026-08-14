@@ -121,6 +121,7 @@ public class UI_ConquestWindow : MonoBehaviour
     private PopulationManager _populationManager;
 
     [Tooltip("이 청크의 랜드마크를 보상 목록에 표시하기 위해 참조한다. 비워두면 랜드마크 행이 생략된다.")]
+    [WiringOptional]
     [SerializeField]
     private LandmarkManager _landmarkManager;
 

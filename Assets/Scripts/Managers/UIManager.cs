@@ -27,6 +27,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private InputActionReference _babyDragonInventoryToggleAction;
 
     [Tooltip("안내 딤이 떠 있는 동안 단축키를 막는 데 쓴다. 비우면 딤과 무관하게 늘 허용한다.")]
+    [WiringOptional]
     [SerializeField] private UI_GuideOverlay _guideOverlay;
 
     [Header("Esc - 기본 창")]

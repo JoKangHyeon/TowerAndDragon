@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // 선택한 건물 하나의 산출량·인구 현황을 보여주고 인구를 배치/회수하는 창(이슈 #110).
@@ -8,7 +9,11 @@ using UnityEngine.UI;
 // 생산시설은 ProducedResourceType이 다중 비트일 수 있어(슬라임 농장) 산출 행이 여러 개가 되므로
 // 행을 풀링한다. 항상 하나인 인구/가용 인구 행은 프리팹에 고정 배치해 값만 갱신한다
 // (점령 창 UI_ConquestWindow와 같은 2단 방식).
-public class UI_PopulationAllocationWindow : MonoBehaviour
+//
+// 배타 모드에는 한 방향으로만 참여한다 - 진입에 "어떤 건물인가"라는 인자가 필요해 인자 없는
+// Open()을 쓸 수 없기 때문이다(SkillTargetingController와 같은 형태). 자세한 것은 파일 끝의
+// IExclusiveMode 구현을 볼 것.
+public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 {
     private const int POPULATION_STEP = 1;
     private const float PERCENT_MULTIPLIER = 100f;
@@ -45,6 +50,13 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
     [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private ResourceManager _resourceManager;
     [SerializeField] private ResearchManager _researchManager;
+
+    [Tooltip("Esc로 닫을 때 튜토리얼 관문(CanCloseExclusive)을 묻는 데 쓴다.")]
+    [SerializeField] private UIManager _uiManager;
+
+    [Header("Keys")]
+    [Tooltip("창을 닫는 키 - 보통 Esc.")]
+    [SerializeField] private InputActionReference _closeAction;
 
     [SerializeField] private TMP_Text _buildingNameText;
     [SerializeField] private TMP_Text _nightLockedText;
@@ -121,6 +133,13 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
             _cycleManager.OnCycleChanged.AddListener(
                 HandleCycleChanged);
         }
+
+        // 이 오브젝트는 늘 활성이고 _windowRoot만 켜고 끄므로 구독은 상시 유지된다
+        // (액션을 켜는 것은 GlobalInputBootstrap의 몫이다 - UI_ResearchWindow와 같은 판단).
+        if (_closeAction != null)
+        {
+            _closeAction.action.performed += OnCloseActionPerformed;
+        }
     }
 
     private void OnDisable()
@@ -135,6 +154,11 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
         {
             _cycleManager.OnCycleChanged.RemoveListener(
                 HandleCycleChanged);
+        }
+
+        if (_closeAction != null)
+        {
+            _closeAction.action.performed -= OnCloseActionPerformed;
         }
     }
 
@@ -517,4 +541,41 @@ public class UI_PopulationAllocationWindow : MonoBehaviour
 
         return string.Empty;
     }
+
+    private bool IsWindowOpen => _windowRoot != null && _windowRoot.activeSelf;
+
+    public void OnCloseActionPerformed(InputAction.CallbackContext context)
+    {
+        // 선택한 건물이 없으면 이 Esc는 이 창의 몫이 아니다 - 그때의 Esc는 설정 창을 연다.
+        if (!IsWindowOpen)
+        {
+            return;
+        }
+
+        // 안내가 이 창 안을 가리키는 중이면 Esc로 닫지 못하게 막는다.
+        if (_uiManager != null && !_uiManager.CanCloseExclusive(this))
+        {
+            return;
+        }
+
+        CloseAndDeselect();
+    }
+
+    // CloseWindow는 선택만 해제하고 표시는 다음 Update의 Bind가 끈다. 배타 조정은 닫은 직후
+    // IsOpen을 읽으므로(UIManager.CloseAllExcept), 여기서 Bind(null)까지 불러 같은 프레임에 맞춘다.
+    private void CloseAndDeselect()
+    {
+        CloseWindow();
+        Bind(null);
+    }
+
+    bool IExclusiveMode.IsOpen => IsWindowOpen;
+
+    // 진입에 "어떤 건물인가"라는 인자가 필요해 인자 없는 Open()으로 표현할 수 없다.
+    // 이 창은 "다른 모드가 열리면 닫힌다"는 한 방향으로만 레지스트리에 참여하고,
+    // 여는 쪽은 건물 선택(BuildingPlacementController)이 담당한다.
+    // SkillTargetingController가 같은 이유로 같은 형태를 쓴다.
+    void IExclusiveMode.Open() { }
+
+    void IExclusiveMode.Close() => CloseAndDeselect();
 }

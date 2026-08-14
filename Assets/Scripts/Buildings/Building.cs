@@ -189,7 +189,11 @@ public class Building : MonoBehaviour
         _spriteRenderer.color = isHighlighted ? highlightColor : _originalColor;
     }
 
-    public void SetDepthSortOrder(int sortingOrder)
+    // virtual - 본체 스프라이트 위에 자식 스프라이트를 얹는 건물(슬라임 농장의 슬라임 등)은
+    // 여기서 자식들의 정렬 순서까지 같이 맞춰야 한다. 배치·세이브 복원·이동 세 경로가 모두
+    // 이 메서드를 지나므로(GridMap.ConstructBuilding/RegisterFootprint/MoveBuilding),
+    // 자식 정렬을 갱신할 지점은 이 하나로 충분하다.
+    public virtual void SetDepthSortOrder(int sortingOrder)
     {
         if (_spriteRenderer == null)
             return;

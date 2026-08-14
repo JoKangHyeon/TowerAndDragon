@@ -53,6 +53,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
     [Header("안내 중 막을 HUD 조작")]
     [Tooltip("배타 창도 밤 시작도 아니라 기존 관문에 걸리지 않는 것들. 비우면 막지 않는다.")]
+    [WiringOptional]
     [SerializeField] private UI_SpeedSettingWindow _speedSettingWindow;
 
     [SerializeField] private MinimapController _minimapController;

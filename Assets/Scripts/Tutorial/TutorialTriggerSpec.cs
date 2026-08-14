@@ -23,6 +23,7 @@ public sealed class TutorialTriggerSpec
     [SerializeField] private TutorialBuildingKind _targetBuilding = TutorialBuildingKind.None;
 
     [Tooltip("생산시설을 종류까지 좁힐 때만 넣는다(농장 vs 채석장). 비우면 아무 생산시설이나 통과한다.")]
+    [WiringOptional]
     [SerializeField] private ResourceProductionData _targetFactoryData;
 
     public TutorialConditionType Condition => _condition;

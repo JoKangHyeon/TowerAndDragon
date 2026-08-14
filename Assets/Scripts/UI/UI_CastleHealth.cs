@@ -26,6 +26,7 @@ public class UI_CastleHealth : MonoBehaviour
 
     [Header("피격 흔들림 연출")]
     [Tooltip("체력이 깎일 때 흔들 대상. 비워두면 이 오브젝트 자신을 흔든다. 보통 fill(FillArea)을 지정한다.")]
+    [WiringOptional]
     [SerializeField] private RectTransform _shakeTarget;
     [Tooltip("흔들림 지속 시간(초).")]
     [SerializeField] private float _shakeDuration = 0.15f;

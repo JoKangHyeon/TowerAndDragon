@@ -23,6 +23,7 @@ public sealed class UI_FrameSteppedSpinner : MonoBehaviour
     [SerializeField] private float _framesPerSecond = DEFAULT_FRAMES_PER_SECOND;
 
     [Tooltip("이 CanvasGroup의 알파가 0이면 멈춘다. 비워 두면 부모에서 자동으로 찾는다.")]
+    [WiringOptional]
     [SerializeField] private CanvasGroup _visibilityGroup;
 
     // 자식을 인스펙터로 12개 끌어다 넣게 하지 않는다 - Layer Lab 프리팹의 자식 순서가 곧 프레임 순서다.

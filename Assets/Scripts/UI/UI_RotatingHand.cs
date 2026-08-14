@@ -57,6 +57,7 @@ public sealed class UI_RotatingHand : MonoBehaviour
     [SerializeField] private int _accelerationTurns = DEFAULT_ACCELERATION_TURNS;
 
     [Tooltip("이 CanvasGroup의 알파가 0이면 돌지 않는다. 비워 두면 부모에서 자동으로 찾는다.")]
+    [WiringOptional]
     [SerializeField] private CanvasGroup _visibilityGroup;
 
     // 가속 진행도의 기준. 켜져 있지 않으면 쓰이지 않는다.

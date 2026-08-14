@@ -22,6 +22,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private UIManager _uiManager;
 
     [Tooltip("주기 변경 시 티어 잠금 표시를 갱신하기 위한 참조. 없어도 창은 동작한다.")]
+    [WiringOptional]
     [SerializeField] private WaveCycleProgression _cycleProgression;
 
     [Header("Layout Targets")]

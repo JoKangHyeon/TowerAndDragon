@@ -1093,6 +1093,17 @@ Transform:
   - {fileID: 93022055}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &490985025 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 944163938}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3094179e10cc65b469f533158c3198e0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ExampleBuildingUI
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -2483,6 +2494,7 @@ MonoBehaviour:
   - {fileID: 239636598373408673, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   - {fileID: 6607914833914992100, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   - {fileID: -7227978520168459255, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _disabledActions: []
 --- !u!114 &914589622
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2915,7 +2927,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _exclusiveModeBehaviours.Array.size
-      value: 6
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[0]'
@@ -2924,19 +2936,31 @@ PrefabInstance:
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[2]'
       value: 
-      objectReference: {fileID: 1500182005}
+      objectReference: {fileID: 37122977}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[3]'
       value: 
-      objectReference: {fileID: 37122977}
+      objectReference: {fileID: 914589615}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[4]'
       value: 
-      objectReference: {fileID: 914589615}
+      objectReference: {fileID: 944163942}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[5]'
       value: 
-      objectReference: {fileID: 944163942}
+      objectReference: {fileID: 944163945}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_exclusiveModeBehaviours.Array.data[6]'
+      value: 
+      objectReference: {fileID: 944163944}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_exclusiveModeBehaviours.Array.data[7]'
+      value: 
+      objectReference: {fileID: 944163943}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_exclusiveModeBehaviours.Array.data[8]'
+      value: 
+      objectReference: {fileID: 490985025}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _exclusiveModeShortcuts.Array.data[3].Action
       value: 
@@ -5950,6 +5974,39 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4dd7d67a4a6d56447b2dbefa25831a64, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI_DragonWindow
+--- !u!114 &944163943 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8647946643271429308, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 944163938}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2147bb3956e98348930ba7cddf672dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_ConfigWindow
+--- !u!114 &944163944 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5874510615575490580, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 944163938}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e696f42ac9e634ba6a0e41725953d0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_LoadGameWindow
+--- !u!114 &944163945 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1349509382364187125, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 944163938}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20c73d3d49e49c548b86ca9997af1397, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_ResearchWindow
 --- !u!114 &987628432 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6444730923389697932, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -6539,17 +6596,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 698775030}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1500182005 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7546850575924265391, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-  m_PrefabInstance: {fileID: 944163938}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d93a25ae51ef4c8488e136874f1ca4cb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UI_PopulationAllocationWindow
 --- !u!1 &1560119867
 GameObject:
   m_ObjectHideFlags: 0

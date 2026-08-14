@@ -95,6 +95,7 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
     private UI_WarningWindow _warningWindow;
 
     [Tooltip("연구로 해금되는 타워를 거르기 위해 참조한다. 비워두면 모든 타워가 그대로 보인다.")]
+    [WiringOptional]
     [SerializeField]
     private ResearchManager _researchManager;
 

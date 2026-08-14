@@ -49,6 +49,7 @@ public class ChunkInfoOverlayRenderer : MonoBehaviour
     private Sprite _populationIcon;
 
     [Tooltip("청크 카드에 랜드마크 아이콘을 함께 띄우기 위해 참조한다. 비워두면 생략된다.")]
+    [WiringOptional]
     [SerializeField]
     private LandmarkManager _landmarkManager;
 

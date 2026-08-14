@@ -30,6 +30,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
     [SerializeField] private DragonEggInventorySystem _eggInventorySystem;
 
     [Tooltip("부화 알림을 실제로 확인한 뒤 배치 안내를 시작하는 데 쓴다. 비우면 장면에서 찾는다.")]
+    [WiringOptional]
     [SerializeField] private BabyDragonEggNotifier _eggNotifier;
 
     [Tooltip("알·새끼용 목록이 있는 용 창. 통합 전에는 별도 창(UI_DragonInventoryWindow)이었다.")]

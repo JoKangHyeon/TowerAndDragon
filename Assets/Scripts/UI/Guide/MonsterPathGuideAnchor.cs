@@ -39,6 +39,7 @@ public sealed class MonsterPathGuideAnchor : MonoBehaviour
     [SerializeField] private Transform _pathRoot;
 
     [Tooltip("경로를 비추는 카메라. 비우면 Camera.main을 쓴다.")]
+    [WiringOptional]
     [SerializeField] private Camera _worldCamera;
 
     [Tooltip("이 앵커를 가리키는 안내가 떠 있을 때만 자리를 다시 계산한다. 비우면 매 프레임 계산한다 - " +

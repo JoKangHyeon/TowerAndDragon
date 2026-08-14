@@ -26,9 +26,11 @@ public class ResourceForecast : MonoBehaviour
 
     [Tooltip("지역(지형) 페널티가 다시 계산될 때 예상치를 갱신하기 위해 구독한다. " +
         "미연결이면 이 값 변동만으로는 예상치가 갱신되지 않는다(다음 건물 추가/제거·인구 변경 때 함께 반영됨).")]
+    [WiringOptional]
     [SerializeField] private TerrainPenaltySystem _terrainPenaltySystem;
 
     [Tooltip("지역(설원·암석) 자재 유지비 예상 소모량을 가져온다. 미연결이면 자재 유지비를 0으로 본다.")]
+    [WiringOptional]
     [SerializeField] private TerrainUpkeepSystem _terrainUpkeepSystem;
 
     [Tooltip("가동 중인 타워의 자재 유지비 예상 소모량을 가져온다. 미연결이면 타워 유지비를 0으로 본다.")]

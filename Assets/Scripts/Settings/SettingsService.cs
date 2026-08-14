@@ -40,6 +40,22 @@ public class SettingsService : MonoBehaviour
     private const int PREF_FLAG_ON = 1;
     private const int NOT_FOUND_INDEX = -1;
 
+    // 게임은 16:9 전제로 만들어져 있다(UI_Canvas의 CanvasScaler 레퍼런스 1920x1080).
+    // 다른 화면비를 고르면 UI와 카메라 구도가 늘어나거나 잘리므로 아예 목록에서 뺀다.
+    private const float TARGET_ASPECT_RATIO = 16f / 9f;
+    // 1366x768(1.7786)처럼 정확히 16:9는 아니지만 사실상 16:9로 통용되는 표준 해상도를
+    // 살리기 위한 여유. 1% — 16:10(1.6)이나 4:3(1.333)은 확실히 걸러진다.
+    private const float ASPECT_RATIO_TOLERANCE = 0.01f;
+
+    // 모니터가 16:9 모드를 하나도 보고하지 않을 때(에디터·특이 디스플레이) 설정 항목이
+    // 비지 않도록 쓰는 기본 목록. 전부 16:9라 필터를 그대로 통과한다.
+    private static readonly Vector2Int[] FALLBACK_RESOLUTIONS =
+    {
+        new Vector2Int(1280, 720),
+        new Vector2Int(1600, 900),
+        new Vector2Int(1920, 1080),
+    };
+
     [Tooltip("볼륨 슬라이더가 조절할 믹서. Assets/AudioMixer.mixer를 지정한다.")]
     [SerializeField] private AudioMixer _audioMixer;
 
@@ -52,7 +68,9 @@ public class SettingsService : MonoBehaviour
     private readonly Dictionary<AudioChannel, float> _volumes = new();
     private readonly List<Vector2Int> _resolutions = new();
 
-    /// <summary>선택 가능한 해상도(가로x세로). 중복 주사율은 제거하고 오름차순으로 정렬한다.</summary>
+    /// <summary>
+    /// 선택 가능한 해상도(가로x세로). 16:9만 담는다. 중복 주사율은 제거하고 오름차순으로 정렬한다.
+    /// </summary>
     public IReadOnlyList<Vector2Int> Resolutions => _resolutions;
 
     /// <summary>현재 선택된 해상도의 <see cref="Resolutions"/> 내 인덱스.</summary>
@@ -212,8 +230,9 @@ public class SettingsService : MonoBehaviour
         _volumes[AudioChannel.SE] = PlayerPrefs.GetFloat(SE_VOLUME_PREF_KEY, DEFAULT_VOLUME);
     }
 
-    // Screen.resolutions는 같은 해상도를 주사율별로 여러 번 돌려주므로 가로x세로로만 추린다.
-    // 에디터에선 목록이 비거나 현재 해상도가 빠질 수 있어, 현재 해상도는 항상 포함시킨다.
+    // Screen.resolutions는 같은 해상도를 주사율별로 여러 번 돌려주므로 가로x세로로만 추리고,
+    // 그중 16:9만 남긴다(AddResolution의 화면비 게이트).
+    // 에디터에선 목록이 비거나 현재 해상도가 빠질 수 있어, 현재 해상도도 후보로 넣는다.
     private void BuildResolutionList()
     {
         _resolutions.Clear();
@@ -225,15 +244,38 @@ public class SettingsService : MonoBehaviour
 
         AddResolution(new Vector2Int(Screen.width, Screen.height));
 
+        // 16:9를 하나도 못 찾았으면(에디터에서 목록이 비거나 모니터가 16:10뿐인 경우)
+        // 해상도 항목이 통째로 비어 조작 불가가 되지 않도록 기본 목록을 넣는다.
+        if (_resolutions.Count == 0)
+        {
+            foreach (Vector2Int resolution in FALLBACK_RESOLUTIONS)
+            {
+                AddResolution(resolution);
+            }
+        }
+
         _resolutions.Sort(CompareResolution);
     }
 
     private void AddResolution(Vector2Int resolution)
     {
-        if (!_resolutions.Contains(resolution))
+        if (!IsTargetAspectRatio(resolution) || _resolutions.Contains(resolution))
         {
-            _resolutions.Add(resolution);
+            return;
         }
+
+        _resolutions.Add(resolution);
+    }
+
+    private static bool IsTargetAspectRatio(Vector2Int resolution)
+    {
+        if (resolution.y <= 0)
+        {
+            return false;
+        }
+
+        float ratio = (float)resolution.x / resolution.y;
+        return Mathf.Abs(ratio - TARGET_ASPECT_RATIO) <= TARGET_ASPECT_RATIO * ASPECT_RATIO_TOLERANCE;
     }
 
     private static int CompareResolution(Vector2Int left, Vector2Int right)

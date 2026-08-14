@@ -43,6 +43,7 @@ public class BuildingPlacementController : MonoBehaviour
     public IReadOnlyList<TerrainType> PenaltyMitigationTerrains => _penaltyMitigationTerrains;
 
     [Tooltip("용암 지대처럼 지형 때문에 건설이 막혔을 때 경고를 띄울 창. 비어 있으면 안내만 생략되고 판정은 그대로다.")]
+    [WiringOptional]
     [SerializeField]
     private UI_WarningWindow _warningWindow;
 

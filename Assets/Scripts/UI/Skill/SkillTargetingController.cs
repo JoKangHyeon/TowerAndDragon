@@ -19,6 +19,7 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
     [Tooltip("타겟팅 모드를 취소하는 액션 - 보통 우클릭/ESC.")]
     [SerializeField] private InputActionReference _cancelAction;
     [Tooltip("스킬 발동자로 기록할 오브젝트. 비워두면 이 컨트롤러 자신.")]
+    [WiringOptional]
     [SerializeField] private GameObject _caster;
     [Tooltip("GroundPoint 스킬 시전 중 커서를 따라다니며 실제 피해 범위를 보여줄 원형 인디케이터.")]
     [SerializeField] private RangeIndicator _rangeIndicator;

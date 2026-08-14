@@ -48,6 +48,7 @@ public class GameManager : MonoBehaviour
 
     [SerializeField]
     [Tooltip("이어하기 지원용. 비워 두면 항상 새 게임으로 시작한다(세이브 없는 테스트 씬).")]
+    [WiringOptional]
     private SaveService _saveService;
 
     [SerializeField] private UnityEvent _victoryOccurred = new();

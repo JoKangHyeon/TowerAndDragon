@@ -41,6 +41,7 @@ public class MouseSelectController : MonoBehaviour
     private RangeIndicator _rangeIndicator;
 
     [Tooltip("설치 미리보기 사거리에 현재 연구 등의 배율을 반영할 합성기. 비어 있으면 씬에서 자동으로 찾는다.")]
+    [WiringOptional]
     [SerializeField]
     private TowerStatMultiplierComposite _towerStatMultiplierComposite;
 

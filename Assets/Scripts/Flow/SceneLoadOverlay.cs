@@ -48,6 +48,7 @@ public sealed class SceneLoadOverlay : MonoBehaviour
     [SerializeField] private CanvasGroup _canvasGroup;
 
     [Tooltip("로딩 문구. key는 코드에서 넣으므로 인스펙터에서 비워 둬도 된다.")]
+    [WiringOptional]
     [SerializeField] private LocalizedText _messageLabel;
 
     [SerializeField] private float _fadeInDuration = DEFAULT_FADE_IN_DURATION;

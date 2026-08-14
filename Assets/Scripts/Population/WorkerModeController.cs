@@ -41,10 +41,12 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode, IExclusiveMod
     private WorkerCountOverlayRenderer _countOverlay;
 
     [Tooltip("랜드마크에도 인구를 배치할 수 있게 참조한다. 비워두면 건물만 대상이 된다.")]
+    [WiringOptional]
     [SerializeField]
     private LandmarkManager _landmarkManager;
 
     [Tooltip("인구를 배치할 건물이 하나도 없을 때 안내 메시지를 띄운다. 없으면 조용히 진입만 막는다.")]
+    [WiringOptional]
     [SerializeField]
     private UI_WarningWindow _warningWindow;
 

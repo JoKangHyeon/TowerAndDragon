@@ -52,13 +52,16 @@ public class SoundManager : MonoBehaviour
     [SerializeField] private float _bgmFadeDuration = 2f;
 
     [Tooltip("낮/밤 BGM 전환에 사용. 비워 두면 씬에서 자동으로 찾고, 없으면 자동 전환만 꺼진다.")]
+    [WiringOptional]
     [SerializeField] private CycleManager _cycleManager;
 
     [Tooltip("보스 웨이브(주기 마지막 밤) 판별에 사용. 비워 두면 씬에서 자동으로 찾고, " +
         "없으면 보스 밤에도 일반 밤 BGM이 나온다.")]
+    [WiringOptional]
     [SerializeField] private WaveCycleProgression _waveCycleProgression;
 
     [Tooltip("게임오버 BGM 전환에 사용. 비워 두면 씬에서 자동으로 찾는다.")]
+    [WiringOptional]
     [SerializeField] private GameManager _gameManager;
 
     private AudioSource[] _seSources;

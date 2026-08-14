@@ -40,6 +40,7 @@ public class UI_IngameWindow : MonoBehaviour
         public ResourceType Type;
         public TMP_Text AmountText;
         [Tooltip("비워두면 프리팹에 배치된 아이콘을 그대로 쓴다. 지정하면 ResourceData의 아이콘으로 덮어쓴다.")]
+        [WiringOptional]
         public Image IconImage;
     }
 

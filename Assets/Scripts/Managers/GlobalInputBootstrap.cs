@@ -12,14 +12,29 @@ using UnityEngine.InputSystem;
 /// 반대로 소유자가 하나뿐이고 그 소유자와 생명주기를 같이해야 하는 액션(CameraController의
 /// 이동·줌·북마크 등)은 여기가 아니라 소유자의 OnEnable/OnDisable에서 다룬다.
 /// 창(Esc로 닫히는 UI)이 있는 씬에는 타이틀 씬을 포함해 이 부트스트랩이 하나씩 있어야 한다 -
-/// 없으면 창들이 꺼져 있는 액션을 구독만 하게 되어 Esc가 조용히 무시된다.</summary>
+/// 없으면 창들이 꺼져 있는 액션을 구독만 하게 되어 Esc가 조용히 무시된다.
+/// 반대로 이 씬에서는 반드시 꺼야 하는 액션은 <see cref="_disabledActions"/>에 넣는다.</summary>
 public class GlobalInputBootstrap : MonoBehaviour
 {
     [Tooltip("씬 내내 항상 켜져 있어야 하는 액션들. 여러 소비자가 공유하거나(Confirm·Cancel), " +
              "소비자가 폴링만 하고 아무도 켜지 않는 액션(모드 전환 단축키, 보정키)을 모두 넣는다.")]
     [SerializeField] private InputActionReference[] _alwaysEnabledActions;
 
+    [Tooltip("이 씬에서는 꺼둘 액션들. 액션의 켜짐 상태는 씬이 아니라 에셋에 남으므로, " +
+             "다른 씬에서 켜고 돌아온 경우까지 확실히 끄려면 목록에서 빼는 것만으로는 부족하고 " +
+             "여기 넣어 명시적으로 꺼야 한다. (예: 타이틀 씬의 Esc)")]
+    [WiringOptional]
+    [SerializeField] private InputActionReference[] _disabledActions;
+
     private void OnEnable()
+    {
+        EnableActions();
+
+        // 끄기를 나중에 한다 - 같은 액션이 실수로 양쪽에 들어가도 "꺼짐"으로 수렴시킨다.
+        DisableActions();
+    }
+
+    private void EnableActions()
     {
         if (_alwaysEnabledActions == null)
         {
@@ -31,6 +46,22 @@ public class GlobalInputBootstrap : MonoBehaviour
             if (action != null)
             {
                 action.action.Enable();
+            }
+        }
+    }
+
+    private void DisableActions()
+    {
+        if (_disabledActions == null)
+        {
+            return;
+        }
+
+        foreach (InputActionReference action in _disabledActions)
+        {
+            if (action != null)
+            {
+                action.action.Disable();
             }
         }
     }
