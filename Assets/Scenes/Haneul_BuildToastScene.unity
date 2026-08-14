@@ -1773,6 +1773,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 485544215}
+    - targetCorrespondingSourceObject: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 485544220}
   m_SourcePrefab: {fileID: 100100000, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
 --- !u!114 &485544206 stripped
 MonoBehaviour:
@@ -1873,6 +1876,19 @@ MonoBehaviour:
   - {fileID: 2021009602}
   - {fileID: 2021009601}
   - {fileID: 2021009599}
+--- !u!114 &485544220
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 485544214}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a39867b80fb1f44687d596651d275bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConquestExpeditionTester
+  _conquestManager: {fileID: 485544213}
 --- !u!1 &526000901
 GameObject:
   m_ObjectHideFlags: 0
@@ -4905,7 +4921,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6864070389072513261, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -50.00006
+      value: -50
       objectReference: {fileID: 0}
     - target: {fileID: 6874002290473965843, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
@@ -5413,7 +5429,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8378660529608903312, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _messages.Array.size
-      value: 10
+      value: 11
       objectReference: {fileID: 0}
     - target: {fileID: 8378660529608903312, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _messages.Array.data[6].Id
@@ -5432,6 +5448,10 @@ PrefabInstance:
       value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 8378660529608903312, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _messages.Array.data[10].Id
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 8378660529608903312, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _messages.Array.data[6].Root
       value: 
       objectReference: {fileID: 186434350}
@@ -5447,6 +5467,10 @@ PrefabInstance:
       propertyPath: _messages.Array.data[9].Root
       value: 
       objectReference: {fileID: 713385457}
+    - target: {fileID: 8378660529608903312, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _messages.Array.data[10].Root
+      value: 
+      objectReference: {fileID: 1978879031}
     - target: {fileID: 8392747383040104502, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -8786,12 +8810,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResourceManager
   _catalog: {fileID: 11400000, guid: 3c68623cfd9e6d74b8c4e6e8fa62c090, type: 2}
   _initialResources:
-  - Type: 1
-    Amount: 250
-  - Type: 2
-    Amount: 250
-  - Type: 4
-    Amount: 250
+  - Type: -1
+    Amount: 1000
   ResourceChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -8958,6 +8978,7 @@ MonoBehaviour:
   - {fileID: 239636598373408673, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   - {fileID: 6607914833914992100, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   - {fileID: -7227978520168459255, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _disabledActions: []
 --- !u!4 &2030707839
 Transform:
   m_ObjectHideFlags: 0
