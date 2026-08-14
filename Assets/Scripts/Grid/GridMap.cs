@@ -839,15 +839,40 @@ public class GridMap : MonoBehaviour
         }
     }
 
-    public bool ConstructBuilding(Building prefab, Vector3Int anchor, int rotationSteps)
+    // 반환값은 생성된 인스턴스(실패 시 null) - 호출부가 GetBuildingAt(anchor)으로 되짚지 않아도 되고,
+    // 앵커 칸이 비어 있는 모양(구멍 뚫린 footprint)에서 되짚기가 빗나가는 문제도 생기지 않는다.
+    public Building ConstructBuilding(Building prefab, Vector3Int anchor, int rotationSteps)
     {
         if (prefab == null)
-            return false;
+            return null;
 
         FootprintShape rotatedShape = prefab.BaseFootprintShape.Rotated(rotationSteps);
 
         if (!TryGetFootprint(anchor, rotatedShape, prefab, null, out List<GridCell> footprint))
-            return false;
+            return null;
+
+        Building building = CreatePlacedInstance(prefab, anchor, rotationSteps);
+        building.SetPlacementAnchor(anchor);
+        building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor));
+
+        foreach (GridCell cell in footprint)
+            cell.PlaceBuilding(building);
+
+        _buildingFootprintCells[building] = footprint;
+
+        foreach (GridCell cell in footprint)
+            OnCellChanged?.Invoke(cell);
+
+        LastAddedBuilding = building;
+        OnBuildingAdded?.Invoke(building);
+        return building;
+    }
+
+    // 프리팹을 배치 위치·회전으로 인스턴스화하는 부분만 떼어낸 것 - 일반 건설과 세이브 복원이 공유한다.
+    // 셀 점유·이벤트 발행은 하지 않으므로 호출부가 반드시 이어서 등록해야 한다.
+    private Building CreatePlacedInstance(Building prefab, Vector3Int anchor, int rotationSteps)
+    {
+        FootprintShape rotatedShape = prefab.BaseFootprintShape.Rotated(rotationSteps);
 
         Vector3 baseOffset = prefab.transform.localPosition;
         Vector3 baseScale = prefab.transform.localScale;
@@ -863,19 +888,34 @@ public class GridMap : MonoBehaviour
         building.SetPlacementOffset(baseOffset);
         building.SetBaseScale(baseScale);
         building.SetRotation(rotationSteps);
-        building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor));
+        return building;
+    }
 
-        foreach (GridCell cell in footprint)
-            cell.PlaceBuilding(building);
+    /// <summary>
+    /// 세이브 복원 전용 배치. 일반 배치 판정(점령·지형·자원노드·봉인석 사이트)을 다시 묻지 않고,
+    /// 셀이 존재하고 비어 있는지만 본다 - 성이 쓰는 RegisterFootprint와 같은 등급의 우회다.
+    ///
+    /// 재판정하지 않는 이유: 세이브에 남아 있다는 것 자체가 "합법적으로 놓였다"의 증거인 반면,
+    /// 복원은 순서상 아직 되돌아오지 않은 조건이 있다. 얼음 새끼용 버프로 풀리는 용암 지대가
+    /// 대표적이다 - 그 새끼용이 목록 뒤쪽이면 아직 배치 전이라, 다시 물으면 멀쩡한 건물이 조용히 사라진다.
+    ///
+    /// LastAddedBuilding은 복원 중 건물마다 덮어써진다 - 반환값을 쓰고 그 프로퍼티에 의존하지 말 것.
+    /// </summary>
+    public Building RestoreBuilding(Building prefab, Vector3Int anchor, int rotationSteps)
+    {
+        if (prefab == null)
+            return null;
 
-        _buildingFootprintCells[building] = footprint;
+        Building building = CreatePlacedInstance(prefab, anchor, rotationSteps);
 
-        foreach (GridCell cell in footprint)
-            OnCellChanged?.Invoke(cell);
+        // 실패 사유(셀 없음/이미 점유)는 RegisterFootprint가 이미 경고로 남긴다.
+        if (!RegisterFootprint(building, anchor))
+        {
+            Destroy(building.gameObject);
+            return null;
+        }
 
-        LastAddedBuilding = building;
-        OnBuildingAdded?.Invoke(building);
-        return true;
+        return building;
     }
 
     // 회전 스텝에 따라 가로/세로 축의 짝홀이 서로 바뀌면서 생기는 어긋남(FootprintShape.ParityMismatch 차이)을
@@ -930,6 +970,7 @@ public class GridMap : MonoBehaviour
         }
 
         _buildingFootprintCells[building] = footprint;
+        building.SetPlacementAnchor(anchor);
         building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor));
         LastAddedBuilding = building;
         OnBuildingAdded?.Invoke(building);
@@ -1301,6 +1342,7 @@ public class GridMap : MonoBehaviour
             + building.ComputePlacementOffset(rotationSteps)
             + ComputeRotationCompensation(building.BaseFootprintShape, rotationSteps);
         building.SetRotation(rotationSteps);
+        building.SetPlacementAnchor(nextCoord);
         building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(nextCoord));
 
         foreach (GridCell footprintCell in newFootprint)

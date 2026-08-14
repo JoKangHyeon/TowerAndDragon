@@ -90,6 +90,9 @@ public sealed class SaveGameDto
         Map.Normalize();
         Castle.Normalize();
         Landmarks.Normalize();
+
+        // 건물의 새끼용 인덱스는 Run.Normalize가 인벤토리를 확정한 뒤에야 검증할 수 있다.
+        Map.NormalizeBabyDragonReferences(Run.BabyDragons.Count);
         return true;
     }
 }
@@ -185,8 +188,9 @@ public sealed class BabyDragonDto
     public int DragonType;
 
     /// <summary>
-    /// 저장 당시 타워에 설치돼 있었는지. 건물 배치 복원이 구현되기 전까지는 복원 시 무조건
-    /// false로 강제한다(SaveRestore 참고) - 타워가 없는데 설치됐다고 주장하는 상태를 막는다.
+    /// 저장 당시 타워에 설치돼 있었는지. 복원의 권위는 이 값이 아니라 MapStateDto.Buildings에 있다 -
+    /// 실제로 새끼용 타워가 세워진 개체만 설치 상태가 된다(SaveRestore 참고).
+    /// 이 필드는 그 결과와 대조해 어긋남을 경고하는 데 쓴다.
     /// </summary>
     public bool IsInTower;
 
@@ -247,8 +251,8 @@ public sealed class PopulationStateDto
 {
     public int MaxPopulation;
 
-    // TODO(범위 밖): PopulationAllocation은 건물 인스턴스에 종속돼 있어 저장할 수 없다.
-    //   BuildingPlacementDto가 실제로 구현될 때 그 안으로 들어간다.
+    // 건물별 배치 인구는 여기가 아니라 BuildingPlacementDto.AssignedPopulation에 있다 -
+    // 할당이 건물 인스턴스에 종속이라 어느 건물의 몫인지 없이는 복원할 수 없기 때문이다.
 
     public void Normalize()
     {
@@ -380,18 +384,10 @@ public sealed class MapStateDto
     /// </summary>
     public List<Vector2IntDto> EnhancedChunks;
 
-    // TODO(범위 밖 - 건물 배치 복원). 지금은 항상 빈 리스트다.
-    //  막힌 지점: GridMap._buildingFootprintCells의 키가 Building MonoBehaviour이고,
-    //    RegisterFootprint/ConstructBuilding이 anchor를 받지만 어디에도 보관하지 않는다.
-    //    즉 "이 건물이 어느 앵커에 어느 회전으로 놓였는가"를 아는 곳이 프로젝트에 없다.
-    //  선행 작업:
-    //   (1) Building에 안정적인 PrefabId 부여 + BuildingCatalog에 id -> prefab 조회 추가
-    //       (현재 GetPrefab<T>()는 타입 기반이라 같은 타입의 여러 종을 구분하지 못한다)
-    //   (2) Building 또는 GridMap이 anchor(Vector3Int)와 rotationSteps를 보관
-    //   (3) 복원 시 GridMap.ConstructBuilding 재호출 + 인구 할당 재생성
-    //       + BabyDragonTower.BindRecord 재바인딩 + BabyDragon.IsInTower 복구
-    //  복원 순서상 삽입 위치: 청크 상태 복원 이후, 원정 복원과 StartDay 이전
-    //    (CanConstructBuilding이 점령 상태를 요구하고, 건물 인구가 원정 인구와 총량을 다툰다)
+    /// <summary>
+    /// 플레이어가 지은 건물의 배치. BuildingCatalog에 등록된(= Building.PrefabId가 채워진) 건물만 담는다 -
+    /// 성·랜드마크·임시 방벽은 각자 재생성 경로가 따로 있어 대상이 아니다.
+    /// </summary>
     public List<BuildingPlacementDto> Buildings;
 
     public void Normalize()
@@ -400,14 +396,91 @@ public sealed class MapStateDto
         ConqueredChunks ??= new List<Vector2IntDto>();
         EnhancedChunks ??= new List<Vector2IntDto>();
         Buildings ??= new List<BuildingPlacementDto>();
+
+        // 프리팹을 못 찾거나 놓을 자리를 모르는 항목은 복원 코드가 어차피 버린다 - 여기서 미리 걷어낸다.
+        Buildings.RemoveAll(building =>
+            building == null || string.IsNullOrWhiteSpace(building.PrefabId) || building.Anchor == null);
+
+        foreach (BuildingPlacementDto building in Buildings)
+        {
+            building.Normalize();
+        }
+    }
+
+    /// <summary>
+    /// 새끼용 인덱스가 실제 인벤토리를 가리키는지 확인한다. MapStateDto 혼자서는 판정할 수 없어
+    /// (RunStateDto를 모른다) SaveGameDto.TryNormalize가 두 Normalize를 끝낸 뒤 불러 준다.
+    /// </summary>
+    public void NormalizeBabyDragonReferences(int babyDragonCount)
+    {
+        var claimedIndices = new HashSet<int>();
+
+        foreach (BuildingPlacementDto building in Buildings)
+        {
+            if (building.BabyDragonIndex == BuildingPlacementDto.NO_BABY_DRAGON_INDEX)
+            {
+                continue;
+            }
+
+            // RunStateDto.Normalize의 DropUndefinedEnums가 항목을 버리면 인덱스가 밀린다.
+            // 밀린 인덱스로 엉뚱한 개체를 결속하느니 결속을 포기하는 편이 낫다.
+            bool isValid =
+                building.BabyDragonIndex < babyDragonCount &&
+                claimedIndices.Add(building.BabyDragonIndex);
+
+            if (!isValid)
+            {
+                Debug.LogWarning(
+                    $"[MapStateDto] 새끼용 인덱스 {building.BabyDragonIndex}가 유효하지 않아 결속을 해제합니다 " +
+                    $"(보유 {babyDragonCount}마리).");
+
+                building.BabyDragonIndex = BuildingPlacementDto.NO_BABY_DRAGON_INDEX;
+            }
+        }
     }
 }
 
 public sealed class BuildingPlacementDto
 {
+    /// <summary>새끼용 타워가 아니거나 결속할 레코드를 찾지 못했음.</summary>
+    public const int NO_BABY_DRAGON_INDEX = -1;
+
+    /// <summary>BuildingCatalog의 키(= Building.PrefabId). 비면 이 항목은 버려진다.</summary>
     public string PrefabId;
+
     public Vector3IntDto Anchor;
     public int RotationSteps;
+
+    /// <summary>
+    /// 이 건물에 배치돼 있던 인구. PopulationStateDto가 아니라 여기 있는 이유는,
+    /// 할당이 건물 인스턴스에 종속이라 "어느 건물의 몫인지" 없이는 복원할 수 없기 때문이다.
+    /// </summary>
+    public int AssignedPopulation;
+
+    /// <summary>건설된 주기(Building.ConstructedCycle). 철거 환급이 당일 건설 여부를 이 값으로 가른다.</summary>
+    public int ConstructedCycle;
+
+    /// <summary>
+    /// 새끼용 타워일 때 RunStateDto.BabyDragons의 인덱스. 아니면 NO_BABY_DRAGON_INDEX.
+    /// 속성만으로 찾으면 같은 속성 두 마리의 모드가 뒤바뀌므로(BabyDragonPlacementCoordinator 참고)
+    /// 인덱스로 지목한다.
+    /// </summary>
+    public int BabyDragonIndex = NO_BABY_DRAGON_INDEX;
+
+    public void Normalize()
+    {
+        RotationSteps =
+            ((RotationSteps % Building.ROTATION_STEP_COUNT) + Building.ROTATION_STEP_COUNT)
+            % Building.ROTATION_STEP_COUNT;
+
+        AssignedPopulation = Mathf.Max(0, AssignedPopulation);
+        ConstructedCycle = Mathf.Max(0, ConstructedCycle);
+
+        if (BabyDragonIndex < 0)
+        {
+            BabyDragonIndex = NO_BABY_DRAGON_INDEX;
+        }
+    }
 }
 
 /// <summary>

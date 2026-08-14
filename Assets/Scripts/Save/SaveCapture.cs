@@ -23,7 +23,7 @@ public static class SaveCapture
             Research = CaptureResearch(context.ResearchManager),
             DragonTree = CaptureDragonTree(context.DragonTreeManager),
             Conquest = CaptureConquest(context.ConquestManager),
-            Map = CaptureMap(context.ConquestManager, context.GridMap),
+            Map = CaptureMap(context.ConquestManager, context.GridMap, run),
             Castle = CaptureCastle(context.Castle),
             Landmarks = CaptureLandmarks(context.LandmarkManager),
         };
@@ -201,7 +201,7 @@ public static class SaveCapture
         return dto;
     }
 
-    private static MapStateDto CaptureMap(ConquestManager conquestManager, GridMap gridMap)
+    private static MapStateDto CaptureMap(ConquestManager conquestManager, GridMap gridMap, RunData run)
     {
         var dto = new MapStateDto
         {
@@ -232,8 +232,81 @@ public static class SaveCapture
             dto.EnhancedChunks = Vector2IntDto.From(conquestManager.EnhancedChunkCoords);
         }
 
-        // TODO(범위 밖): 건물 배치. MapStateDto.Buildings의 주석 참고.
+        dto.Buildings = CaptureBuildings(gridMap, run);
         return dto;
+    }
+
+    private static List<BuildingPlacementDto> CaptureBuildings(GridMap gridMap, RunData run)
+    {
+        var placements = new List<BuildingPlacementDto>();
+
+        if (gridMap == null)
+        {
+            return placements;
+        }
+
+        foreach (Building building in gridMap.Buildings)
+        {
+            // PrefabId가 비어 있으면 세이브가 되살릴 방법이 없다 - 성·랜드마크 구조물·임시 방벽이
+            // 여기서 걸러진다. 타입별 예외 목록을 두지 않고 프리팹 데이터 하나로 판정한다.
+            if (building == null || !building.IsSaveable)
+            {
+                continue;
+            }
+
+            int babyDragonIndex = ResolveBabyDragonIndex(building, run);
+
+            // 어느 레코드에서 온 개체인지 모르면 모드·먹이 상태를 충실히 되살릴 수 없다.
+            // (에디터에서 씬에 직접 놓은 새끼용이 이 경우다.)
+            if (building is BabyDragonTower &&
+                babyDragonIndex == BuildingPlacementDto.NO_BABY_DRAGON_INDEX)
+            {
+                Debug.LogWarning(
+                    "[SaveCapture] 보유 레코드에 결속되지 않은 새끼용 타워가 있어 저장에서 제외합니다.",
+                    building);
+
+                continue;
+            }
+
+            placements.Add(new BuildingPlacementDto
+            {
+                PrefabId = building.PrefabId,
+                Anchor = Vector3IntDto.From(building.PlacementAnchor),
+                RotationSteps = building.RotationSteps,
+                AssignedPopulation =
+                    building.GetComponent<IPopulationAllocationTarget>()?.AssignedPopulation ?? 0,
+                ConstructedCycle = building.ConstructedCycle,
+                BabyDragonIndex = babyDragonIndex,
+            });
+        }
+
+        // ToSortedList와 같은 이유로 정렬한다 - 같은 상태면 같은 바이트가 나오게.
+        placements.Sort(CompareBuildingPlacements);
+        return placements;
+    }
+
+    private static int ResolveBabyDragonIndex(Building building, RunData run)
+    {
+        if (run == null || !(building is BabyDragonTower babyDragonTower) || babyDragonTower.Record == null)
+        {
+            return BuildingPlacementDto.NO_BABY_DRAGON_INDEX;
+        }
+
+        // CaptureRun이 같은 리스트를 같은 순서로 순회하므로 이 인덱스가 RunStateDto.BabyDragons와 일치한다.
+        return run.BabyDragons.IndexOf(babyDragonTower.Record);
+    }
+
+    private static int CompareBuildingPlacements(BuildingPlacementDto left, BuildingPlacementDto right)
+    {
+        int byPrefabId = string.CompareOrdinal(left.PrefabId, right.PrefabId);
+
+        if (byPrefabId != 0)
+        {
+            return byPrefabId;
+        }
+
+        int byX = left.Anchor.X.CompareTo(right.Anchor.X);
+        return byX != 0 ? byX : left.Anchor.Y.CompareTo(right.Anchor.Y);
     }
 
     private static LandmarkStateDto CaptureLandmarks(LandmarkManager landmarkManager)
@@ -307,6 +380,15 @@ public readonly struct SaveCaptureContext
     /// <summary>랜드마크가 배치되지 않은 씬에서는 null일 수 있다.</summary>
     public LandmarkManager LandmarkManager { get; }
 
+    /// <summary>
+    /// 건물 배치 복원의 id -> 프리팹 레지스트리. 캡처는 Building.PrefabId를 직접 읽으므로 쓰지 않는다.
+    /// null이면 건물 복원만 건너뛴다.
+    /// </summary>
+    public BuildingCatalog BuildingCatalog { get; }
+
+    /// <summary>새끼용이 없는 씬에서는 null일 수 있다. 그 경우 새끼용 타워만 복원되지 않는다.</summary>
+    public BabyDragonPlacementCoordinator BabyDragonPlacementCoordinator { get; }
+
     public SaveCaptureContext(
         GameManager gameManager,
         CycleManager cycleManager,
@@ -318,7 +400,9 @@ public readonly struct SaveCaptureContext
         GridMap gridMap,
         WaveCycleProgression waveCycleProgression,
         Castle castle,
-        LandmarkManager landmarkManager)
+        LandmarkManager landmarkManager,
+        BuildingCatalog buildingCatalog,
+        BabyDragonPlacementCoordinator babyDragonPlacementCoordinator)
     {
         GameManager = gameManager;
         CycleManager = cycleManager;
@@ -331,6 +415,8 @@ public readonly struct SaveCaptureContext
         WaveCycleProgression = waveCycleProgression;
         Castle = castle;
         LandmarkManager = landmarkManager;
+        BuildingCatalog = buildingCatalog;
+        BabyDragonPlacementCoordinator = babyDragonPlacementCoordinator;
     }
 
     public bool IsValid => GameManager != null && CycleManager != null && GameManager.CurrentRun != null;

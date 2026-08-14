@@ -41,10 +41,23 @@ public class UI_BuildingSlot : MonoBehaviour, IPointerEnterHandler, IPointerExit
     [SerializeField]
     private TMP_Text _populationCapacityText;
 
+    [Tooltip("건설 비용을 낼 수 있는 자원의 수량 글씨 색.")]
+    [SerializeField]
+    private Color _sufficientColor = Color.white;
+
+    [Tooltip("보유량이 모자라 지금은 지을 수 없는 자원의 수량 글씨 색.")]
+    [SerializeField]
+    private Color _insufficientColor = Color.red;
+
     private Building _prefab;
     private Action<Building> _onSelected;
     private Action<UI_BuildingSlot, bool> _onHoverChanged;
     private Button _button;
+    private ResourceManager _resourceManager;
+
+    // 보유량이 바뀔 때마다 색만 다시 칠하려고 들고 있는다 - 건물 프리팹에서 매번 다시 읽으면
+    // 슬롯이 어떤 비용을 그리고 있었는지와 어긋날 수 있다.
+    private IReadOnlyList<ResourceAmount> _cost;
 
     /// <summary>이 슬롯이 나타내는 건물. 목록에서 특정 슬롯을 되찾을 때 쓴다.</summary>
     public Building Prefab => _prefab;
@@ -53,10 +66,12 @@ public class UI_BuildingSlot : MonoBehaviour, IPointerEnterHandler, IPointerExit
     public void Setup(
         Building prefab,
         Action<Building> onSelected,
+        ResourceManager resourceManager,
         Action<UI_BuildingSlot, bool> onHoverChanged = null)
     {
         _prefab = prefab;
         _onSelected = onSelected;
+        _resourceManager = resourceManager;
         _onHoverChanged = onHoverChanged;
 
         _button = GetComponent<Button>();
@@ -107,10 +122,23 @@ public class UI_BuildingSlot : MonoBehaviour, IPointerEnterHandler, IPointerExit
         }
     }
 
+    /// <summary>
+    /// 보유량이 바뀌었을 때 비용 칸을 다시 칠한다. 슬롯을 재생성하지 않는다 -
+    /// 다시 만들면 호버 팝업이 닫히고 안내(튜토리얼)가 가리키던 대상도 사라진다.
+    /// </summary>
+    public void RefreshAffordability()
+    {
+        if (_cost != null)
+            ApplyBuildCost(_cost);
+    }
+
     // 건설 비용을 칸에 채운다. 항목 수만큼만 칸을 켜고 나머지는 꺼서
     // GridLayoutGroup이 비활성 칸을 건너뛰고 남은 칸끼리 자동으로 채우게 한다.
+    // 모자란 자원은 수량 글씨를 붉게 물들여, 슬롯을 눌러 경고를 보기 전에 무엇이 부족한지 알린다.
     private void ApplyBuildCost(IReadOnlyList<ResourceAmount> cost)
     {
+        _cost = cost;
+
         if (_costStatSlots == null)
             return;
 
@@ -129,9 +157,17 @@ public class UI_BuildingSlot : MonoBehaviour, IPointerEnterHandler, IPointerExit
                 slot.IconImage.sprite = ResolveResourceIcon(cost[i].Type);
 
             if (slot.CountText != null)
+            {
                 slot.CountText.text = cost[i].Amount.ToString();
+                slot.CountText.color = HasEnough(cost[i]) ? _sufficientColor : _insufficientColor;
+            }
         }
     }
+
+    // 자원 매니저가 없는 씬(튜토리얼·테스트)에서는 모자란 것으로 보지 않는다
+    // - BuildingPlacementController.CanAffordBuildCost와 같은 fail-open 관례.
+    private bool HasEnough(ResourceAmount cost) =>
+        _resourceManager == null || _resourceManager.GetAmount(cost.Type) >= cost.Amount;
 
     // 자원 아이콘은 데이터 에셋(ResourceCatalog)이 단일 출처 - 종류로 조회한다.
     private Sprite ResolveResourceIcon(ResourceType type)

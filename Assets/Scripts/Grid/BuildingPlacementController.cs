@@ -235,10 +235,33 @@ public class BuildingPlacementController : MonoBehaviour
             _mouseSelectController.RotatePreview();
     }
 
+    // 건설 비용을 지금 낼 수 있는가. ResourceManager가 배선되지 않은 씬(튜토리얼·테스트)은 막지 않는다
+    // (IsDayForBuildActions와 같은 fail-open 관례).
+    public bool CanAffordBuildCost(Building prefab) =>
+        prefab == null || _resourceManager == null || _resourceManager.CanAfford(prefab.BuildCost);
+
+    /// <summary>
+    /// 건설 비용 판정에 쓰는 자원 매니저. 건설 창이 보유량 변화에 맞춰 비용 색을 갱신하려고 읽는다
+    /// (창이 따로 배선을 들면 씬마다 빠뜨릴 수 있어, 이미 배선된 이 참조를 그대로 나눠 쓴다).
+    /// </summary>
+    public ResourceManager Resources => _resourceManager;
+
     public void SelectBuilding(Building prefab)
     {
         if (prefab == null)
             return;
+
+        // 자원이 모자라면 고스트 자체를 띄우지 않는다 - 못 짓는 건물을 커서에 달고 다니게 하면
+        // 타일을 찍어본 뒤에야 "왜 안 놓이지"를 알게 되고, 그 실패는 아무 안내도 남기지 않는다.
+        if (!CanAffordBuildCost(prefab))
+        {
+            if (_warningWindow != null)
+            {
+                _warningWindow.Show(UI_WarningWindow.MessageId.NotEnoughResources);
+            }
+
+            return;
+        }
 
         bool changed = TryChangeBuildingToPlace(prefab);
         Deselect();
@@ -626,8 +649,17 @@ public class BuildingPlacementController : MonoBehaviour
         if (_selectedBuilding == null)
             return false;
 
+        // 연구소는 하나만 둘 수 있다. 슬롯은 그대로 눌리므로, 안내가 없으면 타일을 찍어도
+        // 아무 일이 없는 것으로만 보인다(자원 부족과 같은 이유로 이유를 알린다).
         if (_selectedBuilding is ResearchLab && _gridMap.HasBuilding<ResearchLab>())
+        {
+            if (_warningWindow != null)
+            {
+                _warningWindow.Show(UI_WarningWindow.MessageId.ResearchLabDuplicate);
+            }
+
             return false;
+        }
 
         // 건설은 낮에만 가능하다(기획 변경 - 새끼용 밤 배치 금지 요청을 계기로 전체 건물로 확장).
         if (!IsDayForBuildActions)
@@ -648,11 +680,14 @@ public class BuildingPlacementController : MonoBehaviour
             return false;
 
         Debug.Log($"[BuildingPlacementController] 건설 위치: {anchor}");
-        if (!_gridMap.ConstructBuilding(_selectedBuilding, anchor, _mouseSelectController.PreviewRotationSteps))
+        Building constructed =
+            _gridMap.ConstructBuilding(_selectedBuilding, anchor, _mouseSelectController.PreviewRotationSteps);
+
+        if (constructed == null)
             return false;
 
         if (_cycleManager != null)
-            _gridMap.GetBuildingAt(anchor)?.SetConstructedCycle(_cycleManager.CurrentCycleNumber);
+            constructed.SetConstructedCycle(_cycleManager.CurrentCycleNumber);
 
         if (_resourceManager != null)
             _resourceManager.Spend(cost);

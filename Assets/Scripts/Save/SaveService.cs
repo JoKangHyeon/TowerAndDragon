@@ -45,6 +45,12 @@ public sealed class SaveService : MonoBehaviour
     [Tooltip("랜드마크 수령 이력과 배치 인구를 저장한다. 랜드마크가 없는 씬에서는 비워 둔다.")]
     [SerializeField] private LandmarkManager _landmarkManager;
 
+    [Tooltip("건물 배치 복원이 쓰는 id -> 프리팹 레지스트리. 비워 두면 건물이 복원되지 않는다.")]
+    [SerializeField] private BuildingCatalog _buildingCatalog;
+
+    [Tooltip("복원된 새끼용 타워를 보유 레코드에 다시 결속한다. 새끼용이 없는 씬에서는 비워 둔다.")]
+    [SerializeField] private BabyDragonPlacementCoordinator _babyDragonPlacementCoordinator;
+
     [Tooltip("슬롯 목록에 띄울 점령 현황 썸네일을 찍는다. 비워 두면 썸네일 없이 저장한다.")]
     [SerializeField] private SaveThumbnailCapturer _thumbnailCapturer;
 
@@ -419,5 +425,7 @@ public sealed class SaveService : MonoBehaviour
         _gridMap,
         _waveCycleProgression,
         _castle,
-        _landmarkManager);
+        _landmarkManager,
+        _buildingCatalog,
+        _babyDragonPlacementCoordinator);
 }

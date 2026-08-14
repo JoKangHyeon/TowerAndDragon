@@ -1,8 +1,9 @@
 using UnityEngine;
 
 // 맵에 실제로 존재하는 랜드마크 1개. LandmarkManager가 ChunkLandmarkTable을 보고 생성하며,
-// 씬에 미리 배치하지 않는다 - 건물처럼 배치·저장되는 물건이 아니라 테이블에서 파생되는
-// 데이터 기반 오브젝트다(MapStateDto.Buildings가 저장되지 않는 이유와 같은 맥락).
+// 씬에 미리 배치하지 않는다 - 플레이어가 짓는 건물이 아니라 테이블에서 파생되는 데이터 기반
+// 오브젝트다. 그래서 MapStateDto.Buildings의 대상이 아니고(PrefabId가 없다), 세이브는 수령 이력과
+// 배치 인구만 LandmarkStateDto에 담는다.
 public sealed class Landmark : MonoBehaviour
 {
     public LandmarkDataSO Data { get; private set; }

@@ -34,6 +34,35 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
     [SerializeField]
     private FilterTab[] _filterTabs;
 
+    // 모든 탭이 띄우는 건물 프리팹 - 연구 해금 여부와 무관한 전체 목록이다.
+    // BuildingCatalogTools가 "지을 수는 있는데 저장되지 않는 건물"을 찾는 데 쓴다.
+    public IEnumerable<Building> PlaceableBuildings
+    {
+        get
+        {
+            if (_filterTabs == null)
+            {
+                yield break;
+            }
+
+            foreach (FilterTab tab in _filterTabs)
+            {
+                if (tab.Buildings == null)
+                {
+                    continue;
+                }
+
+                foreach (Building building in tab.Buildings)
+                {
+                    if (building != null)
+                    {
+                        yield return building;
+                    }
+                }
+            }
+        }
+    }
+
     [Header("건물 슬롯")]
     [Tooltip("생성된 슬롯이 들어갈 부모 (Scroll View의 Content). 슬롯 프리팹은 각 탭(FilterTab)에서 지정.")]
     [SerializeField]
@@ -60,6 +89,10 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
     [Tooltip("밤이 시작되면 빌드모드 패널을 자동으로 닫기 위해 구독한다.")]
     [SerializeField]
     private CycleManager _cycleManager;
+
+    [Tooltip("밤에 건설 모드를 켜려 했을 때 경고 메시지를 띄울 창.")]
+    [SerializeField]
+    private UI_WarningWindow _warningWindow;
 
     [Tooltip("연구로 해금되는 타워를 거르기 위해 참조한다. 비워두면 모든 타워가 그대로 보인다.")]
     [SerializeField]
@@ -99,6 +132,12 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
 
     public void RemoveInteractionQuery(IBuildModeInteractionQuery query) =>
         _interactionQueries.Remove(query);
+
+    // 자원 매니저는 따로 배선하지 않고 이미 배선된 배치 컨트롤러의 것을 나눠 쓴다 - 창이 있는 씬마다
+    // 손으로 이어야 하면 빠뜨린 씬에서 비용 색이 조용히 멈춘다.
+    // (UnityEngine.Resources와 이름이 겹치지 않도록 Build 접두사를 붙였다.)
+    private ResourceManager BuildResources =>
+        _buildingPlacementController != null ? _buildingPlacementController.Resources : null;
 
     // 슬롯은 탭을 고를 때마다 새로 만들어지므로, 슬롯을 가리키려는 안내는 이 이벤트를 듣고 다시 조준해야 한다.
     // UI_DragonInventoryWindow.OnSlotViewChanged와 같은 용도·같은 이름이다.
@@ -237,6 +276,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
             _researchManager.NodeCompleted.AddListener(HandleResearchCompleted);
         }
 
+        if (BuildResources != null)
+        {
+            BuildResources.ResourceChanged.AddListener(HandleResourceChanged);
+        }
+
         _initialized = true;
     }
 
@@ -250,6 +294,24 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         if (_researchManager != null)
         {
             _researchManager.NodeCompleted.RemoveListener(HandleResearchCompleted);
+        }
+
+        if (BuildResources != null)
+        {
+            BuildResources.ResourceChanged.RemoveListener(HandleResourceChanged);
+        }
+    }
+
+    // 보유량이 바뀌면 비용 색이 곧바로 낡는다(생산 정산, 다른 건물 건설 등) - 슬롯을 다시 만들지 않고
+    // 색만 다시 칠한다. 재생성하면 OnSlotViewChanged가 발화해 튜토리얼 조준이 흔들리고 호버 팝업이 닫힌다.
+    private void HandleResourceChanged(ResourceType type, int amount)
+    {
+        foreach (UI_BuildingSlot slot in _spawnedSlots)
+        {
+            if (slot != null)
+            {
+                slot.RefreshAffordability();
+            }
         }
     }
 
@@ -337,12 +399,24 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
     }
 
     /// <summary>
-    /// 밤에는 건설 모드를 켤 수 없다 - 버튼·단축키 어느 경로로 열려 해도 이 판정을 지난다.
-    /// 경고 메시지는 띄우지 않는다: Warning_window에 건설용 메시지 오브젝트가 없다.
+    /// 밤에는 건설 모드를 켤 수 없다 - 버튼·단축키 어느 경로로 열려 해도 이 판정을 지나고,
+    /// 막을 때는 그 이유를 경고창으로 알린다(UI_ConquestWindow.CanEnterConquestMode와 같은 모양).
     /// CycleManager가 없는 씬(튜토리얼·테스트)에서는 막지 않는다.
     /// </summary>
-    public bool CanEnterNow() =>
-        _cycleManager == null || _cycleManager.CurrentCycle != CycleManager.CycleState.Night;
+    public bool CanEnterNow()
+    {
+        if (_cycleManager == null || _cycleManager.CurrentCycle != CycleManager.CycleState.Night)
+        {
+            return true;
+        }
+
+        if (_warningWindow != null)
+        {
+            _warningWindow.Show(UI_WarningWindow.MessageId.Build);
+        }
+
+        return false;
+    }
 
     // BuildMode 버튼 토글. 열 때는 UIManager를 거쳐 다른 배타 모드(점령 등)를 정리한다.
     public void ToggleFromEntryPoint()
@@ -350,16 +424,9 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         // 클릭음을 내지 않는다 - 창을 여닫는 제스처는 OpenBuildPanel/CloseBuildPanel의 창음만 낸다.
         EnsureInitialized();
 
-        // 열 수 없는 때(밤)는 열지 않는다. 닫기는 현재 UI 관문이 허용할 때만 받는다.
-        // UIManager를 지나는 경로는 OpenExclusive가 같은 판정을 하므로, 이 검사는 UIManager가 없는
-        // 씬(아래 else 분기)까지 덮기 위한 것이다.
-        if (!_isOpen && !CanEnterNow())
-        {
-            return;
-        }
-
         if (_isOpen)
         {
+            // 닫기는 현재 UI 관문이 허용할 때만 받는다.
             if (_uiManager == null || _uiManager.CanCloseExclusive(this))
             {
                 CloseBuildPanel();
@@ -367,10 +434,13 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         }
         else if (_uiManager != null)
         {
+            // 밤 금지 판정은 여기서 하지 않는다 - OpenExclusive가 CanEnterNow를 물으므로
+            // 단축키로 켜는 경로와 같은 한 곳에서 판정된다(여기서 또 물으면 경고창이 두 번 뜬다).
             _uiManager.OpenExclusive(this);
         }
-        else
+        else if (CanEnterNow())
         {
+            // UIManager가 없는 씬은 물어볼 관문이 없으니 여기서 직접 판정한다.
             OpenBuildPanel();
         }
     }
@@ -511,7 +581,7 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
             }
 
             UI_BuildingSlot slot = Instantiate(slotPrefab, _slotContainer);
-            slot.Setup(building, OnSlotSelected, HandleSlotHoverChanged);
+            slot.Setup(building, OnSlotSelected, BuildResources, HandleSlotHoverChanged);
             slot.SetInteractable(isPlaceable);
             _spawnedSlots.Add(slot);
         }

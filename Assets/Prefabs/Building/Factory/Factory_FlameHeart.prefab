@@ -125,6 +125,7 @@ MonoBehaviour:
   - {x: 1, y: 1, z: 1}
   - {x: 1, y: 1, z: 1}
   - {x: 1, y: 1, z: 1}
+  _prefabId: Factory_FlameHeart
   _isMoveable: 1
   _isRemoveable: 1
   _data: {fileID: 11400000, guid: d0f0f604df0c85040bf6e57abe5edca1, type: 2}
@@ -143,3 +144,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9447adaa12e5e5942bf00c1eb9928978, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FactoryPopulation
+  OnPopulationChanged:
+    m_PersistentCalls:
+      m_Calls: []

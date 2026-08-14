@@ -27,6 +27,15 @@ public class UI_WarningWindow : MonoBehaviour
 
         // 용암이 흐르는 타일에 건설·이동을 시도했을 때(얼음 새끼용 버프 반경이 필요하다는 안내).
         VolcanoConstruction,
+
+        // 건설 비용을 낼 자원이 모자라 건설창에서 건물을 고르지 못했을 때.
+        NotEnoughResources,
+
+        // 이미 지어 둔 연구소가 있는데 두 번째 연구소를 놓으려 했을 때.
+        ResearchLabDuplicate,
+
+        // 밤에 건설 모드를 켜려 했을 때.
+        Build,
     }
 
     /// <summary>인스펙터 한 줄 = 메시지 하나. 종류를 함께 지정하므로 목록 순서는 상관없다.</summary>

@@ -16,8 +16,6 @@ public static class SaveRestore
 {
     /// <summary>
     /// 단계 사이에 순서 의존성이 있다. 바꾸기 전에 각 단계의 주석을 확인할 것.
-    /// 건물 배치 복원이 추가되면 청크 복원과 원정 복원 사이에 들어가야 한다
-    /// (건물 건설은 점령된 청크를 요구하고, 건물 인구가 원정 인구와 총량을 다툰다).
     /// </summary>
     public static void Apply(SaveGameDto dto, SaveCaptureContext context)
     {
@@ -94,9 +92,14 @@ public static class SaveRestore
             context.LandmarkManager.RefreshConquestState();
         }
 
-        // TODO(범위 밖): 여기에 건물 배치 복원이 들어간다. MapStateDto.Buildings 주석 참고.
+        // 11. 건물 배치. 8번(영토) 이후여야 한다 - OnBuildingAdded 구독자들이 청크 상태를 읽는다.
+        //     9·10번(원정·랜드마크 인구)보다 뒤인 것이 핵심이다. 셋이 같은 인구 총량을 다투는데,
+        //     실패의 성질이 다르다 - 원정·랜드마크가 인구를 못 받으면 비용 없이 진행되는 조용한 오염이
+        //     되지만, 건물은 "인구 0인 건물"이라는 눈에 보이고 로그가 남고 다시 배치할 수 있는 상태로 끝난다.
+        //     총량이 모자란 세이브에서는 건물이 마지막에 줍게 한다.
+        RestoreBuildings(dto.Map.Buildings, dto.Run, context);
 
-        // 11. 성 체력. 다른 복원값에 의존하지 않으므로 마지막에 둔다 -
+        // 12. 성 체력. 다른 복원값에 의존하지 않으므로 마지막에 둔다 -
         //    Castle.Start의 Initialize(만피)를 여기서 덮어쓰는 편이 읽기 쉽다.
         //    0 이하는 "기록 없음"(성이 연결되지 않은 씬에서 저장한 슬롯)이므로 만피를 유지한다.
         if (dto.Castle.CurrentHealth > 0f)
@@ -104,8 +107,151 @@ public static class SaveRestore
             context.Castle?.RestoreHealth(dto.Castle.CurrentHealth);
         }
 
-        // 12. ResumeDay는 호출자(SaveService)가 부른다 - 복원 실패 시 폴백 경로와 구분하기 위해
+        // 13. ResumeDay는 호출자(SaveService)가 부른다 - 복원 실패 시 폴백 경로와 구분하기 위해
         //     이 클래스는 상태 적용까지만 책임진다.
+    }
+
+    /// <summary>
+    /// 건물을 다시 짓고 인구를 다시 배치한다. 두 패스로 나눈 이유는 배치 순서 의존을 없애기 위함이다 -
+    /// TowerPopulation.TryAssign은 건물이 운영 중단(IsSuspended)이면 조용히 실패하는데,
+    /// 화염지대 건물의 운영 중단은 얼음 새끼용 버프로 풀린다. 그 새끼용이 목록 뒤쪽이면
+    /// 한 패스로 처리할 때 아직 배치 전이라 멀쩡한 건물이 인구 0으로 복원된다.
+    ///
+    /// 한 건물이 실패해도 나머지는 계속 복원한다 - Apply는 롤백이 불가능한 구간이라 중단이 더 나쁘다.
+    /// </summary>
+    private static void RestoreBuildings(
+        List<BuildingPlacementDto> placements,
+        RunStateDto run,
+        SaveCaptureContext context)
+    {
+        if (placements.Count == 0)
+        {
+            return;
+        }
+
+        if (context.GridMap == null || context.BuildingCatalog == null)
+        {
+            Debug.LogWarning(
+                $"[SaveRestore] GridMap 또는 BuildingCatalog가 연결되지 않아 건물 {placements.Count}개를 복원하지 못했습니다.");
+
+            return;
+        }
+
+        var restored = new List<(BuildingPlacementDto Placement, Building Instance)>();
+
+        // 패스 1 - 배치.
+        foreach (BuildingPlacementDto placement in placements)
+        {
+            if (!context.BuildingCatalog.TryGetPrefab(placement.PrefabId, out Building prefab))
+            {
+                Debug.LogError(
+                    $"[SaveRestore] PrefabId '{placement.PrefabId}'가 BuildingCatalog에 없어 복원하지 못했습니다.");
+
+                continue;
+            }
+
+            BabyDragon babyDragon = ResolveBabyDragonRecord(placement, context);
+
+            // 결속할 레코드가 없는 새끼용 타워는 아예 짓지 않는다 - 데이터 없는 유령이 남는 것보다 낫다.
+            if (prefab is BabyDragonTower && babyDragon == null)
+            {
+                Debug.LogError(
+                    $"[SaveRestore] 새끼용 타워 '{placement.PrefabId}'에 결속할 보유 레코드가 없어 복원하지 못했습니다.");
+
+                continue;
+            }
+
+            // BabyDragonPlacementCoordinator.HandleBuildingAdded가 이 레코드를 보고
+            // Setup·스프라이트·BindRecord·IsInTower를 전부 처리한다(배치 경로와 같은 코드).
+            context.BabyDragonPlacementCoordinator?.PrepareRestoreBinding(babyDragon);
+
+            Building instance = context.GridMap.RestoreBuilding(
+                prefab,
+                placement.Anchor.ToVector3Int(),
+                placement.RotationSteps);
+
+            // 배치가 실패했을 때 예약이 다음 건물로 새지 않도록 즉시 해제한다.
+            context.BabyDragonPlacementCoordinator?.PrepareRestoreBinding(null);
+
+            if (instance == null)
+            {
+                Debug.LogError(
+                    $"[SaveRestore] '{placement.PrefabId}'를 {placement.Anchor.ToVector3Int()}에 놓지 못했습니다.");
+
+                continue;
+            }
+
+            instance.SetConstructedCycle(placement.ConstructedCycle);
+            restored.Add((placement, instance));
+        }
+
+        // 패스 2 - 인구.
+        foreach ((BuildingPlacementDto placement, Building instance) in restored)
+        {
+            if (placement.AssignedPopulation <= 0)
+            {
+                continue;
+            }
+
+            var target = instance.GetComponent<IPopulationAllocationTarget>();
+
+            if (target == null || !target.TryAssign(placement.AssignedPopulation))
+            {
+                Debug.LogWarning(
+                    $"[SaveRestore] '{placement.PrefabId}'에 인구 {placement.AssignedPopulation}명을 배치하지 못했습니다.");
+            }
+        }
+
+        Debug.Log($"[SaveRestore] 건물 복원 - 요청 {placements.Count}개 중 {restored.Count}개 배치");
+        WarnOnUnplacedBabyDragons(run, restored);
+    }
+
+    private static BabyDragon ResolveBabyDragonRecord(
+        BuildingPlacementDto placement,
+        SaveCaptureContext context)
+    {
+        if (placement.BabyDragonIndex == BuildingPlacementDto.NO_BABY_DRAGON_INDEX)
+        {
+            return null;
+        }
+
+        // 인덱스 유효성은 SaveGameDto.TryNormalize가 DTO 기준으로 이미 검증했고
+        // RestoreInventory가 그 목록을 1:1로 복사하므로 여기서 어긋날 일은 없다.
+        // 그래도 범위를 확인하는 이유: 어긋나면 예외가 나면서 복원 전체가 씬 리로드로 날아간다.
+        List<BabyDragon> babyDragons = context.GameManager.CurrentRun.BabyDragons;
+
+        if (placement.BabyDragonIndex >= babyDragons.Count)
+        {
+            return null;
+        }
+
+        return babyDragons[placement.BabyDragonIndex];
+    }
+
+    /// <summary>
+    /// 저장 당시 설치돼 있었는데 복원되지 않은 새끼용을 알린다. 게임 상태는 이미 일관적이지만
+    /// (RestoreRun이 IsInTower를 false로 시작하고 BindRecord만 true로 되돌린다)
+    /// 배치가 조용히 사라진 것을 로그 없이 넘기지 않기 위한 관측이다.
+    /// </summary>
+    private static void WarnOnUnplacedBabyDragons(
+        RunStateDto run,
+        List<(BuildingPlacementDto Placement, Building Instance)> restored)
+    {
+        var placedIndices = new HashSet<int>();
+
+        foreach ((BuildingPlacementDto placement, Building _) in restored)
+        {
+            placedIndices.Add(placement.BabyDragonIndex);
+        }
+
+        for (int i = 0; i < run.BabyDragons.Count; i++)
+        {
+            if (run.BabyDragons[i].IsInTower && !placedIndices.Contains(i))
+            {
+                Debug.LogWarning(
+                    $"[SaveRestore] 저장 당시 설치돼 있던 새끼용 {i}번이 복원되지 않아 인벤토리로 돌아갑니다.");
+            }
+        }
     }
 
     private static void RestoreResources(ResourceStateDto dto, ResourceManager resourceManager)
@@ -140,9 +286,10 @@ public static class SaveRestore
                 DragonName = entry.DragonName,
                 DragonType = (DragonType)entry.DragonType,
 
-                // TODO(범위 밖): 타워(건물) 배치가 복원되지 않는 동안은 무조건 false로 강제한다.
-                //   true로 두면 "탑 안에 있다고 주장하는데 그 탑이 없는" 유령 상태가 된다.
-                //   건물 복원이 들어오면 BabyDragonTower.BindRecord가 다시 세팅하므로 그때 제거한다.
+                // 설치 여부는 저장값이 아니라 11단계의 건물 배치 복원이 정한다 - false로 시작해
+                // BabyDragonPlacementCoordinator.BindRecord가 실제로 세워진 개체만 true로 되돌린다.
+                // 저장값을 그대로 넣으면 배치 복원이 실패했을 때 "탑 안에 있다고 주장하는데 그 탑이 없는"
+                // 유령이 남지만, 이 방향이면 실제 배치 결과에서 파생되므로 자기치유된다.
                 IsInTower = false,
 
                 Mode = (BabyDragonMode)entry.Mode,

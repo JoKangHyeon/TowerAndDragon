@@ -33,6 +33,12 @@ public class Building : MonoBehaviour
         return scales;
     }
 
+    [Tooltip("세이브가 이 건물을 되살릴 때 쓰는 안정 ID(BuildingCatalog의 키). 프리팹 이름을 바꿔도 이 값은 유지해야 한다. " +
+        "비워 두면 저장 대상에서 제외된다 - 성(스스로 배치)·임시 방벽(밤에 사라짐)이 그렇다. " +
+        "이미 만들어진 세이브가 있는 상태에서 값을 바꾸면 그 건물은 불러올 때 사라진다.")]
+    [SerializeField]
+    private string _prefabId;
+
     [SerializeField]
     [FormerlySerializedAs("IsMoveable")]
     private bool _isMoveable;
@@ -54,6 +60,20 @@ public class Building : MonoBehaviour
 
     public bool IsOpen => _isOpen;
     public Sprite Sprite => _sprite;
+
+    public string PrefabId => _prefabId;
+
+    // 세이브가 재생성할 수 있는 건물인가. 캡처와 복원 양쪽이 쓰는 유일한 필터 기준이다 -
+    // 타입별 예외 목록(성·랜드마크·방벽...)을 코드에 두지 않으려고 프리팹 데이터로 판정한다.
+    public bool IsSaveable => !string.IsNullOrWhiteSpace(_prefabId);
+
+    // 이 인스턴스가 점유한 footprint의 앵커(좌하단 원점). GridMap이 배치·재배치 때마다 채운다.
+    // 점유 셀 목록에서 역산하지 않는 이유: FootprintShape에 구멍이 있으면 앵커 칸이 비어 있을 수 있어
+    // min(점유 좌표)가 앵커와 어긋난다.
+    public Vector3Int PlacementAnchor { get; private set; }
+
+    // GridMap 전용. 셀 점유와 앵커가 어긋나면 세이브가 엉뚱한 자리에 건물을 되살린다.
+    public void SetPlacementAnchor(Vector3Int anchor) => PlacementAnchor = anchor;
 
     // 원본(회전 0도) 모양 - 회전 계산의 기준이 된다.
     public FootprintShape BaseFootprintShape => _footprintShape;

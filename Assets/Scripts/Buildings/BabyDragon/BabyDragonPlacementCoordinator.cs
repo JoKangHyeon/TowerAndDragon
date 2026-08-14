@@ -66,6 +66,14 @@ public class BabyDragonPlacementCoordinator : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 세이브 복원 전용. 바로 뒤에 이어질 OnBuildingAdded 한 번을 이 레코드와 결속한다.
+    /// BeginPlacement와 달리 배치 모드·고스트를 띄우지 않는다 - 복원은 사용자 입력 단계 없이
+    /// GridMap.RestoreBuilding을 곧바로 부르기 때문이다.
+    /// null을 넘기면 대기 상태를 해제한다(배치가 실패했을 때 다음 건물로 새지 않게).
+    /// </summary>
+    public void PrepareRestoreBinding(BabyDragon record) => _pendingRecord = record;
+
     private void HandleBuildingAdded(Building building)
     {
         if (!(building is BabyDragonTower babyDragonTower))
