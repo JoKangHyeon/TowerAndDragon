@@ -33,9 +33,6 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private Color _occupiedOverlayColor = new Color(1f, 0f, 0f, 0.35f);
 
-    [SerializeField]
-    private Color _missingResourceTint = new Color(1f, 0.6f, 0f);
-
     [Tooltip("타워 배치/이동 미리보기 중 공격 사거리를 타원으로 표시할 인디케이터.")]
     [SerializeField]
     private RangeIndicator _rangeIndicator;
@@ -372,65 +369,12 @@ public class MouseSelectController : MonoBehaviour
     private Vector3Int GetFootprintAnchor(Vector3Int hoveredCell, FootprintShape shape) =>
         hoveredCell - shape.CenterOffset;
 
-    // Factory일 때 셀별 색상 의미:
-    //   초록  — 지형 건설 가능 + 요구 자원 노드 보유 → 배치 가능
-    //   주황  — 지형 건설 가능이지만 요구 자원 노드 없음 → 이 Factory 종류만 배치 불가
-    //   빨강  — 점유되거나 지형이 건설 불가 → 어떤 건물도 배치 불가
-    // SealStone일 때 셀별 색상 의미도 동일한 3색 체계를 따른다:
-    //   초록  — 지형 건설 가능 + 포탈 봉인 영역 소속 → 배치 가능
-    //   주황  — 지형 건설 가능이지만 포탈 봉인 영역이 아님(또는 이미 그 포탈에 봉인석이 있음) → 배치 불가
-    //   빨강  — 점유되거나 지형이 건설 불가 → 어떤 건물도 배치 불가
-    private void DrawFootprint(List<Vector3Int> footprint, bool canConstruct)
-    {
-        EnsureRuntimeState();
-
-        if (_selectedBuildingRef is Factory factory)
-        {
-            ResourceType required = factory.RequiredResourceNode;
-
-            for (int i = 0; i < footprint.Count; i++)
-            {
-                SpriteRenderer highlight = _selectionHighlightPool.Get(i);
-                Vector3 cellPos = _gridMap.ConvertGridToWorld(footprint[i]);
-                cellPos.y += _yOffset;
-                highlight.transform.position = cellPos;
-
-                if (!_gridMap.CanConstructBuilding(footprint[i], _selectedBuildingRef))
-                    highlight.color = Color.red;
-                else if (!_gridMap.CellSatisfiesResourceRequirement(footprint[i], required))
-                    highlight.color = _missingResourceTint;
-                else
-                    highlight.color = Color.green;
-            }
-
-            _selectionHighlightPool.DeactivateFrom(footprint.Count);
-            return;
-        }
-
-        if (_selectedBuildingRef is SealStone)
-        {
-            for (int i = 0; i < footprint.Count; i++)
-            {
-                SpriteRenderer highlight = _selectionHighlightPool.Get(i);
-                Vector3 cellPos = _gridMap.ConvertGridToWorld(footprint[i]);
-                cellPos.y += _yOffset;
-                highlight.transform.position = cellPos;
-
-                if (!_gridMap.CanConstructBuilding(footprint[i], _selectedBuildingRef))
-                    highlight.color = Color.red;
-                else if (!_gridMap.CellIsSealSite(footprint[i]))
-                    highlight.color = _missingResourceTint;
-                else
-                    highlight.color = canConstruct ? Color.green : _missingResourceTint;
-            }
-
-            _selectionHighlightPool.DeactivateFrom(footprint.Count);
-            return;
-        }
-
-        Color highlightColor = canConstruct ? Color.green : Color.red;
-        HighlightCells(footprint, highlightColor);
-    }
+    // 셀 색상은 모든 건물이 같은 2색 체계다 - 초록은 배치 가능, 빨강은 배치 불가.
+    // 자원 노드 없음·봉인 영역 아님처럼 건물 종류 고유의 사유도 따로 주황으로 구분하지 않는다.
+    // 주황은 빨강과 비슷해 눈에 띄지 않는 데다 색만으로는 사유를 읽어낼 수 없어 오히려 모호했다 -
+    // 사유는 경고 토스트(UI_WarningWindow)가 대신 알린다.
+    private void DrawFootprint(List<Vector3Int> footprint, bool canConstruct) =>
+        HighlightCells(footprint, canConstruct ? Color.green : Color.red);
 
     public void HighlightCells(List<Vector3Int> coords, Color color)
     {

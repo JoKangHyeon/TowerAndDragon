@@ -36,6 +36,23 @@ public class UI_WarningWindow : MonoBehaviour
 
         // 밤에 건설 모드를 켜려 했을 때.
         Build,
+
+        // 땅은 멀쩡한데 요구 자원 노드가 없어서 생산시설을 놓지 못했을 때.
+        // 초원처럼 지을 수 있어 보이는 땅에서 나므로 다른 사유와 반드시 구분해야 한다.
+        ResourceNodeRequired,
+
+        // 절벽·물처럼 어떤 새끼용으로도 풀 수 없는 지형에 건설·이동을 시도했을 때.
+        // (용암은 얼음 새끼용으로 풀 수 있어 VolcanoConstruction으로 따로 안내한다.)
+        TerrainNotConstructible,
+
+        // 이미 다른 건물이 차지한 칸에 건설·이동을 시도했을 때.
+        CellOccupied,
+
+        // 아직 점령하지 않은 청크에 건설·이동을 시도했을 때.
+        ChunkNotConquered,
+
+        // 봉인석을 포탈 봉인 영역 밖에 놓으려 했거나, 그 포탈에 이미 봉인석이 있을 때.
+        SealSiteRequired,
     }
 
     /// <summary>인스펙터 한 줄 = 메시지 하나. 종류를 함께 지정하므로 목록 순서는 상관없다.</summary>
