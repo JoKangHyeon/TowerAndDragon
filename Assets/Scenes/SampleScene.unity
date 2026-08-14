@@ -1240,19 +1240,19 @@ MonoBehaviour:
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cc70f87391bb556438189252040bf4be, type: 3}
+  m_Script: {fileID: 11500000, guid: db3200645c162584daeae3f0b9ed9bd1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   _cameraMoveAction: {fileID: -1680190386980627800, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cameraZoomAction: {fileID: 5403002573186811895, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cameraBookmarkAction: {fileID: -7252859598093481112, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _cameraBookmarkSaveModifierAction: {fileID: 5692209928381186351, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
-  _wasdSpeed: 12
+  _wasdSpeed: 20
   _edgeScrollSpeed: 12
   _dragSensitivity: 1
   _edgeScrollEnabled: 1
   _edgeScrollThreshold: 20
-  _zoomSpeed: 9
+  _zoomSpeed: 20
   _minZoom: 3
   _maxZoom: 18
   _zoomSmoothing: 8
@@ -1260,8 +1260,8 @@ MonoBehaviour:
   _startFocusTarget: {fileID: 653192657}
   _boundsTilemap: {fileID: 362517319}
   _excludedBoundsTile: {fileID: 11400000, guid: 72c049b1c04abcf41a1152ba4c5fb4cb, type: 2}
-  _boundsMarginMin: {x: 1, y: 0.5}
-  _boundsMarginMax: {x: 1, y: 1.5}
+  _boundsMarginMin: {x: 0, y: 0}
+  _boundsMarginMax: {x: 0, y: 0}
   _mapMin: {x: -60, y: -60}
   _mapMax: {x: 60, y: 60}
 --- !u!1 &528527939
@@ -2068,6 +2068,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Waves
       objectReference: {fileID: 0}
+    - target: {fileID: 7111670838841903477, guid: 962c2eeb01b802d489e27603bb8e25db, type: 3}
+      propertyPath: _schedule
+      value: 
+      objectReference: {fileID: 11400000, guid: 2b4aad5a3a534bfab51792d49472c6b2, type: 2}
     - target: {fileID: 7111670838841903477, guid: 962c2eeb01b802d489e27603bb8e25db, type: 3}
       propertyPath: _cycleManager
       value: 
@@ -2909,8 +2913,12 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 914589612}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _exclusiveModeShortcuts.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _exclusiveModeBehaviours.Array.size
-      value: 5
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[0]'
@@ -2931,7 +2939,11 @@ PrefabInstance:
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_exclusiveModeBehaviours.Array.data[5]'
       value: 
-      objectReference: {fileID: 914589615}
+      objectReference: {fileID: 944163942}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _exclusiveModeShortcuts.Array.data[3].Action
+      value: 
+      objectReference: {fileID: 1961000633486905275, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _exclusiveModeShortcuts.Array.data[0].TargetBehaviour
       value: 
@@ -2940,6 +2952,10 @@ PrefabInstance:
       propertyPath: _exclusiveModeShortcuts.Array.data[1].TargetBehaviour
       value: 
       objectReference: {fileID: 37122977}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _exclusiveModeShortcuts.Array.data[3].TargetBehaviour
+      value: 
+      objectReference: {fileID: 944163942}
     - target: {fileID: 521314989582398888, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -5918,6 +5934,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7b8234ec3124a14a9a0f2e0d0003b0a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI_WarningWindow
+--- !u!114 &944163942 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2473110274389148054, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 944163938}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4dd7d67a4a6d56447b2dbefa25831a64, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_DragonWindow
 --- !u!114 &987628432 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6444730923389697932, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
