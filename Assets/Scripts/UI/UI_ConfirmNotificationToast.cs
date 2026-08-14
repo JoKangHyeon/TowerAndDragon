@@ -422,6 +422,9 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
             return;
         }
 
+        // 무시된 클릭(맨 앞 카드가 아니거나 슬라이드 중)에는 소리를 내지 않도록 위 가드 뒤에서 재생한다.
+        SoundManager.Play(SoundId.UiButtonClick);
+
         card.IsTransitioning = true;
         SetInteraction(card, false);
         card.SlideTween?.Kill();

@@ -43,6 +43,8 @@ public sealed class SceneLoadOverlay : MonoBehaviour
     private const float HIDDEN_ALPHA = 0f;
     private const float VISIBLE_ALPHA = 1f;
 
+    private const float SILENT_VOLUME = 0f;
+
     [SerializeField] private CanvasGroup _canvasGroup;
 
     [Tooltip("로딩 문구. key는 코드에서 넣으므로 인스펙터에서 비워 둬도 된다.")]
@@ -60,12 +62,28 @@ public sealed class SceneLoadOverlay : MonoBehaviour
 
     private bool _isLoading;
 
+    // 씬의 SoundManager에게서 넘겨받은 BGM을 로딩 동안 이어 트는 소스.
+    // 인스펙터에 직렬화하지 않고 여기서 붙이는 이유는 프리팹을 건드리지 않기 위해서다
+    // (SoundManager.CreateSources와 같은 방식).
+    private AudioSource _handoffSource;
+
+    // 이 인스턴스가 BGM을 넘겨받았는지. 한 씬에 오버레이가 여럿 있을 수 있으므로(로딩 화면 연출이
+    // 경로마다 다른 경우) 반드시 인스턴스별로 들고 있어야 한다 - 이게 없으면 인계와 무관한 오버레이가
+    // 씬과 함께 파괴되면서 남의 소유권을 풀어, 아직 로딩 화면이 떠 있는데 새 씬 BGM이 시작된다.
+    private bool _hasHandoff;
+
     private void Awake()
     {
         if (_messageLabel != null)
         {
             _messageLabel.SetKey(LOADING_MESSAGE_LOC_KEY);
         }
+
+        // 클립이 로딩보다 짧아도 끊기지 않도록 루프로 둔다 - 콜드 로딩은 3.8초까지 걸린다(위 측정치).
+        _handoffSource = gameObject.AddComponent<AudioSource>();
+        _handoffSource.playOnAwake = false;
+        _handoffSource.loop = true;
+        _handoffSource.spatialBlend = 0f;
 
         // 참조를 잃으면 Hide()가 돌지 않아, 불투명하고 클릭까지 먹는 로딩 화면에 덮인 채 타이틀이 뜬다.
         // 같은 오브젝트에서 한 번 더 찾아 그 상태를 피한다 - 아래 WiringGuard는 CanvasGroup이
@@ -129,6 +147,11 @@ public sealed class SceneLoadOverlay : MonoBehaviour
             // 로딩이 블록되는 동안 프레임이 멈춰도 unscaledTime은 실제 경과만큼 뛰므로 그대로 반영된다.
             float opaqueSinceUnscaledTime = Time.unscaledTime;
 
+            // 씬이 내려가면 SoundManager도 함께 사라져 흐르던 곡이 뚝 끊기고, 로딩이 끝날 때까지 무음이 된다.
+            // 이 오브젝트는 씬 경계를 넘어 살아남으므로 곡을 넘겨받아 끊긴 자리에서 이어 튼다.
+            // 로드가 시작되기 전에 넘겨받아야 한다 - 씬이 내려간 뒤에는 넘겨줄 SoundManager가 없다.
+            BeginHandoffAudio();
+
             // 씬이 Build Settings에 없거나 빌드에서 항목이 비활성이면 null이 돌아온다.
             AsyncOperation operation = SceneManager.LoadSceneAsync(sceneName);
 
@@ -146,6 +169,10 @@ public sealed class SceneLoadOverlay : MonoBehaviour
             await UniTask.DelayFrame(FRAMES_AFTER_LOAD, cancellationToken: token);
             await WaitForMinimumDisplayAsync(opaqueSinceUnscaledTime, token);
             await FadeAsync(HIDDEN_ALPHA, _fadeOutDuration, token);
+
+            // 화면이 다 걷힌 지금부터 새 씬의 곡이 올라온다. 이 호출을 앞당기면 시계가 도는 동안
+            // 새 씬의 BGM이 뒤에서 시작해 넘겨받은 곡과 겹친다.
+            ReleaseHandoff();
 
             hasCompleted = true;
         }
@@ -188,6 +215,54 @@ public sealed class SceneLoadOverlay : MonoBehaviour
     {
         _canvasGroup.alpha = HIDDEN_ALPHA;
         _canvasGroup.blocksRaycasts = false;
+
+        // 로드가 실패해 화면을 되돌리는 경우에도 여기를 지난다 - 멈추지 않으면 원래 씬이 그대로 보이는데
+        // 넘겨받은 곡만 계속 흐른다(원래 재생하던 SoundManager는 이미 멈춘 뒤다).
+        StopHandoffAudio();
+    }
+
+    // 씬의 SoundManager가 흐르던 곡과 재생 위치를 넘겨준다. 넘겨줄 곡이 없으면(무음 상태이거나
+    // SoundManager가 없는 씬이면) 아무 일도 하지 않는다.
+    private void BeginHandoffAudio()
+    {
+        if (!SoundManager.TryHandOffBgm(out BgmHandoff handoff))
+        {
+            return;
+        }
+
+        _hasHandoff = true;
+        _handoffSource.outputAudioMixerGroup = handoff.OutputGroup;
+        _handoffSource.clip = handoff.Clip;
+        _handoffSource.volume = handoff.Volume;
+        _handoffSource.timeSamples = handoff.TimeSamples;
+        _handoffSource.Play();
+    }
+
+    private void StopHandoffAudio()
+    {
+        _handoffSource.Stop();
+        _handoffSource.clip = null;
+        ReleaseHandoff();
+    }
+
+    // 넘겨받은 곡의 소유권을 돌려준다. 안 돌려주면 새 씬의 매니저가 시작을 계속 미뤄 그 씬이 무음으로 남고,
+    // 넘겨받은 적도 없는데 돌려주면 아직 로딩 화면이 떠 있는 다른 전환의 소유권을 빼앗는다.
+    private void ReleaseHandoff()
+    {
+        if (!_hasHandoff)
+        {
+            return;
+        }
+
+        _hasHandoff = false;
+        SoundManager.ResumeBgmAfterHandoff();
+    }
+
+    // 취소 등으로 정상 경로를 밟지 못하고 사라져도 소유권은 반드시 돌아가야 한다.
+    // 정상 종료라면 이미 돌려준 뒤라 여기서는 아무 일도 일어나지 않는다.
+    private void OnDestroy()
+    {
+        ReleaseHandoff();
     }
 
     // DOTween 대신 직접 보간한다 - 이 페이드는 씬 교체를 넘어 이어지고, 트윈은 SetLink한 오브젝트와
@@ -197,9 +272,17 @@ public sealed class SceneLoadOverlay : MonoBehaviour
     {
         float startAlpha = _canvasGroup.alpha;
 
+        // 넘겨받은 곡은 화면과 함께 걷힌다. 새 씬의 곡은 이 페이드가 끝난 뒤에야 시작하므로
+        // (ReleaseHandoff가 그때 소유권을 돌려준다) 둘이 교차하지 않고 사이가 잠깐 빈다 -
+        // 화면이 아직 덮여 있는 동안 새 곡이 올라와 두 곡이 겹쳐 들리는 쪽을 피한 결과다.
+        // 페이드 인 구간에서는 아직 넘겨받기 전이라 볼륨이 0이고, 이 계산도 그 값을 그대로 유지한다.
+        float startVolume = _handoffSource.volume;
+        float targetVolume = Mathf.Approximately(targetAlpha, HIDDEN_ALPHA) ? SILENT_VOLUME : startVolume;
+
         if (duration <= 0f)
         {
             _canvasGroup.alpha = targetAlpha;
+            _handoffSource.volume = targetVolume;
             return;
         }
 
@@ -208,10 +291,13 @@ public sealed class SceneLoadOverlay : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;
-            _canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, elapsed / duration);
+            float progress = elapsed / duration;
+            _canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, progress);
+            _handoffSource.volume = Mathf.Lerp(startVolume, targetVolume, progress);
             await UniTask.Yield(token);
         }
 
         _canvasGroup.alpha = targetAlpha;
+        _handoffSource.volume = targetVolume;
     }
 }
