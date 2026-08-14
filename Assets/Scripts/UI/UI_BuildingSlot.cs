@@ -113,7 +113,8 @@ public class UI_BuildingSlot : MonoBehaviour, IPointerEnterHandler, IPointerExit
         _onHoverChanged?.Invoke(this, false);
     }
 
-    // 밤에는 건설을 시작할 수 없으므로 슬롯을 회색으로 비활성화한다(UI_BuildModeWindow가 매 재오픈마다 호출).
+    // 지금 지을 수 없는 건물(밤이거나 재료가 모자람)은 슬롯을 회색으로 비활성화한다 -
+    // UI_BuildModeWindow가 슬롯을 다시 그릴 때와 보유량이 바뀔 때마다 호출한다.
     public void SetInteractable(bool interactable)
     {
         if (_button != null)

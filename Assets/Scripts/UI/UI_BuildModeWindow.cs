@@ -302,15 +302,23 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         }
     }
 
-    // 보유량이 바뀌면 비용 색이 곧바로 낡는다(생산 정산, 다른 건물 건설 등) - 슬롯을 다시 만들지 않고
-    // 색만 다시 칠한다. 재생성하면 OnSlotViewChanged가 발화해 튜토리얼 조준이 흔들리고 호버 팝업이 닫힌다.
-    private void HandleResourceChanged(ResourceType type, int amount)
+    // 보유량이 바뀌면 비용 색과 슬롯 활성 상태가 곧바로 낡는다(생산 정산, 다른 건물 건설 등) -
+    // 슬롯을 다시 만들지 않고 표시만 다시 맞춘다. 재생성하면 OnSlotViewChanged가 발화해
+    // 튜토리얼 조준이 흔들리고 호버 팝업이 닫힌다.
+    private void HandleResourceChanged(ResourceType type, int amount) => RefreshSlotStates();
+
+    // 비용 색(모자란 자원은 빨갛게)과 슬롯 활성 상태(못 지으면 흐리게)는 "지금 지을 수 있는가"라는
+    // 같은 판정을 다른 방식으로 보여주는 것이므로 한곳에서 함께 맞춘다 - 따로 갱신하면
+    // 색은 빨간데 슬롯은 눌리는 식으로 서로 어긋난다.
+    private void RefreshSlotStates()
     {
         foreach (UI_BuildingSlot slot in _spawnedSlots)
         {
             if (slot != null)
             {
                 slot.RefreshAffordability();
+                slot.SetInteractable(_buildingPlacementController == null ||
+                    _buildingPlacementController.CanBuildNow(slot.Prefab));
             }
         }
     }
@@ -562,8 +570,6 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
             return;
         }
 
-        bool isPlaceable = _buildingPlacementController == null || _buildingPlacementController.IsDayForBuildActions;
-
         foreach (Building building in buildings)
         {
             // 참조가 끊긴 항목(프리팹에서 컴포넌트를 다시 만든 경우 등)은 건너뛴다.
@@ -582,9 +588,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
 
             UI_BuildingSlot slot = Instantiate(slotPrefab, _slotContainer);
             slot.Setup(building, OnSlotSelected, BuildResources, HandleSlotHoverChanged);
-            slot.SetInteractable(isPlaceable);
             _spawnedSlots.Add(slot);
         }
+
+        // 활성 상태는 낮/밤과 보유 자원 양쪽에 달려 있어 슬롯마다 따로 계산하지 않는다.
+        RefreshSlotStates();
 
         OnSlotViewChanged?.Invoke();
     }
