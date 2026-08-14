@@ -220,7 +220,7 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         // (CLAUDE.md 이벤트 초기화 규칙 참고).
         if (!_isOpen)
         {
-            Close();
+            CloseSilently();
         }
     }
 
@@ -370,6 +370,8 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 
     public void Open()
     {
+        SoundManager.Play(SoundId.UiWindowOpen);
+
         _isOpen = true;
 
         // 스크립트 호스트가 비활성으로 저장돼 있으면 되살린다 - 그래야 Update가 돌아 성 클릭을 받는다
@@ -391,6 +393,14 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     }
 
     public void Close()
+    {
+        SoundManager.Play(SoundId.UiWindowClose);
+        CloseSilently();
+    }
+
+    // Awake의 초기 닫기가 소리를 내지 않도록 소리 없는 경로를 따로 둔다 - 그냥 Close를 부르면
+    // 씬에 들어오자마자 창 닫는 소리가 난다(UI_TutorialPromptPanel.CloseSilently와 같은 이유).
+    private void CloseSilently()
     {
         _isOpen = false;
 

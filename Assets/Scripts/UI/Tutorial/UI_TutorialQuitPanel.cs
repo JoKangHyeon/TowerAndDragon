@@ -55,7 +55,7 @@ public sealed class UI_TutorialQuitPanel : MonoBehaviour
 
         // 팝업은 자기 자신을 닫는 Awake를 가진 창이 아니라 평범한 자식 오브젝트이므로,
         // CLAUDE.md의 _isOpen 가드가 필요 없다 - 여기서 한 번 닫아 두면 그대로 닫힌 채 시작한다.
-        CloseConfirm();
+        CloseConfirmSilently();
     }
 
     private void OnDestroy()
@@ -80,11 +80,23 @@ public sealed class UI_TutorialQuitPanel : MonoBehaviour
     {
         if (_confirmPopup != null)
         {
+            SoundManager.Play(SoundId.UiButtonClick);
             _confirmPopup.SetActive(true);
         }
     }
 
     public void CloseConfirm()
+    {
+        if (_confirmPopup != null)
+        {
+            SoundManager.Play(SoundId.UiButtonClick);
+            _confirmPopup.SetActive(false);
+        }
+    }
+
+    // Awake의 초기 닫기가 소리를 내지 않도록 소리 없는 경로를 따로 둔다 - 그냥 CloseConfirm을 부르면
+    // 튜토리얼 씬에 들어오자마자 취소 버튼을 누른 소리가 난다(UI_TutorialPromptPanel.CloseSilently와 같은 이유).
+    private void CloseConfirmSilently()
     {
         if (_confirmPopup != null)
         {
@@ -105,6 +117,9 @@ public sealed class UI_TutorialQuitPanel : MonoBehaviour
         }
 
         _hasRequested = true;
+
+        // 두 번째 클릭은 위 가드에서 걸러지므로, 소리도 실제로 나가는 첫 클릭에서만 낸다.
+        SoundManager.Play(SoundId.UiButtonClick);
         Debug.Log("[UI_TutorialQuitPanel] 튜토리얼을 중도 포기하고 본게임으로 넘어갑니다.", this);
 
         if (!WiringGuard.Optional(_loadOverlay, nameof(_loadOverlay), this))

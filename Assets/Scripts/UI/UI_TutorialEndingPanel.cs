@@ -102,7 +102,11 @@ public sealed class UI_TutorialEndingPanel : MonoBehaviour
         ShowBeat(beat);
     }
 
-    private void HandleNextClicked() => NextClicked?.Invoke();
+    private void HandleNextClicked()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        NextClicked?.Invoke();
+    }
 
     public async UniTask ShowAsync(CancellationToken cancellationToken)
     {

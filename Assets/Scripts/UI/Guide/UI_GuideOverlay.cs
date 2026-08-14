@@ -199,7 +199,11 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
         SetVisualsActive(false);
     }
 
-    private void HandleConfirmClicked() => ConfirmClicked?.Invoke();
+    private void HandleConfirmClicked()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        ConfirmClicked?.Invoke();
+    }
 
     // 안내용 그래픽은 클릭 대상이 아니다 - 차단하지 않는 단계에서 뒤쪽 조작을 막으면 안 된다.
     private static void SetAboveDim(RectTransform rect)

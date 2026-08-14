@@ -21,6 +21,21 @@ public class SoundManager : MonoBehaviour
 
     private static SoundManager _current;
 
+    // 로딩 화면이 이전 씬의 BGM을 넘겨받아 트는 동안에는 새 씬의 매니저가 자기 곡을 시작하지 않는다.
+    // 정적인 이유: 넘긴 쪽(사라질 씬의 매니저)과 되돌려받는 쪽(새 씬의 매니저)이 서로 다른 인스턴스다.
+    private static bool _isBgmHandedOff;
+
+    // 넘겨준 동안 들어온 재생 요청. 화면이 걷힐 때 이 곡으로 시작한다.
+    private static bool _hasPendingBgm;
+    private static BgmId _pendingBgm;
+
+    // 넘겨준 곡. 씬이 끝내 바뀌지 않았을 때(로드 실패·취소) 이 곡으로 되돌린다.
+    private static BgmId _handedOffBgm;
+
+    // 곡을 넘긴 매니저. 넘긴 쪽은 씬이 내려갈 때까지 1초 넘게 더 살아 있어서 그 동안에도
+    // 낮/밤 전환 이벤트를 받는데, 그 요청까지 받아 두면 새 씬이 이전 씬의 곡으로 시작한다.
+    private static SoundManager _handOffOwner;
+
     [Tooltip("id → 클립·볼륨·피치 매핑. 비워 두면 모든 재생 요청이 무시된다.")]
     [SerializeField] private SoundCatalog _catalog;
 
@@ -63,6 +78,9 @@ public class SoundManager : MonoBehaviour
     private static void ResetStatics()
     {
         _current = null;
+        _isBgmHandedOff = false;
+        _hasPendingBgm = false;
+        _handOffOwner = null;
     }
 
     /// <summary>효과음을 한 번 재생한다. 씬에 SoundManager가 없으면 아무 일도 하지 않는다.</summary>
@@ -89,6 +107,48 @@ public class SoundManager : MonoBehaviour
         {
             current.FadeOutBgm();
         }
+    }
+
+    /// <summary>
+    /// 지금 흐르는 BGM을 다른 재생자에게 넘긴다. 씬이 언로드되면 이 매니저가 함께 사라져 소리가 뚝 끊기므로,
+    /// 씬 경계를 넘어 살아남는 쪽(<see cref="SceneLoadOverlay"/>)이 이어 받아 튼다.
+    ///
+    /// 넘기는 즉시 이쪽은 멈춘다 - 씬 언로드까지 1초 넘게 걸려(SceneLoadOverlay의 측정치) 그 동안
+    /// 같은 클립이 두 소스에서 겹쳐 울리면 이어지는 게 아니라 소리만 커진다.
+    /// </summary>
+    public static bool TryHandOffBgm(out BgmHandoff handoff)
+    {
+        if (TryGetCurrent(out SoundManager current))
+        {
+            return current.HandOffBgm(out handoff);
+        }
+
+        handoff = default;
+        return false;
+    }
+
+    /// <summary>
+    /// 넘겨줬던 BGM을 되돌려받는다. 로딩 화면이 <b>걷히는 시점</b>에 부른다 - 그보다 먼저 풀면
+    /// 아직 시계가 도는 화면 뒤에서 새 씬의 곡이 올라와 두 곡이 겹친다.
+    /// 넘겨준 동안 보류해 둔 곡이 있으면 여기서 시작한다. 넘긴 적이 없으면 아무 일도 하지 않는다.
+    /// </summary>
+    public static void ResumeBgmAfterHandoff()
+    {
+        if (!_isBgmHandedOff)
+        {
+            return;
+        }
+
+        _isBgmHandedOff = false;
+        _handOffOwner = null;
+
+        // 보류된 요청이 있으면 그것이 새 씬이 틀려던 곡이다. 없다면 씬이 끝내 바뀌지 않았다는 뜻이므로
+        // (Build Settings 누락으로 로드가 시작조차 못 한 경우 등) 넘겨줬던 곡을 되돌린다 -
+        // 그냥 두면 원래 화면이 그대로 보이는데 음악만 영영 죽은 채로 남는다.
+        BgmId resumed = _hasPendingBgm ? _pendingBgm : _handedOffBgm;
+        _hasPendingBgm = false;
+
+        PlayBgm(resumed);
     }
 
     // Unity 연산자 비교라 파괴된 오브젝트도 null로 걸러진다 - OnDestroy를 놓친 경우의 안전망.
@@ -279,6 +339,21 @@ public class SoundManager : MonoBehaviour
 
     private void StartBgm(BgmId id)
     {
+        // 로딩 화면이 이전 씬의 곡을 이어 트는 중이면 얹지 않고 미뤄 둔다 - 지금 시작하면
+        // 아직 시계가 도는 화면 뒤에서 두 곡이 겹친다. 화면이 걷힐 때 ResumeBgmAfterHandoff가 시작한다.
+        if (_isBgmHandedOff)
+        {
+            // 곡을 넘긴 매니저 자신의 요청은 버린다. 그 씬은 이제 내려가는 중인데도 낮/밤 전환 구독이
+            // 살아 있어서, 하필 그 순간 밤이 되면 새 씬이 이전 씬의 밤 곡으로 시작해 버린다.
+            if (this != _handOffOwner)
+            {
+                _pendingBgm = id;
+                _hasPendingBgm = true;
+            }
+
+            return;
+        }
+
         if (_isBgmPlaying && _currentBgm == id)
         {
             return;
@@ -300,6 +375,46 @@ public class SoundManager : MonoBehaviour
         next.Play();
 
         StartFade(entry.Volume);
+    }
+
+    private bool HandOffBgm(out BgmHandoff handoff)
+    {
+        handoff = default;
+
+        if (!_isBgmPlaying)
+        {
+            return false;
+        }
+
+        AudioSource source = _bgmSources[_activeBgmIndex];
+
+        if (source.clip == null)
+        {
+            return false;
+        }
+
+        // 페이드가 도는 중이면 아직 올라가는 중인 볼륨이 그대로 굳는다 - 넘겨받는 쪽에는 이어서
+        // 올릴 방법이 없어서, 곡이 시작되자마자 씬을 옮기면 로딩 내내 거의 안 들린다.
+        // 그래서 지금 값이 아니라 이 곡이 도달했어야 할 볼륨으로 확정해 넘긴다.
+        float volume = _catalog != null && _catalog.TryGet(_currentBgm, out BgmEntry entry)
+            ? entry.Volume
+            : source.volume;
+
+        handoff = new BgmHandoff(source.clip, source.timeSamples, volume, _bgmGroup);
+
+        // 넘긴 순간부터 화면이 걷힐 때까지는 새 씬의 매니저도 곡을 시작하지 않는다.
+        _isBgmHandedOff = true;
+        _hasPendingBgm = false;
+        _handedOffBgm = _currentBgm;
+        _handOffOwner = this;
+
+        CancelFade();
+        _isBgmPlaying = false;
+
+        // _isBgmPlaying이 false가 되면 활성 소스도 "활성이 아닌" 것으로 판정되므로 두 소스가 모두 멈춘다.
+        StopSilentBgmSources();
+
+        return true;
     }
 
     private void FadeOutBgm()
