@@ -67,6 +67,7 @@ private float GetAreaYieldMultiplier(ResourceType resourceType) =>
     public override int PopulationCapacity => _data != null ? _data.PopulationCapacity : base.PopulationCapacity;
 
     public bool IsInitialized => _isInitialized;
+    protected GridMap FactoryGridMap => _gridMap;
 
     // ProducedResourceType이 여러 비트를 동시에 가질 수 있다(슬라임 농장). 정산도 UI 표시도
     // 자원 종류별로 따로 다뤄야 하므로 개별 비트 순회를 공통으로 열어둔다.
