@@ -1,0 +1,1226 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "어미용 스킬트리 — 현재 구현 상세",
+    "description": "Tower and Dragons의 현재 구현 기준 5속성 어미용 스킬트리 구조, 비용, 선행 조건, 효과 상세.",
+    "generatedAt": "2026-08-14T00:00:00+09:00",
+    "charts": [
+      {
+        "id": "node_mix_chart",
+        "title": "전체 70개 노드의 계통별 구성",
+        "subtitle": "5속성 합계. 액티브·패시브·새끼용 강화가 각각 20개로 같은 비중입니다.",
+        "type": "bar",
+        "dataset": "node_mix",
+        "sourceId": "generator",
+        "valueFormat": "number",
+        "encodings": {
+          "x": {
+            "field": "category",
+            "type": "nominal",
+            "label": "계통"
+          },
+          "y": {
+            "field": "nodes",
+            "type": "quantitative",
+            "label": "노드 수"
+          },
+          "tooltip": [
+            {
+              "field": "nodes",
+              "type": "quantitative",
+              "label": "노드 수",
+              "format": "number"
+            },
+            {
+              "field": "share",
+              "type": "quantitative",
+              "label": "전체 비중",
+              "format": "percent"
+            }
+          ]
+        }
+      }
+    ],
+    "tables": [
+      {
+        "id": "cost_table",
+        "title": "공통 비용과 게이트",
+        "subtitle": "생명 속성은 특화 자원이 없어 특화 자원 비용이 실제 에셋에서 생략됩니다.",
+        "dataset": "common_costs",
+        "sourceId": "generator",
+        "defaultSort": {
+          "field": "group",
+          "direction": "asc"
+        },
+        "columns": [
+          {
+            "field": "group",
+            "label": "노드군",
+            "type": "text"
+          },
+          {
+            "field": "ranks",
+            "label": "랭크",
+            "type": "text"
+          },
+          {
+            "field": "slime",
+            "label": "속성 슬라임",
+            "type": "text"
+          },
+          {
+            "field": "special",
+            "label": "특화 자원",
+            "type": "text"
+          },
+          {
+            "field": "condition",
+            "label": "추가 조건",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "id": "table_ice",
+        "title": "❄ 얼음 스킬트리 — 노드 14개",
+        "subtitle": "전체 완성 비용: 설원 슬라임 133 + 눈결정 48",
+        "dataset": "nodes_ice",
+        "sourceId": "generator",
+        "defaultSort": {
+          "field": "order",
+          "direction": "asc"
+        },
+        "columns": [
+          {
+            "field": "order",
+            "label": "순서",
+            "type": "number"
+          },
+          {
+            "field": "path",
+            "label": "계통",
+            "type": "text"
+          },
+          {
+            "field": "node",
+            "label": "노드",
+            "type": "text"
+          },
+          {
+            "field": "rank",
+            "label": "랭크",
+            "type": "text"
+          },
+          {
+            "field": "cost",
+            "label": "해금 비용",
+            "type": "text"
+          },
+          {
+            "field": "requirement",
+            "label": "선행·게이트",
+            "type": "text"
+          },
+          {
+            "field": "effect",
+            "label": "현재 구현 효과",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "id": "table_fire",
+        "title": "🔥 불 스킬트리 — 노드 14개",
+        "subtitle": "전체 완성 비용: 용암 슬라임 133 + 불꽃심장 48",
+        "dataset": "nodes_fire",
+        "sourceId": "generator",
+        "defaultSort": {
+          "field": "order",
+          "direction": "asc"
+        },
+        "columns": [
+          {
+            "field": "order",
+            "label": "순서",
+            "type": "number"
+          },
+          {
+            "field": "path",
+            "label": "계통",
+            "type": "text"
+          },
+          {
+            "field": "node",
+            "label": "노드",
+            "type": "text"
+          },
+          {
+            "field": "rank",
+            "label": "랭크",
+            "type": "text"
+          },
+          {
+            "field": "cost",
+            "label": "해금 비용",
+            "type": "text"
+          },
+          {
+            "field": "requirement",
+            "label": "선행·게이트",
+            "type": "text"
+          },
+          {
+            "field": "effect",
+            "label": "현재 구현 효과",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "id": "table_time",
+        "title": "⏳ 시간 스킬트리 — 노드 14개",
+        "subtitle": "전체 완성 비용: 사막 슬라임 133 + 시간모래 48",
+        "dataset": "nodes_time",
+        "sourceId": "generator",
+        "defaultSort": {
+          "field": "order",
+          "direction": "asc"
+        },
+        "columns": [
+          {
+            "field": "order",
+            "label": "순서",
+            "type": "number"
+          },
+          {
+            "field": "path",
+            "label": "계통",
+            "type": "text"
+          },
+          {
+            "field": "node",
+            "label": "노드",
+            "type": "text"
+          },
+          {
+            "field": "rank",
+            "label": "랭크",
+            "type": "text"
+          },
+          {
+            "field": "cost",
+            "label": "해금 비용",
+            "type": "text"
+          },
+          {
+            "field": "requirement",
+            "label": "선행·게이트",
+            "type": "text"
+          },
+          {
+            "field": "effect",
+            "label": "현재 구현 효과",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "id": "table_stone",
+        "title": "🪨 암석 스킬트리 — 노드 14개",
+        "subtitle": "전체 완성 비용: 암석 슬라임 133 + 현자의 돌 48",
+        "dataset": "nodes_stone",
+        "sourceId": "generator",
+        "defaultSort": {
+          "field": "order",
+          "direction": "asc"
+        },
+        "columns": [
+          {
+            "field": "order",
+            "label": "순서",
+            "type": "number"
+          },
+          {
+            "field": "path",
+            "label": "계통",
+            "type": "text"
+          },
+          {
+            "field": "node",
+            "label": "노드",
+            "type": "text"
+          },
+          {
+            "field": "rank",
+            "label": "랭크",
+            "type": "text"
+          },
+          {
+            "field": "cost",
+            "label": "해금 비용",
+            "type": "text"
+          },
+          {
+            "field": "requirement",
+            "label": "선행·게이트",
+            "type": "text"
+          },
+          {
+            "field": "effect",
+            "label": "현재 구현 효과",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "id": "table_life",
+        "title": "🌿 생명 스킬트리 — 노드 14개",
+        "subtitle": "전체 완성 비용: 초원 슬라임 133",
+        "dataset": "nodes_life",
+        "sourceId": "generator",
+        "defaultSort": {
+          "field": "order",
+          "direction": "asc"
+        },
+        "columns": [
+          {
+            "field": "order",
+            "label": "순서",
+            "type": "number"
+          },
+          {
+            "field": "path",
+            "label": "계통",
+            "type": "text"
+          },
+          {
+            "field": "node",
+            "label": "노드",
+            "type": "text"
+          },
+          {
+            "field": "rank",
+            "label": "랭크",
+            "type": "text"
+          },
+          {
+            "field": "cost",
+            "label": "해금 비용",
+            "type": "text"
+          },
+          {
+            "field": "requirement",
+            "label": "선행·게이트",
+            "type": "text"
+          },
+          {
+            "field": "effect",
+            "label": "현재 구현 효과",
+            "type": "text"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "generator",
+        "label": "용 스킬트리 에셋 생성기",
+        "path": "Assets/Scripts/Dragon/Editor/DragonSkillTreeAssetGenerator.cs",
+        "query": {
+          "engine": "static-snapshot",
+          "language": "sql",
+          "description": "생성기에서 확인한 70개 노드를 계통별로 집계한 정적 스냅샷입니다.",
+          "sql": "SELECT '액티브 강화' AS category, 20 AS nodes, 0.286 AS share UNION ALL SELECT '패시브 강화', 20, 0.286 UNION ALL SELECT '새끼용 강화', 20, 0.286 UNION ALL SELECT '루트', 5, 0.071 UNION ALL SELECT '궁극', 5, 0.071",
+          "tables_used": [
+            "Assets/Scripts/Dragon/Editor/DragonSkillTreeAssetGenerator.cs"
+          ],
+          "filters": [
+            "현재 워크스페이스의 생성기 상수 및 슬롯 정의"
+          ],
+          "executed_at": "2026-08-14T00:00:00+09:00"
+        }
+      },
+      {
+        "id": "tree_asset",
+        "label": "현재 DragonSkillTree 에셋",
+        "path": "Assets/Data/Dragon/DragonSkillTree.asset"
+      },
+      {
+        "id": "runtime",
+        "label": "용 스킬트리 런타임 집계",
+        "path": "Assets/Scripts/Dragon/DragonTreeManager.cs"
+      },
+      {
+        "id": "effect_contract",
+        "label": "용 스킬 효과 활성·비활성 계약",
+        "path": "Assets/Scripts/Dragon/DragonSkillEffectSO.cs"
+      },
+      {
+        "id": "progression_rules",
+        "label": "진행 노드 해금 규칙",
+        "path": "Assets/Scripts/Progression/ProgressionRules.cs"
+      }
+    ],
+    "blocks": [
+      {
+        "id": "title",
+        "type": "markdown",
+        "body": "# 어미용 스킬트리 — 현재 구현 상세"
+      },
+      {
+        "id": "technical_summary",
+        "type": "markdown",
+        "sourceId": "generator",
+        "body": "## 현재 구현을 한눈에 보면\n\n- **5개 속성 × 14개 노드 = 총 70개 노드**가 실제 `DragonSkillTree.asset`에 등록되어 있습니다.\n- 속성별 구조는 `루트 1 → 액티브 2단계 → 패시브 2단계 → 궁극 1`, 그리고 `새끼용 A/B` 두 갈래입니다.\n- **기본 패시브도 루트 노드에 묶여 있습니다.** 새 게임에서 루트가 자동 해금되지 않으므로, 어미용을 선택만 한 상태에서는 기본 패시브가 적용되지 않습니다.\n- 노드는 **낮에만** 해금할 수 있고, 효과 수치는 대부분 랭크별 가산 방식입니다.\n- 아래 표의 수치는 기획안이 아니라 생성기 상수와 현재 생성된 ScriptableObject 구조를 기준으로 정리했습니다."
+      },
+      {
+        "id": "structure",
+        "type": "markdown",
+        "body": "## 모든 속성이 공유하는 해금 구조\n\n`루트`에서 액티브와 기본 패시브가 함께 열립니다. 이후 액티브와 패시브가 각각 2랭크짜리 1단계·2단계로 진행됩니다. 심화 단계에는 같은 속성의 새끼용 노드 해금 랭크가 2 이상이어야 한다는 게이트가 붙습니다. 궁극은 루트 이후 바로 보이지만, **새끼용 A/B를 모두 최대 강화했거나 액티브 II와 가동 강화를 모두 완주한 경우**에만 구매할 수 있습니다. 새끼용 계통은 해당 속성 새끼용을 실제로 보유해야 열립니다.\n\n> 새끼용 효과는 어미용의 현재 활성 속성과 무관하게, 해당 속성 새끼용 자체에 계속 적용됩니다. 일반 패시브·액티브 강화는 해당 어미용 속성이 활성일 때만 적용됩니다. 궁극의 비활성 50% 잔존은 수치형인 시간·암석·생명에서 작동하지만, 상태이상 객체형인 얼음·불에서는 현재 `IsEffective` 판정 때문에 실제 발동하지 않습니다."
+      },
+      {
+        "id": "node_mix_explanation",
+        "type": "markdown",
+        "sourceId": "generator",
+        "body": "## 70개 노드는 세 강화 축에 고르게 배분되어 있습니다\n\n액티브·패시브·새끼용 강화가 각각 전체의 약 28.6%를 차지하고, 루트와 궁극은 속성당 하나씩입니다. 따라서 한 속성에서 실질적인 선택량은 세 강화 축에 집중되며, 궁극은 두 성장 경로를 연결하는 종착점 역할을 합니다."
+      },
+      {
+        "id": "node_mix",
+        "type": "chart",
+        "chartId": "node_mix_chart"
+      },
+      {
+        "id": "cost_intro",
+        "type": "markdown",
+        "body": "## 비용 곡선과 공통 게이트\n\n랭크 2의 비용이 크게 오르는 구조입니다. 한 속성을 전부 완성하면 일반 속성은 속성 슬라임 133개와 특화 자원 48개가 필요합니다. 생명은 특화 자원이 `None`이라 초원 슬라임 133개만 사용합니다."
+      },
+      {
+        "id": "cost",
+        "type": "table",
+        "tableId": "cost_table"
+      },
+      {
+        "id": "intro_ice",
+        "type": "markdown",
+        "body": "## ❄ 얼음 — 전역 빙결 중심 트리\n\n**루트 기본 패시브:** 모든 타워의 기본 공격에 3초 둔화(이동속도 ×0.5)를 부여합니다.\n\n**액티브 기본값:** 전역 빙결 · 기본 3초 · 쿨다운 60초 · 일일 사용 무제한\n\n표의 효과는 각 노드를 새로 찍었을 때 추가되는 값이며, “누적” 표기는 해당 계통의 앞 랭크까지 모두 찍은 결과입니다."
+      },
+      {
+        "id": "nodes_ice",
+        "type": "table",
+        "tableId": "table_ice"
+      },
+      {
+        "id": "intro_fire",
+        "type": "markdown",
+        "body": "## 🔥 불 — 전역 화염 피해 중심 트리\n\n**루트 기본 패시브:** 몬스터가 생성될 때 초당 2 피해의 화상을 부여합니다. 지속시간 0 설정으로 사망 시까지 유지됩니다.\n\n**액티브 기본값:** 전역 화염 피해 · 적 현재 체력의 30% · 화상 부여 · 쿨다운 60초 · 일일 사용 무제한\n\n표의 효과는 각 노드를 새로 찍었을 때 추가되는 값이며, “누적” 표기는 해당 계통의 앞 랭크까지 모두 찍은 결과입니다."
+      },
+      {
+        "id": "nodes_fire",
+        "type": "table",
+        "tableId": "table_fire"
+      },
+      {
+        "id": "intro_time",
+        "type": "markdown",
+        "body": "## ⏳ 시간 — 즉시 재활성화 중심 트리\n\n**루트 기본 패시브:** 모든 타워의 공격속도를 +15% 증가시킵니다.\n\n**액티브 기본값:** 즉시 재활성화 · 비활성화된 모든 타워 복구 · 쿨다운 60초 · 일일 사용 무제한\n\n표의 효과는 각 노드를 새로 찍었을 때 추가되는 값이며, “누적” 표기는 해당 계통의 앞 랭크까지 모두 찍은 결과입니다."
+      },
+      {
+        "id": "nodes_time",
+        "type": "table",
+        "tableId": "table_time"
+      },
+      {
+        "id": "intro_stone",
+        "type": "markdown",
+        "body": "## 🪨 암석 — 메테오+방벽 중심 트리\n\n**루트 기본 패시브:** 석재·암석 슬라임·현자의 돌 생산량을 +20% 증가시킵니다.\n\n**액티브 기본값:** 메테오+방벽 · 고정 피해 40 · 반경 2 · 기본 일일 2회 · 쿨다운 60초\n\n표의 효과는 각 노드를 새로 찍었을 때 추가되는 값이며, “누적” 표기는 해당 계통의 앞 랭크까지 모두 찍은 결과입니다."
+      },
+      {
+        "id": "nodes_stone",
+        "type": "table",
+        "tableId": "table_stone"
+      },
+      {
+        "id": "intro_life",
+        "type": "markdown",
+        "body": "## 🌿 생명 — 성 회복 중심 트리\n\n**루트 기본 패시브:** 식량·초원 슬라임 생산량을 +20% 증가시킵니다.\n\n**액티브 기본값:** 성 회복 · 회복량 50 · 쿨다운 60초 · 일일 사용 무제한\n\n표의 효과는 각 노드를 새로 찍었을 때 추가되는 값이며, “누적” 표기는 해당 계통의 앞 랭크까지 모두 찍은 결과입니다."
+      },
+      {
+        "id": "nodes_life",
+        "type": "table",
+        "tableId": "table_life"
+      },
+      {
+        "id": "runtime_notes",
+        "type": "markdown",
+        "body": "## 실제 런타임에서 기억해야 할 점\n\n- **기본 패시브는 무료 자동 효과가 아닙니다.** 현재 에셋에서는 루트가 액티브 해금 효과와 기본 패시브 효과를 함께 참조합니다.\n- **액티브 해금은 영구 유지**되지만 HUD에서 실제 사용할 수 있는 스킬은 현재 활성 어미용 속성과 일치하는 것뿐입니다.\n- **일반 효과는 활성 속성 일치 시 발동**합니다. 궁극의 수치형 복제 패시브는 다른 속성이 활성일 때 0.5배로 계산됩니다.\n- **얼음·불 궁극의 비활성 잔존은 현재 작동하지 않습니다.** 상태이상 반환형 효과는 `Scale >= 1`일 때만 유효한데, 궁극의 비활성 배율은 0.5이기 때문입니다. 생성 의도와 런타임 결과가 다른 구현 공백입니다.\n- **상태이상은 단순 합산이 아닙니다.** 얼음 액티브 지속시간과 불 새끼용 화상은 더 높은 랭크의 상태이상 에셋으로 교체됩니다.\n- **타워 최대체력 효과는 밤 시작 시 재적용**되고, 그 외 공격력·공속·사거리·생산량 계열은 소비 지점에서 조회됩니다.\n- 수치 주석에 ‘예시, 밸런싱 대상’이라고 명시된 값이 많으므로 향후 생성기를 다시 실행하면 현재 값이 바뀔 수 있습니다."
+      },
+      {
+        "id": "scope_method",
+        "type": "markdown",
+        "body": "## 확인 범위와 작성 방법\n\n이 문서는 `DragonSkillTreeAssetGenerator`의 슬롯·비용·효과 생성 규칙을 기준으로 작성하고, `DragonSkillTree.asset`에 노드 참조가 70개 존재하는지 확인했습니다. 런타임 발동 조건은 `DragonTreeManager`, `DragonSkillEffectSO`, `ProgressionRules`를 대조했습니다. UI 표시 문구나 과거 프로토타입 문서보다 현재 C#과 ScriptableObject 배선을 우선했습니다."
+      },
+      {
+        "id": "limitations",
+        "type": "markdown",
+        "body": "## 한계와 점검 포인트\n\n이 문서는 정적 코드·에셋 검토 결과입니다. Unity 플레이 모드에서 각 효과의 체감값과 씬 참조 누락까지 재현한 테스트 결과는 포함하지 않습니다. 특히 생성기 코드와 개별 `.asset`이 수동 편집으로 달라질 가능성이 있으므로, 밸런스 변경 후에는 생성기 재실행 여부와 Git diff를 함께 확인해야 합니다."
+      },
+      {
+        "id": "next_steps",
+        "type": "markdown",
+        "body": "## 다음 점검 권장 사항\n\n1. 기본 패시브를 정말 ‘선택 즉시 자동 적용’으로 운영할지 팀에서 확정합니다.\n2. 확정 후 루트 효과 배선 또는 런타임 기본 효과 집계 중 한 곳만 수정해 이중 적용을 방지합니다.\n3. 각 속성별로 루트 전/후, 활성/비활성, 궁극 전/후를 플레이 모드에서 비교 테스트합니다.\n4. 밸런스가 바뀌면 이 HTML을 생성기 상수와 함께 갱신합니다."
+      },
+      {
+        "id": "questions",
+        "type": "markdown",
+        "body": "## 아직 확인이 필요한 질문\n\n- 기본 패시브를 무료 자동 적용으로 바꿀 경우, 궁극의 ‘비활성 50% 잔존’ 기준값을 어디에서 소유할 것인가?\n- 생명 속성의 특화 자원 비용 부재가 최종 밸런스 의도인가?\n- 시간 액티브 강화 I·II가 모두 쿨다운 감소인 현재 구성이 최종 의도인가?\n- 얼음·불 상태이상 교체형 효과를 UI에서 누적 수치처럼 오해하지 않도록 어떻게 표시할 것인가?"
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-08-14T00:00:00+09:00",
+    "status": "ready",
+    "datasets": {
+      "node_mix": [
+        {
+          "category": "액티브 강화",
+          "nodes": 20,
+          "share": 0.286
+        },
+        {
+          "category": "패시브 강화",
+          "nodes": 20,
+          "share": 0.286
+        },
+        {
+          "category": "새끼용 강화",
+          "nodes": 20,
+          "share": 0.286
+        },
+        {
+          "category": "루트",
+          "nodes": 5,
+          "share": 0.071
+        },
+        {
+          "category": "궁극",
+          "nodes": 5,
+          "share": 0.071
+        }
+      ],
+      "common_costs": [
+        {
+          "group": "루트",
+          "ranks": "R1",
+          "slime": "5",
+          "special": "0",
+          "condition": "선행·게이트 없음"
+        },
+        {
+          "group": "일반/심화 갈래",
+          "ranks": "R1 → R2",
+          "slime": "6 → 13",
+          "special": "2 → 5",
+          "condition": "심화는 새끼용 노드 랭크 합계 2 필요"
+        },
+        {
+          "group": "궁극",
+          "ranks": "R1",
+          "slime": "20",
+          "special": "8",
+          "condition": "새끼용 랭크 4 또는 양 갈래 완주"
+        },
+        {
+          "group": "새끼용 A/B",
+          "ranks": "R1 → R2",
+          "slime": "5 → 11",
+          "special": "2 → 4",
+          "condition": "해당 속성 새끼용 보유"
+        }
+      ],
+      "nodes_ice": [
+        {
+          "order": 1,
+          "path": "루트",
+          "node": "액티브 해금",
+          "rank": "R1/1",
+          "cost": "설원 슬라임 5",
+          "requirement": "없음",
+          "effect": "전역 빙결 · 기본 3초 · 쿨다운 60초 · 일일 사용 무제한; 기본 패시브: 모든 타워의 기본 공격에 3초 둔화(이동속도 ×0.5)를 부여합니다."
+        },
+        {
+          "order": 2,
+          "path": "액티브",
+          "node": "액티브 강화 I",
+          "rank": "R1/2",
+          "cost": "설원 슬라임 6 + 눈결정 2",
+          "requirement": "루트",
+          "effect": "쿨다운 −12% (누적 −12%)"
+        },
+        {
+          "order": 3,
+          "path": "액티브",
+          "node": "액티브 강화 I",
+          "rank": "R2/2",
+          "cost": "설원 슬라임 13 + 눈결정 5",
+          "requirement": "액티브 강화 I R1",
+          "effect": "쿨다운 −12% (누적 −24%)"
+        },
+        {
+          "order": 4,
+          "path": "액티브 심화",
+          "node": "액티브 강화 II",
+          "rank": "R1/2",
+          "cost": "설원 슬라임 6 + 눈결정 2",
+          "requirement": "액티브 강화 I R2 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "전역 빙결 지속시간을 4초 상태로 교체"
+        },
+        {
+          "order": 5,
+          "path": "액티브 심화",
+          "node": "액티브 강화 II",
+          "rank": "R2/2",
+          "cost": "설원 슬라임 13 + 눈결정 5",
+          "requirement": "액티브 강화 II R1 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "전역 빙결 지속시간을 5초 상태로 교체"
+        },
+        {
+          "order": 6,
+          "path": "패시브",
+          "node": "생산 강화",
+          "rank": "R1/2",
+          "cost": "설원 슬라임 6 + 눈결정 2",
+          "requirement": "루트",
+          "effect": "설원 슬라임·눈결정 생산량 +12%"
+        },
+        {
+          "order": 7,
+          "path": "패시브",
+          "node": "생산 강화",
+          "rank": "R2/2",
+          "cost": "설원 슬라임 13 + 눈결정 5",
+          "requirement": "생산 강화 R1",
+          "effect": "동일 생산량 +12% (누적 +24%)"
+        },
+        {
+          "order": 8,
+          "path": "패시브 심화",
+          "node": "가동 강화",
+          "rank": "R1/2",
+          "cost": "설원 슬라임 6 + 눈결정 2",
+          "requirement": "생산 강화 R2 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "얼음 속성 타워 공격속도 +10%"
+        },
+        {
+          "order": 9,
+          "path": "패시브 심화",
+          "node": "가동 강화",
+          "rank": "R2/2",
+          "cost": "설원 슬라임 13 + 눈결정 5",
+          "requirement": "가동 강화 R1 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "동일 공격속도 +10% (누적 +20%)"
+        },
+        {
+          "order": 10,
+          "path": "궁극",
+          "node": "궁극",
+          "rank": "R1/1",
+          "cost": "설원 슬라임 20 + 눈결정 8",
+          "requirement": "루트 + 새끼용 노드 랭크 합계 ≥ 4 또는 액티브 II R2·가동 강화 R2 모두 완료",
+          "effect": "전역 빙결 쿨다운 −20%. 비활성 둔화 50% 잔존도 배선되어 있으나 상태이상 효과는 Scale 0.5를 유효로 보지 않아 현재 실제 발동하지 않음"
+        },
+        {
+          "order": 11,
+          "path": "새끼용 A",
+          "node": "새끼용 숙련",
+          "rank": "R1/2",
+          "cost": "설원 슬라임 5 + 눈결정 2",
+          "requirement": "루트 완료 + 얼음 새끼용 보유",
+          "effect": "얼음 새끼용 공격에 3초 둔화(×0.5) 부여"
+        },
+        {
+          "order": 12,
+          "path": "새끼용 A",
+          "node": "새끼용 숙련",
+          "rank": "R2/2",
+          "cost": "설원 슬라임 11 + 눈결정 4",
+          "requirement": "새끼용 숙련 R1 + 얼음 새끼용 보유",
+          "effect": "얼음 새끼용 자신의 공격력 +12%"
+        },
+        {
+          "order": 13,
+          "path": "새끼용 B",
+          "node": "새끼용 지역 강화",
+          "rank": "R1/2",
+          "cost": "설원 슬라임 5 + 눈결정 2",
+          "requirement": "루트 완료 + 얼음 새끼용 보유",
+          "effect": "강 결빙/건설 해제 버프 반경 +20%"
+        },
+        {
+          "order": 14,
+          "path": "새끼용 B",
+          "node": "새끼용 지역 강화",
+          "rank": "R2/2",
+          "cost": "설원 슬라임 11 + 눈결정 4",
+          "requirement": "새끼용 지역 강화 R1 + 얼음 새끼용 보유",
+          "effect": "동일 반경 +20% (누적 +40%)"
+        }
+      ],
+      "nodes_fire": [
+        {
+          "order": 1,
+          "path": "루트",
+          "node": "액티브 해금",
+          "rank": "R1/1",
+          "cost": "용암 슬라임 5",
+          "requirement": "없음",
+          "effect": "전역 화염 피해 · 적 현재 체력의 30% · 화상 부여 · 쿨다운 60초 · 일일 사용 무제한; 기본 패시브: 몬스터가 생성될 때 초당 2 피해의 화상을 부여합니다. 지속시간 0 설정으로 사망 시까지 유지됩니다."
+        },
+        {
+          "order": 2,
+          "path": "액티브",
+          "node": "액티브 강화 I",
+          "rank": "R1/2",
+          "cost": "용암 슬라임 6 + 불꽃심장 2",
+          "requirement": "루트",
+          "effect": "전역 화염 피해 위력 +20%"
+        },
+        {
+          "order": 3,
+          "path": "액티브",
+          "node": "액티브 강화 I",
+          "rank": "R2/2",
+          "cost": "용암 슬라임 13 + 불꽃심장 5",
+          "requirement": "액티브 강화 I R1",
+          "effect": "동일 위력 +20% (누적 +40%)"
+        },
+        {
+          "order": 4,
+          "path": "액티브 심화",
+          "node": "액티브 강화 II",
+          "rank": "R1/2",
+          "cost": "용암 슬라임 6 + 불꽃심장 2",
+          "requirement": "액티브 강화 I R2 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "쿨다운 −12%"
+        },
+        {
+          "order": 5,
+          "path": "액티브 심화",
+          "node": "액티브 강화 II",
+          "rank": "R2/2",
+          "cost": "용암 슬라임 13 + 불꽃심장 5",
+          "requirement": "액티브 강화 II R1 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "쿨다운 −12% (누적 −24%)"
+        },
+        {
+          "order": 6,
+          "path": "패시브",
+          "node": "생산 강화",
+          "rank": "R1/2",
+          "cost": "용암 슬라임 6 + 불꽃심장 2",
+          "requirement": "루트",
+          "effect": "용암 슬라임·불꽃심장 생산량 +12%"
+        },
+        {
+          "order": 7,
+          "path": "패시브",
+          "node": "생산 강화",
+          "rank": "R2/2",
+          "cost": "용암 슬라임 13 + 불꽃심장 5",
+          "requirement": "생산 강화 R1",
+          "effect": "동일 생산량 +12% (누적 +24%)"
+        },
+        {
+          "order": 8,
+          "path": "패시브 심화",
+          "node": "가동 강화",
+          "rank": "R1/2",
+          "cost": "용암 슬라임 6 + 불꽃심장 2",
+          "requirement": "생산 강화 R2 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "불 속성 타워 공격력 +10%"
+        },
+        {
+          "order": 9,
+          "path": "패시브 심화",
+          "node": "가동 강화",
+          "rank": "R2/2",
+          "cost": "용암 슬라임 13 + 불꽃심장 5",
+          "requirement": "가동 강화 R1 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "동일 공격력 +10% (누적 +20%)"
+        },
+        {
+          "order": 10,
+          "path": "궁극",
+          "node": "궁극",
+          "rank": "R1/1",
+          "cost": "용암 슬라임 20 + 불꽃심장 8",
+          "requirement": "루트 + 새끼용 노드 랭크 합계 ≥ 4 또는 액티브 II R2·가동 강화 R2 모두 완료",
+          "effect": "액티브 위력 +30% + 쿨다운 −20%. 비활성 화상 50% 잔존도 배선되어 있으나 상태이상 효과는 Scale 0.5를 유효로 보지 않아 현재 실제 발동하지 않음"
+        },
+        {
+          "order": 11,
+          "path": "새끼용 A",
+          "node": "새끼용 숙련",
+          "rank": "R1/2",
+          "cost": "용암 슬라임 5 + 불꽃심장 2",
+          "requirement": "루트 완료 + 불 새끼용 보유",
+          "effect": "불 새끼용 공격에 초당 2 피해 화상 부여"
+        },
+        {
+          "order": 12,
+          "path": "새끼용 A",
+          "node": "새끼용 숙련",
+          "rank": "R2/2",
+          "cost": "용암 슬라임 11 + 불꽃심장 4",
+          "requirement": "새끼용 숙련 R1 + 불 새끼용 보유",
+          "effect": "화상을 초당 4 피해 상태로 교체"
+        },
+        {
+          "order": 13,
+          "path": "새끼용 B",
+          "node": "새끼용 지역 강화",
+          "rank": "R1/2",
+          "cost": "용암 슬라임 5 + 불꽃심장 2",
+          "requirement": "루트 완료 + 불 새끼용 보유",
+          "effect": "불 새끼용 자신의 공격 사거리 +12%"
+        },
+        {
+          "order": 14,
+          "path": "새끼용 B",
+          "node": "새끼용 지역 강화",
+          "rank": "R2/2",
+          "cost": "용암 슬라임 11 + 불꽃심장 4",
+          "requirement": "새끼용 지역 강화 R1 + 불 새끼용 보유",
+          "effect": "동일 사거리 +12% (누적 +24%)"
+        }
+      ],
+      "nodes_time": [
+        {
+          "order": 1,
+          "path": "루트",
+          "node": "액티브 해금",
+          "rank": "R1/1",
+          "cost": "사막 슬라임 5",
+          "requirement": "없음",
+          "effect": "즉시 재활성화 · 비활성화된 모든 타워 복구 · 쿨다운 60초 · 일일 사용 무제한; 기본 패시브: 모든 타워의 공격속도를 +15% 증가시킵니다."
+        },
+        {
+          "order": 2,
+          "path": "액티브",
+          "node": "액티브 강화 I",
+          "rank": "R1/2",
+          "cost": "사막 슬라임 6 + 시간모래 2",
+          "requirement": "루트",
+          "effect": "쿨다운 −12%"
+        },
+        {
+          "order": 3,
+          "path": "액티브",
+          "node": "액티브 강화 I",
+          "rank": "R2/2",
+          "cost": "사막 슬라임 13 + 시간모래 5",
+          "requirement": "액티브 강화 I R1",
+          "effect": "쿨다운 −12% (누적 −24%)"
+        },
+        {
+          "order": 4,
+          "path": "액티브 심화",
+          "node": "액티브 강화 II",
+          "rank": "R1/2",
+          "cost": "사막 슬라임 6 + 시간모래 2",
+          "requirement": "액티브 강화 I R2 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "쿨다운 −12% (전체 액티브 계통 누적 −36%)"
+        },
+        {
+          "order": 5,
+          "path": "액티브 심화",
+          "node": "액티브 강화 II",
+          "rank": "R2/2",
+          "cost": "사막 슬라임 13 + 시간모래 5",
+          "requirement": "액티브 강화 II R1 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "쿨다운 −12% (전체 액티브 계통 누적 −48%)"
+        },
+        {
+          "order": 6,
+          "path": "패시브",
+          "node": "생산 강화",
+          "rank": "R1/2",
+          "cost": "사막 슬라임 6 + 시간모래 2",
+          "requirement": "루트",
+          "effect": "사막 슬라임·시간모래 생산량 +12%"
+        },
+        {
+          "order": 7,
+          "path": "패시브",
+          "node": "생산 강화",
+          "rank": "R2/2",
+          "cost": "사막 슬라임 13 + 시간모래 5",
+          "requirement": "생산 강화 R1",
+          "effect": "동일 생산량 +12% (누적 +24%)"
+        },
+        {
+          "order": 8,
+          "path": "패시브 심화",
+          "node": "가동 강화",
+          "rank": "R1/2",
+          "cost": "사막 슬라임 6 + 시간모래 2",
+          "requirement": "생산 강화 R2 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "시간 속성 타워 공격속도 +10%"
+        },
+        {
+          "order": 9,
+          "path": "패시브 심화",
+          "node": "가동 강화",
+          "rank": "R2/2",
+          "cost": "사막 슬라임 13 + 시간모래 5",
+          "requirement": "가동 강화 R1 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "동일 공격속도 +10% (누적 +20%)"
+        },
+        {
+          "order": 10,
+          "path": "궁극",
+          "node": "궁극",
+          "rank": "R1/1",
+          "cost": "사막 슬라임 20 + 시간모래 8",
+          "requirement": "루트 + 새끼용 노드 랭크 합계 ≥ 4 또는 액티브 II R2·가동 강화 R2 모두 완료",
+          "effect": "비활성 중 기본 공격속도 보너스의 50%(+7.5%) 잔존 + 원정 소요일 −1일"
+        },
+        {
+          "order": 11,
+          "path": "새끼용 A",
+          "node": "새끼용 숙련",
+          "rank": "R1/2",
+          "cost": "사막 슬라임 5 + 시간모래 2",
+          "requirement": "루트 완료 + 시간 새끼용 보유",
+          "effect": "시간 새끼용 자신의 공격속도 +12%"
+        },
+        {
+          "order": 12,
+          "path": "새끼용 A",
+          "node": "새끼용 숙련",
+          "rank": "R2/2",
+          "cost": "사막 슬라임 11 + 시간모래 4",
+          "requirement": "새끼용 숙련 R1 + 시간 새끼용 보유",
+          "effect": "동일 공격속도 +12% (누적 +24%)"
+        },
+        {
+          "order": 13,
+          "path": "새끼용 B",
+          "node": "새끼용 지역 강화",
+          "rank": "R1/2",
+          "cost": "사막 슬라임 5 + 시간모래 2",
+          "requirement": "루트 완료 + 시간 새끼용 보유",
+          "effect": "사막 페널티 완화 버프 반경 +20%"
+        },
+        {
+          "order": 14,
+          "path": "새끼용 B",
+          "node": "새끼용 지역 강화",
+          "rank": "R2/2",
+          "cost": "사막 슬라임 11 + 시간모래 4",
+          "requirement": "새끼용 지역 강화 R1 + 시간 새끼용 보유",
+          "effect": "동일 반경 +20% (누적 +40%)"
+        }
+      ],
+      "nodes_stone": [
+        {
+          "order": 1,
+          "path": "루트",
+          "node": "액티브 해금",
+          "rank": "R1/1",
+          "cost": "암석 슬라임 5",
+          "requirement": "없음",
+          "effect": "메테오+방벽 · 고정 피해 40 · 반경 2 · 기본 일일 2회 · 쿨다운 60초; 기본 패시브: 석재·암석 슬라임·현자의 돌 생산량을 +20% 증가시킵니다."
+        },
+        {
+          "order": 2,
+          "path": "액티브",
+          "node": "액티브 강화 I",
+          "rank": "R1/2",
+          "cost": "암석 슬라임 6 + 현자의 돌 2",
+          "requirement": "루트",
+          "effect": "메테오 고정 피해 위력 +20%"
+        },
+        {
+          "order": 3,
+          "path": "액티브",
+          "node": "액티브 강화 I",
+          "rank": "R2/2",
+          "cost": "암석 슬라임 13 + 현자의 돌 5",
+          "requirement": "액티브 강화 I R1",
+          "effect": "동일 위력 +20% (누적 +40%)"
+        },
+        {
+          "order": 4,
+          "path": "액티브 심화",
+          "node": "액티브 강화 II",
+          "rank": "R1/2",
+          "cost": "암석 슬라임 6 + 현자의 돌 2",
+          "requirement": "액티브 강화 I R2 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "설치 방벽 최대체력 +50%"
+        },
+        {
+          "order": 5,
+          "path": "액티브 심화",
+          "node": "액티브 강화 II",
+          "rank": "R2/2",
+          "cost": "암석 슬라임 13 + 현자의 돌 5",
+          "requirement": "액티브 강화 II R1 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "동일 최대체력 +50% (누적 +100%)"
+        },
+        {
+          "order": 6,
+          "path": "패시브",
+          "node": "생산 강화",
+          "rank": "R1/2",
+          "cost": "암석 슬라임 6 + 현자의 돌 2",
+          "requirement": "루트",
+          "effect": "석재·암석 슬라임·현자의 돌 생산량 +12%"
+        },
+        {
+          "order": 7,
+          "path": "패시브",
+          "node": "생산 강화",
+          "rank": "R2/2",
+          "cost": "암석 슬라임 13 + 현자의 돌 5",
+          "requirement": "생산 강화 R1",
+          "effect": "동일 생산량 +12% (누적 +24%)"
+        },
+        {
+          "order": 8,
+          "path": "패시브 심화",
+          "node": "가동 강화",
+          "rank": "R1/2",
+          "cost": "암석 슬라임 6 + 현자의 돌 2",
+          "requirement": "생산 강화 R2 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "암석 속성 타워 공격력 +10%"
+        },
+        {
+          "order": 9,
+          "path": "패시브 심화",
+          "node": "가동 강화",
+          "rank": "R2/2",
+          "cost": "암석 슬라임 13 + 현자의 돌 5",
+          "requirement": "가동 강화 R1 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "동일 공격력 +10% (누적 +20%)"
+        },
+        {
+          "order": 10,
+          "path": "궁극",
+          "node": "궁극",
+          "rank": "R1/1",
+          "cost": "암석 슬라임 20 + 현자의 돌 8",
+          "requirement": "루트 + 새끼용 노드 랭크 합계 ≥ 4 또는 액티브 II R2·가동 강화 R2 모두 완료",
+          "effect": "비활성 중 기본 생산 보너스의 50%(+10%) 잔존 + 메테오 일일 사용 횟수 +1"
+        },
+        {
+          "order": 11,
+          "path": "새끼용 A",
+          "node": "새끼용 숙련",
+          "rank": "R1/2",
+          "cost": "암석 슬라임 5 + 현자의 돌 2",
+          "requirement": "루트 완료 + 암석 새끼용 보유",
+          "effect": "암석 새끼용 자신의 공격력 +12%"
+        },
+        {
+          "order": 12,
+          "path": "새끼용 A",
+          "node": "새끼용 숙련",
+          "rank": "R2/2",
+          "cost": "암석 슬라임 11 + 현자의 돌 4",
+          "requirement": "새끼용 숙련 R1 + 암석 새끼용 보유",
+          "effect": "동일 공격력 +12% (누적 +24%)"
+        },
+        {
+          "order": 13,
+          "path": "새끼용 B",
+          "node": "새끼용 지역 강화",
+          "rank": "R1/2",
+          "cost": "암석 슬라임 5 + 현자의 돌 2",
+          "requirement": "루트 완료 + 암석 새끼용 보유",
+          "effect": "암석 새끼용 주변 광산 생산량 +15%"
+        },
+        {
+          "order": 14,
+          "path": "새끼용 B",
+          "node": "새끼용 지역 강화",
+          "rank": "R2/2",
+          "cost": "암석 슬라임 11 + 현자의 돌 4",
+          "requirement": "새끼용 지역 강화 R1 + 암석 새끼용 보유",
+          "effect": "동일 지역 생산량 +15% (누적 +30%)"
+        }
+      ],
+      "nodes_life": [
+        {
+          "order": 1,
+          "path": "루트",
+          "node": "액티브 해금",
+          "rank": "R1/1",
+          "cost": "초원 슬라임 5",
+          "requirement": "없음",
+          "effect": "성 회복 · 회복량 50 · 쿨다운 60초 · 일일 사용 무제한; 기본 패시브: 식량·초원 슬라임 생산량을 +20% 증가시킵니다."
+        },
+        {
+          "order": 2,
+          "path": "액티브",
+          "node": "액티브 강화 I",
+          "rank": "R1/2",
+          "cost": "초원 슬라임 6",
+          "requirement": "루트",
+          "effect": "쿨다운 −12%"
+        },
+        {
+          "order": 3,
+          "path": "액티브",
+          "node": "액티브 강화 I",
+          "rank": "R2/2",
+          "cost": "초원 슬라임 13",
+          "requirement": "액티브 강화 I R1",
+          "effect": "쿨다운 −12% (누적 −24%)"
+        },
+        {
+          "order": 4,
+          "path": "액티브 심화",
+          "node": "액티브 강화 II",
+          "rank": "R1/2",
+          "cost": "초원 슬라임 6",
+          "requirement": "액티브 강화 I R2 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "성 회복량 +20%"
+        },
+        {
+          "order": 5,
+          "path": "액티브 심화",
+          "node": "액티브 강화 II",
+          "rank": "R2/2",
+          "cost": "초원 슬라임 13",
+          "requirement": "액티브 강화 II R1 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "성 회복량 +20% (누적 +40%)"
+        },
+        {
+          "order": 6,
+          "path": "패시브",
+          "node": "생산 강화",
+          "rank": "R1/2",
+          "cost": "초원 슬라임 6",
+          "requirement": "루트",
+          "effect": "식량·초원 슬라임 생산량 +12%"
+        },
+        {
+          "order": 7,
+          "path": "패시브",
+          "node": "생산 강화",
+          "rank": "R2/2",
+          "cost": "초원 슬라임 13",
+          "requirement": "생산 강화 R1",
+          "effect": "동일 생산량 +12% (누적 +24%)"
+        },
+        {
+          "order": 8,
+          "path": "패시브 심화",
+          "node": "가동 강화",
+          "rank": "R1/2",
+          "cost": "초원 슬라임 6",
+          "requirement": "생산 강화 R2 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "모든 타워 최대체력 +10%"
+        },
+        {
+          "order": 9,
+          "path": "패시브 심화",
+          "node": "가동 강화",
+          "rank": "R2/2",
+          "cost": "초원 슬라임 13",
+          "requirement": "가동 강화 R1 + 같은 속성 새끼용 노드 해금 랭크 합계 ≥ 2",
+          "effect": "동일 최대체력 +10% (누적 +20%)"
+        },
+        {
+          "order": 10,
+          "path": "궁극",
+          "node": "궁극",
+          "rank": "R1/1",
+          "cost": "초원 슬라임 20",
+          "requirement": "루트 + 새끼용 노드 랭크 합계 ≥ 4 또는 액티브 II R2·가동 강화 R2 모두 완료",
+          "effect": "비활성 중 기본 생산 보너스의 50%(+10%) 잔존 + 성 회복 위력 +30% + 쿨다운 −20%"
+        },
+        {
+          "order": 11,
+          "path": "새끼용 A",
+          "node": "새끼용 숙련",
+          "rank": "R1/2",
+          "cost": "초원 슬라임 5",
+          "requirement": "루트 완료 + 생명 새끼용 보유",
+          "effect": "생명 새끼용 버프모드 효과 반경 +20%"
+        },
+        {
+          "order": 12,
+          "path": "새끼용 A",
+          "node": "새끼용 숙련",
+          "rank": "R2/2",
+          "cost": "초원 슬라임 11",
+          "requirement": "새끼용 숙련 R1 + 생명 새끼용 보유",
+          "effect": "동일 반경 +20% (누적 +40%)"
+        },
+        {
+          "order": 13,
+          "path": "새끼용 B",
+          "node": "새끼용 지역 강화",
+          "rank": "R1/2",
+          "cost": "초원 슬라임 5",
+          "requirement": "루트 완료 + 생명 새끼용 보유",
+          "effect": "생명 새끼용 주변 농장 생산량 +15%"
+        },
+        {
+          "order": 14,
+          "path": "새끼용 B",
+          "node": "새끼용 지역 강화",
+          "rank": "R2/2",
+          "cost": "초원 슬라임 11",
+          "requirement": "새끼용 지역 강화 R1 + 생명 새끼용 보유",
+          "effect": "동일 지역 생산량 +15% (누적 +30%)"
+        }
+      ]
+    },
+    "accessIssues": []
+  },
+  "sources": [
+    {
+      "id": "generator",
+      "label": "용 스킬트리 에셋 생성기",
+      "path": "Assets/Scripts/Dragon/Editor/DragonSkillTreeAssetGenerator.cs",
+      "query": {
+        "engine": "static-snapshot",
+        "language": "sql",
+        "description": "생성기에서 확인한 70개 노드를 계통별로 집계한 정적 스냅샷입니다.",
+        "sql": "SELECT '액티브 강화' AS category, 20 AS nodes, 0.286 AS share UNION ALL SELECT '패시브 강화', 20, 0.286 UNION ALL SELECT '새끼용 강화', 20, 0.286 UNION ALL SELECT '루트', 5, 0.071 UNION ALL SELECT '궁극', 5, 0.071",
+        "tables_used": [
+          "Assets/Scripts/Dragon/Editor/DragonSkillTreeAssetGenerator.cs"
+        ],
+        "filters": [
+          "현재 워크스페이스의 생성기 상수 및 슬롯 정의"
+        ],
+        "executed_at": "2026-08-14T00:00:00+09:00"
+      }
+    },
+    {
+      "id": "tree_asset",
+      "label": "현재 DragonSkillTree 에셋",
+      "path": "Assets/Data/Dragon/DragonSkillTree.asset"
+    },
+    {
+      "id": "runtime",
+      "label": "용 스킬트리 런타임 집계",
+      "path": "Assets/Scripts/Dragon/DragonTreeManager.cs"
+    },
+    {
+      "id": "effect_contract",
+      "label": "용 스킬 효과 활성·비활성 계약",
+      "path": "Assets/Scripts/Dragon/DragonSkillEffectSO.cs"
+    },
+    {
+      "id": "progression_rules",
+      "label": "진행 노드 해금 규칙",
+      "path": "Assets/Scripts/Progression/ProgressionRules.cs"
+    }
+  ]
+}
