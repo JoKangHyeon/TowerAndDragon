@@ -156,6 +156,28 @@ Codex 웨이브 기본 EHP:
 - 2주기 진입이 너무 급하면 8~10일차 웨이브 총량과 2번째 포탈 개방 충격을 조정한다.
 - 4주기 후반이 버겁다면 27~28일 EHP와 다중 포탈 분산 압박을 분리해서 본다.
 
+속성 대응 몬스터 투입 원칙:
+
+| 구간 | 방침 |
+|---|---|
+| 1~14일차 | 특정 속성만 피해가 들어가는 `OnlyMatchingElement` 금지 |
+| 15~21일차 | 특정 속성 면역 `ImmuneToMatchingElement`까지만 허용 |
+| 22~23일차 | `OnlyMatchingElement` 금지, 4주기 진입 전 준비 구간 |
+| 24~27일차 | `OnlyMatchingElement`를 속성별 1/2/3/4마리로 순차 증가 |
+| 28일차 | 최종 보스 웨이브, 별도 보스 난이도 기준으로 조정 |
+
+2026-08-17 조정:
+
+| 일차 | 기존 | 변경 |
+|---:|---|---|
+| 16 | `Only_Fire/Ice/Stone` 총 9마리 | 제거 |
+| 16 | 없음 | `Immune_Fire/Ice/Stone` 각 1마리 |
+| 16 | 나머지 6마리 | `Ground_Attack/Ranged/Basic`으로 분산 |
+| 24 | 없음 | `Only_Fire/Ice/Stone` 각 1마리 |
+| 25 | `Immune_Fire/Ice/Stone` 각 4마리 | `Immune_*` 각 2마리 + `Only_*` 각 2마리 |
+| 26 | 없음 | `Only_Fire/Ice/Stone` 각 3마리 |
+| 27 | `Only_Fire/Ice/Stone` 각 4마리 | 유지 |
+
 ---
 
 ## 7. 점령
@@ -186,6 +208,22 @@ Codex 웨이브 기본 EHP:
 | Volcano | 공격 |
 | Desert | 이동속도 + 스폰밀도 |
 | Rock | 체력 + 방어막 |
+
+스폰 보너스 재분배:
+
+| 몬스터군 | 기존 | 1차 재분배 후 |
+|---|---:|---:|
+| Ground Basic | +4 | +3 |
+| Ground Attack | +3 | +3 |
+| Ground Ranged | +3 | +3 |
+| Air Basic | +2 | +3 |
+
+적용 변경:
+
+| 청크 | 기존 | 변경 |
+|---|---|---|
+| `(0, 2)` | Rock Minor Basic Reinforcement | Rock Minor |
+| `(3, 2)` | Snow Major | Snow Major Air Reinforcement |
 
 ---
 
@@ -409,6 +447,34 @@ Codex 웨이브 기본 EHP:
 - 초반 두 번째 확장 구간의 대기 시간을 줄인다.
 - 초반 인구 비용이나 인구 보상은 그대로 두어 인구 스노우볼을 직접 키우지 않는다.
 - 대각선은 점령 가능 인접 규칙과 맞지 않으므로 거리 계산에서 `|x| + |y|` 기준을 사용한다.
+
+### 추가 적용: 점령 페널티 스폰 보너스 재분배
+
+| 항목 | 변경 |
+|---|---|
+| `(0, 2)` | `Penalty_Rock_Minor_BasicReinforcement` -> `Penalty_Rock_Minor` |
+| `(3, 2)` | `Penalty_Snow_Major` -> `Penalty_Snow_Major_AirReinforcement` |
+
+의도:
+
+- 초반 거리 2 구간에 몰린 Basic 추가 스폰 체감을 줄인다.
+- 스폰 보너스 총량은 유지하면서 `Ground Basic / Ground Attack / Ground Ranged / Air Basic`을 각각 +3으로 맞춘다.
+- 지형별 스탯 정체성은 유지하고, 특정 몬스터군만 반복 강화되는 인상을 완화한다.
+
+### 추가 적용: 16일차 속성 Only 몬스터 제거
+
+| 항목 | 변경 |
+|---|---|
+| 대상 웨이브 | `CodexWave_16` |
+| 제거 | `MD_Ground_Only_Fire`, `MD_Ground_Only_Ice`, `MD_Ground_Only_Stone` 총 9마리 |
+| 대체 | `MD_Ground_Immune_Fire/Ice/Stone` 각 1마리, 일반 지상 몬스터 6마리 |
+| 총 스폰 수 | 42 유지 |
+
+의도:
+
+- 3주기 초반에 특정 속성 공격만 허용하는 해결 불가 체크를 제거한다.
+- 속성 대응 요구는 `Immune_*`로 약하게 예고하고, `Only_*`는 극후반인 27일차부터 본격 사용한다.
+- 중반 난이도를 단순 삭제하지 않고 총 스폰 수는 유지한다.
 
 ---
 
