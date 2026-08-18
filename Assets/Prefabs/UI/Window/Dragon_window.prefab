@@ -1973,7 +1973,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1800, y: 1800}
+  m_SizeDelta: {x: 2480, y: 2480}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2371084394708254737
 GameObject:
@@ -2155,7 +2155,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UI_ScrollRectZoom
   _target: {fileID: 926967523853811762}
   _zoomStep: 0.1
-  _minZoom: 0.3
+  _minZoom: 0.2
   _maxZoom: 2
 --- !u!1 &2582060778834109138
 GameObject:
@@ -5787,12 +5787,13 @@ MonoBehaviour:
   _babyDragonCatalog: {fileID: 11400000, guid: 3493e5ed7926f4147ae5f74da9cbd871, type: 2}
   _radiusAttributeLabel: 135
   _radiusUnlock: 250
-  _radiusKin: 340
-  _kinAngleOffset: 22
-  _radiusBranch1: 490
-  _radiusBranch2: 650
-  _branchAngleOffset: 15
-  _radiusUltimate: 770
+  _radiusKinFirst: 350
+  _radiusKinStep: 150
+  _kinAngleOffset: 28
+  _radiusBranchFirst: 440
+  _radiusBranchStep: 160
+  _branchAngleOffset: 11
+  _radiusUltimate: 1080
   _edgeLockedColor: {r: 0.2, g: 0.18, b: 0.16, a: 0.6}
 --- !u!1 &6286233475493676958
 GameObject:

@@ -8,9 +8,9 @@ using UnityEngine.UI;
 // 용 스킬트리 - DragonSkillTree.asset을 순회해 방사형으로 런타임 배치하고, 클릭 시 상세 패널에
 // 바인딩한다. 해금/속성 변경 규칙은 여기서 재구현하지 않는다 - 전부 DragonTreeManager에 위임.
 //
-// 랭크는 별도 노드로 체인돼 있지만(속성 5 × 슬롯 8 × 랭크 = 70개), 원을 70개 그리면 읽을 수 없어
-// 뷰는 (속성, 슬롯) 단위로 하나만 만든다. 그 원이 대표하는 노드는 "다음에 살 랭크"이고,
-// 뱃지에 Lv 1/2처럼 진행도를 표시한다.
+// 노드 하나 = 강화 한 단계다. 랭크는 에셋 단계에서 이미 별도 노드로 체인돼 있으므로
+// (속성 5 × 슬롯 8 × 랭크 = 70개), 뷰도 그 노드를 그대로 하나씩 그린다.
+// 같은 슬롯의 랭크는 같은 갈래의 "다음 칸"을 차지하고, 라벨이 같으므로 Lv 1/2 뱃지로 구분한다.
 //
 // Dragon_window의 Panel_MotherDragon/Right_Scroll View_skillTree에 부착해 쓰는 '심는 패널'이다.
 // 창 자체를 여닫는 건 UI_DragonWindow가 하고, 이 컴포넌트는 부모 패널이 켜질 때 도는
@@ -19,6 +19,16 @@ public class UI_DragonSkillWindow : MonoBehaviour
 {
     // 속성 이름표를 피해 기준선을 시작할 여유. 이름표 높이의 절반보다 크게 잡는다.
     private const float ATTRIBUTE_LABEL_CLEARANCE = 34f;
+
+    // 가장 바깥 노드의 원 바깥으로도 라벨·뱃지가 나가므로, Content를 그만큼 더 키워 둔다.
+    // 여기가 모자라면 ScrollRect가 바깥 링을 화면 안으로 못 끌어와 클릭조차 되지 않는다.
+    private const float CONTENT_EDGE_MARGIN = 160f;
+
+    // 창을 열었을 때의 배율 상한. 트리가 뷰포트보다 작아도 확대하지는 않는다.
+    private const float MAX_INITIAL_ZOOM = 1f;
+
+    // 반지름 → 지름.
+    private const float DIAMETER_PER_RADIUS = 2f;
 
     [Header("Dependencies")]
     [SerializeField] private GameManager _gameManager;
@@ -36,24 +46,30 @@ public class UI_DragonSkillWindow : MonoBehaviour
     [Tooltip("새끼용 노드에 얹을 속성별 알 아이콘의 출처. 비워 두면 아이콘 없이 테두리로만 구분한다.")]
     [SerializeField] private BabyDragonDataCatalog _babyDragonCatalog;
 
-    // 노드가 커지고 라벨이 노드 바깥으로 나오면서, 반지름은 "노드 지름 + 라벨"이 겹치지 않을 만큼
-    // 벌려 둔다. 줄이려면 DragonSkillNodeStyleTable의 노드 지름도 같이 줄여야 한다.
+    // 반지름 간격(Step)은 "노드 지름 + 라벨 + 뱃지"보다 커야 한다 - 좁히면 안쪽 노드의 뱃지가
+    // 바깥 노드의 원 위에 올라탄다. 노드 규격은 DragonSkillNodeStyleTable이 들고 있다.
     [Header("Radii")]
     [SerializeField] private float _radiusAttributeLabel = 135f;
     // 구 이름을 남겨 프리팹에 이미 조정돼 있던 반지름 값을 잃지 않는다
-    // (슬롯 구성이 바뀌면서 Awaken→Unlock, Active/Enhance→Branch1/2로 역할이 옮겨갔다).
+    // (슬롯 구성이 바뀌면서 Awaken→Unlock으로 역할이 옮겨갔다).
     [FormerlySerializedAs("_radiusAwaken")]
     [SerializeField] private float _radiusUnlock = 250f;
-    [SerializeField] private float _radiusKin = 340f;
+
+    [Tooltip("새끼용 갈래의 첫 칸(랭크 1) 반지름.")]
+    [SerializeField] private float _radiusKinFirst = 350f;
+    [Tooltip("새끼용 갈래에서 다음 강화 단계로 나갈 때 더하는 반지름.")]
+    [SerializeField] private float _radiusKinStep = 150f;
     [Tooltip("새끼용 두 갈래를 속성 기준선 양옆으로 벌리는 각도. 속성 간격(72도)의 절반을 넘기면 옆 속성의 새끼용과 붙는다.")]
-    [SerializeField] private float _kinAngleOffset = 22f;
-    [FormerlySerializedAs("_radiusActive")]
-    [SerializeField] private float _radiusBranch1 = 490f;
-    [FormerlySerializedAs("_radiusEnhance")]
-    [SerializeField] private float _radiusBranch2 = 650f;
+    [SerializeField] private float _kinAngleOffset = 28f;
+
+    [Tooltip("어미용 갈래(액티브·패시브)의 첫 칸 반지름.")]
+    [SerializeField] private float _radiusBranchFirst = 440f;
+    [Tooltip("어미용 갈래에서 다음 강화 단계로 나갈 때 더하는 반지름. 슬롯이 바뀌든 랭크가 오르든 한 칸이다.")]
+    [SerializeField] private float _radiusBranchStep = 160f;
     [Tooltip("액티브 갈래와 패시브 갈래를 속성 기준선 양옆으로 벌리는 각도.")]
-    [SerializeField] private float _branchAngleOffset = 15f;
-    [SerializeField] private float _radiusUltimate = 770f;
+    [SerializeField] private float _branchAngleOffset = 11f;
+
+    [SerializeField] private float _radiusUltimate = 1080f;
 
     [Header("Colors")]
     // 속성 색은 DragonAttributePalette가 단일 출처다(창마다 따로 지정하면 값이 어긋난다).
@@ -63,17 +79,27 @@ public class UI_DragonSkillWindow : MonoBehaviour
     private static readonly DragonType[] ATTRIBUTES_IN_ORDER =
         (DragonType[])Enum.GetValues(typeof(DragonType));
 
-    // 한 슬롯을 이루는 랭크 노드들(랭크 오름차순)과 그 슬롯의 뷰·좌표.
-    private readonly Dictionary<(DragonType, DragonNodeKind), List<DragonSkillNodeData>> _slotNodes = new();
-    private readonly Dictionary<(DragonType, DragonNodeKind), UI_DragonSkillNode> _slotViews = new();
-    private readonly Dictionary<(DragonType, DragonNodeKind), Vector2> _slotPositions = new();
+    // 액티브·패시브 갈래를 이루는 슬롯 순서. 갈래 안에서는 이 순서대로, 슬롯 안에서는 랭크 순서대로
+    // 바깥을 향해 한 칸씩 나간다.
+    private static readonly DragonNodeKind[] ACTIVE_BRANCH_SLOTS =
+        { DragonNodeKind.ActiveUp1, DragonNodeKind.ActiveUp2 };
+
+    private static readonly DragonNodeKind[] PASSIVE_BRANCH_SLOTS =
+        { DragonNodeKind.PassiveUp1, DragonNodeKind.PassiveUp2 };
+
+    // 노드 하나당 뷰 하나. 랭크가 다르면 다른 노드이므로 다른 원이 된다.
+    private readonly Dictionary<DragonSkillNodeData, UI_DragonSkillNode> _nodeViews = new();
+    private readonly Dictionary<DragonSkillNodeData, Vector2> _nodePositions = new();
     private readonly List<EdgeView> _edgeViews = new();
+
+    // 트리 중심에서 가장 먼 노드까지의 거리. Content 크기와 첫 배율을 여기서 끌어낸다 -
+    // 반지름 값을 손볼 때마다 프리팹의 Content 크기를 같이 고치는 걸 잊지 않기 위해서다.
+    private float _maxPlacedRadius;
 
     private bool _built;
 
-    // 상세 패널이 보고 있는 슬롯. 랭크를 사면 대표 노드가 다음 랭크로 바뀌므로,
-    // 노드가 아니라 슬롯을 기억해 두었다가 갱신 때 새 대표 노드로 다시 바인딩한다.
-    private (DragonType, DragonNodeKind)? _selectedSlot;
+    // 상세 패널이 보고 있는 노드.
+    private DragonSkillNodeData _selectedNode;
 
     // 낮/밤 이벤트용. 구독과 해제가 반드시 같은 인스턴스를 보게 하려고 필드로 들고 있는다.
     private CycleManager _cycleManager;
@@ -81,7 +107,10 @@ public class UI_DragonSkillWindow : MonoBehaviour
     private struct EdgeView
     {
         public RectTransform Transform;
-        public (DragonType, DragonNodeKind) DependentSlot;
+
+        /// <summary>이 선이 향하는(=이 선을 켜고 끄는) 노드.</summary>
+        public DragonSkillNodeData DependentNode;
+
         public DragonType Attribute;
     }
 
@@ -124,6 +153,10 @@ public class UI_DragonSkillWindow : MonoBehaviour
         }
 
         BuildTreeIfNeeded();
+
+        // 배율·위치 되돌리기는 열 때마다 한다 - 지난번에 한 갈래를 확대해 둔 채로 닫았으면
+        // 다시 열었을 때 어느 속성을 보고 있는지조차 알 수 없는 화면에서 시작한다.
+        FitContentToViewport();
         RefreshAll();
     }
 
@@ -152,7 +185,7 @@ public class UI_DragonSkillWindow : MonoBehaviour
 
         // 상세 팝업은 이 스크롤뷰가 아니라 Dragon_window 루트의 자식이라 어미용 탭이 꺼져도
         // 스스로 사라지지 않는다 - 새끼용 탭 위에 남지 않도록 여기서 닫는다.
-        _selectedSlot = null;
+        _selectedNode = null;
         _detailsPanel?.Clear();
     }
 
@@ -164,6 +197,26 @@ public class UI_DragonSkillWindow : MonoBehaviour
             return;
         }
 
+        Dictionary<(DragonType, DragonNodeKind), List<DragonSkillNodeData>> slotNodes = GroupNodesBySlot();
+
+        for (int i = 0; i < ATTRIBUTES_IN_ORDER.Length; i++)
+        {
+            DragonType attribute = ATTRIBUTES_IN_ORDER[i];
+            float baseAngle = DragonSkillTreeLayout.AttributeBaseAngle(i);
+
+            PlaceAttributeLabel(attribute, baseAngle);
+            PlaceAttributeBranches(slotNodes, attribute, baseAngle);
+        }
+
+        ResizeContentToTree();
+
+        _built = true;
+    }
+
+    private Dictionary<(DragonType, DragonNodeKind), List<DragonSkillNodeData>> GroupNodesBySlot()
+    {
+        var slotNodes = new Dictionary<(DragonType, DragonNodeKind), List<DragonSkillNodeData>>();
+
         foreach (DragonSkillNodeData node in _dragonTreeManager.Tree.DragonNodes)
         {
             if (node == null)
@@ -173,42 +226,97 @@ public class UI_DragonSkillWindow : MonoBehaviour
 
             var key = (node.Attribute, node.Kind);
 
-            if (!_slotNodes.TryGetValue(key, out List<DragonSkillNodeData> ranks))
+            if (!slotNodes.TryGetValue(key, out List<DragonSkillNodeData> ranks))
             {
                 ranks = new List<DragonSkillNodeData>();
-                _slotNodes[key] = ranks;
-                _slotViews[key] = Instantiate(_nodePrefab, _content);
+                slotNodes[key] = ranks;
             }
 
             ranks.Add(node);
         }
 
-        // 트리 에셋의 나열 순서를 믿지 않는다 - 대표 노드 선택이 랭크 순서에 의존하기 때문이다.
-        foreach (List<DragonSkillNodeData> ranks in _slotNodes.Values)
+        // 트리 에셋의 나열 순서를 믿지 않는다 - 안쪽에서 바깥쪽 순서가 랭크 순서여야 한다.
+        foreach (List<DragonSkillNodeData> ranks in slotNodes.Values)
         {
             ranks.Sort((left, right) => left.Rank.CompareTo(right.Rank));
         }
 
-        for (int i = 0; i < ATTRIBUTES_IN_ORDER.Length; i++)
+        return slotNodes;
+    }
+
+    private void PlaceAttributeBranches(
+        Dictionary<(DragonType, DragonNodeKind), List<DragonSkillNodeData>> slotNodes,
+        DragonType attribute,
+        float baseAngle)
+    {
+        // 속성 기준선은 트리 중심이 아니라 속성 이름표 바로 바깥에서 시작한다 -
+        // 중심에서 그으면 선이 이름표를 관통해 글자를 읽기 어렵다.
+        Vector2 spokeStart = DragonSkillTreeLayout.PositionAt(
+            baseAngle, _radiusAttributeLabel + ATTRIBUTE_LABEL_CLEARANCE);
+
+        // 해금 노드가 이 속성의 뿌리다 - 나머지 갈래는 전부 여기서 뻗어 나간다.
+        Vector2 rootPosition = PlaceChain(
+            slotNodes, attribute, baseAngle, _radiusUnlock, 0f, spokeStart,
+            DragonNodeKind.ActiveUnlock);
+
+        PlaceChain(
+            slotNodes, attribute, baseAngle - _kinAngleOffset,
+            _radiusKinFirst, _radiusKinStep, rootPosition, DragonNodeKind.KinTower);
+
+        PlaceChain(
+            slotNodes, attribute, baseAngle + _kinAngleOffset,
+            _radiusKinFirst, _radiusKinStep, rootPosition, DragonNodeKind.KinArea);
+
+        PlaceChain(
+            slotNodes, attribute, baseAngle - _branchAngleOffset,
+            _radiusBranchFirst, _radiusBranchStep, rootPosition, ACTIVE_BRANCH_SLOTS);
+
+        PlaceChain(
+            slotNodes, attribute, baseAngle + _branchAngleOffset,
+            _radiusBranchFirst, _radiusBranchStep, rootPosition, PASSIVE_BRANCH_SLOTS);
+
+        PlaceChain(
+            slotNodes, attribute, baseAngle, _radiusUltimate, 0f, rootPosition,
+            DragonNodeKind.Ultimate);
+    }
+
+    /// <summary>
+    /// 한 갈래를 안쪽에서 바깥쪽으로 심는다. 슬롯 안의 랭크도 같은 갈래의 다음 칸을 차지하므로,
+    /// 강화 단계가 몇 개인지는 트리 에셋이 정하고 여기서는 세지 않는다.
+    /// 노드를 놓으면서 <paramref name="edgeOrigin"/> → 첫 칸 → 다음 칸 순으로 연결선도 잇는다.
+    /// </summary>
+    /// <returns>마지막으로 놓인 노드의 좌표. 놓인 노드가 없으면 <paramref name="edgeOrigin"/>.</returns>
+    private Vector2 PlaceChain(
+        Dictionary<(DragonType, DragonNodeKind), List<DragonSkillNodeData>> slotNodes,
+        DragonType attribute,
+        float angle,
+        float firstRadius,
+        float radiusStep,
+        Vector2 edgeOrigin,
+        params DragonNodeKind[] kinds)
+    {
+        Vector2 previousPosition = edgeOrigin;
+        int step = 0;
+
+        foreach (DragonNodeKind kind in kinds)
         {
-            DragonType attribute = ATTRIBUTES_IN_ORDER[i];
-            float baseAngle = DragonSkillTreeLayout.AttributeBaseAngle(i);
+            if (!slotNodes.TryGetValue((attribute, kind), out List<DragonSkillNodeData> ranks))
+            {
+                continue;
+            }
 
-            PlaceAttributeLabel(attribute, baseAngle);
+            foreach (DragonSkillNodeData node in ranks)
+            {
+                float radius = firstRadius + radiusStep * step;
+                Vector2 position = PlaceNode(node, angle, radius);
+                CreateEdge(previousPosition, node, attribute);
 
-            PlaceSlot(attribute, DragonNodeKind.ActiveUnlock, baseAngle, _radiusUnlock);
-            PlaceSlot(attribute, DragonNodeKind.ActiveUp1, baseAngle - _branchAngleOffset, _radiusBranch1);
-            PlaceSlot(attribute, DragonNodeKind.ActiveUp2, baseAngle - _branchAngleOffset, _radiusBranch2);
-            PlaceSlot(attribute, DragonNodeKind.PassiveUp1, baseAngle + _branchAngleOffset, _radiusBranch1);
-            PlaceSlot(attribute, DragonNodeKind.PassiveUp2, baseAngle + _branchAngleOffset, _radiusBranch2);
-            PlaceSlot(attribute, DragonNodeKind.Ultimate, baseAngle, _radiusUltimate);
-            PlaceSlot(attribute, DragonNodeKind.KinTower, baseAngle - _kinAngleOffset, _radiusKin);
-            PlaceSlot(attribute, DragonNodeKind.KinArea, baseAngle + _kinAngleOffset, _radiusKin);
-
-            BuildEdges(attribute, baseAngle);
+                previousPosition = position;
+                step++;
+            }
         }
 
-        _built = true;
+        return previousPosition;
     }
 
     // 속성 이름표는 창 프리팹에 5개를 심어 두는 대신 여기서 찍는다 - 속성이 늘거나
@@ -226,53 +334,26 @@ public class UI_DragonSkillWindow : MonoBehaviour
         label.rectTransform.anchoredPosition = DragonSkillTreeLayout.PositionAt(baseAngle, _radiusAttributeLabel);
     }
 
-    private void PlaceSlot(DragonType attribute, DragonNodeKind kind, float angle, float radius)
+    private Vector2 PlaceNode(DragonSkillNodeData node, float angle, float radius)
     {
-        var key = (attribute, kind);
-
-        if (!_slotViews.TryGetValue(key, out UI_DragonSkillNode view))
-        {
-            return;
-        }
-
         Vector2 position = DragonSkillTreeLayout.PositionAt(angle, radius);
-        _slotPositions[key] = position;
+
+        UI_DragonSkillNode view = Instantiate(_nodePrefab, _content);
         view.GetComponent<RectTransform>().anchoredPosition = position;
 
         // 트리 중심이 (0,0)이라 좌표 자체가 "바깥쪽" 방향이다 - 노드가 라벨을 그 방향으로 밀어낸다.
-        view.ApplyLayout(kind, position);
+        view.ApplyLayout(node.Kind, position);
+
+        _nodeViews[node] = view;
+        _nodePositions[node] = position;
+        _maxPlacedRadius = Mathf.Max(_maxPlacedRadius, radius);
+
+        return position;
     }
 
-    private void BuildEdges(DragonType attribute, float baseAngle)
+    private void CreateEdge(Vector2 from, DragonSkillNodeData toNode, DragonType attribute)
     {
-        // 속성 기준선은 트리 중심이 아니라 속성 이름표 바로 바깥에서 시작한다 -
-        // 중심에서 그으면 선이 이름표를 관통해 글자를 읽기 어렵다.
-        Vector2 spokeStart = DragonSkillTreeLayout.PositionAt(
-            baseAngle, _radiusAttributeLabel + ATTRIBUTE_LABEL_CLEARANCE);
-        CreateEdge(spokeStart, (attribute, DragonNodeKind.ActiveUnlock), attribute);
-
-        CreateEdgeBetween(attribute, DragonNodeKind.ActiveUnlock, DragonNodeKind.ActiveUp1);
-        CreateEdgeBetween(attribute, DragonNodeKind.ActiveUp1, DragonNodeKind.ActiveUp2);
-        CreateEdgeBetween(attribute, DragonNodeKind.ActiveUnlock, DragonNodeKind.PassiveUp1);
-        CreateEdgeBetween(attribute, DragonNodeKind.PassiveUp1, DragonNodeKind.PassiveUp2);
-        CreateEdgeBetween(attribute, DragonNodeKind.ActiveUnlock, DragonNodeKind.Ultimate);
-        CreateEdgeBetween(attribute, DragonNodeKind.ActiveUnlock, DragonNodeKind.KinTower);
-        CreateEdgeBetween(attribute, DragonNodeKind.ActiveUnlock, DragonNodeKind.KinArea);
-    }
-
-    private void CreateEdgeBetween(DragonType attribute, DragonNodeKind fromKind, DragonNodeKind toKind)
-    {
-        if (!_slotPositions.TryGetValue((attribute, fromKind), out Vector2 fromPosition))
-        {
-            return;
-        }
-
-        CreateEdge(fromPosition, (attribute, toKind), attribute);
-    }
-
-    private void CreateEdge(Vector2 from, (DragonType, DragonNodeKind) toSlot, DragonType attribute)
-    {
-        if (_edgePrefab == null || !_slotPositions.TryGetValue(toSlot, out Vector2 to))
+        if (_edgePrefab == null || !_nodePositions.TryGetValue(toNode, out Vector2 to))
         {
             return;
         }
@@ -290,38 +371,39 @@ public class UI_DragonSkillWindow : MonoBehaviour
         size.y = distance;
         edge.sizeDelta = size;
 
-        _edgeViews.Add(new EdgeView { Transform = edge, DependentSlot = toSlot, Attribute = attribute });
+        _edgeViews.Add(new EdgeView { Transform = edge, DependentNode = toNode, Attribute = attribute });
     }
 
-    // 이 슬롯에서 다음에 구매할 노드. 전부 해금됐으면 최종 랭크를 돌려준다(완료 표시용).
-    private DragonSkillNodeData ResolveCurrentNode((DragonType, DragonNodeKind) slot)
+    // Content를 실제로 놓인 트리 크기에 맞춘다 - 프리팹에 박아 둔 크기보다 트리가 커지면
+    // ScrollRect가 바깥 링까지 스크롤해 주지 않아 노드를 볼 수도 누를 수도 없게 된다.
+    private void ResizeContentToTree()
     {
-        List<DragonSkillNodeData> ranks = _slotNodes[slot];
-
-        foreach (DragonSkillNodeData node in ranks)
-        {
-            if (!_dragonTreeManager.IsUnlocked(node.NodeId))
-            {
-                return node;
-            }
-        }
-
-        return ranks[ranks.Count - 1];
+        float extent = _maxPlacedRadius + CONTENT_EDGE_MARGIN;
+        float side = extent * DIAMETER_PER_RADIUS;
+        _content.sizeDelta = new Vector2(side, side);
     }
 
-    private int CountUnlockedRanks((DragonType, DragonNodeKind) slot)
+    // 트리 전체가 한 화면에 들어오게 축소하고 중앙으로 되돌린다. 이후 배율은
+    // 휠(UI_ScrollRectZoom)과 드래그가 이어받으므로 여기서는 시작 상태만 정한다.
+    private void FitContentToViewport()
     {
-        int count = 0;
-
-        foreach (DragonSkillNodeData node in _slotNodes[slot])
+        if (_content == null || _content.parent is not RectTransform viewport)
         {
-            if (_dragonTreeManager.IsUnlocked(node.NodeId))
-            {
-                count++;
-            }
+            return;
         }
 
-        return count;
+        Vector2 size = _content.sizeDelta;
+        Rect viewRect = viewport.rect;
+
+        if (size.x <= 0f || size.y <= 0f || viewRect.width <= 0f || viewRect.height <= 0f)
+        {
+            return;
+        }
+
+        float scale = Mathf.Min(viewRect.width / size.x, viewRect.height / size.y);
+        scale = Mathf.Min(scale, MAX_INITIAL_ZOOM);
+        _content.localScale = new Vector3(scale, scale, 1f);
+        _content.anchoredPosition = Vector2.zero;
     }
 
     private void HandleNodeUnlocked(ProgressionNodeData node) => RefreshAll();
@@ -343,17 +425,17 @@ public class UI_DragonSkillWindow : MonoBehaviour
             return;
         }
 
-        foreach (KeyValuePair<(DragonType, DragonNodeKind), UI_DragonSkillNode> entry in _slotViews)
+        foreach (KeyValuePair<DragonSkillNodeData, UI_DragonSkillNode> entry in _nodeViews)
         {
-            DragonSkillNodeData node = ResolveCurrentNode(entry.Key);
+            DragonSkillNodeData node = entry.Key;
             ProgressionNodeState state = _dragonTreeManager.GetNodeState(node);
 
             entry.Value.Bind(
                 node,
                 state,
                 ColorForAttribute(node.Attribute),
-                KinIconFor(node),
-                BuildBadgeText(entry.Key, node, state),
+                IconFor(node),
+                BuildBadgeText(node, state),
                 HandleNodeClicked);
         }
     }
@@ -378,22 +460,18 @@ public class UI_DragonSkillWindow : MonoBehaviour
                 continue;
             }
 
-            // 랭크 하나라도 샀으면 그 슬롯으로 오는 선을 켠다 - 대표 노드는 "다음 랭크"라
-            // 그것만 보면 1랭크를 산 슬롯의 선이 계속 꺼져 있다.
-            bool lit = CountUnlockedRanks(edge.DependentSlot) > 0;
+            bool lit = _dragonTreeManager.IsUnlocked(edge.DependentNode.NodeId);
             image.color = DragonSkillNodePalette.EdgeColor(lit, ColorForAttribute(edge.Attribute), _edgeLockedColor);
         }
     }
 
-    // 랭크가 여러 개인 슬롯은 진행도(Lv 1/2)를 우선 보여준다 - 잠금 사유보다 그쪽이 자주 필요하다.
-    // 아직 한 랭크도 못 산 채 잠겨 있을 때만 잠금 사유를 띄운다.
-    private string BuildBadgeText((DragonType, DragonNodeKind) slot, DragonSkillNodeData node, ProgressionNodeState state)
+    // 강화 단계가 여러 개인 슬롯은 같은 이름의 노드가 나란히 놓이므로, 몇 번째 단계인지를
+    // 항상 뱃지로 보여준다(잠금 사유는 상세 패널이 설명한다).
+    private string BuildBadgeText(DragonSkillNodeData node, ProgressionNodeState state)
     {
-        int unlockedRanks = CountUnlockedRanks(slot);
-
-        if (node.MaxRank > 1 && unlockedRanks > 0)
+        if (node.MaxRank > 1)
         {
-            return string.Format(StringTable.GetString(DragonLocKeys.RANK_BADGE), unlockedRanks, node.MaxRank);
+            return string.Format(StringTable.GetString(DragonLocKeys.RANK_BADGE), node.Rank, node.MaxRank);
         }
 
         if (state == ProgressionNodeState.GateLocked)
@@ -412,12 +490,10 @@ public class UI_DragonSkillWindow : MonoBehaviour
 
     private void HandleNodeClicked(DragonSkillNodeData node)
     {
-        _selectedSlot = (node.Attribute, node.Kind);
+        _selectedNode = node;
         _detailsPanel?.Show(node);
     }
 
-    // 랭크를 사고 나면 그 슬롯의 대표 노드가 다음 랭크로 바뀐다 - 상세 패널이 방금 산(이미 완료된)
-    // 노드를 계속 보고 있으면 연속으로 다음 랭크를 살 수 없다.
     private void RefreshDetailsPanel()
     {
         if (_detailsPanel == null)
@@ -428,23 +504,22 @@ public class UI_DragonSkillWindow : MonoBehaviour
         // 사용자가 빈 공간을 눌러 패널을 닫았을 수도 있다 - 닫힌 패널에 Show를 부르면 되살아난다.
         if (!_detailsPanel.IsOpen)
         {
-            _selectedSlot = null;
+            _selectedNode = null;
             return;
         }
 
-        if (!_selectedSlot.HasValue || !_slotNodes.ContainsKey(_selectedSlot.Value))
-        {
-            _detailsPanel.Refresh();
-            return;
-        }
-
-        _detailsPanel.Show(ResolveCurrentNode(_selectedSlot.Value));
+        _detailsPanel.Refresh();
     }
 
-    // 새끼용 노드에 얹을 속성별 알 아이콘. 어미용 노드는 아이콘 없이 "속성 색으로 찬 원"으로
-    // 구분되므로 null을 준다.
-    private Sprite KinIconFor(DragonSkillNodeData node)
+    // 첫 번째 노드(Root)에는 어미용 액티브 스킬 아이콘을, 새끼용 노드에는 알 아이콘을 얹는다.
+    private Sprite IconFor(DragonSkillNodeData node)
     {
+        if (node.Kind == DragonNodeKind.ActiveUnlock)
+        {
+            SkillSO skill = _dragonTreeManager?.GetActiveSkillOf(node.Attribute);
+            return skill != null ? skill.Sprite : null;
+        }
+
         if (_babyDragonCatalog == null || !DragonSkillNodeStyleTable.For(node.Kind).IsKin)
         {
             return null;
