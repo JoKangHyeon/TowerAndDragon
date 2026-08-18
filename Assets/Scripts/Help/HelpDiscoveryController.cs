@@ -55,6 +55,22 @@ public sealed class HelpDiscoveryController : MonoBehaviour
     [WiringOptional]
     [SerializeField] private UIManager _uiManager;
 
+    [Tooltip("\"짓기 전\" 안내를 위해 필요하다. 무엇을 지을지 고른 순간과 그리드의 건물을 고른 순간을 듣는다.")]
+    [WiringOptional]
+    [SerializeField] private BuildingPlacementController _placementController;
+
+    [Tooltip("점령지를 골라 패널이 열린 순간(= 보내기 전)을 듣는다.")]
+    [WiringOptional]
+    [SerializeField] private UI_ConquestWindow _conquestWindow;
+
+    [Tooltip("어미용·새끼용 탭이 보이게 된 순간(= 바꾸거나 배치하기 전)을 듣는다.")]
+    [WiringOptional]
+    [SerializeField] private UI_DragonWindow _dragonWindow;
+
+    [Tooltip("지은 자리에 지형 페널티가 붙었는지 물어본다. 전용 이벤트가 없어 질의로 판정한다.")]
+    [WiringOptional]
+    [SerializeField] private TerrainPenaltySystem _terrainPenaltySystem;
+
     // 속성 변경 알림이 실제 변경인지 새날·복원 갱신인지 가르는 기준값
     // (TutorialObjectiveController.HandleAttributeChanged와 같은 처리).
     private DragonType? _lastSeenAttribute;
@@ -140,6 +156,22 @@ public sealed class HelpDiscoveryController : MonoBehaviour
             _uiManager.ExclusiveModeOpened.AddListener(HandleExclusiveModeOpened);
         }
 
+        if (_placementController != null)
+        {
+            _placementController.BuildingToPlaceChanged.AddListener(HandleBuildingToPlaceChanged);
+            _placementController.SelectedBuildingChanged.AddListener(HandleBuildingSelectedOnGrid);
+        }
+
+        if (_conquestWindow != null)
+        {
+            _conquestWindow.ChunkSelected.AddListener(HandleConquestChunkSelected);
+        }
+
+        if (_dragonWindow != null)
+        {
+            _dragonWindow.OnTabDisplayed.AddListener(HandleDragonTabDisplayed);
+        }
+
         if (_popup != null)
         {
             _popup.Closed.AddListener(HandlePopupClosed);
@@ -210,6 +242,22 @@ public sealed class HelpDiscoveryController : MonoBehaviour
             _uiManager.ExclusiveModeOpened.RemoveListener(HandleExclusiveModeOpened);
         }
 
+        if (_placementController != null)
+        {
+            _placementController.BuildingToPlaceChanged.RemoveListener(HandleBuildingToPlaceChanged);
+            _placementController.SelectedBuildingChanged.RemoveListener(HandleBuildingSelectedOnGrid);
+        }
+
+        if (_conquestWindow != null)
+        {
+            _conquestWindow.ChunkSelected.RemoveListener(HandleConquestChunkSelected);
+        }
+
+        if (_dragonWindow != null)
+        {
+            _dragonWindow.OnTabDisplayed.RemoveListener(HandleDragonTabDisplayed);
+        }
+
         if (_popup != null)
         {
             _popup.Closed.RemoveListener(HandlePopupClosed);
@@ -267,6 +315,25 @@ public sealed class HelpDiscoveryController : MonoBehaviour
     {
         DiscoverMatching(TutorialConditionType.BuildingConstructed,
             entry => entry.UnlockTrigger.MatchesBuilding(building));
+
+        // 지형 페널티만은 "짓고 나서" 알린다. 짓기 전에 알리려면 고스트 미리보기에 수치를 띄워야 하는데,
+        // 그건 도감이 아니라 툴팁 계층의 몫이다(베타 계획이 둘을 나눠 뒀다).
+        if (HasTerrainPenalty(building))
+        {
+            DiscoverMatching(TutorialConditionType.BuildingPlacedOnPenaltyTerrain, null);
+        }
+    }
+
+    // 전용 이벤트가 없어 질의로 판정한다. 페널티 표가 없거나 미배선이면 Neutral이 나와 조용히 넘어간다.
+    private bool HasTerrainPenalty(Building building)
+    {
+        if (_terrainPenaltySystem == null || building == null)
+        {
+            return false;
+        }
+
+        TerrainPenaltyModifiers modifiers = _terrainPenaltySystem.Resolve(building);
+        return !modifiers.Equals(TerrainPenaltyModifiers.Neutral);
     }
 
     // 넘어오는 값은 변경 후 보유량이다. 복원은 보유량 0인 자원까지 전부 쏘므로 수량을 반드시 본다.
@@ -317,6 +384,65 @@ public sealed class HelpDiscoveryController : MonoBehaviour
 
     private void HandleNightStart(int _) =>
         DiscoverMatching(TutorialConditionType.NightStarted, null);
+
+    // 아래 넷은 전부 "하기 전" 트리거다. 완료 이벤트로 띄우면 플레이어는 이미 방법을 알아낸 뒤라
+    // 설명을 읽어도 해볼 것이 없다 - 읽고 나서 눌러볼 수 있어야 안내다.
+
+    // 무엇을 지을지 골라 고스트가 커서에 붙은 순간. 아직 찍기 전이다.
+    private void HandleBuildingToPlaceChanged(Building building)
+    {
+        // 고스트를 끄면 null이 넘어온다. 취소 때마다 판정을 돌리지 않는다.
+        if (building == null)
+        {
+            return;
+        }
+
+        DiscoverMatching(TutorialConditionType.BuildingSelectedForPlacement,
+            entry => MatchesBuildingOrAny(entry, building));
+    }
+
+    // 그리드의 건물을 클릭해 인구 패널이 열린 순간. 아직 배치 전이다.
+    private void HandleBuildingSelectedOnGrid(Building building)
+    {
+        if (building == null)
+        {
+            return;
+        }
+
+        DiscoverMatching(TutorialConditionType.BuildingSelectedOnGrid,
+            entry => MatchesBuildingOrAny(entry, building));
+    }
+
+    /// <summary>
+    /// 종류를 지정하지 않은 항목(None)은 <b>아무 건물이나</b> 통과시킨다.
+    /// TutorialTargetMatcher는 None을 false로 떨구는데, 그건 "종류를 반드시 정하라"는
+    /// 튜토리얼 단계의 계약이다 - "건물을 클릭하면 인구 패널이 열린다"처럼 대상이 없는
+    /// 도감 항목은 그 계약을 쓸 수 없다(_targetFactoryData가 null일 때와 같은 취급).
+    /// </summary>
+    private static bool MatchesBuildingOrAny(HelpEntrySO entry, Building building)
+    {
+        return entry.UnlockTrigger.TargetBuilding == TutorialBuildingKind.None
+            || entry.UnlockTrigger.MatchesBuilding(building);
+    }
+
+    // 점령지를 골라 패널이 열린 순간. 아직 원정을 보내기 전이다.
+    private void HandleConquestChunkSelected(Vector2Int _) =>
+        DiscoverMatching(TutorialConditionType.ConquestChunkSelected, null);
+
+    // 용 창의 탭이 바뀐 순간. 어미용은 속성을 바꾸기 전, 새끼용은 배치하기 전이다.
+    private void HandleDragonTabDisplayed(bool isBabyTab)
+    {
+        if (isBabyTab)
+        {
+            DiscoverMatching(TutorialConditionType.DragonInventoryDragonTabSelected, null);
+            return;
+        }
+
+        if (_dragonWindow != null && _dragonWindow.IsMotherTabShown)
+        {
+            DiscoverMatching(TutorialConditionType.DragonWindowMotherTabSelected, null);
+        }
+    }
 
     private void HandleExclusiveModeOpened(MonoBehaviour mode) =>
         DiscoverMatching(TutorialConditionType.ExclusiveModeOpened,

@@ -152,4 +152,8 @@ public enum TutorialConditionType
     // 계산을 여기서 다시 하지 않고 ResourceForecast에 물어보는 것이 중요하다 - 자원 UI가 보는 값과
     // 같은 출처를 써야 "UI에는 흑자인데 퀘스트는 미완료"인 상태가 생기지 않는다.
     ResourceForecastNonNegative,
+
+    // 지형 페널티가 붙은 자리에 건물을 지었다. 전용 이벤트는 없고, BuildingConstructed를 받은
+    // 자리에서 IBuildingTerrainPenaltyQuery.Resolve 결과가 Neutral과 다른지로 판정한다.
+    BuildingPlacedOnPenaltyTerrain,
 }
