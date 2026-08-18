@@ -156,4 +156,17 @@ public enum TutorialConditionType
     // 지형 페널티가 붙은 자리에 건물을 지었다. 전용 이벤트는 없고, BuildingConstructed를 받은
     // 자리에서 IBuildingTerrainPenaltyQuery.Resolve 결과가 Neutral과 다른지로 판정한다.
     BuildingPlacedOnPenaltyTerrain,
+
+    // 지정한 종류의 건물이 필요한 개수만큼 서 있다(TutorialStepSO의 RequiredCount·RequiresStaffed).
+    // "한 기는 손잡고 짓고 나머지는 자율"을 표현하는 조건이라 증가분이 아니라 총량으로 센다.
+    //
+    // 정원 옵션이 있는 이유: 타워의 공격 속도가 충원율에 비례하므로(TowerAttack.GetAttackInterval)
+    // 인구가 1명뿐인 타워 3기는 개수만 채웠을 뿐 화력이 1/5이다. 밤을 넘기는 기준으로 쓰려면
+    // "정원을 채운 타워"를 세야 한다.
+    BuildingCountReached,
+
+    // 일꾼 모드에서 우클릭했다. 인구 감소가 아니라 "그 조작을 해봤는가"를 본다 -
+    // 회수는 흔적이 남지 않는 조작이라 인구 증감으로 재면 뺄 인구가 없을 때 영영 통과하지 못하고,
+    // 채운 인구를 일부러 다시 빼는 순서를 강요하게 된다.
+    WorkerModeRightClicked,
 }
