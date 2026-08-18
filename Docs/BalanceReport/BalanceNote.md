@@ -208,65 +208,71 @@ Codex 웨이브 기본 EHP:
 
 | 지형 | 강화 방향 |
 |---|---|
-| Snow | 마릿수 (힐러·팔라딘 계열) |
-| Volcano | 마릿수 (폭탄병·파괴자 계열) |
-| Desert | 마릿수 (저격·비행 계열) |
-| Rock | 마릿수 (기본·실드 계열) |
+| Snow | 마릿수 (팔라딘·힐러·프로텍터 등 보조/맷집 계열) |
+| Volcano | 마릿수 (공격병·폭탄병·파괴자·마비병 계열) |
+| Desert | 마릿수 (원거리·저격·비행 계열) |
+| Rock | 마릿수 (실드생성기·석갑·탱커 계열) |
 
 스탯 보정(`_maxHealth`, `_shieldAmount`, `_attackPower`, `_moveSpeed`, `_spawnInterval`)은 28개 프로필 전부 0이다.
 시스템은 그대로 살아 있고 데이터만 중립화한 상태라, 필요하면 값만 다시 넣으면 복구된다.
 
-프로필별 규칙: **청크 하나당 몬스터 1종의 마릿수를 +1.**
+프로필별 규칙: **청크 하나당 몬스터 2~4종의 마릿수를 각각 +1.**
 
-+1을 받을 몬스터는 **등급이 아니라 프로필이 붙은 청크 수로** 골랐다. 같은 프로필이 N청크에 붙어 있으면
+어떤 몬스터를 고르느냐는 **등급이 아니라 프로필이 붙은 청크 수로** 정한다. 같은 프로필이 N청크에 붙어 있으면
 지형을 전부 점령했을 때 그 몬스터가 +N이 되기 때문이다.
 
-- 여러 청크에 반복되는 프로필(2~3청크)일수록 **가볍거나 그 포탈 웨이브에 흔한** 몬스터를 맡는다.
-- 1청크짜리 프로필일수록 **무겁거나 드문** 몬스터를 맡는다.
-- 보스(`Boss_*`)와 정예(`Elite_*`)는 등급과 무관하게 항상 0이다.
+- 종수: 3청크 프로필 = 2종, 2청크 = 2~3종, 1청크 = 2~4종. **어떤 프로필도 1종만 갖지 않는다.**
+- 대상: 이미 다른 프로필이 쓴 몬스터를 피해 분산하고, 같은 조건이면 **가볍고 그 포탈 후반 웨이브에 자주 나오는** 몬스터를 고른다.
+- 보스(`Boss_*`)와 정예(`Elite_*`, `Elite_DragonHunter`, `Elite_VoidShell`)는 등급과 무관하게 항상 0이다.
 
-그래서 "Minor는 잡몹, Major는 대형" 같은 등급별 규칙은 성립하지 않는다. 예를 들어 `Volcano_Major`는
-1청크뿐이라 Ground_Attack(40 EHP)을, `Volcano_Standard`는 3청크라 Ground_Destroyer(80 EHP)를 맡는다.
-프로필을 다른 청크로 옮기면 이 균형이 깨지므로, 배선을 바꿀 때는 아래 청크 수 열을 반드시 같이 본다.
+그래서 "Minor는 잡몹, Major는 대형" 같은 등급별 규칙은 성립하지 않는다. 예를 들어 `Rock_Minor`는 3청크에
+붙어 있어 2종만 맡고, `Desert_Major_AirReinforcement`는 1청크뿐이라 4종을 맡는다. 프로필을 다른 청크로 옮기면
+이 균형이 깨지므로, 배선을 바꿀 때는 아래 청크 수 열을 반드시 같이 본다.
 
-| 프로필 | +1 대상 | 붙은 청크 수 |
-|---|---|---:|
-| `Penalty_Rock_Minor` | Ground_Basic | 3 |
-| `Penalty_Rock_Standard` | Ground_ShieldGenerator | 2 |
-| `Penalty_Rock_Standard_AttackReinforcement` | Ground_Attack | 1 |
-| `Penalty_Rock_Major` | Ground_StoneArmor | 2 |
-| `Penalty_Rock_Major_AirReinforcement` | Air_Basic | 1 |
-| `Penalty_Volcano_Minor` | Ground_Bomber | 3 |
-| `Penalty_Volcano_Minor_BasicReinforcement` | Ground_Basic | 1 |
-| `Penalty_Volcano_Standard` | Ground_Destroyer | 3 |
-| `Penalty_Volcano_Standard_AttackReinforcement` | Ground_Attack | 1 |
-| `Penalty_Volcano_Major` | Ground_Attack | 1 |
-| `Penalty_Volcano_Major_RangedReinforcement` | Ground_Ranged | 1 |
-| `Penalty_Desert_Minor` | Air_Ranged | 2 |
-| `Penalty_Desert_Minor_BasicReinforcement` | Ground_Basic | 1 |
-| `Penalty_Desert_Standard` | Ground_Sniper | 2 |
-| `Penalty_Desert_Standard_AttackReinforcement` | Ground_Attack | 1 |
-| `Penalty_Desert_Major` | Ground_DragonHunter | 1 |
-| `Penalty_Desert_Major_AirReinforcement` | Air_Basic | 1 |
-| `Penalty_Desert_Major_RangedReinforcement` | Ground_Ranged | 1 |
-| `Penalty_Snow_Minor` | Ground_Protector | 1 |
-| `Penalty_Snow_Minor_BasicReinforcement` | Ground_Basic | 1 |
-| `Penalty_Snow_Standard` | Ground_Healer | 2 |
-| `Penalty_Snow_Major` | Ground_Paladin | 2 |
-| `Penalty_Snow_Major_AirReinforcement` | Air_Basic | 1 |
-| `Penalty_Snow_Major_RangedReinforcement` | Ground_Ranged | 1 |
+| 프로필 | 청크 | +1 대상 |
+|---|---:|---|
+| `Penalty_Rock_Minor` | 3 | Ground_Basic, Ground_ShieldGenerator |
+| `Penalty_Rock_Standard` | 2 | Ground_StoneArmor, Ground_Paladin, Ground_Tank |
+| `Penalty_Rock_Standard_AttackReinforcement` | 1 | Ground_Attack, Ground_ShieldGenerator |
+| `Penalty_Rock_Major` | 2 | Ground_StoneArmor, Ground_Tank |
+| `Penalty_Rock_Major_AirReinforcement` | 1 | Air_Basic, Air_Ranged |
+| `Penalty_Volcano_Minor` | 3 | Ground_Paralyzer, Ground_Destroyer |
+| `Penalty_Volcano_Minor_BasicReinforcement` | 1 | Ground_Basic, Ground_Attack |
+| `Penalty_Volcano_Standard` | 3 | Ground_Attack, Ground_Bomber |
+| `Penalty_Volcano_Standard_AttackReinforcement` | 1 | Ground_Paralyzer, Ground_Destroyer |
+| `Penalty_Volcano_Major` | 1 | Ground_Attack, Ground_Bomber |
+| `Penalty_Volcano_Major_RangedReinforcement` | 1 | Ground_Ranged, Ground_DragonHunter |
+| `Penalty_Desert_Minor` | 2 | Air_Basic, Ground_DragonHunter, Ground_Ranged |
+| `Penalty_Desert_Minor_BasicReinforcement` | 1 | Ground_Basic, Ground_DragonHunter |
+| `Penalty_Desert_Standard` | 2 | Ground_Ranged, Ground_Sniper, Air_Ranged |
+| `Penalty_Desert_Standard_AttackReinforcement` | 1 | Ground_Attack, Air_Ranged, Air_Sniper |
+| `Penalty_Desert_Major` | 1 | Air_Sniper, Ground_Ranged |
+| `Penalty_Desert_Major_AirReinforcement` | 1 | Air_Sniper, Air_Basic, Ground_Sniper, Air_Ranged |
+| `Penalty_Desert_Major_RangedReinforcement` | 1 | Air_Sniper, Ground_DragonHunter, Air_Basic, Ground_Sniper |
+| `Penalty_Snow_Minor` | 1 | Air_Sniper, Ground_Immune_Ice |
+| `Penalty_Snow_Minor_BasicReinforcement` | 1 | Ground_Basic, Ground_Immune_Ice, Ground_Protector |
+| `Penalty_Snow_Standard` | 2 | Ground_Paladin, Ground_Healer, Ground_Protector |
+| `Penalty_Snow_Major` | 2 | Ground_Paladin, Ground_Healer |
+| `Penalty_Snow_Major_AirReinforcement` | 1 | Air_Basic, Air_Ranged, Air_Sniper |
+| `Penalty_Snow_Major_RangedReinforcement` | 1 | Ground_Ranged, Ground_Sniper, Ground_DragonHunter |
 
-어느 청크에도 붙어 있지 않은 4개(`Rock_Minor_BasicReinforcement`, `Rock_Major_RangedReinforcement`,
-`Snow_Standard_AttackReinforcement`, `Volcano_Major_AirReinforcement`)도 같은 규칙으로 채워 뒀지만 현재는 동작하지 않는다.
+어느 청크에도 붙어 있지 않은 4개도 같은 규칙으로 채워 뒀지만 현재는 동작하지 않는다.
+
+| 프로필 (미배치) | +1 대상 |
+|---|---|
+| `Penalty_Rock_Minor_BasicReinforcement` | Ground_Basic, Ground_ShieldGenerator, Ground_Paladin |
+| `Penalty_Rock_Major_RangedReinforcement` | Ground_Ranged, Ground_Sniper, Ground_ShieldGenerator |
+| `Penalty_Snow_Standard_AttackReinforcement` | Ground_Attack, Ground_Protector, Ground_Healer |
+| `Penalty_Volcano_Major_AirReinforcement` | Air_Basic, Ground_Attack, Air_Ranged |
 
 지형 전체를 점령했을 때 그 지형이 배정된 포탈에 누적되는 마릿수:
 
-| 지형 | 청크 | 누적 |
-|---|---:|---|
-| Rock (서) | 9 | Ground_Basic +3, Ground_ShieldGenerator +2, Ground_StoneArmor +2, Ground_Attack +1, Air_Basic +1 |
-| Volcano (남) | 10 | Ground_Bomber +3, Ground_Destroyer +3, Ground_Attack +2, Ground_Basic +1, Ground_Ranged +1 |
-| Desert (동) | 9 | Air_Ranged +2, Ground_Sniper +2, Ground_Basic +1, Ground_Attack +1, Ground_Ranged +1, Ground_DragonHunter +1, Air_Basic +1 |
-| Snow (북) | 8 | Ground_Healer +2, Ground_Paladin +2, Ground_Protector +1, Ground_Basic +1, Ground_Ranged +1, Air_Basic +1 |
+| 지형 | 청크 | 누적 | 합 |
+|---|---:|---|---:|
+| Rock (서) | 9 | ShieldGenerator +4, StoneArmor +4, Tank +4, Basic +3, Paladin +2, Attack +1, Air_Basic +1, Air_Ranged +1 | +20 |
+| Volcano (남) | 10 | Attack +5, Bomber +4, Paralyzer +4, Destroyer +4, Ranged +1, DragonHunter +1, Basic +1 | +20 |
+| Desert (동) | 9 | Ranged +5, Sniper +4, Air_Ranged +4, Air_Basic +4, DragonHunter +4, Air_Sniper +4, Basic +1, Attack +1 | +27 |
+| Snow (북) | 8 | Paladin +4, Healer +4, Protector +3, Immune_Ice +2, Air_Sniper +2, Ranged +1, Sniper +1, DragonHunter +1, Basic +1, Air_Basic +1, Air_Ranged +1 | +21 |
 
 같은 프로필이 여러 청크에 붙어 있으면 그 수만큼 누적되므로, 프로필 배선을 옮길 때는 위 청크 수를 함께 확인한다.
 
@@ -276,7 +282,7 @@ Codex 웨이브 기본 EHP:
 |---|---:|
 | 대상 프로필 | 28개 |
 | 프로필당 대상 몬스터 수 | 5종 |
-| 프로필당 마릿수 부여 대상 | 1종 (+1) |
+| 프로필당 마릿수 부여 대상 | 2~4종 (각 +1) |
 | 스탯 보정 | 전부 0 (시스템은 유지) |
 | 시각화 문서 | `Docs/BalanceReport/ConquestPenaltyMap.html` (**미갱신 — 스탯 기준으로 만들어진 구버전**) |
 
@@ -614,7 +620,7 @@ Codex 웨이브 기본 EHP:
 | 항목 | 이전 | 현재 |
 |---|---|---|
 | 스탯 보정 | 지형별 체력·실드·공격·이속·스폰간격 배율 (최대 HP ×1.32) | 28개 프로필 전부 **0** |
-| 마릿수 보정 | 4개 Reinforcement 프로필만 특정 몬스터 +1 | **모든 프로필이 몬스터 1종 +1** |
+| 마릿수 보정 | 4개 Reinforcement 프로필만 특정 몬스터 +1 | **모든 프로필이 몬스터 2~4종에 각각 +1** |
 | 코드 | — | 변경 없음 (`EnemyEnhancementRule`·`Resolver`·`WaveRoutePlanner` 그대로) |
 
 의사결정 메모:
@@ -622,27 +628,41 @@ Codex 웨이브 기본 EHP:
 - 스탯 강화는 체감이 안 나면서 계산만 복잡해진다는 판단으로, 이번 테스트에서는 **페널티를 "몬스터가 더 온다" 하나로 단순화**한다.
 - 스탯 시스템 자체는 살려 둔다. 프로필 값만 0으로 되돌린 것이라, 되살릴 때 데이터만 다시 넣으면 된다.
 - 보스(`Boss_*`)와 정예(`Elite_*`)는 마릿수 +0으로 고정했다. 1마리 추가의 무게가 다른 몬스터와 비교가 안 된다(Boss_4 = 4,000 EHP).
-- 같은 프로필이 최대 3청크에 붙어 있어서, 값은 전부 0 또는 1로만 두고 누적은 청크 수로 만들었다.
+- 처음엔 청크당 1종만 올렸으나 "한 청크가 한 종류만 건드려서 밋밋하다"는 피드백으로 **청크당 2~4종**으로 넓혔다.
+- **종수를 늘리면 총량이 같이 커진다.** 값의 최소 단위가 +1이라 종수를 2배로 하면 누적도 대략 2배가 된다.
+  세기를 되돌리고 싶으면 종수를 줄이는 것 말고는 방법이 없다(청크당 1종 = 아래 표의 +26.4% 지점).
 
 Codex 웨이브 후반(22~28일, 4포탈 전부 개방) 기준 **모든 청크를 점령했을 때**의 정적 추정:
 
-| 지표 | 페널티 없음 | 이전(스탯+마릿수) | 현재(마릿수만) |
-|---|---:|---:|---:|
-| 총 마릿수 | 572 | 655 (+14.5%) | 723 (**+26.4%**) |
-| 총 기본 EHP | 41,350 | 45,500 (+10.0%) | 48,960 (**+18.4%**) |
+| 지표 | 페널티 없음 | 원래(스탯 기반) | 1차(마릿수 1종/청크) | 현재(마릿수 2~4종/청크) |
+|---|---:|---:|---:|---:|
+| 총 마릿수 | 572 | 655 (+14.5%) | 723 (+26.4%) | 877 (**+53.3%**) |
+| 총 기본 EHP | 41,350 | 45,500 (+10.0%) | 48,960 (+18.4%) | 57,350 (**+38.7%**) |
 
-- 즉 페널티 총량은 이전의 약 1.8배다. `밸런스분석_2026-08-18.md` §8-A가 제안한 3~5배 상향은 적용하지 않았다.
+- 페널티가 없을 때 대비 마릿수 +53.3% / EHP +38.7%다. 원래 스탯 방식(+14.5% / +10.0%)과 배율로 비교하면 3~4배지만,
+  이전 방식의 세기는 대부분 스탯 배율에 있었으므로 직접 비교는 아니다. 어쨌든 `밸런스분석_2026-08-18.md` §8-A가
+  제안한 상향 폭에는 들어왔다.
 - **위 EHP는 하한이다.** Rock의 `Ground_ShieldGenerator`, Snow의 `Ground_Healer`·`Ground_Protector`는 다른 몬스터의
-  생존력을 올려 주는 보조 유닛인데, 표는 이들을 자기 체력(80/100/110)으로만 계산한다. 서문·북문 체감은 +18.4%보다 높다.
-- 밤당 편차가 있다. 가장 센 밤은 25일차 서문(기본 18마리 1,050 EHP → 27마리 1,730 EHP, +65%), 가장 약한 밤은 25일차 북문(+15%)이다.
+  생존력을 올려 주는 보조 유닛인데, 표는 이들을 자기 체력(80/100/110)으로만 계산한다. 서문·북문 체감은 +38.7%보다 높다.
+- 밤당 편차가 크다.
+
+  | 밤 | 기본 | 전 청크 점령 시 |
+  |---|---|---|
+  | 25일차 서문 (가장 센 EHP) | 18마리 1,050 EHP | 32마리 2,240 EHP (마릿수 +77%, EHP **+113%**) |
+  | 27일차 동문 (가장 센 마릿수) | 24마리 1,350 EHP | 47마리 2,230 EHP (마릿수 **+95%**, EHP +65%) |
+  | 28일차 남문 (가장 약함) | 25마리 3,140 EHP | 32마리 3,420 EHP (마릿수 +28%, EHP +8%) |
+
 - `_spawnInterval` 감소 보정이 사라져 스폰 간격은 원래 값으로 돌아왔다. 마릿수가 늘어난 만큼 **밤이 길어진다.**
   특히 Desert는 전 청크 점령 시 스폰 간격이 ×0.72까지 줄었었는데 이제 ×1.0이다. 동문은 "빨리 몰려오는 압박"을
   잃고 "수가 많은 압박"으로 성격이 바뀐다.
-- 북문(Snow)은 프로필이 겨냥하는 힐러·프로텍터·팔라딘이 후반 북문 웨이브에 거의 안 나와서 페널티가 잘 안 걸린다. 웨이브 편성 쪽 문제라 이번 변경에서는 손대지 않았다.
+- 북문(Snow)은 페널티가 다른 지형보다 덜 걸린다. `Ground_Immune_Ice`(+2)는 15~16일차 북문에는 나오지만
+  **후반(22~28일) 북문 웨이브에는 한 번도 안 나오고**, `Ground_Healer`(+4)도 7밤 중 1밤뿐이다.
+  웨이브 편성 쪽 문제라 이번 변경에서는 손대지 않았다.
 
 적용 후 확인할 것:
 
 - 점령을 많이 한 방향의 포탈이 실제로 더 버겁게 느껴지는가?
+- 전 지형을 다 먹었을 때 마릿수 +50~95%가 "감당은 되는데 아프다" 선인가, 그냥 벽인가?
 - 마릿수 증가로 밤이 길어져 지루해지지 않는가?
-- 점령 창(`UI_ConquestWindow`)에 "몬스터 +1"이 제대로 보이는가? (스탯 표기가 사라져 마릿수 줄만 남는다)
+- 점령 창(`UI_ConquestWindow`)에 "몬스터 +1"이 2~4줄로 제대로 보이는가? (스탯 표기가 사라져 마릿수 줄만 남는다)
 - `ConquestPenaltyMap.html`은 스탯 기준으로 만들어진 구버전이라 재생성이 필요하다.
