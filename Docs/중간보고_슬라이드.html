@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>수성록 (Tower and Dragons) 중간 경과 보고 PPT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card-dark: #1e293b;
+      --bg-light: #f8fafc;
+      --bg-card-light: #ffffff;
+      --primary: #0ea5e9;
+      --primary-dark: #0284c7;
+      --teal: #14b8a6;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --purple: #8b5cf6;
+      --green: #10b981;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #f1f5f9;
+      --border: #e2e8f0;
+      --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-family);
+      background-color: #020617;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .viewport {
+      position: relative;
+      width: 90vw;
+      max-width: 1280px;
+      aspect-ratio: 16 / 9;
+      background: var(--bg-light);
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      padding: 2.5rem 3.2rem;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      transform: translateX(20px);
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-light);
+    }
+
+    .slide.active { opacity: 1; visibility: visible; transform: translateX(0); z-index: 10; }
+    .slide.dark-slide { background-color: var(--bg-dark); color: var(--text-light); }
+
+    .slide-header { margin-bottom: 1.2rem; }
+    .category-badge {
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+      text-transform: uppercase;
+      margin-bottom: 0.3rem;
+    }
+    .slide-title { font-size: 1.8rem; font-weight: 800; color: var(--text-main); line-height: 1.25; }
+    .dark-slide .slide-title { color: var(--text-light); }
+
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; flex: 1; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; flex: 1; }
+    .grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 0.9rem; flex: 1; }
+
+    .card {
+      background-color: var(--bg-card-light);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background-color: var(--primary); }
+    .card.accent-teal::before { background-color: var(--teal); }
+    .card.accent-amber::before { background-color: var(--amber); }
+
+    .dark-slide .card { background-color: var(--bg-card-dark); border-color: #334155; }
+    .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-main); }
+    .dark-slide .card-title { color: var(--text-light); }
+
+    .card-list { list-style: none; display: flex; flex-direction: column; gap: 0.85rem; }
+    .card-list li { font-size: 0.95rem; line-height: 1.5; color: #334155; position: relative; padding-left: 1.2rem; }
+    .dark-slide .card-list li { color: #cbd5e1; }
+    .dark-slide .card-list li::before { content: '•'; position: absolute; left: 0; color: var(--primary); font-weight: bold; }
+
+    /* Text-Only Compact Monster Grid Box */
+    .m-box {
+      background-color: var(--bg-card-dark);
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .m-box-header { display: flex; justify-content: space-between; align-items: center; }
+    .m-box-title { font-size: 1.02rem; font-weight: 800; color: var(--text-light); }
+    .m-box-badge { font-family: monospace; font-size: 0.68rem; font-weight: 700; color: var(--primary); background: rgba(14,165,233,0.15); padding: 2px 6px; border-radius: 4px; }
+    .m-box-prefabs { font-family: monospace; font-size: 0.72rem; color: var(--amber); font-weight: 600; }
+    .m-box-desc { font-size: 0.8rem; color: #94a3b8; line-height: 1.4; }
+
+    .title-slide-container { display: flex; flex-direction: column; justify-content: center; height: 100%; padding-left: 2rem; border-left: 6px solid var(--primary); }
+    .title-main { font-size: 3rem; font-weight: 800; color: var(--text-light); margin-bottom: 0.5rem; }
+    .title-sub { font-size: 2.1rem; font-weight: 700; color: var(--primary); margin-bottom: 1.5rem; }
+    .title-desc { font-size: 1.25rem; color: #94a3b8; margin-bottom: 3rem; }
+    .title-footer { font-size: 1.1rem; font-weight: 600; color: var(--amber); }
+
+    .table-container { width: 100%; flex: 1; overflow: hidden; border-radius: 12px; border: 1px solid var(--border); }
+    table { width: 100%; height: 100%; border-collapse: collapse; text-align: left; }
+    th { background-color: var(--primary); color: white; font-weight: 700; padding: 1rem; font-size: 0.95rem; }
+    td { padding: 0.9rem 1rem; font-size: 0.88rem; border-bottom: 1px solid var(--border); vertical-align: middle; line-height: 1.4; }
+    tr:nth-child(even) td { background-color: #f1f5f9; }
+    td:first-child { font-weight: 700; text-align: center; }
+
+    .controls-bar {
+      margin-top: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 0.6rem 1.5rem;
+      border-radius: 30px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+    }
+    .nav-btn { background: var(--primary); color: white; border: none; padding: 0.4rem 1.2rem; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+    .nav-btn:hover { background: var(--primary-dark); }
+    .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .slide-counter { color: var(--text-light); font-weight: 600; font-size: 0.95rem; min-width: 60px; text-align: center; }
+    .hint { color: #94a3b8; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+
+  <div class="viewport" id="viewport">
+    
+    <!-- SLIDE 1 -->
+    <div class="slide dark-slide active">
+      <div class="title-slide-container">
+        <h1 class="title-main">수성록 (Tower and Dragons)</h1>
+        <h2 class="title-sub">개발 경과 보고 (중간단계 브리핑)</h2>
+        <p class="title-desc">"낮의 선택이 밤의 생존을 결정한다" — 7월 30일 이후 알파 빌드 구현 및 기획 변경 현황</p>
+        <div class="title-footer">수성록 3팀 : 조강현 · 김지해 · 이하늘 · 나상욱 &nbsp;|&nbsp; 2026년 8월</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2 -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="category-badge">수성록 (Tower and Dragons) 중간 경과 보고</div>
+        <h2 class="slide-title">01. 알파 단계 개발 성과 및 현황 요약</h2>
+      </div>
+      <div class="grid-3">
+        <div class="card accent-teal">
+          <h3 class="card-title">7월 말 (프로토타입)</h3>
+          <ul class="card-list">
+            <li>낮/밤 수성 루프 뼈대 구축</li>
+            <li>기본 그리드 및 건물 배치 시스템</li>
+            <li>기초 웨이브 & 인구 연동 코어</li>
+            <li>프로토타입 검증 완료</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 class="card-title">8월 초~현재 (알파 빌드)</h3>
+          <ul class="card-list">
+            <li>어미용 5속성 스킬트리 (70노드)</li>
+            <li>새끼용 기믹 & 지형 페널티 해제</li>
+            <li>4속성 타워 및 몬스터 31종 전수 연동</li>
+            <li>랜드마크, 튜토리얼 씬, 세이브/로드</li>
+          </ul>
+        </div>
+        <div class="card accent-amber">
+          <h3 class="card-title">현재 개발 연동 상태</h3>
+          <ul class="card-list">
+            <li>C# 스크립트 500여 개 규모</li>
+            <li>ScriptableObject 570여 개 구축</li>
+            <li>핵심 가동 씬(SampleScene) 연동</li>
+            <li>독립 튜토리얼 씬 정상 플레이</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3 -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="category-badge">수성록 (Tower and Dragons) 중간 경과 보고</div>
+        <h2 class="slide-title">02. 주요 추가 기능 ① — 어미용 & 새끼용 시스템 완성</h2>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3 class="card-title">어미용 5속성 스킬트리 정식 구현</h3>
+          <ul class="card-list">
+            <li>5가지 속성: 얼음, 불, 시간, 암석, 생명</li>
+            <li>속성별 8개 슬롯 × 랭크 = 총 70개 노드 트리 완성</li>
+            <li>속성 변경 시 전용 스킬 패널 UI 및 효과 즉시 반영</li>
+            <li>Data-driven 구조: ScriptableObject 210여 개 에셋화</li>
+          </ul>
+        </div>
+        <div class="card accent-teal">
+          <h3 class="card-title">새끼용 운용 및 지형 극복 기믹</h3>
+          <ul class="card-list">
+            <li>독자적 경제 단위: 인구 대신 '슬라임 먹이'로 일일 가동</li>
+            <li>공격 모드 vs 버프 모드 (생산 배율 증가)</li>
+            <li>특수 지형 해제: 얼음용 배치 시 화산/극지 지형 제한 해제</li>
+            <li>알 획득 ➔ 성장/부화 ➔ 필드 배치 ➔ 정산 파이프라인 완비</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4 -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="category-badge">수성록 (Tower and Dragons) 중간 경과 보고</div>
+        <h2 class="slide-title">03. 주요 추가 기능 ② — 전투 및 속성 다양화</h2>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <h3 class="card-title">속성 타워 4종 구현</h3>
+          <ul class="card-list">
+            <li>얼음 타워: 적 이동속도 둔화</li>
+            <li>불 타워: 지속 화상 피격 데미지</li>
+            <li>암석 타워: 강력한 범위 스플래시</li>
+            <li>시간 타워: 아군 버프 오라 제공</li>
+          </ul>
+        </div>
+        <div class="card accent-amber">
+          <h3 class="card-title">신규 몬스터 타입 추가</h3>
+          <ul class="card-list">
+            <li>탱커형: 고체력 전열 흡수</li>
+            <li>용사냥꾼형: 새끼용 우선 타깃</li>
+            <li>보호형: 주변 적 오라 방어막 부여</li>
+            <li>공중/지상 필터링 타겟팅 적용</li>
+          </ul>
+        </div>
+        <div class="card accent-teal">
+          <h3 class="card-title">타워 충원율(인구) 연동</h3>
+          <ul class="card-list">
+            <li>파괴 대신 '비활성화' 매커니즘</li>
+            <li>인구 0일 경우 기능 전면 침묵</li>
+            <li>충원율 비례 아침 자동 부활</li>
+            <li>배치 인구에 비례한 공격속도 계산</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: COMPACT TEXT-ONLY ALL MONSTERS -->
+    <div class="slide dark-slide">
+      <div class="slide-header">
+        <div class="category-badge">수성록 (Tower and Dragons) — 전체 구현 몬스터 31종 전수 명세</div>
+        <h2 class="slide-title">04. 구현 몬스터 분류 및 전술적 특성 (Total 31 Monster Data / 30 Prefabs)</h2>
+      </div>
+      <div class="grid-6">
+        
+        <div class="m-box">
+          <div class="m-box-header">
+            <span class="m-box-title">1. 지상 근접 & 탱커형 (6종)</span>
+            <span class="m-box-badge">Ground Assault</span>
+          </div>
+          <div class="m-box-prefabs">MP_Ground_Basic, Attack, Elite, Tank, Destroyer, StoneArmor</div>
+          <div class="m-box-desc">기본 보병, 전열 돌파 탱커, 공성 파괴자(Destroyer), 암석 장갑병으로 구성된 근접 몬스터.</div>
+        </div>
+
+        <div class="m-box">
+          <div class="m-box-header">
+            <span class="m-box-title">2. 원거리 & 용사냥꾼 (4종)</span>
+            <span class="m-box-badge">Ranged & Assassin</span>
+          </div>
+          <div class="m-box-prefabs">MP_Ground_RangedAttack, Sniper, DragonHunter, Elite_DragonHunter</div>
+          <div class="m-box-desc">후방 사격 딜러 및 필드에 배치된 **새끼용(DragonTargetType.Dragon)을 최우선 사격**하는 암살자.</div>
+        </div>
+
+        <div class="m-box">
+          <div class="m-box-header">
+            <span class="m-box-title">3. 수호자 오라 & 방어막 (3종)</span>
+            <span class="m-box-badge">Shield & Defense</span>
+          </div>
+          <div class="m-box-prefabs">MP_Ground_Protector, ShieldGenerator, Elite_VoidShell</div>
+          <div class="m-box-desc">ProtectionAura 및 실시간 방어막 재생을 통해 주변 아군 몬스터를 타워 화력으로부터 보호.</div>
+        </div>
+
+        <div class="m-box">
+          <div class="m-box-header">
+            <span class="m-box-title">4. 치유, 자폭 & 마비 (4종)</span>
+            <span class="m-box-badge">Support Utility</span>
+          </div>
+          <div class="m-box-prefabs">MP_Ground_Healer, Bomber, Paralyzer, Paladin</div>
+          <div class="m-box-desc">HealAura 체력 회복, 접촉 시 즉시 자폭 폭발(Bomber), 타워 일시 기절(Paralyzer) 특수 유닛.</div>
+        </div>
+
+        <div class="m-box">
+          <div class="m-box-header">
+            <span class="m-box-title">5. 공중 비행 유닛 (3종)</span>
+            <span class="m-box-badge">Air Flying Units</span>
+          </div>
+          <div class="m-box-prefabs">MP_Air_Basic, Ranged, Sniper</div>
+          <div class="m-box-desc">지형과 안개를 무시하고 빠르게 직진 비행. 대공 전용 타겟팅 타워로만 대처 가능.</div>
+        </div>
+
+        <div class="m-box">
+          <div class="m-box-header">
+            <span class="m-box-title">6. 속성 면역 & 주기 보스 (11종)</span>
+            <span class="m-box-badge">Elemental & Bosses</span>
+          </div>
+          <div class="m-box-prefabs">MP_ElementImmune/Only (Fire, Ice, Stone, Life), MP_Boss_1 ~ 4</div>
+          <div class="m-box-desc">특정 속성 면역/전용 몬스터 7종 및 7일 주기별 보스 몬스터 4종 (28일차 최종 보스 격파 시 승리).</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SLIDE 6 -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="category-badge">수성록 (Tower and Dragons) 중간 경과 보고</div>
+        <h2 class="slide-title">05. 주요 추가 기능 ③ — 영토 확장 및 지형 기믹</h2>
+      </div>
+      <div class="grid-3">
+        <div class="card accent-teal">
+          <h3 class="card-title">랜드마크 시스템 (08-12)</h3>
+          <ul class="card-list">
+            <li>청크 점령 상태 변화 자동 감지</li>
+            <li>랜드마크 수령 시 알/자원 보상</li>
+            <li>가동형 랜드마크 인구 배치 가동</li>
+            <li>자투리 편입 영토 랜드마크도 지급</li>
+          </ul>
+        </div>
+        <div class="card accent-amber">
+          <h3 class="card-title">지형 페널티 4종 도입</h3>
+          <ul class="card-list">
+            <li>늪지/화산 등 생산력/전투 감태</li>
+            <li>새끼용 버프 범위 배치 시 무효화</li>
+            <li>지형 특성에 맞춘 전술 배치 유도</li>
+            <li>안개 타일 틴트 처리로 시야 명확화</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 class="card-title">자투리 편입 & 점령 UX</h3>
+          <ul class="card-list">
+            <li>고립 소형 청크 자동 편입 로직</li>
+            <li>점령 가능/불가 외곽선 하이라이트</li>
+            <li>청크 레이아웃 에디터 툴 도입</li>
+            <li>성 기준 거리 비례 생산 배율</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7 -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="category-badge">수성록 (Tower and Dragons) 중간 경과 보고</div>
+        <h2 class="slide-title">06. 주요 추가 기능 ④ — 게임 완성도 및 UX 개선</h2>
+      </div>
+      <div class="grid-3">
+        <div class="card">
+          <h3 class="card-title">독립 튜토리얼 씬 구축</h3>
+          <ul class="card-list">
+            <li>신규 유저 적응용 Tutorial 씬</li>
+            <li>단계별 챕터 + 자유 목표 시스템</li>
+            <li>튜토리얼 전용 3일 웨이브 스케줄</li>
+            <li>안내 팝업 및 건물 가이드 연동</li>
+          </ul>
+        </div>
+        <div class="card accent-teal">
+          <h3 class="card-title">세이브/로드 파이프라인</h3>
+          <ul class="card-list">
+            <li>낮 정산 경계(OnDaySettled) 저장</li>
+            <li>자원/인구/점령 영토 완전 복원</li>
+            <li>로딩 시 자원 중복 증식 방지</li>
+            <li>자동저장 및 수동저장 UI 지원</li>
+          </ul>
+        </div>
+        <div class="card accent-amber">
+          <h3 class="card-title">UI / UX & Sound 통합</h3>
+          <ul class="card-list">
+            <li>ESC 시스템 설정창 (일시정지 연동)</li>
+            <li>단축키(B, V, C, Tab) 지원</li>
+            <li>SoundManager 통합 및 BGM/SFX</li>
+            <li>게임 가이드 및 툴팁 팝업 완성</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8 -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="category-badge">수성록 (Tower and Dragons) 중간 경과 보고</div>
+        <h2 class="slide-title">07. 원래 기획 대비 주요 변경 사항 및 사유</h2>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 15%;">구분</th>
+              <th style="width: 25%;">초기 기획 안</th>
+              <th style="width: 25%;">변경된 구현 내용</th>
+              <th style="width: 35%;">변경 및 조정 사유</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>자원 종류</td>
+              <td>기본 자원 4종<br>(식량 · 목재 · 석재 · 광물)</td>
+              <td>기본 자원 3종<br>(광물 제외, 특화 자원 통합)</td>
+              <td>UI 가독성 향상 및 자원 관리의 불필요한 과도한 복잡도 완화</td>
+            </tr>
+            <tr>
+              <td>주둔지</td>
+              <td>점령 시 1단계 주둔지 건설<br>및 자원 지속 투입 강화</td>
+              <td>주둔지 제외,<br>점령 시 자원/인구 직접 해금</td>
+              <td>플레이어의 건물 마이크로매니지먼트 피로도 저감 및 직관성 확보</td>
+            </tr>
+            <tr>
+              <td>타워 파괴</td>
+              <td>방어 실패 시 타워 완전 파괴<br>(재건설 필요)</td>
+              <td>파괴 대신 '비활성화',<br>아침에 인구 충원 부활</td>
+              <td>밤 방어 실패 시 순식간에 복구 불가능해지는 패배 부도 스노우볼 방지</td>
+            </tr>
+            <tr>
+              <td>적 타겟팅</td>
+              <td>적은 메인 성과<br>타워만 공격</td>
+              <td>필드에 배치된<br>새끼용도 적 공격 대상 포함</td>
+              <td>새끼용의 강력한 생산/버프 혜택에 따른 전술적 배치 리스크 부여</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SLIDE 9 -->
+    <div class="slide dark-slide">
+      <div class="slide-header">
+        <div class="category-badge">수성록 (Tower and Dragons) 중간 경과 보고</div>
+        <h2 class="slide-title">08. 알려진 공백 및 향후 과제 (~베타/최종)</h2>
+      </div>
+      <div class="grid-2" style="flex: 0.85;">
+        <div class="card">
+          <h3 class="card-title" style="color: var(--primary);">현재 알려진 우선 해결 과제 (공백)</h3>
+          <ul class="card-list">
+            <li>건물 배치 정보 세이브/로드 완결 (프리팹 ID 복원)</li>
+            <li>승리 경로 ② (봉인석 4곳 봉인) 본게임 씬 배선 완료</li>
+            <li>연구 노드 미구현 효과 대입 & 타워 T5 밸런스 조정</li>
+            <li>몬스터 사망 시 자원 드롭 및 오브젝트 풀링 고려</li>
+          </ul>
+        </div>
+        <div class="card accent-amber">
+          <h3 class="card-title" style="color: var(--amber);">향후 진행 일정 마일스톤</h3>
+          <ul class="card-list">
+            <li>~ 8월 말 (베타 단계): 세이브 완결, 봉인석 배선 완료, 최종 밸런싱</li>
+            <li>~ 9월 3일 (최종 제출): 빌드 검증 및 릴리즈 준비</li>
+            <li>핵심 루프 정상 플레이 가능 상태 유지</li>
+            <li>팀원 역할 분담을 통한 차질 없는 완수 약속</li>
+          </ul>
+        </div>
+      </div>
+      <div style="margin-top: 1.5rem; background: var(--primary); padding: 1rem; border-radius: 12px; text-align: center; font-weight: 800; font-size: 1.3rem; color: white;">
+        경청해 주셔서 감사합니다. &nbsp;|&nbsp; Q & A
+      </div>
+    </div>
+
+  </div>
+
+  <div class="controls-bar">
+    <button class="nav-btn" id="prevBtn" onclick="prevSlide()">이전 (←)</button>
+    <div class="slide-counter" id="counter">1 / 9</div>
+    <button class="nav-btn" id="nextBtn" onclick="nextSlide()">다음 (→)</button>
+    <span class="hint">| 키보드 방향키(←, →) 이용 가능</span>
+  </div>
+
+  <script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const counter = document.getElementById('counter');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    function updateSlides() {
+      slides.forEach((slide, idx) => {
+        slide.classList.toggle('active', idx === currentSlide);
+      });
+      counter.innerText = `${currentSlide + 1} / ${slides.length}`;
+      prevBtn.disabled = currentSlide === 0;
+      nextBtn.disabled = currentSlide === slides.length - 1;
+    }
+
+    function nextSlide() {
+      if (currentSlide < slides.length - 1) { currentSlide++; updateSlides(); }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) { currentSlide--; updateSlides(); }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { nextSlide(); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { prevSlide(); }
+    });
+
+    updateSlides();
+  </script>
+</body>
+</html>

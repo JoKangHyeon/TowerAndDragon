@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>수성록 (Tower and Dragons) — 전체 몬스터 컴팩트 도감 (31종)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --bg-card: #1e293b;
+      --primary: #0ea5e9;
+      --amber: #f59e0b;
+      --teal: #14b8a6;
+      --red: #ef4444;
+      --purple: #8b5cf6;
+      --green: #10b981;
+      --text-light: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-family);
+      background-color: #020617;
+      color: var(--text-light);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1380px;
+      background-color: var(--bg-dark);
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--border);
+      padding: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2.2rem;
+    }
+
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.2rem;
+    }
+
+    .category-badge {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.3rem;
+    }
+
+    .title {
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: var(--text-light);
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      font-size: 0.98rem;
+      color: var(--text-muted);
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1rem;
+    }
+
+    .section-title::before {
+      content: '';
+      display: inline-block;
+      width: 5px;
+      height: 1.3rem;
+      background-color: var(--primary);
+      border-radius: 3px;
+    }
+
+    .section-title.amber::before { background-color: var(--amber); }
+    .section-title.teal::before { background-color: var(--teal); }
+    .section-title.purple::before { background-color: var(--purple); }
+    .section-title.red::before { background-color: var(--red); }
+    .section-title.green::before { background-color: var(--green); }
+
+    .monster-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 1024px) {
+      .monster-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .monster-grid { grid-template-columns: 1fr; }
+    }
+
+    .monster-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      position: relative;
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .monster-name {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text-light);
+    }
+
+    .prefab-code {
+      font-family: monospace;
+      font-size: 0.73rem;
+      font-weight: 700;
+      color: var(--primary);
+      background: rgba(14, 165, 233, 0.12);
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid rgba(14, 165, 233, 0.25);
+    }
+
+    .asset-code {
+      font-family: monospace;
+      font-size: 0.7rem;
+      color: #64748b;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      margin: 0.2rem 0;
+    }
+
+    .tag {
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background-color: rgba(14, 165, 233, 0.15);
+      color: var(--primary);
+    }
+    .tag.red { background-color: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .tag.amber { background-color: rgba(245, 158, 11, 0.15); color: var(--amber); }
+    .tag.purple { background-color: rgba(139, 92, 246, 0.15); color: var(--purple); }
+    .tag.green { background-color: rgba(16, 185, 129, 0.15); color: var(--green); }
+    .tag.teal { background-color: rgba(20, 184, 166, 0.15); color: var(--teal); }
+
+    .monster-desc {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- HEADER -->
+    <div class="header">
+      <div class="category-badge">수성록 (Tower and Dragons) — 몬스터 시스템 전체 명세</div>
+      <h1 class="title">프로젝트 구현 몬스터 전체 컴팩트 도감 (31종 전수 수록)</h1>
+      <p class="subtitle">MonsterData 에셋(31개) 및 프리팹(30개)의 이름, ID, 특성 및 설명 요약</p>
+    </div>
+
+    <!-- CATEGORY 1 -->
+    <div>
+      <h2 class="section-title">1. 지상 근접 돌파 및 전열 탱커 (6종)</h2>
+      <div class="monster-grid">
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">지상 기본 보병</span>
+            <span class="prefab-code">MP_Ground_Basic</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Basic.asset</div>
+          <div class="tags"><span class="tag">기본 몬스터</span><span class="tag">이동속도 2.0</span></div>
+          <p class="monster-desc">주 웨이브의 뼈대를 이루는 기본 지상 기병. 보편적인 체력과 이동속도를 가짐.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">지상 근접 공격병</span>
+            <span class="prefab-code">MP_Ground_Attack</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Attack.asset</div>
+          <div class="tags"><span class="tag red">근접 공격력</span><span class="tag amber">건물 타격</span></div>
+          <p class="monster-desc">높은 근접 공격력으로 성벽 및 타워 방어선에 타격을 가하는 공격 특화 보병.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">정예 지상 보병</span>
+            <span class="prefab-code">MP_Ground_Elite</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Elite.asset</div>
+          <div class="tags"><span class="tag amber">이동속도 2.5</span><span class="tag red">강화 체력</span></div>
+          <p class="monster-desc">높은 체력과 빠른 이동속도로 방어선을 신속히 돌파하는 정예 육상 유닛.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">탱커형 몬스터</span>
+            <span class="prefab-code">MP_Ground_Tank</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Tank.asset</div>
+          <div class="tags"><span class="tag red">고체력</span><span class="tag">고방어력</span><span class="tag">이동속도 1.0</span></div>
+          <p class="monster-desc">압도적인 체력과 높은 방어력으로 최전방에서 타워 화력을 온몸으로 무력화 흡수함.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">건물 파괴자</span>
+            <span class="prefab-code">MP_Ground_Destroyer</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Destroyer.asset</div>
+          <div class="tags"><span class="tag red">공성 특화</span><span class="tag amber">건물 파괴</span></div>
+          <p class="monster-desc">메인 성과 방어 건물 타격에 특화된 공성 전용 근접 몬스터.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">암석 장갑병</span>
+            <span class="prefab-code">MP_Ground_StoneArmor</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_StoneArmor.asset</div>
+          <div class="tags"><span class="tag purple">단단한 장갑</span><span class="tag">이동속도 1.0</span></div>
+          <p class="monster-desc">단단한 암석 장갑으로 단일 원거리 타워의 기본 데미지를 대폭 감소시킴.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CATEGORY 2 -->
+    <div>
+      <h2 class="section-title amber">2. 원거리 사격 및 저격/암살 특화 (4종)</h2>
+      <div class="monster-grid">
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">지상 원거리 사격병</span>
+            <span class="prefab-code">MP_Ground_RangedAttack</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Ranged.asset</div>
+          <div class="tags"><span class="tag amber">원거리 투사체</span><span class="tag">후방 딜러</span></div>
+          <p class="monster-desc">타워 사거리 밖에서 원거리 투사체로 성과 방어 타워를 타격하는 원거리 딜러.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">지상 저격수</span>
+            <span class="prefab-code">MP_Ground_Sniper</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Sniper.asset</div>
+          <div class="tags"><span class="tag red">초장거리</span><span class="tag red">고피해 사격</span></div>
+          <p class="monster-desc">긴 사거리와 선모션을 가지며 성과 중요 건물에 고위력 저격 사격을 가함.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">용사냥꾼</span>
+            <span class="prefab-code">MP_Ground_DragonHunter</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_DragonHunter.asset</div>
+          <div class="tags"><span class="tag red">새끼용 최우선</span><span class="tag amber">전술 저격</span></div>
+          <p class="monster-desc">필드에 배치된 <b>새끼용(DragonTargetType.Dragon)을 최우선 타깃</b>으로 저격 파괴함.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">정예 용사냥꾼</span>
+            <span class="prefab-code">MP_Ground_Elite_DragonHunter</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Elite_DragonHunter.asset</div>
+          <div class="tags"><span class="tag red">정예 암살자</span><span class="tag amber">새끼용 위협</span></div>
+          <p class="monster-desc">강화된 체력과 공격력을 보유하여 새끼용 버프 거점을 위협하는 정예 용사냥꾼.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CATEGORY 3 -->
+    <div>
+      <h2 class="section-title purple">3. 특수 보조, 오라, 치유 & 자폭 (7종)</h2>
+      <div class="monster-grid">
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">수호자 (Protector)</span>
+            <span class="prefab-code">MP_Ground_Protector</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Protector.asset</div>
+          <div class="tags"><span class="tag purple">ProtectionAura</span><span class="tag red">방어막 부여</span></div>
+          <p class="monster-desc">주변 아군 몬스터들에게 <b>실시간 방어막 오라</b>를 지속 부여하여 타워 화력을 무력화.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">쉴드 제너레이터</span>
+            <span class="prefab-code">MP_Ground_ShieldGenerator</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_ShieldGenerator.asset</div>
+          <div class="tags"><span class="tag purple">방어막 재생</span><span class="tag">보조 유닛</span></div>
+          <p class="monster-desc">RegeneratingShieldBehavior를 탑재하여 아군 몬스터의 방어막을 지속 재생시킴.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">정예 공허 껍질</span>
+            <span class="prefab-code">MP_Ground_Elite_VoidShell</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Elite_VoidShell.asset</div>
+          <div class="tags"><span class="tag purple">공허 보호막</span><span class="tag amber">정예 보조</span></div>
+          <p class="monster-desc">특수 보호막과 높은 방어 판정을 지니고 방어선을 보호하는 정예 지원 유닛.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">치유 주술사 (Healer)</span>
+            <span class="prefab-code">MP_Ground_Healer</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Healer.asset</div>
+          <div class="tags"><span class="tag green">HealAura</span><span class="tag green">광역 체력 회복</span></div>
+          <p class="monster-desc">주기적인 회복 오라를 방출하여 피격당한 아군 전열 몬스터의 체력을 가동 복구함.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">자폭병 (Bomber)</span>
+            <span class="prefab-code">MP_Ground_Bomber</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Bomber.asset</div>
+          <div class="tags"><span class="tag red">SelfDestruct</span><span class="tag red">접촉 자폭</span></div>
+          <p class="monster-desc">빠르게 건물로 다가가 접촉 시 즉시 자폭 폭발하여 치명적인 자폭 피해를 남김.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">마비 공격병 (Paralyzer)</span>
+            <span class="prefab-code">MP_Ground_Paralyzer</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Paralyzer.asset</div>
+          <div class="tags"><span class="tag purple">MA_Paralyze</span><span class="tag amber">타워 마비</span></div>
+          <p class="monster-desc">타워 공격 시 특수 파동을 발사하여 일시적으로 타워 기능을 정지(스턴)시킴.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">성기사 (Paladin)</span>
+            <span class="prefab-code">MP_Ground_Paladin</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Paladin.asset</div>
+          <div class="tags"><span class="tag purple">신성 방어</span><span class="tag">정예 기병</span></div>
+          <p class="monster-desc">특수 신성 방어막과 단단한 체력으로 전열 후방에서 방어망을 유지하는 정예 유닛.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CATEGORY 4 -->
+    <div>
+      <h2 class="section-title teal">4. 공중 이동 비행 유닛 (3종)</h2>
+      <div class="monster-grid">
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">공중 기본 비행병</span>
+            <span class="prefab-code">MP_Air_Basic</span>
+          </div>
+          <div class="asset-code">Data: MD_Air_Basic.asset</div>
+          <div class="tags"><span class="tag teal">이동속도 4.0</span><span class="tag teal">지형 무시 비행</span></div>
+          <p class="monster-desc">빠른 속도로 지형과 안개를 무시하고 직진 비행. 대공 지원 타워로만 타격 가능.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">공중 원거리 비행병</span>
+            <span class="prefab-code">MP_Air_Ranged</span>
+          </div>
+          <div class="asset-code">Data: MD_Air_Ranged.asset</div>
+          <div class="tags"><span class="tag teal">공중 사격</span><span class="tag amber">이동속도 4.0</span></div>
+          <p class="monster-desc">공중에서 고저차를 무시하고 이동하며 지상 건물과 성에 투사체를 발사함.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">공중 저격수</span>
+            <span class="prefab-code">MP_Air_Sniper</span>
+          </div>
+          <div class="asset-code">Data: MD_Air_Sniper.asset</div>
+          <div class="tags"><span class="tag teal">공중 선회</span><span class="tag red">고위력 사격</span></div>
+          <p class="monster-desc">공중에서 느리게(1.5) 선회하며 성과 중요 타워에 고위력 저격 사격을 가함.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CATEGORY 5 -->
+    <div>
+      <h2 class="section-title green">5. 속성 면역 및 속성 전용 유닛 (7종)</h2>
+      <div class="monster-grid">
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">불 속성 면역병</span>
+            <span class="prefab-code">MP_Ground_ElementImmune_Fire</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Immune_Fire.asset</div>
+          <div class="tags"><span class="tag red">불 면역</span><span class="tag">화상 차단</span></div>
+          <p class="monster-desc">화염 타워의 지속 화상 피해 및 화염 데미지를 완전히 무효화함.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">얼음 속성 면역병</span>
+            <span class="prefab-code">MP_Ground_ElementImmune_Ice</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Immune_Ice.asset</div>
+          <div class="tags"><span class="tag teal">얼음 면역</span><span class="tag">둔화 차단</span></div>
+          <p class="monster-desc">얼음 타워의 이동속도 둔화(CC) 및 냉기 데미지 피격을 무효화함.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">암석 속성 면역병</span>
+            <span class="prefab-code">MP_Ground_ElementImmune_Stone</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Immune_Stone.asset</div>
+          <div class="tags"><span class="tag amber">암석 면역</span><span class="tag">스플래시 차단</span></div>
+          <p class="monster-desc">암석 타워의 스플래시 및 암석 속성 피해를 완벽히 차단함.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">생명 속성 면역병</span>
+            <span class="prefab-code">MD_Ground_Immune_Life</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Immune_Life.asset</div>
+          <div class="tags"><span class="tag green">생명 면역</span><span class="tag">상태이상 차단</span></div>
+          <p class="monster-desc">생명 속성 및 관련 디버프 피해를 완전히 차단 무효화함.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">불 속성 전용 피격병</span>
+            <span class="prefab-code">MP_Ground_ElementOnly_Fire</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Only_Fire.asset</div>
+          <div class="tags"><span class="tag red">불 속성 전용</span><span class="tag amber">조합 강제</span></div>
+          <p class="monster-desc">오직 화염 속성 공격으로만 피해를 입는 기믹형 몬스터 (불 타워 필요).</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">얼음 속성 전용 피격병</span>
+            <span class="prefab-code">MP_Ground_ElementOnly_Ice</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Only_Ice.asset</div>
+          <div class="tags"><span class="tag teal">얼음 속성 전용</span><span class="tag amber">조합 강제</span></div>
+          <p class="monster-desc">오직 냉기 속성 공격으로만 피해를 입는 기믹형 몬스터 (얼음 타워 필요).</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">암석 속성 전용 피격병</span>
+            <span class="prefab-code">MP_Ground_ElementOnly_Stone</span>
+          </div>
+          <div class="asset-code">Data: MD_Ground_Only_Stone.asset</div>
+          <div class="tags"><span class="tag amber">암석 속성 전용</span><span class="tag amber">조합 강제</span></div>
+          <p class="monster-desc">오직 암석 속성 공격으로만 피해를 입는 기믹형 몬스터 (암석 타워 필요).</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CATEGORY 6 -->
+    <div>
+      <h2 class="section-title red">6. 주기별 보스 몬스터 (4종)</h2>
+      <div class="monster-grid">
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">1주기 보스 (Cycle 1 Boss)</span>
+            <span class="prefab-code">MP_Boss_1</span>
+          </div>
+          <div class="asset-code">Data: MD_Boss_1.asset</div>
+          <div class="tags"><span class="tag red">7일차 출현</span><span class="tag amber">알 보상 지급</span></div>
+          <p class="monster-desc">1주기 완료 보스. 격파 시 1주기 종료 판정 및 새끼용 알 보상을 지급함.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">2주기 보스 (Cycle 2 Boss)</span>
+            <span class="prefab-code">MP_Boss_2</span>
+          </div>
+          <div class="asset-code">Data: MD_Boss_2.asset</div>
+          <div class="tags"><span class="tag red">14일차 출현</span><span class="tag amber">포탈 연동</span></div>
+          <p class="monster-desc">14일차 출현 보스. 추가 해금된 포탈 웨이브와 함께 강화된 체력으로 진격.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">3주기 보스 (Cycle 3 Boss)</span>
+            <span class="prefab-code">MP_Boss_3</span>
+          </div>
+          <div class="asset-code">Data: MD_Boss_3.asset</div>
+          <div class="tags"><span class="tag red">21일차 출현</span><span class="tag purple">중장갑 오라</span></div>
+          <p class="monster-desc">21일차 출현 보스. 높은 장갑과 공격력으로 방어 타워 진형을 강하게 압박.</p>
+        </div>
+
+        <div class="monster-card">
+          <div class="card-top">
+            <span class="monster-name">4주기 최종 보스 (Final Boss)</span>
+            <span class="prefab-code">MP_Boss_4</span>
+          </div>
+          <div class="asset-code">Data: MD_Boss_4.asset</div>
+          <div class="tags"><span class="tag red">28일차 최종전</span><span class="tag green">승리 조건</span></div>
+          <p class="monster-desc">28일차 웨이브에 출현하는 최종 보스. 격파 시 메인 게임 승리 조건 달성.</p>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
