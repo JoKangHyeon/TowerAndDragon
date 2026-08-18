@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -22,14 +21,10 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     // 밤 진입이 막혔을 때 띄운다. 막는 주체는 안내 러너나 새끼용 가이드지만 문구는 여기서 낸다 -
     // 플레이어가 알아야 하는 것은 "누가 막았는가"가 아니라 "오늘 할 일이 남았다"이고, 그 목록이 여기에 있다.
     private const string NIGHT_BLOCKED_LOC_KEY = "tutorial_night_blocked";
-    private const string WORKER_MODE_NUDGE_LOC_KEY = "tutorial_worker_mode_nudge";
-
     // "아직 해보지 않은 것이 {0}가지 남았습니다." - 밤으로 넘어가기 직전 1회 상기.
     private const string OBJECTIVE_REMAINING_LOC_KEY = "tutorial_objective_remaining";
 
     private const int FIRST_DAY_NUMBER = 1;
-    private const int WORKER_MODE_NUDGE_DAY = 2;
-    private const float DEFAULT_WORKER_MODE_NUDGE_DELAY_SECONDS = 1f;
 
     [Tooltip("추적할 목표들. 순서는 목록에 보이는 순서다.")]
     [SerializeField] private List<TutorialObjectiveSO> _objectives = new();
@@ -42,13 +37,6 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
 
     [Tooltip("완료·상기 알림을 띄운다.")]
     [SerializeField] private UI_NotificationToast _toast;
-
-    [Tooltip("마지막 건물 팁이 화면 표시권을 반납한 뒤 워커모드 토스트를 띄우는 데 쓴다.")]
-    [SerializeField] private TutorialTipChainController _tipChainController;
-
-    [Tooltip("건물 팁과 열려 있던 창이 모두 끝난 뒤 워커모드 토스트를 띄우기까지 기다릴 시간(초).")]
-    [Min(0f)]
-    [SerializeField] private float _workerModeNudgeDelaySeconds = DEFAULT_WORKER_MODE_NUDGE_DELAY_SECONDS;
 
     [Header("완료 조건을 듣는 대상")]
     [SerializeField] private PopulationManager _populationManager;
@@ -75,9 +63,6 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
 
     // 매번 새로 만들면 구독자가 프레임마다 리스트를 할당하게 된다.
     private readonly List<TutorialObjectiveSO> _visibleObjectives = new();
-    private bool _workerModeNudgeShown;
-    private bool _workerModeNudgeCheckScheduled;
-
     // 속성 변경 알림이 실제 변경인지 새날·복원 갱신인지 가르는 기준값.
     private DragonType? _lastSeenAttribute;
 
@@ -186,11 +171,6 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
             _lastSeenAttribute = _dragonTreeManager.ActiveAttribute;
         }
 
-        if (_tipChainController != null)
-        {
-            _tipChainController.ChainEnded.AddListener(HandleTipChainEnded);
-        }
-
         if (_cycleManager != null)
         {
             _cycleManager.OnDayStart.AddListener(HandleDayStart);
@@ -249,11 +229,6 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
             _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleAttributeChanged);
         }
 
-        if (_tipChainController != null)
-        {
-            _tipChainController.ChainEnded.RemoveListener(HandleTipChainEnded);
-        }
-
         if (_cycleManager != null)
         {
             _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
@@ -297,7 +272,6 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
 
         WarnIfEggCheckObjectiveUnwired();
         RebuildVisibleObjectives();
-        ScheduleWorkerModeNudgeCheck();
     }
 
     // 배선을 빼먹으면 그 목표만 영영 체크되지 않고 아무 에러도 나지 않는다 - 씬 참조라 실제로 자주 빠진다.
@@ -321,78 +295,9 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         }
     }
 
-    private void ScheduleWorkerModeNudgeCheck()
-    {
-        if (_workerModeNudgeShown || _workerModeNudgeCheckScheduled)
-        {
-            return;
-        }
-
-        _workerModeNudgeCheckScheduled = true;
-        CheckWorkerModeNudgeAfterTipStartAsync().Forget();
-    }
-
-    private async UniTaskVoid CheckWorkerModeNudgeAfterTipStartAsync()
-    {
-        // 건설 목표와 건물 팁이 같은 OnBuildingAdded에서 결정된다. 이벤트 구독 순서와 무관하게
-        // 팁이 시작된 뒤 검사하도록 한 프레임을 양보한다.
-        var token = this.GetCancellationTokenOnDestroy();
-        await UniTask.Yield(token);
-
-        if (_workerModeNudgeDelaySeconds > 0f)
-        {
-            await UniTask.WaitForSeconds(
-                _workerModeNudgeDelaySeconds,
-                ignoreTimeScale: true,
-                cancellationToken: token);
-        }
-
-        _workerModeNudgeCheckScheduled = false;
-        TryShowWorkerModeNudge();
-    }
-
-    private void HandleTipChainEnded() => ScheduleWorkerModeNudgeCheck();
-
-    /// <summary>
-    /// 2일차 건설 목표를 모두 마친 시점에 워커모드의 존재만 알린다.
-    /// 학습 체인은 플레이어가 워커모드를 직접 열었을 때 별도로 시작한다.
-    /// </summary>
-    private void TryShowWorkerModeNudge()
-    {
-        if (_workerModeNudgeShown || _toast == null || CurrentDayNumber != WORKER_MODE_NUDGE_DAY ||
-            (_tipChainController != null && _tipChainController.IsRunning) ||
-            (_uiManager != null && _uiManager.CurrentOpenExclusiveMode != null))
-        {
-            return;
-        }
-
-        bool hasBuildingObjective = false;
-        foreach (TutorialObjectiveSO objective in _objectives)
-        {
-            if (objective == null || objective.RecommendedDay != WORKER_MODE_NUDGE_DAY ||
-                objective.CompletionTrigger.Condition != TutorialConditionType.BuildingConstructed)
-            {
-                continue;
-            }
-
-            hasBuildingObjective = true;
-            if (!IsCompleted(objective))
-            {
-                return;
-            }
-        }
-
-        if (hasBuildingObjective)
-        {
-            _workerModeNudgeShown = true;
-            _toast.Show(WORKER_MODE_NUDGE_LOC_KEY);
-        }
-    }
-
     private void HandleDayStart(int _)
     {
         RebuildVisibleObjectives();
-        ScheduleWorkerModeNudgeCheck();
     }
 
     private void HandleBuildingAdded(Building building)
@@ -477,12 +382,6 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
 
     private void HandleExclusiveModeOpened(MonoBehaviour mode)
     {
-        if (mode is WorkerModeController)
-        {
-            // 이미 스스로 일꾼 모드를 찾은 플레이어에게 나중에 존재를 다시 알리지 않는다.
-            _workerModeNudgeShown = true;
-        }
-
         TryCompleteMatching(TutorialConditionType.ExclusiveModeOpened,
             objective => TutorialTargetMatcher.MatchesMode(mode, objective.CompletionTrigger.TargetMode));
     }
@@ -492,9 +391,6 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     {
         TryCompleteMatching(TutorialConditionType.ExclusiveModeClosed,
             objective => TutorialTargetMatcher.MatchesMode(mode, objective.CompletionTrigger.TargetMode));
-
-        // 슬라임 농장 팁은 용 창을 연 채 끝날 수 있다. 그 창을 닫은 뒤 읽을 틈을 두고 토스트를 다시 검사한다.
-        ScheduleWorkerModeNudgeCheck();
     }
 
     // 용 창은 새끼용·어미용이 한 창의 두 탭이라 창이 열렸는지로는 구분되지 않는다 - 탭까지 봐야 한다.
@@ -550,7 +446,6 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         // 완료 알림은 따로 띄우지 않는다. 목록이 늘 화면에 있고 그 줄에 체크가 들어가므로
         // 토스트까지 내면 같은 사실을 두 번 말하면서 안내 말풍선과 자리를 다툰다.
         RebuildVisibleObjectives();
-        ScheduleWorkerModeNudgeCheck();
     }
 
     // 권장 일차가 된 목표를 목록에 넣는다. 지난 날의 목표는 완료 여부와 관계없이 계속 남는다 -

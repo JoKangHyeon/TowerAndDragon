@@ -23,6 +23,11 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
     private const string MANAGE_HINT_LOC_KEY = "baby_dragon_guide_manage_hint";
     private const string MODE_HINT_LOC_KEY = "baby_dragon_guide_mode_hint";
 
+    // 막힌 조작을 알리는 사유 줄의 노출 규칙. 연타해도 한 번만 뜨고 잠깐 뒤 사라진다.
+    // 문구 키는 튜토리얼 러너와 공유하므로 Defines에 있다.
+    private const float BLOCKED_HINT_COOLDOWN_SECONDS = 1.5f;
+    private const float BLOCKED_HINT_DURATION_SECONDS = 2f;
+
     // 배치가 끝난 뒤 순서대로 보여줄 마무리 문구. 확인 버튼으로 한 컷씩 넘긴다.
     private static readonly string[] COMPLETION_LOC_KEYS = { COMPLETED_LOC_KEY, MANAGE_HINT_LOC_KEY };
 
@@ -73,6 +78,8 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
     /// </summary>
     public UnityEvent EggCheckGuideFinished = new();
 
+    public bool HasFinishedEggCheckGuide => _hasFinishedWaitHatchGuide;
+
     // 아직 시작 전이면 값이 없다 - 첫 알을 얻는 순간 OpenInventory로 들어간다.
     private BabyDragonGuideStep? _currentStep;
 
@@ -90,6 +97,9 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
     // 한 컷에 몰지 않는 이유: 오버레이가 구멍 밖을 막으므로 구멍은 하나뿐이고,
     // 알 슬롯을 가리키면 X를 못 누르고 X를 가리키면 알이 어느 것인지 알 수 없다.
     private bool _hasReadEggSlotInfo;
+
+    // 마지막으로 사유 줄을 낸 시각. 정지 중에도 흘러야 하므로 unscaled를 쓴다.
+    private float _lastBlockedHintTime = float.NegativeInfinity;
 
     // 모드 안내를 이미 보여줬는지. 최초 1회만 뜨고 그 뒤로는 다시 뜨지 않는다 -
     // 새끼용을 클릭할 때마다 같은 안내가 따라붙으면 이미 읽은 문구가 계속 화면을 차지한다.
@@ -150,7 +160,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
             return true;
         }
 
-        return ReferenceEquals(mode, _inventoryWindow);
+        return ReferenceEquals(mode, _inventoryWindow) || Reject();
     }
 
     /// <summary>
@@ -159,27 +169,83 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
     /// </summary>
     bool IExclusiveModeOpenQuery.CanClose(MonoBehaviour mode)
     {
-        return true;
+        // 안내가 창 안을 가리키는 동안에는 ESC로 닫지 못하게 한다 - 닫히면 가리킬 곳이 사라져
+        // 안내가 앞 단계로 되돌아가고, 플레이어는 방금 시킨 것을 처음부터 다시 해야 한다.
+        //
+        // 창을 닫아 하루를 보내라고 시키는 단계(WaitHatch)와 마무리 문구는 그대로 열어 둔다 -
+        // 여기까지 막으면 시킨 대로 했는데도 진행이 안 되는 상태가 된다.
+        if (_overlay == null || !_overlay.IsShowingFor(this) ||
+            !ReferenceEquals(mode, _inventoryWindow) || !IsInventoryOpen)
+        {
+            return true;
+        }
+
+        // 부화 대기 단계는 두 컷으로 나뉜다 - 알 슬롯을 설명하는 앞 컷에서 닫으면 설명이 날아가므로,
+        // "이제 닫으세요"까지 읽은 뒤(_hasReadEggSlotInfo)에만 연다. 단축키 예외와 같은 판정이다.
+        bool isCloseRequested = _currentStep == BabyDragonGuideStep.WaitHatch && _hasReadEggSlotInfo;
+
+        if (isCloseRequested || _currentStep == BabyDragonGuideStep.Completed)
+        {
+            return true;
+        }
+
+        return Reject();
     }
 
     bool IShortcutBlockQuery.AllowsShortcut(MonoBehaviour mode)
     {
         if (_overlay == null || !_overlay.IsShowingFor(this) || !ReferenceEquals(mode, _inventoryWindow))
         {
-            return false;
+            return Reject();
         }
 
         // 창을 열라고 시키는 단계 - 문구가 이름을 알려준 바로 그 키다.
         if (!IsInventoryOpen)
         {
             return _currentStep == BabyDragonGuideStep.OpenInventory ||
-                   _currentStep == BabyDragonGuideStep.PlaceDragon;
+                   _currentStep == BabyDragonGuideStep.PlaceDragon ||
+                   Reject();
         }
 
         // 창을 닫으라고 시키는 컷. 여는 법으로 알려준 키를 닫을 때만 막으면 앞뒤가 맞지 않는다 -
         // 토글 키는 같은 키로 여닫는 것이 당연하므로, 알려준 이상 양쪽 다 통해야 한다.
-        return _currentStep == BabyDragonGuideStep.WaitHatch && _hasReadEggSlotInfo;
+        return (_currentStep == BabyDragonGuideStep.WaitHatch && _hasReadEggSlotInfo) || Reject();
     }
+
+    /// <summary>
+    /// 막았다는 사유를 그 자리에서 알리고 거절한다. 무반응으로 두면 플레이어가 버그로 읽는다 -
+    /// 항상 false를 돌려주므로 거절 지점에 <c>|| Reject()</c> 꼴로 붙인다.
+    /// </summary>
+    private bool Reject()
+    {
+        NotifyBlocked();
+        return false;
+    }
+
+    /// <summary>
+    /// 사유 줄을 말풍선 아래에 낸다. 딤에 삼켜진 클릭(<see cref="UI_GuideOverlay.BlockedClicked"/>)처럼
+    /// 거절값을 돌려줄 곳이 없는 경로도 이것을 직접 부른다.
+    ///
+    /// 화면을 쓰고 있을 때만 말한다 - 사유 줄은 말풍선 안에 있어 표시권이 없으면 띄워도 보이지 않고,
+    /// 튜토리얼 러너와 이 가이드가 같은 관문에 함께 등록돼 있어 그러지 않으면 둘이 같이 말한다.
+    /// </summary>
+    private void NotifyBlocked()
+    {
+        if (_overlay == null || !_overlay.IsShowingFor(this))
+        {
+            return;
+        }
+
+        if (Time.unscaledTime - _lastBlockedHintTime < BLOCKED_HINT_COOLDOWN_SECONDS)
+        {
+            return;
+        }
+
+        _lastBlockedHintTime = Time.unscaledTime;
+        _overlay.ShowHint(this, Defines.TUTORIAL_BLOCKED_HINT_LOC_KEY, BLOCKED_HINT_DURATION_SECONDS);
+    }
+
+    private void HandleBlockedClicked() => NotifyBlocked();
 
     private void OnEnable()
     {
@@ -228,6 +294,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         {
             _overlay.DisplayReleased += Render;
             _overlay.ConfirmClicked += HandleConfirmClicked;
+            _overlay.BlockedClicked += HandleBlockedClicked;
         }
 
         // 이 컴포넌트의 활성 체크박스가 곧 가이드 on/off 스위치다. 플레이 중 다시 켜면 현재 단계 안내를
@@ -282,6 +349,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         {
             _overlay.DisplayReleased -= Render;
             _overlay.ConfirmClicked -= HandleConfirmClicked;
+            _overlay.BlockedClicked -= HandleBlockedClicked;
             _overlay.Release(this);
         }
     }

@@ -3,6 +3,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// 1일차 튜토리얼의 순서 진행과 완료 조건 감시. 표시는 UI_GuideOverlay에 맡기고,
@@ -11,10 +12,9 @@ using UnityEngine.Events;
 /// 도는 동안에는 아직 설명하지 않은 배타 창을 열지 못하게 막고(IExclusiveModeOpenQuery),
 /// 토스트도 멈춰 둔다 - 안내와 다른 정보가 뒤섞이면 무엇을 하라는 것인지 알 수 없어진다.
 ///
-/// 러너는 한 번에 하나가 아니다 - TutorialScenarioController의 챕터와 TutorialTipChainController의
-/// 팁 체인이 같은 프레임에 켜질 수 있고(3일차 아침의 보스 예고 + 정산 팁), 둘 다 같은 우선순위라
-/// 나중에 켜진 쪽은 표시권을 못 얻는다. 그래서 <b>확인 클릭은 표시권을 가진 러너만 받고</b>,
-/// 진 쪽은 DisplayReleased를 듣고 자기 차례에 다시 그린다(HandleConfirmClicked · HandleDisplayReleased).
+/// 챕터는 TutorialScenarioController가 한 번에 하나만 켠다. 다만 새끼용 알 확인처럼 다른 안내 시스템에
+/// 표시권을 잠시 넘길 수 있으므로, <b>확인 클릭은 표시권을 가진 러너만 받고</b> 표시권이 돌아오면
+/// 현재 단계를 다시 그린다(HandleConfirmClicked · HandleDisplayReleased).
 /// </summary>
 public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDayEndBlockQuery,
     IHudControlBlockQuery, IBuildModeInteractionQuery, IShortcutBlockQuery
@@ -47,6 +47,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     [Tooltip("알·새끼용 슬롯을 가리키는 단계와 새끼용 탭 선택을 기다리는 단계에 필요하다. " +
              "슬롯은 런타임 생성이라 앵커로 잡을 수 없다.")]
     [SerializeField] private UI_DragonWindow _dragonWindow;
+
+    [Tooltip("새끼용 알 확인 안내가 끝날 때까지 표시권을 넘겨주는 단계에 필요하다.")]
+    [SerializeField] private BabyDragonGuideController _babyDragonGuideController;
 
     [Tooltip("건설 패널 슬롯을 가리키는 단계에 필요하다. 슬롯은 런타임 생성이라 GuideAnchor로 잡을 수 없다.")]
     [SerializeField] private UI_BuildModeWindow _buildModeWindow;
@@ -81,8 +84,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
              "뒤 챕터가 '이미 봤음' 판정으로 아무것도 실행하지 않는다.")]
     [SerializeField] private bool _marksScenarioDismissedOnFinish = true;
 
-    [Tooltip("도는 동안 밤 진입·창 열기·HUD를 잠글지. 1일차 강제 안내만 켠다 - " +
-             "플레이어가 스스로 시작한 팁 체인은 언제든 그만둘 수 있어야 하므로 꺼 둔다.")]
+    [Tooltip("도는 동안 밤 진입·창 열기·HUD를 잠글지. 시나리오 챕터는 항상 켜 둔다.")]
     [SerializeField] private bool _holdsGates = true;
 
     [Tooltip("플레이어가 열어서 시작한 팁 체인에서 현재 배타 모드를 닫거나 다른 모드로 바꾸지 못하게 한다. " +
@@ -96,10 +98,18 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     private const string RENDER_REASON_STALL_ESCAPE = "스톨 탈출(확인 버튼 제공)";
     private const string RENDER_REASON_DISPLAY_RELEASED = "표시권 반납으로 재시도";
     private const string RENDER_REASON_TARGET_WAIT_TIMEOUT = "대상 대기 시간 초과";
+    private const string RENDER_REASON_WORLD_TARGET_UNCOVERED = "월드 대상을 가리던 창이 닫힘";
+    private const string RENDER_REASON_BUILDING_COUNT_CHANGED = "건물 개수 진행률 갱신";
 
     // 단계가 가리킬 대상이 나타나기를 기다리는 시간(초). 창이 열리는 데 필요한 한두 프레임만 넘기면 되고,
     // 이보다 길어지면 배선 문제로 보고 대상 없이 그린다.
     private const float TARGET_WAIT_SECONDS = 0.5f;
+
+    // 막힌 버튼·단축키를 눌렀을 때 내는 사유 문구의 노출 규칙.
+    // 연타해도 한 번만 뜨게 잠금을 두고(문구가 깜빡이면 그것대로 고장으로 보인다), 잠깐 뒤 지운다.
+    // 문구 키는 새끼용 가이드와 공유하므로 Defines에 둔다.
+    private const float BLOCKED_HINT_COOLDOWN_SECONDS = 1.5f;
+    private const float BLOCKED_HINT_DURATION_SECONDS = 2f;
 
     // 마지막으로 그린 단계와 그 횟수. 재렌더를 세기 위한 것이라 단계가 바뀌면 1로 돌아간다.
     private TutorialStepSO _renderedStep;
@@ -122,6 +132,17 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     // 지금 단계가 오래 진행되지 않아 확인 버튼을 내준 상태. 단계를 넘길 때마다 풀린다.
     private bool _isStalled;
 
+    // 마지막으로 사유 문구를 낸 시각(정지 중에도 흘러야 하므로 unscaled). 연타 대응 잠금에 쓴다.
+    private float _lastBlockedHintTime = float.NegativeInfinity;
+
+    // 지금 그리는 단계가 월드(맵 위 건물)를 가리키는지, 그리고 그 대상이 배타 창에 가려 보류 중인지.
+    // 둘 다 Render가 갱신하고, Update가 창이 여닫힐 때 다시 그릴지 판단하는 데 쓴다.
+    private bool _hasWorldTarget;
+    private bool _isWorldTargetCovered;
+
+    // 진행률을 그린 시점의 개수. 이 값과 지금 개수가 다르면 말풍선을 다시 그린다.
+    private int _renderedBuildingCount;
+
     // 마지막 단계를 확인 버튼으로 넘겼는지. 눌러서 "다 읽었다"고 답한 뒤에도 인계를 기다리게 하면
     // 버튼이 먹지 않은 것처럼 보이므로, 그때는 HandOverAsync의 읽을 틈을 건너뛴다.
     private bool _isConfirmedByClick;
@@ -138,6 +159,12 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// 이 컴포넌트가 새끼용 같은 개별 도메인을 알지 않게 하기 위한 통로다.
     /// </summary>
     public UnityEvent TutorialEnded = new();
+
+    /// <summary>
+    /// 현재 단계를 완료했다. 특정 진행 보상을 단계와 맞물려 지급하되 러너가 그 도메인을 직접
+    /// 알지 않게 하는 연결점이다. 건너뛰기는 개별 단계를 완료한 것이 아니므로 발화하지 않는다.
+    /// </summary>
+    public UnityEvent<TutorialStepSO> TutorialStepCompleted = new();
 
 
     private RunData CurrentRun => _gameManager == null ? null : _gameManager.CurrentRun;
@@ -215,6 +242,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         {
             _overlay.ConfirmClicked += HandleConfirmClicked;
             _overlay.DisplayReleased += HandleDisplayReleased;
+            _overlay.BlockedClicked += HandleBlockedClicked;
         }
 
         RunData run = CurrentRun;
@@ -250,7 +278,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// </summary>
     bool IHudControlBlockQuery.CanUseHudControl()
     {
-        return !_isRunning;
+        return !_isRunning || Reject();
     }
 
     // OnEnable이 else-if라 _holdsGates가 켜져 있으면 _heldExclusiveMode는 채워지지 않는다.
@@ -285,6 +313,12 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             return true;
         }
 
+        return IsUnlockedMode(mode) || Reject();
+    }
+
+    // 안내가 이미 지나간 창인지. 열기 관문과 단축키 예외가 같은 목록을 봐야 마우스와 키가 갈리지 않는다.
+    private bool IsUnlockedMode(MonoBehaviour mode)
+    {
         foreach (TutorialExclusiveModeKind unlocked in _unlockedModes)
         {
             if (MatchesMode(mode, unlocked))
@@ -308,8 +342,19 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             return true;
         }
 
-        return IsStepRequestedShortcut(mode);
+        // 스스로 더 지어야 하는 단계에서는 열기를 허용한 창의 닫기도 함께 허용한다 -
+        // 앞 단계가 "건설 모드 버튼을 다시 눌러 닫으세요"라고 가르쳐 놓고 여기서 그 버튼을 거절하면
+        // 같은 버튼이 상황에 따라 다르게 동작하는 것으로 읽힌다.
+        return IsExternalGuideMode(mode) || IsStepRequestedShortcut(mode) || IsCoveringWindow(mode) ||
+               (IsFreeBuildStep && IsUnlockedMode(mode)) || Reject();
     }
+
+    /// <summary>
+    /// 지금 안내를 가려서 보류시키고 있는 창인지(Render 참고). 그 창을 닫아야 안내가 다시 그려지므로
+    /// 닫기와 단축키를 열어 둔다 - 막으면 화면에는 아무 안내도 없는데 창도 못 닫는 상태가 된다.
+    /// </summary>
+    private bool IsCoveringWindow(MonoBehaviour mode) =>
+        _isWorldTargetCovered && TutorialTargetMatcher.CoversWorld(mode);
 
     /// <summary>
     /// 1일차 강제 안내는 딤이 없는 설명 단계에서도 단축키를 막는다 - 순서대로 따라오게 하는 것이
@@ -329,13 +374,36 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// </summary>
     bool IShortcutBlockQuery.AllowsShortcut(MonoBehaviour mode)
     {
+        // 외부 가이드에 표시권을 넘긴 동안에는 그 가이드가 쓰는 창의 토글 키도 함께 넘긴다.
+        // 열기는 IsUnlockedMode로 통과해도 닫기 단축키가 여기서 막히면, 화면 문구가 Tab을
+        // 안내하는데 X 버튼으로만 닫히는 상태가 된다.
+        if (_isRunning && IsExternalGuideMode(mode))
+        {
+            return true;
+        }
+
         // 표시권을 가진 러너만 예외를 말할 수 있다. 러너는 둘 이상 동시에 돌 수 있는데(챕터 + 팁 체인),
         // 진 쪽은 화면에 뜨지도 않은 채 살아 있다. 그 상태의 단계가 "이 창을 닫아라"이면
         // 지금 화면을 쓰는 안내가 전 구간을 막고 있어도 그 키만 열려버린다
         // (확인 클릭을 IsDisplaying으로 거르는 것과 같은 이유 - HandleConfirmClicked 참고).
-        return _isRunning &&
-               (_overlay == null || _overlay.IsShowingFor(this)) &&
-               IsStepRequestedShortcut(mode);
+        // 보류 중에는 IsShowingFor가 거짓이라 아래 조건을 못 넘는다. 그 창을 닫는 키는 따로 열어 준다.
+        if (_isRunning && IsCoveringWindow(mode))
+        {
+            return true;
+        }
+
+        // 스스로 더 지어야 하는 단계에서는 이미 지나간 창의 단축키도 연다 - 버튼으로는 되는데
+        // 키로는 안 되면 같은 조작이 경로에 따라 갈리고, 사유 문구도 상황과 어긋난다.
+        if (_isRunning && IsFreeBuildStep && IsUnlockedMode(mode))
+        {
+            return true;
+        }
+
+        bool allows = _isRunning &&
+                      (_overlay == null || _overlay.IsShowingFor(this)) &&
+                      IsStepRequestedShortcut(mode);
+
+        return allows || Reject();
     }
 
     // 지금 단계가 명시적으로 "이 창을 닫아라"라고 시켰는지. 닫기 관문과 단축키 예외가 같은 판정을
@@ -348,9 +416,12 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                MatchesMode(mode, _activeStep.TargetMode);
     }
 
+    private bool IsExternalGuideMode(MonoBehaviour mode) =>
+        IsWaitingForExternalGuide && MatchesMode(mode, _activeStep.TargetMode);
+
     bool IBuildModeInteractionQuery.CanSelectFilter(RectTransform filterTab)
     {
-        if (!IsWaitingForAction)
+        if (!IsWaitingForAction || IsFreeBuildStep)
         {
             return true;
         }
@@ -358,23 +429,34 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (_activeStep.Condition != TutorialConditionType.BuildPanelTabSelected ||
             !GuideAnchorRegistry.TryGet(_activeStep.AnchorId, out RectTransform targetTab))
         {
-            return false;
+            return Reject();
         }
 
-        return ReferenceEquals(filterTab, targetTab);
+        return ReferenceEquals(filterTab, targetTab) || Reject();
     }
 
     bool IBuildModeInteractionQuery.CanSelectBuilding(Building prefab) =>
         !IsWaitingForAction ||
         (_activeStep.Condition == TutorialConditionType.BuildingSelectedForPlacement &&
-         MatchesBuilding(prefab, _activeStep));
+         MatchesBuilding(prefab, _activeStep)) ||
+        (IsFreeBuildStep && MatchesBuilding(prefab, _activeStep)) ||
+        Reject();
+
+    /// <summary>
+    /// 개수를 채우라고 시키는 단계인지. 손잡아 가르치는 단계와 달리 플레이어가 스스로 더 지어야 하므로
+    /// 건설 패널의 탭과 그 종류의 건물을 열어 준다 - 막아두면 시킨 것을 할 수 없어 관문에 갇힌다.
+    /// </summary>
+    private bool IsFreeBuildStep =>
+        IsWaitingForAction && _activeStep.Condition == TutorialConditionType.BuildingCountReached;
 
     bool IBuildModeInteractionQuery.CanMoveSelectedBuilding() =>
-        !IsWaitingForAction || _activeStep.Condition == TutorialConditionType.BuildingMoved;
+        !IsWaitingForAction || _activeStep.Condition == TutorialConditionType.BuildingMoved || Reject();
 
     bool IBuildModeInteractionQuery.CanRemoveSelectedBuilding() =>
-        !IsWaitingForAction || _activeStep.Condition == TutorialConditionType.BuildingRemoved;
+        !IsWaitingForAction || _activeStep.Condition == TutorialConditionType.BuildingRemoved || Reject();
 
+    // 아래 셋은 사유를 내지 않는다 - BuildingPlacementController가 입력을 확인하기 전에 매 프레임 물어보므로
+    // (HandleBuildCancelInput · HandleLongPressMove), 여기서 알리면 누르지도 않았는데 문구가 계속 뜬다.
     bool IBuildModeInteractionQuery.CanCancelPlacement() => !IsWaitingForAction;
 
     bool IBuildModeInteractionQuery.CanRotatePlacement() => !IsWaitingForAction;
@@ -408,6 +490,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         {
             _overlay.ConfirmClicked -= HandleConfirmClicked;
             _overlay.DisplayReleased -= HandleDisplayReleased;
+            _overlay.BlockedClicked -= HandleBlockedClicked;
             _overlay.Release(this);
         }
     }
@@ -424,7 +507,8 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// </summary>
     private void HandleDisplayReleased()
     {
-        if (!_isRunning || _activeStep == null || _overlay == null || _overlay.IsDisplaying(this))
+        if (!_isRunning || _activeStep == null || IsWaitingForExternalGuide ||
+            _overlay == null || _overlay.IsDisplaying(this))
         {
             return;
         }
@@ -575,6 +659,15 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
 
         SubscribeCondition(_activeStep);
+
+        // 외부 가이드가 자기 화면과 입력을 써야 하는 단계다. 1일차 러너는 밤 진입 관문만 유지하고
+        // 표시권은 놓는다. DisplayReleased에서 이 단계를 다시 그리지 않도록 같은 판정을 사용한다.
+        if (IsWaitingForExternalGuide)
+        {
+            _overlay?.Release(this);
+            return;
+        }
+
         Render(RENDER_REASON_ENTER_STEP);
 
         // 확인 버튼을 쓰는 설명은 누를 때까지 기다린다(ConfirmClicked 구독). 그 외에는 시간으로 넘긴다.
@@ -590,8 +683,13 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
     private void Advance()
     {
+        TutorialStepSO completedStep = _activeStep;
+        TutorialStepCompleted.Invoke(completedStep);
         EnterStep(_currentIndex + 1);
     }
+
+    private bool IsWaitingForExternalGuide =>
+        _activeStep != null && _activeStep.Condition == TutorialConditionType.BabyDragonEggChecked;
 
     private void Finish()
     {
@@ -740,9 +838,36 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             return;
         }
 
+        // 문구가 없는 단계는 화면을 잡지 않고 조건만 기다린다.
+        //
+        // 다른 안내(새끼용 가이드)가 화면을 쓰는 동안 그것이 끝나기를 기다리는 '이음매' 컷을 위한 것이다 -
+        // 여기서 말풍선을 띄우면 우선순위가 높은 챕터가 표시권을 쥐어, 정작 플레이어가 따라야 할
+        // 낮은 우선순위 안내가 화면에 뜨지 못한다.
+        if (string.IsNullOrWhiteSpace(_activeStep.MessageLocKey))
+        {
+            _hasWorldTarget = false;
+            _isWorldTargetCovered = false;
+            _overlay.Release(this);
+            return;
+        }
+
         RectTransform target = ResolveAnchor(_activeStep);
         Renderer worldTarget = target == null ? ResolveWorldTarget(_activeStep) : null;
         bool hasTarget = target != null || worldTarget != null;
+
+        // 월드 대상이 배타 창 뒤에 있으면 그리지 않고 보류한다.
+        //
+        // 그리면 딤이 창 위에 깔려 대상 클릭도, 창 닫기도 막힌다 - 성을 가리키는 단계에서 용 창이 열려 있으면
+        // 45초 스톨 탈출이 올 때까지 아무것도 누를 수 없었다. 표시권은 쥔 채로 화면에서만 걷어(Suspend)
+        // 낮은 우선순위 안내가 그 틈에 끼어들지 않게 하고, 창이 닫히면 Update가 다시 그린다.
+        _hasWorldTarget = worldTarget != null;
+        _isWorldTargetCovered = _hasWorldTarget && IsWorldCoveredByWindow;
+
+        if (_isWorldTargetCovered)
+        {
+            _overlay.Suspend(this);
+            return;
+        }
 
         // 가리킬 곳을 선언한 단계인데 그 대상이 아직 화면에 없으면 이번 프레임은 그리지 않는다.
         //
@@ -777,6 +902,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         // 갇힌 단계에서는 행동형에도 확인 버튼을 띄운다 - 그것이 유일한 빠져나갈 길이다.
         bool showsConfirmButton = _activeStep.ShowsConfirmButton || _isStalled;
 
+        // 개수를 채우는 단계는 진행률을 문구에 넣는다. 숫자가 안 보이면 눌러도 아무 일이 없는 것처럼 읽힌다.
+        object[] args = BuildProgressArgs(_activeStep);
+
         // 딤과 입력 차단은 넘기지 않는다 - 오버레이가 대상·확인 버튼 유무로 스스로 정한다.
         // 여기서 단계별로 판단하게 두었더니 한 단계가 빠졌을 때 다른 탭·건물을 눌러 순서가 무너졌다.
         if (worldTarget != null)
@@ -788,7 +916,8 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 _activeStep.MessageLocKey,
                 _activeStep.BlocksTargetInteraction,
                 showsConfirmButton,
-                _activeStep.BubbleSlot);
+                _activeStep.BubbleSlot,
+                args);
             return;
         }
 
@@ -799,7 +928,24 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             _activeStep.MessageLocKey,
             _activeStep.BlocksTargetInteraction,
             showsConfirmButton,
-            _activeStep.BubbleSlot);
+            _activeStep.BubbleSlot,
+            args);
+    }
+
+    /// <summary>
+    /// 문구에 넣을 포맷 인자. 지금은 개수 채우기 단계의 진행률(현재/목표)뿐이고, 나머지는 인자가 없다.
+    /// 그린 시점의 개수를 함께 기억해 두어 Update가 "숫자가 바뀌었으니 다시 그린다"를 판단한다.
+    /// </summary>
+    private object[] BuildProgressArgs(TutorialStepSO step)
+    {
+        if (step.Kind != TutorialStepKind.WaitForAction ||
+            step.Condition != TutorialConditionType.BuildingCountReached)
+        {
+            return null;
+        }
+
+        _renderedBuildingCount = CountMatchingBuildings(step);
+        return new object[] { _renderedBuildingCount, step.RequiredCount };
     }
 
     private Renderer ResolveWorldTarget(TutorialStepSO step)
@@ -839,9 +985,19 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// 게이트를 여는 방식도 쓰지 않는다 - 아직 설명하지 않은 창이 열리거나 밤으로 넘어가면
     /// 무엇을 하라는 안내인지 알 수 없게 되고, 그건 갇히는 것보다 나쁘다.
     /// 버튼만 내주면 플레이어가 고를 수 있고, 어느 단계에서 막혔는지는 로그로 남는다.
+    ///
+    /// <b>스스로 여러 번 해야 하는 단계는 대상에서 뺀다.</b> 타워를 몇 기 더 짓고 정원까지 채우는 데는
+    /// 45초보다 오래 걸리는 것이 정상인데, 그때 확인 버튼을 내주면 <b>딤이 함께 깔려</b>
+    /// (Render가 확인 버튼 유무로 입력 차단을 정한다) 정작 시키던 건설을 할 수 없게 된다 -
+    /// 배선 오류를 잡으려던 장치가 정상 진행을 멈추는 쪽으로 작동한다.
     /// </summary>
     private async UniTaskVoid WatchStallAsync(TutorialStepSO step)
     {
+        if (IsSelfPacedStep(step))
+        {
+            return;
+        }
+
         await UniTask.WaitForSeconds(
             _stallEscapeSeconds,
             ignoreTimeScale: true,
@@ -860,6 +1016,12 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
         Render(RENDER_REASON_STALL_ESCAPE);
     }
+
+    // 플레이어가 자기 속도로 여러 번 해야 하는 단계인지. 지금은 개수 채우기뿐이다 -
+    // 걸리는 시간이 조작 실력이 아니라 목표 개수에 달려 있어 시간으로 판단할 수 없다.
+    private static bool IsSelfPacedStep(TutorialStepSO step) =>
+        step.Condition == TutorialConditionType.BuildingCountReached ||
+        step.Condition == TutorialConditionType.BabyDragonEggChecked;
 
     // 대상을 못 찾아도 단계는 진행돼야 하므로 문구만 띄우고(null), 나중에 나타나면 그때 다시 그린다.
     private RectTransform ResolveAnchor(TutorialStepSO step)
@@ -973,11 +1135,94 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// </summary>
     private void Update()
     {
-        if (_isRunning && _activeStep != null && IsConditionAlreadySatisfied(_activeStep))
+        if (!_isRunning || _activeStep == null)
+        {
+            return;
+        }
+
+        if (IsConditionAlreadySatisfied(_activeStep))
         {
             Advance();
+            return;
+        }
+
+        // 월드 대상을 가리는 창이 열리거나 닫히면 다시 그린다(Render가 보류할지 그릴지 정한다).
+        // 창은 안내와 무관한 경로로도 여닫히므로 상태가 바뀌었는지로만 본다.
+        if (_hasWorldTarget && _isWorldTargetCovered != IsWorldCoveredByWindow)
+        {
+            Render(RENDER_REASON_WORLD_TARGET_UNCOVERED);
+            return;
+        }
+
+        // 개수가 늘거나 줄면 진행률을 다시 그린다. 숫자가 멈춰 있으면 지은 것이 안 세어진 줄 안다.
+        if (_activeStep.Condition == TutorialConditionType.BuildingCountReached &&
+            CountMatchingBuildings(_activeStep) != _renderedBuildingCount)
+        {
+            Render(RENDER_REASON_BUILDING_COUNT_CHANGED);
         }
     }
+
+    /// <summary>
+    /// 막았다는 사실을 그 자리에서 알리고 거절한다. 관문이 거절하는 지점은 전부 플레이어가 무언가를
+    /// 누른 순간이라(폴링이 아니다) 여기서 사유를 낼 수 있다 - 무반응으로 두면 버그로 읽힌다.
+    ///
+    /// 항상 false를 돌려주므로 <c>return Reject();</c> 꼴로 거절 지점에 그대로 끼워 넣는다.
+    /// 매 프레임 물어보는 질의(배치 취소·롱프레스)에는 쓰지 않는다 - 누르지도 않았는데 문구가 뜬다.
+    /// </summary>
+    private bool Reject()
+    {
+        NotifyBlocked();
+        return false;
+    }
+
+    /// <summary>
+    /// 막았다는 사유를 말풍선 아래에 낸다. 딤에 삼켜진 클릭(<see cref="UI_GuideOverlay.BlockedClicked"/>)처럼
+    /// 거절값을 돌려줄 곳이 없는 경로도 이것을 직접 부른다.
+    /// </summary>
+    private void NotifyBlocked()
+    {
+        if (!_isRunning || _overlay == null)
+        {
+            return;
+        }
+
+        // 화면을 쓰고 있는 러너만 말한다. 사유 줄은 말풍선 안에 있어, 표시권이 없으면 띄워도 보이지 않는다.
+        if (!_overlay.IsShowingFor(this))
+        {
+            // 막기는 했는데 알릴 화면이 없는 경우다. 플레이어에게는 여전히 무반응으로 보이므로,
+            // 어느 단계에서 그러는지 콘솔에 남겨 둔다(연타로 도배되지 않게 잠금 시간을 함께 쓴다).
+            if (Time.unscaledTime - _lastBlockedHintTime >= BLOCKED_HINT_COOLDOWN_SECONDS)
+            {
+                _lastBlockedHintTime = Time.unscaledTime;
+                Debug.Log(
+                    $"[TutorialRunner] {name}이 조작을 막았지만 사유를 낼 화면이 없습니다 " +
+                    $"(단계 '{(_activeStep == null ? "없음" : _activeStep.StepId)}'). " +
+                    "이 러너가 표시권을 갖고 있지 않습니다.", this);
+            }
+
+            return;
+        }
+
+        if (Time.unscaledTime - _lastBlockedHintTime < BLOCKED_HINT_COOLDOWN_SECONDS)
+        {
+            return;
+        }
+
+        _lastBlockedHintTime = Time.unscaledTime;
+        _overlay.ShowHint(this, Defines.TUTORIAL_BLOCKED_HINT_LOC_KEY, BLOCKED_HINT_DURATION_SECONDS);
+    }
+
+    private void HandleBlockedClicked() => NotifyBlocked();
+
+    // 일꾼 모드가 열려 있는지. 우클릭 조작은 그 모드 안에서만 뜻이 있으므로 함께 확인한다 -
+    // 모드를 보지 않으면 안내와 무관한 곳에서 누른 우클릭(배치 취소 등)으로도 넘어간다.
+    private bool IsWorkerModeOpen =>
+        _uiManager != null &&
+        MatchesMode(_uiManager.CurrentOpenExclusiveMode, TutorialExclusiveModeKind.WorkerMode);
+
+    /// <summary>맵을 덮는 창이 열려 있는지. 건설·일꾼·점령처럼 맵 위에서 조작하는 모드는 가리지 않는다.</summary>
+    private bool IsWorldCoveredByWindow =>
+        _uiManager != null && TutorialTargetMatcher.CoversWorld(_uiManager.CurrentOpenExclusiveMode);
 
     /// <summary>
     /// 지금 이 조건이 충족돼 있는지. "상태"로 확인할 수 있는 것만 본다.
@@ -994,6 +1239,15 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (step.Kind != TutorialStepKind.WaitForAction)
         {
             return false;
+        }
+
+        // 이 단계가 유도하는 창에 이미 들어가 있으면 통로를 다시 지날 수 없다.
+        // 성을 클릭하게 하는 단계가 그렇다 - 용 창이 열리는 순간 성 선택이 풀려 조건은 영영 거짓인데,
+        // 딤은 창 뒤의 성을 계속 가리켜 클릭도 창 닫기도 막힌다. 목적지에 도착했으면 통로는 건너뛴다.
+        if (step.SkipIfModeOpen != TutorialExclusiveModeKind.None && _uiManager != null &&
+            MatchesMode(_uiManager.CurrentOpenExclusiveMode, step.SkipIfModeOpen))
+        {
+            return true;
         }
 
         // _uiManager는 아래 두 조건에서만 쓴다. 위에서 통째로 막으면 배선되지 않은 러너가
@@ -1020,6 +1274,16 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             case TutorialConditionType.SelectedBuildingFullyStaffed:
                 return IsSelectedBuildingFullyStaffed();
 
+            // 총량으로 세는 조건이라 상태만 보면 된다 - 건물을 짓든 인구를 넣든 결과가 여기 드러난다.
+            case TutorialConditionType.BuildingCountReached:
+                return CountMatchingBuildings(step) >= step.RequiredCount;
+
+            // 그 프레임의 입력을 본다. Update가 매 프레임 이 판정을 돌리므로 누른 프레임에 잡힌다 -
+            // 결과가 남지 않는 조작이라 상태로는 확인할 방법이 없다.
+            case TutorialConditionType.WorkerModeRightClicked:
+                return IsWorkerModeOpen && Mouse.current != null &&
+                       Mouse.current.rightButton.wasPressedThisFrame;
+
             case TutorialConditionType.ConquestChunkSelected:
                 return _conquestWindow != null && _conquestWindow.HasSelectedChunk;
 
@@ -1028,6 +1292,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
             case TutorialConditionType.DragonWindowMotherTabSelected:
                 return _dragonWindow != null && _dragonWindow.IsMotherTabShown;
+
+            case TutorialConditionType.BabyDragonEggChecked:
+                return _babyDragonGuideController != null &&
+                       _babyDragonGuideController.HasFinishedEggCheckGuide;
 
             // --- 여기부터는 상태로 판정할 수 없다. 이벤트 구독으로만 넘어간다. ---
             // 진입 시점 대비 증감이거나(인구), 흔적이 남지 않는 1회성 입력이다.
@@ -1172,6 +1440,20 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 }
                 break;
 
+            case TutorialConditionType.BabyDragonEggChecked:
+                if (_babyDragonGuideController != null)
+                {
+                    _babyDragonGuideController.EggCheckGuideFinished.AddListener(HandleEggCheckGuideFinished);
+                }
+                break;
+
+            // 아래 둘은 상태·입력으로만 판정한다 - 건물 개수는 총량에 드러나고 우클릭은 그 프레임의
+            // 입력이라, Update의 매 프레임 확인으로 충분하다.
+            // 대신 IsConditionAlreadySatisfied에 반드시 들어 있어야 한다.
+            case TutorialConditionType.BuildingCountReached:
+            case TutorialConditionType.WorkerModeRightClicked:
+                break;
+
             default:
                 Debug.LogWarning(
                     $"[TutorialRunner] 단계 '{step.StepId}'는 행동형인데 완료 조건이 없어 스스로 넘어가지 않습니다.", this);
@@ -1227,6 +1509,11 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         {
             _dragonWindow.OnSlotViewChanged.RemoveListener(Render);
             _dragonWindow.OnTabDisplayed.RemoveListener(HandleDragonTabDisplayed);
+        }
+
+        if (_babyDragonGuideController != null)
+        {
+            _babyDragonGuideController.EggCheckGuideFinished.RemoveListener(HandleEggCheckGuideFinished);
         }
 
         if (_conquestManager != null)
@@ -1397,6 +1684,14 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
     }
 
+    private void HandleEggCheckGuideFinished()
+    {
+        if (_isRunning && IsWaitingForExternalGuide)
+        {
+            Advance();
+        }
+    }
+
     private void HandlePopulationChanged(PopulationState state)
     {
         if (_activeStep == null || !_isRunning)
@@ -1435,6 +1730,46 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// 지금 고른 건물이 정원을 다 채웠는지. 전체 인구 합계로는 알 수 없어 그 건물의 배치 대상을 직접 읽는다.
     /// 타워·연구소·생산시설이 같은 인터페이스를 구현하므로 종류를 가리지 않는다.
     /// </summary>
+    /// <summary>
+    /// 지금 서 있는 건물 중 이 단계가 세라고 한 종류가 몇 개인지. 정원 옵션이 켜져 있으면
+    /// 인구를 다 채운 것만 센다 - 타워는 충원율이 곧 화력이라 개수만 채운 것은 기준이 되지 않는다.
+    /// </summary>
+    private int CountMatchingBuildings(TutorialStepSO step)
+    {
+        if (_gridMap == null)
+        {
+            return 0;
+        }
+
+        int count = 0;
+
+        foreach (Building building in _gridMap.Buildings)
+        {
+            if (building == null || !MatchesBuilding(building, step))
+            {
+                continue;
+            }
+
+            if (step.RequiresStaffed && !IsFullyStaffed(building))
+            {
+                continue;
+            }
+
+            count++;
+        }
+
+        return count;
+    }
+
+    private static bool IsFullyStaffed(Building building)
+    {
+        var target = building.GetComponent<IPopulationAllocationTarget>();
+
+        // 정원이 0이면 "다 찼다"가 성립하지 않는다 - 초기화 전이거나 인구를 받지 않는 건물이다.
+        return target != null && target.IsInitialized && target.Capacity > 0 &&
+               target.AssignedPopulation >= target.Capacity;
+    }
+
     private bool IsSelectedBuildingFullyStaffed()
     {
         Building selected = _placementController == null ? null : _placementController.SelectedBuilding;

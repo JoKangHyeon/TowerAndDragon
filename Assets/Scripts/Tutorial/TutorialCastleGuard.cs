@@ -13,8 +13,9 @@ using UnityEngine;
 ///   1. 성이 위태로워지면 남은 웨이브를 정리해 그 밤을 끝낸다 - 교착을 푸는 쪽.
 ///   2. 그래도 들어온 치명타는 거절한다 - 한 방에 무너지는 경우까지 막는 마지막 방어선.
 ///
-/// 마지막 밤만 예외다 - TutorialBossDefeatController가 AllowDefeat로 잠금을 풀고, 그때부터는
-/// 보호도 구제도 없이 실제 전투로 결판이 난다.
+/// <b>예외는 없다 - 세 밤 내내 보호한다.</b> 튜토리얼에는 패배 경로를 두지 않기로 했다(팀 결정, 2026-08-14).
+/// 이 씬은 게임오버 창이 의도적으로 비어 있고 timeScale이 0으로 굳으므로, 성이 무너지면
+/// 빠져나갈 UI가 없는 완전 정지가 된다. 잠금을 푸는 메서드를 두지 않는 것으로 그 상태를 불가능하게 만든다.
 /// </summary>
 public sealed class TutorialCastleGuard : MonoBehaviour, ICastleDamageBlockQuery
 {
@@ -29,20 +30,9 @@ public sealed class TutorialCastleGuard : MonoBehaviour, ICastleDamageBlockQuery
     [Tooltip("구제할 때 남은 몬스터를 정리한다. 비우면 밤이 끝나지 않아 교착에 빠질 수 있다.")]
     [SerializeField] private WaveManager _waveManager;
 
-    private bool _isDefeatAllowed;
-
-    /// <summary>
-    /// 마지막 밤에 호출한다. 치명타 거절과 구제를 한꺼번에 풀어 성이 평범하게 죽게 만든다.
-    /// 한 번 풀면 되돌리지 않는다.
-    /// </summary>
-    public void AllowDefeat()
-    {
-        _isDefeatAllowed = true;
-    }
-
     bool ICastleDamageBlockQuery.CanTakeDamage(float amount)
     {
-        if (_isDefeatAllowed || _castle == null)
+        if (_castle == null)
         {
             return true;
         }
@@ -83,7 +73,7 @@ public sealed class TutorialCastleGuard : MonoBehaviour, ICastleDamageBlockQuery
 
     private void HandleHealthChanged(float current, float max)
     {
-        if (_isDefeatAllowed || max <= 0f)
+        if (max <= 0f)
         {
             return;
         }

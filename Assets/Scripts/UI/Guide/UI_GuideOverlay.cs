@@ -1,6 +1,8 @@
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 
@@ -11,7 +13,7 @@ using UnityEngine.UI;
 /// 단일 인스턴스로 쓰는 것을 전제한다 - 그래야 안내끼리 겹치지 않는다. 여러 가이드가 동시에 뜨려 하면
 /// 우선순위가 높은 쪽이 표시권을 잡고, 진 쪽은 Show가 false를 돌려받아 그리지 않는다(상태는 계속 전진).
 /// </summary>
-public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
+public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHandler
 {
     private const int DIM_PANEL_COUNT = 4;
     private const int RECT_CORNER_COUNT = 4;
@@ -47,6 +49,10 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     [Tooltip("읽고 넘기는 설명에 쓰는 확인 버튼. 말풍선 안(_bubbleRoot의 자식)에 두고, " +
              "행동을 기다리는 단계에서는 자동으로 숨는다. 없으면 설명이 시간으로만 넘어간다.")]
     [SerializeField] private Button _confirmButton;
+
+    [Tooltip("말풍선 아래에 잠깐 붙는 보조 줄. 막힌 버튼을 눌렀을 때 그 사유를 여기에 낸다. " +
+             "비워두면 사유를 표시하지 않는다(안내 자체는 그대로 돈다).")]
+    [SerializeField] private TMP_Text _hintText;
 
     [Tooltip("안내가 떠 있는 동안 밤으로 넘어가지 못하게 막는 데 쓴다. 비우면 막지 않는다.")]
     [SerializeField] private CycleManager _cycleManager;
@@ -97,6 +103,9 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     private string _currentLocKey;
     private object[] _currentArgs;
 
+    // 보조 줄이 몇 번째로 뜬 것인지. 겹쳐 뜬 사유의 옛 타이머가 새 사유를 지우지 않게 한다.
+    private int _hintSequence;
+
     /// <summary>
     /// 표시권을 놓았을 때 알린다. 구독자는 <b>캐시된 요청을 되살리는 대신 자기 현재 상태로 다시 유도</b>해야 한다 -
     /// 양보하는 동안 단계가 전진했을 수 있어 옛 요청을 재생하면 이미 지나간 안내가 다시 뜬다.
@@ -105,6 +114,58 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
 
     /// <summary>확인 버튼이 눌렸다. 지금 표시권을 가진 쪽에게만 의미가 있다.</summary>
     public event System.Action ConfirmClicked;
+
+    /// <summary>
+    /// 딤에 막힌 클릭이 있었다. 딤은 대상 밖의 클릭을 통째로 삼키므로 그 버튼의 관문은 물어보지도 못한다 -
+    /// 화면에는 아무 일도 일어나지 않아 플레이어는 버튼이 고장 났다고 읽는다. 그 침묵을 여기서 깬다.
+    /// </summary>
+    public event System.Action BlockedClicked;
+
+    // 딤 패널은 raycastTarget이라 클릭을 받지만 자기 몫의 처리는 없다. 이벤트는 부모로 거슬러 올라오므로
+    // 루트에 있는 이 컴포넌트가 대신 받는다 - 딤 조각마다 스크립트를 붙이지 않아도 된다.
+    void IPointerClickHandler.OnPointerClick(PointerEventData eventData)
+    {
+        if (!IsShowingGuide || !_blocksInput || eventData == null)
+        {
+            return;
+        }
+
+        // 말풍선·확인 버튼을 눌러도 이벤트는 여기까지 올라온다. 막힌 클릭만 골라야 한다.
+        if (!IsDimPart(eventData.pointerCurrentRaycast.gameObject))
+        {
+            return;
+        }
+
+        BlockedClicked?.Invoke();
+    }
+
+    private bool IsDimPart(GameObject candidate)
+    {
+        if (candidate == null)
+        {
+            return false;
+        }
+
+        if (_holeBlocker != null && ReferenceEquals(candidate, _holeBlocker.gameObject))
+        {
+            return true;
+        }
+
+        if (_dimPanels == null)
+        {
+            return false;
+        }
+
+        foreach (RectTransform panel in _dimPanels)
+        {
+            if (panel != null && ReferenceEquals(candidate, panel.gameObject))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     // Overlay 모드에서는 카메라를 넘기면 좌표가 어긋나므로 null이어야 한다.
     private Camera UiCamera =>
@@ -357,6 +418,10 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
         _showConfirmButton = showConfirmButton;
         _currentLocKey = locKey;
         _currentArgs = args;
+
+        // 앞 단계에서 낸 사유는 여기서 지운다 - 새 안내와 함께 남아 있으면 방금 막힌 것처럼 읽힌다.
+        HideHint();
+
         ApplyText();
         ApplyDim();
         ApplyBubbleSlot(bubbleSlot);
@@ -417,6 +482,50 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     }
 
     /// <summary>
+    /// 말풍선 아래에 보조 줄을 잠깐 띄운다. 막았다는 사실을 그 자리에서 알리는 데 쓴다 -
+    /// 무반응으로 두면 플레이어가 버그로 읽는다.
+    ///
+    /// <b>표시권을 가진 쪽만 낼 수 있다.</b> 안내는 둘 이상 동시에 살아 있을 수 있고(챕터 + 팁 체인)
+    /// 진 쪽도 관문 질의에는 거절을 돌려주므로, 그대로 두면 화면에 뜬 적 없는 안내가 말을 건다.
+    /// </summary>
+    public void ShowHint(object owner, string locKey, float durationSeconds)
+    {
+        if (_hintText == null || !IsShowingFor(owner))
+        {
+            return;
+        }
+
+        _hintText.text = StringTable.GetString(locKey);
+        _hintText.gameObject.SetActive(true);
+
+        _hintSequence++;
+        HideHintLaterAsync(_hintSequence, durationSeconds).Forget();
+    }
+
+    // 사유는 잠깐 붙었다 사라진다. 남겨두면 안내 문구처럼 읽혀 "지금 할 일"과 섞인다.
+    // 그 사이 새 사유가 뜨면 옛 타이머는 자기 차례가 아니므로 아무것도 하지 않는다.
+    private async UniTaskVoid HideHintLaterAsync(int sequence, float durationSeconds)
+    {
+        await UniTask.WaitForSeconds(
+            durationSeconds,
+            ignoreTimeScale: true,
+            cancellationToken: this.GetCancellationTokenOnDestroy());
+
+        if (sequence == _hintSequence)
+        {
+            HideHint();
+        }
+    }
+
+    private void HideHint()
+    {
+        if (_hintText != null)
+        {
+            _hintText.gameObject.SetActive(false);
+        }
+    }
+
+    /// <summary>
     /// 표시권은 쥔 채로 화면에서만 걷는다. 안내가 끝났지만 아직 다음 안내에 넘길 때가 아닐 때 쓴다 -
     /// 그냥 Release하면 대기 중이던 낮은 우선순위가 곧바로 그려져 다른 알림과 겹친다.
     /// </summary>
@@ -434,6 +543,7 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
         // 확인 버튼이 있는 단계를 딤째로 다시 띄운다(표시권은 계속 쥐고 있으므로 early return도 안 걸린다).
         _expectsTarget = false;
 
+        HideHint();
         SetVisualsActive(false);
     }
 
@@ -450,6 +560,8 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
         _owner = null;
         _target = null;
         _worldTarget = null;
+
+        HideHint();
         SetVisualsActive(false);
 
         // 기다리던 가이드가 자기 현재 단계로 다시 유도할 기회를 준다.
