@@ -77,6 +77,10 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
     [SerializeField] private float _pulseDuration = DEFAULT_PULSE_DURATION;
     [SerializeField] private float _pulseScale = DEFAULT_PULSE_SCALE;
 
+    [Tooltip("표시권이 오간 순간을 프레임 번호와 함께 콘솔에 남긴다. '안내가 한 프레임 스쳤다' 같은 제보는 " +
+             "화면만 봐서는 어느 경로였는지 되짚을 수 없어, 재현할 때만 켜서 순서를 확인하는 용도다.")]
+    [SerializeField] private bool _logsDisplayHandover;
+
     private readonly Vector3[] _cornerBuffer = new Vector3[RECT_CORNER_COUNT];
     private RectTransform[] _dimPanels;
     private Image[] _dimImages;
@@ -277,6 +281,21 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
         ConfirmClicked?.Invoke();
     }
 
+    // 진단 전용. 프레임 번호를 함께 남기는 것이 핵심이다 - 같은 프레임 안에서 오간 표시권은 화면에
+    // 나가지 않으므로, 번쩍인 안내는 반드시 프레임을 넘긴 구간에 있다.
+    private void LogHandover(string action, object owner, int priority)
+    {
+        if (!_logsDisplayHandover)
+        {
+            return;
+        }
+
+        string ownerName = owner is Object unityObject && unityObject != null ? unityObject.name : "?";
+        Debug.Log(
+            $"[UI_GuideOverlay] f{Time.frameCount} {action} owner={ownerName} priority={priority} " +
+            $"visuals={_visualsActive} key={_currentLocKey}", this);
+    }
+
     // 안내용 그래픽은 클릭 대상이 아니다 - 차단하지 않는 단계에서 뒤쪽 조작을 막으면 안 된다.
     private static void SetAboveDim(RectTransform rect)
     {
@@ -401,8 +420,8 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
     // 기본값을 두지 않는다 - params 배열 앞의 선택 인자는 호출부가 인자를 빠뜨렸을 때 조용히
     // 엉뚱한 자리에 묶일 수 있다. 호출부가 매번 밝히게 한다.
     public bool Show(object owner, int priority, RectTransform target, string locKey,
-        bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot,
-        params object[] args)
+        bool blocksTargetInteraction, bool keepsInputOpen, bool showConfirmButton,
+        GuideBubbleSlot bubbleSlot, params object[] args)
     {
         return ShowInternal(
             owner,
@@ -411,9 +430,60 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
             null,
             locKey,
             blocksTargetInteraction,
+            keepsInputOpen,
             showConfirmButton,
             bubbleSlot,
             args);
+    }
+
+    /// <summary>
+    /// 표시권만 넘겨받고 <b>화면은 건드리지 않는다</b>. 안내가 다음 프레임에야 첫 컷을 그리는 쪽이 쓴다.
+    ///
+    /// 두 가지를 동시에 막는다.
+    /// <list type="bullet">
+    /// <item>표시권이 잠깐 비는 틈 - 그 틈에 우선순위가 낮은 안내가 한 프레임 그려졌다가 덮인다
+    /// (챕터가 인수인계하는 프레임에 새끼용 가이드가 실제로 그렇게 스쳐 지나갔다).</item>
+    /// <item>화면이 한 프레임 비는 것 - 여기서 연출을 걷으면 딤과 말풍선이 통째로 사라졌다가
+    /// 다음 프레임에 돌아와, 안내가 바뀔 때마다 화면이 번쩍인다.</item>
+    /// </list>
+    ///
+    /// 그래서 앞 안내의 그림을 그대로 둔 채 주인만 바꾼다. 잡은 쪽이 곧 <see cref="Show"/>로 덮어쓰고,
+    /// 그릴 것이 없다면 <see cref="Release"/>·<see cref="Suspend"/>로 스스로 걷어야 한다.
+    /// </summary>
+    public bool Reserve(object owner, int priority)
+    {
+        if (owner == null)
+        {
+            return false;
+        }
+
+        if (HasOwner && ReferenceEquals(_owner, owner))
+        {
+            return true;
+        }
+
+        // Show와 달리 같은 우선순위에서 이긴다. Show의 "먼저 잡은 쪽이 유지한다"는 규칙은 두 안내가
+        // 매 프레임 서로 빼앗아 깜빡이는 것을 막기 위한 것인데, 선점은 매 프레임 도는 것이 아니라
+        // "내가 뒤를 잇는다"는 일회성 선언이다. 챕터끼리는 우선순위가 같으므로(GuidePriority),
+        // 여기서 지면 인계 프레임에 표시권이 비어 그 틈으로 낮은 우선순위 안내가 그려진다.
+        if (HasOwner && priority < _ownerPriority)
+        {
+            return false;
+        }
+
+        _owner = owner;
+        _ownerPriority = priority;
+
+        // 대상을 기다리는 상태는 반드시 푼다. 남겨두면 LateUpdate가 "가리키던 대상이 사라졌다"로 보고
+        // 앞 안내의 문구와 딤을 되살린다 - 밤을 넘긴 뒤 아침 챕터가 선점하는 순간, 지난밤 마지막 컷이
+        // 한 프레임 다시 떴다(2일차 시작 깜빡임의 원인). 화면 자체는 그대로 두고 되살아나는 것만 막는다.
+        _expectsTarget = false;
+
+        // 앞 안내가 낸 사유 줄만 지운다 - 주인이 바뀌었는데 남아 있으면 방금 막힌 것처럼 읽힌다.
+        HideHint();
+
+        LogHandover("RESERVE", owner, priority);
+        return true;
     }
 
     /// <summary>
@@ -421,8 +491,8 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
     /// UI 대상과 같은 딤 구멍을 만들므로, 해당 오브젝트 밖의 UI와 월드 클릭을 함께 막을 수 있다.
     /// </summary>
     public bool ShowWorldTarget(object owner, int priority, Renderer target, string locKey,
-        bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot,
-        params object[] args)
+        bool blocksTargetInteraction, bool keepsInputOpen, bool showConfirmButton,
+        GuideBubbleSlot bubbleSlot, params object[] args)
     {
         return ShowInternal(
             owner,
@@ -431,13 +501,14 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
             target,
             locKey,
             blocksTargetInteraction,
+            keepsInputOpen,
             showConfirmButton,
             bubbleSlot,
             args);
     }
 
     private bool ShowInternal(object owner, int priority, RectTransform target, Renderer worldTarget,
-        string locKey, bool blocksTargetInteraction, bool showConfirmButton,
+        string locKey, bool blocksTargetInteraction, bool keepsInputOpen, bool showConfirmButton,
         GuideBubbleSlot bubbleSlot, params object[] args)
     {
         if (owner == null)
@@ -478,7 +549,12 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
         // 그리드를 클릭해 새끼용을 배치하는 단계가 그 경우로, 대상을 지정하지 않아 화면 전체가 통로다.
         //
         // 딤도 같은 값을 쓴다(ApplyDim). 막는 곳은 어둡게 해야 한다 - 보이지 않는 벽에 막히면 멈춘 줄 안다.
-        _blocksInput = hasTarget || hasEscape;
+        //
+        // keepsInputOpen은 그 자동 판단을 단계가 되돌리는 유일한 통로다. "읽으면서 자유롭게 조작하라"는
+        // 단계(원하는 만큼 인구를 배치한 뒤 확인)는 확인 버튼이 필요한데, 버튼이 있다는 이유로 딤이 깔리면
+        // 정작 시킨 조작을 할 수 없다. 대상을 가리키기만 하고 막지는 않는 경우도 이쪽이다 -
+        // 딤은 투명해지고 구멍 테두리만 남는다(ApplyDim).
+        _blocksInput = !keepsInputOpen && (hasTarget || hasEscape);
 
         _blocksTargetInteraction = blocksTargetInteraction;
         _showConfirmButton = showConfirmButton;
@@ -493,6 +569,7 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
         ApplyBubbleSlot(bubbleSlot);
 
         SetVisualsActive(true);
+        LogHandover("SHOW", owner, priority);
 
         if (_target != null)
         {
@@ -611,6 +688,7 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
 
         HideHint();
         SetVisualsActive(false);
+        LogHandover("SUSPEND", owner, _ownerPriority);
     }
 
     /// <summary>
@@ -623,9 +701,15 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
             return;
         }
 
+        LogHandover("RELEASE", owner, _ownerPriority);
+
         _owner = null;
         _target = null;
         _worldTarget = null;
+
+        // Suspend와 같은 이유로 대상 대기 상태도 함께 푼다 - 남겨두면 다음 주인이 그리기 전에
+        // LateUpdate가 지난 안내를 되살린다.
+        _expectsTarget = false;
 
         HideHint();
         SetVisualsActive(false);

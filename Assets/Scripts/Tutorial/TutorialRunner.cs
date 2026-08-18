@@ -150,6 +150,12 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     // 팁 체인을 시작하게 한 배타 모드. 체인이 끝나기 전까지 이 모드만 유지한다.
     private MonoBehaviour _heldExclusiveMode;
 
+    // 마지막 단계까지 끝내고 다음 챕터에 넘기는 중. 이 동안의 OnDisable은 화면을 걷지 않는다 -
+    // 챕터를 넘기는 쪽(TutorialScenarioController)이 앞 챕터를 끄고 나서 다음 챕터를 켜므로,
+    // 여기서 표시권을 놓으면 그 사이에 낮은 우선순위 안내가 한 프레임 그려진다.
+    // 마무리는 HandOverAsync가 맡는다.
+    private bool _isHandingOver;
+
     // 안내가 지나간 창만 열 수 있다. 지금 단계의 것만 허용하면 플레이어가 그 창을 닫았을 때 다시 열 수 없어 갇힌다.
     private readonly HashSet<TutorialExclusiveModeKind> _unlockedModes = new();
 
@@ -243,6 +249,13 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             _overlay.ConfirmClicked += HandleConfirmClicked;
             _overlay.DisplayReleased += HandleDisplayReleased;
             _overlay.BlockedClicked += HandleBlockedClicked;
+
+            // 첫 컷은 BeginAsync가 한 프레임 뒤에 그린다. 그동안 표시권이 비어 있으면 우선순위가 낮은
+            // 안내(새끼용 가이드)가 그 한 프레임을 그렸다가 곧바로 덮여 화면이 번쩍인다 -
+            // 앞 챕터의 Release가 부르는 DisplayReleased와 이 OnEnable이 같은 프레임이므로,
+            // 여기서 미리 잡아 두면 그 그림은 화면에 나가지 않는다.
+            // 시작하지 않기로 한 경우엔 BeginAsync가 이 선점을 도로 놓는다.
+            _overlay.Reserve(this, GuidePriority.DAY_ONE_TUTORIAL);
         }
 
         RunData run = CurrentRun;
@@ -251,6 +264,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             return;
         }
 
+        _isHandingOver = false;
         _isRunning = true;
         EnterStep(_currentIndex);
     }
@@ -486,12 +500,18 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         ReleaseOpenQuery();
 
         // 끄면 떠 있던 딤·말풍선도 같이 걷는다. 새끼용 가이드가 기다리고 있었다면 이때 표시권을 넘겨받는다.
+        // 다만 인계 중이라면 놓지 않는다 - 다음 챕터가 아직 켜지기 전이라, 여기서 놓으면
+        // 그 틈에 낮은 우선순위 안내가 한 프레임 그려졌다가 덮인다. 마무리는 HandOverAsync가 한다.
         if (_overlay != null)
         {
             _overlay.ConfirmClicked -= HandleConfirmClicked;
             _overlay.DisplayReleased -= HandleDisplayReleased;
             _overlay.BlockedClicked -= HandleBlockedClicked;
-            _overlay.Release(this);
+
+            if (!_isHandingOver)
+            {
+                _overlay.Release(this);
+            }
         }
     }
 
@@ -554,10 +574,13 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         await UniTask.Yield(this.GetCancellationTokenOnDestroy());
 
         // 시작하지 않기로 한 경우엔 잠금을 풀고, 튜토리얼에 매달린 일(알 지급 등)이 진행되도록 종료를 알린다.
+        // 표시권도 반드시 함께 놓는다 - OnEnable이 선점해 두었으므로, 여기서 놓지 않으면 아무것도 그리지 않는
+        // 러너가 표시권을 영구히 쥐고 앉아 다른 안내가 화면에 뜨지 못한다.
         if (_sequence == null || _sequence.Steps.Count == 0)
         {
             Debug.LogWarning("[TutorialRunner] 시퀀스가 비어 있어 튜토리얼을 시작하지 않습니다.", this);
             ReleaseOpenQuery();
+            _overlay?.Release(this);
             TutorialEnded.Invoke();
             return;
         }
@@ -566,6 +589,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (run != null && run.IsTutorialDismissed)
         {
             ReleaseOpenQuery();
+            _overlay?.Release(this);
             TutorialEnded.Invoke();
             return;
         }
@@ -705,13 +729,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             run.IsTutorialDismissed = true;
         }
 
-        // 마지막 단계를 끝낸 순간 화면은 곧바로 걷는다 - 딤이 남아 있으면 조작이 막힌 것처럼 보인다.
-        // 다만 표시권은 계속 쥐고 있어야 다음 가이드가 알림과 겹쳐 뜨지 않는다.
-        if (_overlay != null)
-        {
-            _overlay.Suspend(this);
-        }
-
+        // 화면은 여기서 걷지 않는다. 뒤이어 열리는 챕터는 한 프레임 뒤에야 첫 컷을 그리므로,
+        // 지금 걷으면 그 한 프레임이 통째로 비어 안내가 바뀔 때마다 화면이 번쩍인다.
+        // 인계할 곳이 없어 실제로 기다려야 할 때만 HandOverAsync가 걷는다.
+        _isHandingOver = true;
         HandOverAsync().Forget();
     }
 
@@ -726,22 +747,29 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
         if (_handOverDelaySeconds > 0f && !_isConfirmedByClick)
         {
+            // 실제로 기다릴 때만 화면을 걷는다 - 다 끝난 안내의 딤이 그동안 남아 있으면
+            // 조작이 막힌 것처럼 보인다. 표시권은 계속 쥐고 있어야 다른 안내가 끼어들지 않는다.
+            _overlay?.Suspend(this);
+
             await UniTask.WaitForSeconds(_handOverDelaySeconds, ignoreTimeScale: true, cancellationToken: token);
+
+            // 기다리는 동안 컴포넌트가 꺼졌다. OnDisable은 인계 중이라 표시권을 놓지 않았으므로
+            // 여기서 반드시 놓아야 한다 - 아니면 아무것도 그리지 않는 러너가 표시권을 영구히 쥔다.
+            if (!isActiveAndEnabled)
+            {
+                _overlay?.Release(this);
+                return;
+            }
         }
 
-        // 기다리는 동안 컴포넌트가 꺼졌다면 OnDisable이 이미 정리했다.
-        if (!isActiveAndEnabled)
-        {
-            return;
-        }
-
-        if (_overlay != null)
-        {
-            _overlay.Release(this);
-        }
-
-        // 인계 단계를 거치지 않고 끝났다면(건너뛰기 등) 여기서라도 매달린 일이 진행돼야 한다.
+        // Release보다 먼저 알린다. 이 신호로 열리는 다음 챕터가 표시권을 선점하므로,
+        // 반대로 두면 표시권이 잠깐 비고 그 틈에 우선순위가 낮은 안내(새끼용 가이드)가
+        // 한 프레임 그려졌다가 덮인다.
         TutorialEnded.Invoke();
+
+        // 다음 챕터가 가져갔으면 아무 일도 없다 - 소유자가 아닌 쪽의 Release는 무시된다.
+        // 이어받을 챕터가 없을 때만 실제로 화면이 걷힌다.
+        _overlay?.Release(this);
     }
 
     // 남이 걸어둔 것을 지우지 않도록 내가 건 경우에만 뗀다.
@@ -915,6 +943,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 worldTarget,
                 _activeStep.MessageLocKey,
                 _activeStep.BlocksTargetInteraction,
+                _activeStep.KeepsInputOpen,
                 showsConfirmButton,
                 _activeStep.BubbleSlot,
                 args);
@@ -927,6 +956,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             target,
             _activeStep.MessageLocKey,
             _activeStep.BlocksTargetInteraction,
+            _activeStep.KeepsInputOpen,
             showsConfirmButton,
             _activeStep.BubbleSlot,
             args);

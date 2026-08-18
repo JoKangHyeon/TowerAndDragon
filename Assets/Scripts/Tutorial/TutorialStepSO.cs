@@ -42,6 +42,11 @@ public sealed class TutorialStepSO : ScriptableObject
              "되돌릴 수 없는 조작(하루 1회뿐인 어미용 속성 변경 등)을 설명 중에 소모하지 않게 한다.")]
     [SerializeField] private bool _blocksTargetInteraction;
 
+    [Tooltip("딤을 깔지 않는다. 읽으면서 자유롭게 조작해야 하는 단계에 쓴다 - 확인 버튼이 있으면 " +
+             "오버레이가 화면을 통째로 덮으므로, 그대로 두면 '원하는 만큼 배치한 뒤 확인'이 성립하지 않는다. " +
+             "대상을 지정했다면 구멍 테두리만 남고 클릭은 어디든 통한다.")]
+    [SerializeField] private bool _keepsInputOpen;
+
     [Tooltip("말풍선을 띄울 자리. 타일을 클릭해야 하는 단계는 말풍선이 그리드를 가리므로 Top/Bottom으로 옮긴다.")]
     [SerializeField] private GuideBubbleSlot _bubbleSlot = GuideBubbleSlot.Default;
 
@@ -89,6 +94,7 @@ public sealed class TutorialStepSO : ScriptableObject
     public Building TargetBuildingSlot => _targetBuildingSlot;
     public TutorialDynamicTargetKind DynamicTarget => _dynamicTarget;
     public bool BlocksTargetInteraction => _blocksTargetInteraction;
+    public bool KeepsInputOpen => _keepsInputOpen;
     public GuideBubbleSlot BubbleSlot => _bubbleSlot;
     public TutorialConditionType Condition => _condition;
     public TutorialExclusiveModeKind TargetMode => _targetMode;
