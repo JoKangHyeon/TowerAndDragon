@@ -130,6 +130,7 @@ GameObject:
   - component: {fileID: 37122975}
   - component: {fileID: 37122977}
   - component: {fileID: 37122976}
+  - component: {fileID: 37122978}
   m_Layer: 0
   m_Name: WorkerModeController
   m_TagString: Untagged
@@ -202,6 +203,22 @@ MonoBehaviour:
   _nightLockedBuildingTint: {r: 0.7, g: 0.7, b: 0.7, a: 1}
   _countLabelColor: {r: 1, g: 1, b: 1, a: 1}
   _dragThreshold: 10
+--- !u!114 &37122978
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 37122974}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ffd849062f520745991860abeda62cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerDisableDebugClicker
+  _gridMap: {fileID: 313449541}
+  _mouseSelectController: {fileID: 250167905}
+  _cycleManager: {fileID: 914589611}
+  _isEnabled: 1
 --- !u!1 &61071321
 GameObject:
   m_ObjectHideFlags: 0
@@ -7562,7 +7579,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6864070389072513261, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -50
+      value: -50.00006
       objectReference: {fileID: 0}
     - target: {fileID: 6874002290473965843, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
@@ -9564,6 +9581,14 @@ MonoBehaviour:
   _cheerSeconds: 0.1
   _fadeOutSeconds: 0.2
   _attackIntervalSeconds: 1
+  _conquestCompletionEffectPrefab: {fileID: 753293567017306486, guid: 1937130aef1e12a43bbad61ab4da7177, type: 3}
+  _conquestCompletionIdleSeconds: 1
+  _conquestCompletionEffectLifetimeSeconds: 3
+  _towerEjectionEffectPrefab: {fileID: 2395260373604045706, guid: 008c56ead7cc31b4ea3c0d480179f4a6, type: 3}
+  _ejectDistance: 1
+  _ejectHeight: 0.9
+  _ejectSeconds: 0.6
+  _ejectLingerSeconds: 1
   _spreadRadius: 0.45
   _maxActiveVillagers: 60
 --- !u!114 &1368852691 stripped
@@ -10535,6 +10560,10 @@ PrefabInstance:
     - target: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: m_Name
       value: Grid_HeightVariant
+      objectReference: {fileID: 0}
+    - target: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6681738151754636705, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: _gameManager

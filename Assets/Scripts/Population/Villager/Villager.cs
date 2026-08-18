@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using DG.Tweening;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -20,7 +21,13 @@ public enum VillagerProfile
     Expedition,
 
     /// <summary>목적지(성)에 도착하면 그대로 사라진다. 인구 회수와 원정 귀환에 쓴다.</summary>
-    Recall
+    Recall,
+
+    /// <summary>목적지에 도착하면 잠깐 idle 후 사라진다. 추가 배치 인원의 이동 표현에 쓴다.</summary>
+    Transit,
+
+    /// <summary>타워가 비활성화될 때 사망 모션으로 튕겨져 나온다. 걸어가지 않고 포물선으로 날아간다.</summary>
+    Ejected
 }
 
 /// <summary>
@@ -155,6 +162,11 @@ public sealed class Villager : MonoBehaviour
     // 컨트롤러마다 가진 파라미터가 조금씩 다르므로 실제 호출은 HasParameter 가드로 걸러낸다.
     private const string WORK_ANIM_KEY = "Work";
     private const string CHEER_ANIM_KEY = "Cheer";
+    private const string DEATH_ANIM_KEY = "Death";
+
+    // 포물선 높이 계수. 4t(1-t)는 t=0.5에서 최대 1이 되어, _ejectHeight가 그대로 최고점이 된다.
+    private const float EJECT_ARC_FACTOR = 4f;
+    private const float TRANSIT_ARRIVAL_IDLE_SECONDS = 0.15f;
     private const string IDLE_ANIM_STATE_PATH = BASE_LAYER_NAME + "." + IDLE_ANIM_STATE;
     private const string MOVE_ANIM_STATE_PATH = BASE_LAYER_NAME + "." + Defines.ANIM_MOVE;
     private const string WORK_ANIM_STATE_PATH = BASE_LAYER_NAME + "." + WORK_ANIM_KEY;
@@ -168,6 +180,7 @@ public sealed class Villager : MonoBehaviour
     private static readonly int ATTACK_ANIM_HASH = Animator.StringToHash(Defines.ANIM_ENEMY_ATTACK);
     private static readonly int WORK_ANIM_HASH = Animator.StringToHash(WORK_ANIM_KEY);
     private static readonly int CHEER_ANIM_HASH = Animator.StringToHash(CHEER_ANIM_KEY);
+    private static readonly int DEATH_ANIM_HASH = Animator.StringToHash(DEATH_ANIM_KEY);
     private static readonly int IDLE_STATE_HASH = Animator.StringToHash(IDLE_ANIM_STATE_PATH);
     private static readonly int MOVE_STATE_HASH = Animator.StringToHash(MOVE_ANIM_STATE_PATH);
     private static readonly int WORK_STATE_HASH = Animator.StringToHash(WORK_ANIM_STATE_PATH);
@@ -181,7 +194,8 @@ public sealed class Villager : MonoBehaviour
     {
         None,
         Despawn,
-        SendHome
+        SendHome,
+        HoldIdleThenSendHome
     }
 
     /// <summary>소멸 직전에 알린다 - VillagerDispatchSystem이 활성 목록에서 지운다.</summary>
@@ -194,18 +208,25 @@ public sealed class Villager : MonoBehaviour
     private SpriteRenderer[] _renderers;
     private readonly HashSet<int> _animatorParameterHashes = new();
     private RuntimeAnimatorController _cachedAnimatorController;
+    private Tween _fadeTween;
 
     private VillagerOrder _order;
     private VillagerCommand _command = VillagerCommand.None;
     private float _cheerSeconds;
     private float _fadeOutSeconds;
     private float _attackIntervalSeconds;
+    private float _idleBeforeHomeSeconds;
+    private float _ejectHeight;
+    private float _ejectSeconds;
+    private float _ejectLingerSeconds;
     private bool _hasFinished;
     private bool _hasCachedParameters;
     private bool _wantsMove;
     private bool _wantsWork;
     private bool _hasDesiredState;
     private bool _hasAppliedState;
+    private bool _isFading;
+    private float _fadeAlpha = 1f;
     private int _desiredStateHash;
     private int _desiredShortStateHash;
     private int _appliedStateHash;
@@ -239,11 +260,22 @@ public sealed class Villager : MonoBehaviour
         _movement.SetSpeed(moveSpeed);
     }
 
+    /// <summary>튕겨져 나오는 연출의 세기. <see cref="VillagerProfile.Ejected"/>에서만 쓴다.</summary>
+    public void ConstructEject(float height, float seconds, float lingerSeconds)
+    {
+        _ejectHeight = height;
+        _ejectSeconds = seconds;
+        _ejectLingerSeconds = lingerSeconds;
+    }
+
     public void Dispatch(in VillagerOrder order)
     {
         _order = order;
 
-        if (order.HasOutboundLeg && order.HasFixedOriginWorldPosition)
+        // 튕겨 나오는 캐릭터는 걷지 않지만(HasOutboundLeg=false) 타워 위치에서 시작해야 하므로
+        // 월드 좌표 워프는 그대로 태운다. SpreadOffset은 여기서 더하지 않는다 - 그건 날아갈 방향이다.
+        if (order.HasFixedOriginWorldPosition &&
+            (order.HasOutboundLeg || order.Profile == VillagerProfile.Ejected))
         {
             _movement.WarpWorld(order.OriginWorldPosition);
         }
@@ -255,13 +287,13 @@ public sealed class Villager : MonoBehaviour
         RunAsync(this.GetCancellationTokenOnDestroy()).Forget();
     }
 
-    /// <summary>걸어가는 연출 없이 사라지게 한다. 밤 전환·건물 철거·인구 0 등에 쓴다.</summary>
+    /// <summary>걸어가는 연출 없이 사라지게 한다. 타워/점령 정리·건물 철거 등에 쓴다.</summary>
     public void Despawn()
     {
         _command = VillagerCommand.Despawn;
     }
 
-    /// <summary>성으로 걸어가 사라지게 한다. 점령 완료 후 귀환에 쓴다.</summary>
+    /// <summary>성으로 걸어가 사라지게 한다. 상주 인구의 밤 귀가와 점령 완료 후 귀환에 쓴다.</summary>
     public void SendHome()
     {
         // 이미 사라지기로 한 개체를 되돌리지 않는다 - 밤 전환과 점령 완료가 같은 프레임에 겹칠 수 있다.
@@ -269,6 +301,18 @@ public sealed class Villager : MonoBehaviour
         {
             _command = VillagerCommand.SendHome;
         }
+    }
+
+    /// <summary>제자리에서 잠깐 idle을 보여준 뒤 성으로 걸어가게 한다. 점령 완료 축하 연출에 쓴다.</summary>
+    public void SendHomeAfterIdle(float idleSeconds)
+    {
+        if (_command == VillagerCommand.Despawn)
+        {
+            return;
+        }
+
+        _idleBeforeHomeSeconds = Mathf.Max(0f, idleSeconds);
+        _command = VillagerCommand.HoldIdleThenSendHome;
     }
 
     // 취소는 오브젝트 파괴 시에만 일어난다. UniTaskVoid + Forget은 OperationCanceledException을
@@ -293,8 +337,17 @@ public sealed class Villager : MonoBehaviour
                 await UniTask.WaitForSeconds(_cheerSeconds, cancellationToken: token);
                 break;
 
+            case VillagerProfile.Ejected:
+                await EjectAsync(token);
+                break;
+
+            case VillagerProfile.Transit:
+                PlayIdle();
+                await UniTask.WaitForSeconds(TRANSIT_ARRIVAL_IDLE_SECONDS, cancellationToken: token);
+                break;
+
             case VillagerProfile.Recall:
-                // 목적지가 곧 성이었다 - 도착했으므로 더 할 일이 없다.
+                // 목적지에 닿았으므로 더 할 일이 없다.
                 break;
 
             default:
@@ -312,15 +365,44 @@ public sealed class Villager : MonoBehaviour
                     await AttackUntilCommandedAsync(token);
                 }
 
-                if (_command == VillagerCommand.SendHome)
-                {
-                    await WalkHomeAsync(token);
-                }
+                await ExecuteCommandAsync(token);
 
                 break;
         }
 
         await FinishAsync(token);
+    }
+
+    private async UniTask ExecuteCommandAsync(CancellationToken token)
+    {
+        switch (_command)
+        {
+            case VillagerCommand.SendHome:
+                await WalkHomeAsync(token);
+                break;
+
+            case VillagerCommand.HoldIdleThenSendHome:
+                await HoldIdleThenWalkHomeAsync(token);
+                break;
+        }
+    }
+
+    private async UniTask HoldIdleThenWalkHomeAsync(CancellationToken token)
+    {
+        PlayIdle();
+
+        float elapsed = 0f;
+
+        while (elapsed < _idleBeforeHomeSeconds && _command == VillagerCommand.HoldIdleThenSendHome)
+        {
+            elapsed += Time.deltaTime;
+            await UniTask.Yield(PlayerLoopTiming.Update, token);
+        }
+
+        if (_command != VillagerCommand.Despawn)
+        {
+            await WalkHomeAsync(token);
+        }
     }
 
     private UniTask<bool> WalkToWorkAsync(CancellationToken token) =>
@@ -354,6 +436,36 @@ public sealed class Villager : MonoBehaviour
                 await UniTask.Yield(PlayerLoopTiming.Update, token);
             }
         }
+    }
+
+    // 타워가 비활성화될 때 수비병이 밖으로 튕겨 나오는 연출.
+    // 걷는 이동(VillagerMovement)을 쓰지 않고 트랜스폼을 직접 포물선으로 던진다 - 지면을 따라
+    // 걸어가는 것이 아니라 "날아가 떨어지는" 그림이라 이동 로직과 성격이 다르다.
+    private async UniTask EjectAsync(CancellationToken token)
+    {
+        PlayDeath();
+
+        // 날아갈 방향·거리는 디스패치가 정해 SpreadOffset으로 실어 보낸다(타워마다 다른 방향으로 튄다).
+        Vector3 start = transform.position;
+        Vector3 end = start + _order.SpreadOffset;
+        float elapsed = 0f;
+
+        while (elapsed < _ejectSeconds && _command != VillagerCommand.Despawn)
+        {
+            elapsed += Time.deltaTime;
+
+            float progress = Mathf.Clamp01(elapsed / _ejectSeconds);
+
+            // 수평은 등속, 수직은 포물선(4t(1-t)로 중간에 최고점). 아이소메트릭이라 화면 Y가 곧 높이다.
+            float arc = EJECT_ARC_FACTOR * progress * (1f - progress);
+
+            transform.position = Vector3.Lerp(start, end, progress) + new Vector3(0f, arc * _ejectHeight, 0f);
+
+            await UniTask.Yield(PlayerLoopTiming.Update, token);
+        }
+
+        // 쓰러진 채로 잠깐 남아 있다가 사라진다(FinishAsync의 페이드가 이어받는다).
+        await UniTask.WaitForSeconds(_ejectLingerSeconds, cancellationToken: token);
     }
 
     // 목적지에 닿았으면 true. 도중에 Despawn 지시를 받아 중단했으면 false.
@@ -405,16 +517,31 @@ public sealed class Villager : MonoBehaviour
             return;
         }
 
-        float elapsed = 0f;
+        _fadeTween?.Kill();
+        _fadeAlpha = 1f;
+        _isFading = true;
 
-        // Time.deltaTime을 쓰므로 일시정지·배속(GameSpeedManager)에 이동과 똑같이 따라간다.
-        while (elapsed < _fadeOutSeconds)
-        {
-            elapsed += Time.deltaTime;
-            SetAlpha(1f - Mathf.Clamp01(elapsed / _fadeOutSeconds));
+        _fadeTween = DOTween.To(
+                () => _fadeAlpha,
+                alpha =>
+                {
+                    _fadeAlpha = alpha;
+                    SetAlpha(alpha);
+                },
+                0f,
+                _fadeOutSeconds)
+            .SetEase(Ease.Linear)
+            .SetUpdate(UpdateType.Late)
+            .SetLink(gameObject);
 
-            await UniTask.Yield(PlayerLoopTiming.Update, token);
-        }
+        await UniTask.WaitUntil(
+            () => _fadeTween == null || !_fadeTween.IsActive() || _fadeTween.IsComplete(),
+            cancellationToken: token);
+
+        _fadeAlpha = 0f;
+        SetAlpha(_fadeAlpha);
+        _fadeTween = null;
+        _isFading = false;
     }
 
     private void SetAlpha(float alpha)
@@ -448,6 +575,9 @@ public sealed class Villager : MonoBehaviour
     // 죽은 항목이 남는다 - 그 경우에도 반드시 알린다.
     private void OnDestroy()
     {
+        _fadeTween?.Kill();
+        _fadeTween = null;
+
         if (_hasFinished)
         {
             return;
@@ -462,6 +592,12 @@ public sealed class Villager : MonoBehaviour
     private void PlayIdle() => SetLocomotionState(isMoving: false, isWorking: false);
 
     private void PlayWork() => SetLocomotionState(isMoving: false, isWorking: true);
+
+    private void PlayDeath()
+    {
+        SetLocomotionState(isMoving: false, isWorking: false);
+        SetTrigger(DEATH_ANIM_HASH);
+    }
 
     private void PlayCheer()
     {
@@ -499,6 +635,14 @@ public sealed class Villager : MonoBehaviour
         SetBool(MOVE_ANIM_HASH, _wantsMove);
         SetBool(WORK_ANIM_HASH, _wantsWork);
         ApplyDesiredState();
+    }
+
+    private void LateUpdate()
+    {
+        if (_isFading)
+        {
+            SetAlpha(_fadeAlpha);
+        }
     }
 
     // 컨트롤러마다 있는 파라미터가 다르다(PixelWorld 원본에는 Move/EnemyAttack만 있다).

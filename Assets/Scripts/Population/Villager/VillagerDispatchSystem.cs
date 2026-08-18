@@ -34,6 +34,12 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private const float DEFAULT_CHEER_SECONDS = 1.5f;
     private const float DEFAULT_FADE_OUT_SECONDS = 0.4f;
     private const float DEFAULT_ATTACK_INTERVAL_SECONDS = 1f;
+    private const float DEFAULT_CONQUEST_COMPLETION_IDLE_SECONDS = 1f;
+    private const float DEFAULT_CONQUEST_COMPLETION_EFFECT_LIFETIME_SECONDS = 3f;
+    private const float DEFAULT_EJECT_DISTANCE = 1.2f;
+    private const float DEFAULT_EJECT_HEIGHT = 0.9f;
+    private const float DEFAULT_EJECT_SECONDS = 0.6f;
+    private const float DEFAULT_EJECT_LINGER_SECONDS = 1f;
     private const float DEFAULT_SPREAD_RADIUS = 0.45f;
     private const int DEFAULT_MAX_ACTIVE_VILLAGERS = 60;
     private const float CASTLE_SPAWN_WORLD_X = 0f;
@@ -84,6 +90,33 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     [Tooltip("점령지에 선 크루가 공격 모션을 다시 재생하는 간격(초). 공격 클립 길이에 맞추면 자연스럽다.")]
     [SerializeField] private float _attackIntervalSeconds = DEFAULT_ATTACK_INTERVAL_SECONDS;
 
+    [Tooltip("점령 완료 때 크루 위치에 한 번 재생할 이펙트 프리팹.")]
+    [SerializeField] private GameObject _conquestCompletionEffectPrefab;
+
+    [Tooltip("점령 완료 후 크루가 idle 상태로 머무는 시간(초).")]
+    [SerializeField] private float _conquestCompletionIdleSeconds = DEFAULT_CONQUEST_COMPLETION_IDLE_SECONDS;
+
+    [Tooltip("점령 완료 이펙트를 자동 제거하기까지 기다리는 시간(초).")]
+    [SerializeField] private float _conquestCompletionEffectLifetimeSeconds =
+        DEFAULT_CONQUEST_COMPLETION_EFFECT_LIFETIME_SECONDS;
+
+    [Header("타워 비활성화 연출")]
+    [Tooltip("타워가 비활성화된 동안 타워 위치에 띄워 둘 이펙트(Imported/Effect/Smoke 등). " +
+             "타워가 다시 가동되면 자동으로 걷힌다.")]
+    [SerializeField] private GameObject _towerEjectionEffectPrefab;
+
+    [Tooltip("튕겨 나온 수비병이 날아가는 수평 거리.")]
+    [SerializeField] private float _ejectDistance = DEFAULT_EJECT_DISTANCE;
+
+    [Tooltip("튕겨 나온 수비병이 그리는 포물선의 최고 높이.")]
+    [SerializeField] private float _ejectHeight = DEFAULT_EJECT_HEIGHT;
+
+    [Tooltip("튕겨 나가 떨어지기까지 걸리는 시간(초).")]
+    [SerializeField] private float _ejectSeconds = DEFAULT_EJECT_SECONDS;
+
+    [Tooltip("떨어진 뒤 쓰러진 채로 남아 있는 시간(초). 이후 페이드아웃으로 사라진다.")]
+    [SerializeField] private float _ejectLingerSeconds = DEFAULT_EJECT_LINGER_SECONDS;
+
     [Tooltip("같은 자리에 여럿이 설 때 흩어지는 반경. 아이소메트릭 종횡비로 눌러 화면상 원형이 된다.")]
     [SerializeField] private float _spreadRadius = DEFAULT_SPREAD_RADIUS;
 
@@ -111,6 +144,26 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     // 밤에 완료된 점령. 밤에는 크루가 이미 치워져 있어 돌려보낼 대상이 없으므로,
     // 좌표만 적어뒀다가 낮 전환 때 되살려 성으로 보낸다(새벽 귀환). 밤 정리에서 지우면 안 된다.
     private readonly HashSet<Vector2Int> _pendingReturns = new();
+
+    // 밤에 성으로 들어간 상주 대상. 다음 낮에는 세이브 복원처럼 제자리에 뚝 나타나지 않고
+    // 성에서 다시 걸어 나가야 하므로 대상만 남긴다. 모습은 다시 뽑아도 괜찮다.
+    private readonly HashSet<IPopulationAllocationTarget> _nightShelteredResidents = new();
+
+    // 밤에 귀가 중인 실제 캐릭터. 밤중에 다른 이벤트로 Reconcile이 다시 돌아도 중간에 Despawn하지 않는다.
+    private readonly HashSet<Villager> _nightReturners = new();
+
+    // 생산시설 상주 worker가 이번 조작의 이동 연출 1명분을 이미 담당한 경우를 기록한다.
+    // 나머지 증감 인원만 이동 전용 transient로 보태기 위한 보정값이다.
+    private readonly HashSet<IPopulationAllocationTarget> _residentArrivalHandledByWorker = new();
+    private readonly HashSet<IPopulationAllocationTarget> _residentReturnHandledByWorker = new();
+
+    // 타워에서 튕겨 나온 캐릭터. 밤 연출이라 밤중 정리 대상에서 빼야 한다 - 타워가 비활성화되면
+    // 인구가 회수되면서 PopulationChanged가 발화하고, 그게 부른 Reconcile이 방금 만든 캐릭터를
+    // 곧바로 지워버린다.
+    private readonly HashSet<Villager> _ejectedVillagers = new();
+
+    // 비활성화된 타워마다 하나씩 떠 있는 연기. 타워가 다시 가동되면 걷어낸다.
+    private readonly Dictionary<Tower, GameObject> _towerEjectionEffects = new();
 
     private readonly Dictionary<VillagerAppearance, Villager[]> _prefabsByAppearance = new();
 
@@ -197,8 +250,9 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         if (_gridMap != null)
         {
             // 작업 위치는 주변 빈 칸을 보므로 건설·철거·이동 모두 다시 계산해야 한다.
-            _gridMap.OnBuildingAdded.AddListener(HandleBuildingChanged);
-            _gridMap.OnBuildingRemoving.AddListener(HandleBuildingChanged);
+            // 추가·제거는 타워 비활성화 연출 구독도 같이 챙긴다.
+            _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
+            _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoving);
             _gridMap.OnBuildingMoved.AddListener(HandleBuildingChanged);
         }
     }
@@ -223,9 +277,54 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
         if (_gridMap != null)
         {
-            _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingChanged);
-            _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingChanged);
+            _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingAdded);
+            _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingRemoving);
             _gridMap.OnBuildingMoved.RemoveListener(HandleBuildingChanged);
+
+            foreach (Building building in _gridMap.Buildings)
+            {
+                UnsubscribeTowerDisabled(building);
+            }
+        }
+
+        // 그리드에서 이미 빠진 타워의 연기는 위 순회로 걷히지 않는다 - 남은 것을 전부 정리한다.
+        ClearAllTowerEjectionEffects();
+    }
+
+    private void HandleBuildingAdded(Building building)
+    {
+        SubscribeTowerDisabled(building);
+        HandleBuildingChanged(building);
+    }
+
+    private void HandleBuildingRemoving(Building building)
+    {
+        UnsubscribeTowerDisabled(building);
+        HandleBuildingChanged(building);
+    }
+
+    private void SubscribeTowerDisabled(Building building)
+    {
+        if (building is Tower tower)
+        {
+            // UnityEvent는 같은 대상을 두 번 등록하면 두 번 호출되므로 먼저 지운다
+            // (Start의 초기 훑기와 OnBuildingAdded가 겹칠 수 있다).
+            tower.Disabled.RemoveListener(HandleTowerDisabled);
+            tower.Disabled.AddListener(HandleTowerDisabled);
+            tower.Reactivated.RemoveListener(HandleTowerReactivated);
+            tower.Reactivated.AddListener(HandleTowerReactivated);
+        }
+    }
+
+    private void UnsubscribeTowerDisabled(Building building)
+    {
+        if (building is Tower tower)
+        {
+            tower.Disabled.RemoveListener(HandleTowerDisabled);
+            tower.Reactivated.RemoveListener(HandleTowerReactivated);
+
+            // 철거되는 타워의 연기를 남겨두면 빈 땅에서 계속 피어오른다.
+            ClearTowerEjectionEffect(tower);
         }
     }
 
@@ -233,6 +332,16 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     // 성 등록(Castle.Start)과 랜드마크 생성이 끝난 뒤에 첫 그림이 맞춰지도록 한 프레임 미뤄진다.
     private void Start()
     {
+        // OnEnable 시점에는 아직 그리드에 등록되지 않은 타워가 있을 수 있다(Building들이 Start에서 등록된다).
+        // OnBuildingAdded를 놓친 타워를 여기서 한 번 훑어 구독을 채운다.
+        if (_gridMap != null)
+        {
+            foreach (Building building in _gridMap.Buildings)
+            {
+                SubscribeTowerDisabled(building);
+            }
+        }
+
         RequestReconcile();
     }
 
@@ -281,7 +390,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         // 낮에 완료된 경우(디버그 명령 등)에는 서 있는 크루를 그대로 돌려보낸다.
         if (_crews.ContainsKey(chunkCoord))
         {
-            RemoveCrew(chunkCoord, sendHome: true);
+            CompleteCrew(chunkCoord);
             return;
         }
 
@@ -329,12 +438,12 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             return;
         }
 
-        // 밤에는 아무도 밖에 없다 - 웨이브 경로에 민간인이 서 있으면 안 된다.
+        // 밤에는 생산시설 쪽 상주만 성으로 걸어 돌아가고, 점령 크루와 타워 transient는 기존처럼 정리한다.
         // 이 가드가 없으면 밤에 도는 PopulationChanged(기아 정산 등)가 상주를 되살린다.
         // _pendingReturns는 일부러 비우지 않는다 - 밤에 완료된 점령의 귀환이 여기 담겨 있다.
         if (!IsDay)
         {
-            DespawnAll();
+            ReconcileNight();
             _pendingNotify.Clear();
             _pendingExpeditions.Clear();
             return;
@@ -372,23 +481,25 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             }
 
             int crewSize = ResolveCrewSize(chunkCoord);
+            SpawnConquestCompletionEffect(originCell);
 
             for (int i = 0; i < crewSize; i++)
             {
-                // 행동은 Recall(성으로 걸어가 사라짐)이지만 겉모습은 원정 크루여야 한다.
-                Spawn(
+                Villager villager = Spawn(
                     new VillagerOrder(
-                        VillagerProfile.Recall,
+                        VillagerProfile.Expedition,
+                        originCell,
                         originCell,
                         castleCell,
-                        castleCell,
                         ResolveRingOffset(i, crewSize),
-                        hasOutboundLeg: true,
+                        hasOutboundLeg: false,
                         hasFixedOriginWorldPosition: false,
                         originWorldPosition: default(Vector3),
                         hasFixedCastleWorldPosition: true,
                         castleWorldPosition: CASTLE_SPAWN_WORLD_POSITION),
                     VillagerAppearance.Expedition);
+
+                villager?.SendHomeAfterIdle(_conquestCompletionIdleSeconds);
             }
         }
 
@@ -397,7 +508,11 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     private void ReconcileResidents()
     {
+        _residentArrivalHandledByWorker.Clear();
+        _residentReturnHandledByWorker.Clear();
+
         CollectWantedResidents();
+        PruneNightShelteredResidents();
 
         _residentRemovalScratch.Clear();
 
@@ -420,6 +535,11 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
                 if (IsRetiringResident(target, entry))
                 {
                     entry.Villager.SendHome();
+
+                    if (IsProductionFacilityTarget(target))
+                    {
+                        _residentReturnHandledByWorker.Add(target);
+                    }
                 }
                 else
                 {
@@ -442,7 +562,12 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
                 continue;
             }
 
-            // 사용자가 방금 배치한 것이 아니면(세이브 복원 등) 걸어오지 않고 제자리에서 일하는 상태로 등장한다.
+            bool shouldWalkFromCastle =
+                _pendingNotify.ContainsKey(target) ||
+                _nightShelteredResidents.Contains(target);
+
+            // 사용자가 방금 배치했거나 밤에 성으로 들어갔다가 낮에 복귀하는 경우에는 성에서 걸어온다.
+            // 그 외 세이브 복원 등은 제자리에서 일하는 상태로 등장한다.
             Villager villager = Spawn(
                 new VillagerOrder(
                     VillagerProfile.Resident,
@@ -450,7 +575,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
                     workCell,
                     castleCell,
                     Vector3.zero,
-                    hasOutboundLeg: _pendingNotify.ContainsKey(target),
+                    hasOutboundLeg: shouldWalkFromCastle,
                     hasFixedOriginWorldPosition: true,
                     originWorldPosition: CASTLE_SPAWN_WORLD_POSITION,
                     hasFixedCastleWorldPosition: true,
@@ -460,7 +585,225 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             if (villager != null)
             {
                 _residents.Add(target, new ResidentEntry(villager, workCell));
+
+                if (shouldWalkFromCastle &&
+                    _pendingNotify.ContainsKey(target) &&
+                    IsProductionFacilityTarget(target))
+                {
+                    _residentArrivalHandledByWorker.Add(target);
+                }
+
+                _nightShelteredResidents.Remove(target);
             }
+        }
+    }
+
+    private void CompleteCrew(Vector2Int chunkCoord)
+    {
+        if (!_crews.TryGetValue(chunkCoord, out List<Villager> crew))
+        {
+            return;
+        }
+
+        if (TryResolveCrewAnchorCell(chunkCoord, out Vector3Int anchorCell))
+        {
+            SpawnConquestCompletionEffect(anchorCell);
+        }
+
+        foreach (Villager villager in crew)
+        {
+            if (villager != null)
+            {
+                villager.SendHomeAfterIdle(_conquestCompletionIdleSeconds);
+            }
+        }
+
+        _crews.Remove(chunkCoord);
+    }
+
+    // 밤 전투 중 타워가 비활성화될 때, 수비병 하나가 사망 모션으로 튕겨 나오고 연기가 피어오른다.
+    // Reconcile을 거치지 않고 곧바로 만든다 - 밤에는 Reconcile이 전원 정리로 끝나므로 그 경로로는
+    // 이 연출을 낼 수 없다. 대신 _ejectedVillagers에 넣어 밤중 정리에서 제외한다.
+    private void HandleTowerDisabled(Tower tower)
+    {
+        if (tower == null || _prefabsByAppearance.Count == 0)
+        {
+            return;
+        }
+
+        Vector3 towerPosition = WorkerCountOverlayRenderer.ResolveLabelPosition(tower);
+
+        SpawnTowerEjectionEffect(tower, towerPosition);
+
+        // 인원수와 무관하게 한 명만 튀어나온다 - 연출이 목적이지 인구를 표현하는 것이 아니다.
+        Villager villager = Spawn(
+            new VillagerOrder(
+                VillagerProfile.Ejected,
+                _castleCell,
+                _castleCell,
+                _castleCell,
+                ResolveEjectOffset(),
+                hasOutboundLeg: false,
+                hasFixedOriginWorldPosition: true,
+                originWorldPosition: towerPosition,
+                hasFixedCastleWorldPosition: false,
+                castleWorldPosition: default),
+            VillagerAppearance.Soldier);
+
+        if (villager != null)
+        {
+            villager.ConstructEject(_ejectHeight, _ejectSeconds, _ejectLingerSeconds);
+            _ejectedVillagers.Add(villager);
+        }
+    }
+
+    // 튕겨 나가는 방향은 매번 달라야 자연스럽다. 아이소메트릭이라 세로를 눌러 화면상 원형으로 흩어진다.
+    private Vector3 ResolveEjectOffset()
+    {
+        float angle = Random.Range(0f, FULL_TURN_RADIANS);
+
+        return new Vector3(
+            Mathf.Cos(angle) * _ejectDistance,
+            Mathf.Sin(angle) * _ejectDistance * IsometricMath.RADIUS_Y_RATIO,
+            0f);
+    }
+
+    // 연기는 타워가 다시 가동될 때까지 계속 피어오른다 - 시간이 아니라 타워 상태가 수명을 정한다.
+    // Smoke 프리팹이 looping 파티클이라 스스로 멈추지 않으므로, 반드시 짝이 되는 정리(HandleTowerReactivated /
+    // UnsubscribeTowerDisabled / OnDisable)가 있어야 빈 땅에 연기가 남지 않는다.
+    private void SpawnTowerEjectionEffect(Tower tower, Vector3 worldPosition)
+    {
+        if (_towerEjectionEffectPrefab == null)
+        {
+            return;
+        }
+
+        // 같은 타워가 다시 비활성화되는 경우(부활 후 재파괴) 이전 연기를 먼저 걷는다.
+        ClearTowerEjectionEffect(tower);
+
+        _towerEjectionEffects[tower] = Instantiate(
+            _towerEjectionEffectPrefab, worldPosition, Quaternion.identity, VillagerRoot);
+    }
+
+    private void HandleTowerReactivated(Tower tower)
+    {
+        ClearTowerEjectionEffect(tower);
+    }
+
+    private void ClearTowerEjectionEffect(Tower tower)
+    {
+        if (tower == null || !_towerEjectionEffects.TryGetValue(tower, out GameObject effect))
+        {
+            return;
+        }
+
+        if (effect != null)
+        {
+            Destroy(effect);
+        }
+
+        _towerEjectionEffects.Remove(tower);
+    }
+
+    private void ClearAllTowerEjectionEffects()
+    {
+        foreach (GameObject effect in _towerEjectionEffects.Values)
+        {
+            if (effect != null)
+            {
+                Destroy(effect);
+            }
+        }
+
+        _towerEjectionEffects.Clear();
+    }
+
+    private void SpawnConquestCompletionEffect(Vector3Int cell)
+    {
+        if (_conquestCompletionEffectPrefab == null || _gridMap == null)
+        {
+            return;
+        }
+
+        GameObject effect = Instantiate(
+            _conquestCompletionEffectPrefab,
+            _gridMap.ConvertGridToWorld(cell),
+            Quaternion.identity,
+            VillagerRoot);
+
+        if (_conquestCompletionEffectLifetimeSeconds > 0f)
+        {
+            Destroy(effect, _conquestCompletionEffectLifetimeSeconds);
+        }
+    }
+
+    private void ReconcileNight()
+    {
+        SendResidentsHomeForNight();
+        DespawnNightTransientVillagers();
+        _crews.Clear();
+    }
+
+    private void SendResidentsHomeForNight()
+    {
+        foreach (KeyValuePair<IPopulationAllocationTarget, ResidentEntry> pair in _residents)
+        {
+            if (IsResidentTarget(pair.Key))
+            {
+                _nightShelteredResidents.Add(pair.Key);
+            }
+
+            Villager villager = pair.Value.Villager;
+
+            if (villager == null)
+            {
+                continue;
+            }
+
+            _nightReturners.Add(villager);
+            villager.SendHome();
+        }
+
+        _residents.Clear();
+    }
+
+    private void DespawnNightTransientVillagers()
+    {
+        for (int i = _activeVillagers.Count - 1; i >= 0; i--)
+        {
+            Villager villager = _activeVillagers[i];
+
+            if (villager == null ||
+                _nightReturners.Contains(villager) ||
+                _ejectedVillagers.Contains(villager))
+            {
+                continue;
+            }
+
+            villager.Despawn();
+        }
+    }
+
+    private void PruneNightShelteredResidents()
+    {
+        if (_nightShelteredResidents.Count == 0)
+        {
+            return;
+        }
+
+        _residentRemovalScratch.Clear();
+
+        foreach (IPopulationAllocationTarget target in _nightShelteredResidents)
+        {
+            if (!IsResidentTarget(target))
+            {
+                _residentRemovalScratch.Add(target);
+            }
+        }
+
+        foreach (IPopulationAllocationTarget target in _residentRemovalScratch)
+        {
+            _nightShelteredResidents.Remove(target);
         }
     }
 
@@ -501,6 +844,9 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         target is not TowerPopulation &&
         target.IsInitialized &&
         target.AssignedPopulation > 0;
+
+    private static bool IsProductionFacilityTarget(IPopulationAllocationTarget target) =>
+        target is FactoryPopulation;
 
     // 상주가 "일을 마치고 물러나는" 경우인지. 이때만 성으로 걸어 돌아가는 연출을 붙인다.
     // 건물이 철거됐거나(대상이 사라짐) 자리를 옮긴 경우(건물 이동)에는 걸어갈 맥락이 없으므로
@@ -651,11 +997,10 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
                 continue;
             }
 
-            // 타워만 인원 수만큼 캐릭터가 오간다 - 타워에는 상주가 없기 때문이다.
-            // 생산시설·연구소·랜드마크는 몇 명을 넣든 상주 한 명만 서 있으므로, 인원 수만큼 만들면
-            // 있지도 않던 사람이 우르르 걸어나온다. 그쪽의 배치·회수 연출은 상주 한 명의 등장과
-            // 퇴장으로 표현되며 ReconcileResidents가 담당한다.
-            if (target is not TowerPopulation)
+            bool isTower = target is TowerPopulation;
+            bool isProductionFacility = IsProductionFacilityTarget(target);
+
+            if (!isTower && !isProductionFacility)
             {
                 continue;
             }
@@ -664,20 +1009,49 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
             if (delta < 0)
             {
-                // 회수 - 빠져나온 인원만큼 타워에서 성으로 돌아간다.
+                int count = ResolveTransientCount(
+                    -delta,
+                    isProductionFacility && _residentReturnHandledByWorker.Contains(target));
+
+                if (count <= 0)
+                {
+                    continue;
+                }
+
+                // 회수 - 빠져나온 인원만큼 일터에서 성으로 돌아간다.
                 SpawnGroup(
                     VillagerProfile.Recall, workCell, castleCell, castleCell,
-                    -delta, workCell, VillagerAppearance.Soldier);
+                    count, workCell, ResolveAppearance(target));
             }
             else if (delta > 0)
             {
-                // 배치 - 배치된 인원만큼 성에서 나와, 도착 후 모션 한 번 하고 사라진다.
+                int count = ResolveTransientCount(
+                    delta,
+                    isProductionFacility && _residentArrivalHandledByWorker.Contains(target));
+
+                if (count <= 0)
+                {
+                    continue;
+                }
+
+                // 배치 - 타워는 도착 모션, 생산시설의 추가 인원은 이동만 보여주고 사라진다.
                 SpawnGroup(
-                    VillagerProfile.TowerVisit, castleCell, workCell, castleCell,
-                    delta, workCell, VillagerAppearance.Soldier);
+                    isTower ? VillagerProfile.TowerVisit : VillagerProfile.Transit,
+                    castleCell,
+                    workCell,
+                    castleCell,
+                    count,
+                    workCell,
+                    ResolveAppearance(target));
             }
         }
     }
+
+    private static int ResolveTransientCount(int requestedCount, bool isHandledByResidentWorker) =>
+        Mathf.Max(0, requestedCount - (isHandledByResidentWorker ? 1 : 0));
+
+    private static VillagerAppearance ResolveAppearance(IPopulationAllocationTarget target) =>
+        target is TowerPopulation ? VillagerAppearance.Soldier : VillagerAppearance.Worker;
 
     private void SpawnGroup(
         VillagerProfile profile,
@@ -746,6 +1120,8 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     private void HandleVillagerFinished(Villager villager)
     {
+        _nightReturners.Remove(villager);
+        _ejectedVillagers.Remove(villager);
         villager.Finished -= HandleVillagerFinished;
         _activeVillagers.Remove(villager);
     }
@@ -762,6 +1138,8 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
         _residents.Clear();
         _crews.Clear();
+        _nightShelteredResidents.Clear();
+        _nightReturners.Clear();
     }
 
     // 인터페이스 참조로는 Unity의 == 오버로드를 타지 않아 파괴된 컴포넌트를 "살아 있다"고 오판한다

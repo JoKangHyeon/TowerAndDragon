@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
@@ -19,13 +20,24 @@ public sealed class VillagerMovement : MonsterMovement
     // 고저차는 셀 단위로 계단처럼 끊겨 있어 샘플값을 그대로 쓰면 셀 경계마다 Y가 튄다 -
     // 목표 높이로 부드럽게 수렴시킨다. GroundSplineMovement와 같은 값을 쓴다.
     private const float DEFAULT_HEIGHT_FOLLOW_SPEED = 12f;
-    private const float DEFAULT_MAX_TRAVEL_SECONDS = 4f;
-    private const float DEFAULT_MAX_DISTANCE_SPEED_MULTIPLIER = 4f;
+    private const float DEFAULT_MAX_TRAVEL_SECONDS = 2f;
+    private const float DEFAULT_MAX_DISTANCE_SPEED_MULTIPLIER = 5f;
+    private const float DEFAULT_BOUNCE_STEP_SECONDS = 0.2f;
+    private const float DEFAULT_BOUNCE_SQUASH_X = 1.08f;
+    private const float DEFAULT_BOUNCE_SQUASH_Y = 0.92f;
+    private const float DEFAULT_BOUNCE_STRETCH_X = 0.96f;
+    private const float DEFAULT_BOUNCE_STRETCH_Y = 1.08f;
     private const float MIN_DISTANCE_SPEED_MULTIPLIER = 1f;
+    private const int INFINITE_LOOP_COUNT = -1;
 
     [SerializeField] private float _heightFollowSpeed = DEFAULT_HEIGHT_FOLLOW_SPEED;
     [SerializeField] private float _maxTravelSeconds = DEFAULT_MAX_TRAVEL_SECONDS;
     [SerializeField] private float _maxDistanceSpeedMultiplier = DEFAULT_MAX_DISTANCE_SPEED_MULTIPLIER;
+    [SerializeField] private float _bounceStepSeconds = DEFAULT_BOUNCE_STEP_SECONDS;
+    [SerializeField] private Vector2 _bounceSquashScale =
+        new Vector2(DEFAULT_BOUNCE_SQUASH_X, DEFAULT_BOUNCE_SQUASH_Y);
+    [SerializeField] private Vector2 _bounceStretchScale =
+        new Vector2(DEFAULT_BOUNCE_STRETCH_X, DEFAULT_BOUNCE_STRETCH_Y);
 
     private GridMap _gridMap;
 
@@ -35,8 +47,11 @@ public sealed class VillagerMovement : MonsterMovement
 
     private float _baseSpeed;
     private float _currentHeightOffset;
+    private Vector3 _baseLocalScale;
+    private Tween _bounceTween;
     private bool _hasHeightOffset;
     private bool _hasDestination;
+    private bool _hasBaseLocalScale;
 
     public override Vector3 GroundPlanePosition => _flatPosition;
 
@@ -47,6 +62,18 @@ public sealed class VillagerMovement : MonsterMovement
     {
         _baseSpeed = speed;
         _speed = speed;
+    }
+
+    public override void Begin()
+    {
+        base.Begin();
+        StartBounceTween();
+    }
+
+    public override void Stop()
+    {
+        base.Stop();
+        StopBounceTween();
     }
 
     /// <summary>스포너(VillagerDispatchSystem)가 주입한다. GroundSplineMovement처럼 스스로 찾지 않는
@@ -146,8 +173,74 @@ public sealed class VillagerMovement : MonsterMovement
         // 출발지와 목적지의 높이가 다르면 목적지에 닿아도 임계값 안에 영영 들어오지 못한다.
         if (Vector3.Distance(_flatPosition, _flatDestination) <= _arrivalThreshold)
         {
+            StopBounceTween();
             RaiseArrived();
         }
+    }
+
+    private void OnDisable()
+    {
+        StopBounceTween();
+    }
+
+    private void OnDestroy()
+    {
+        StopBounceTween();
+    }
+
+    private void StartBounceTween()
+    {
+        if (_bounceStepSeconds <= 0f)
+        {
+            return;
+        }
+
+        EnsureBaseLocalScale();
+
+        if (_bounceTween != null && _bounceTween.IsActive())
+        {
+            return;
+        }
+
+        _bounceTween?.Kill();
+        _bounceTween = DOTween.Sequence()
+            .Append(transform.DOScale(ResolveBounceScale(_bounceSquashScale), _bounceStepSeconds)
+                .SetEase(Ease.OutQuad))
+            .Append(transform.DOScale(ResolveBounceScale(_bounceStretchScale), _bounceStepSeconds)
+                .SetEase(Ease.OutBack))
+            .Append(transform.DOScale(_baseLocalScale, _bounceStepSeconds)
+                .SetEase(Ease.InOutQuad))
+            .SetLoops(INFINITE_LOOP_COUNT, LoopType.Restart);
+    }
+
+    private void StopBounceTween()
+    {
+        _bounceTween?.Kill();
+        _bounceTween = null;
+
+        if (_hasBaseLocalScale)
+        {
+            transform.localScale = _baseLocalScale;
+        }
+    }
+
+    private void EnsureBaseLocalScale()
+    {
+        if (_hasBaseLocalScale)
+        {
+            return;
+        }
+
+        _baseLocalScale = transform.localScale;
+        _hasBaseLocalScale = true;
+    }
+
+    private Vector3 ResolveBounceScale(Vector2 scaleMultiplier)
+    {
+        return new Vector3(
+            _baseLocalScale.x * scaleMultiplier.x,
+            _baseLocalScale.y * scaleMultiplier.y,
+            _baseLocalScale.z);
     }
 
     private void ApplyPosition()

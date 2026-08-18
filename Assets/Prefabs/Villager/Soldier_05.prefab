@@ -81,7 +81,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 1811136797
   m_SortingLayer: 3
-  m_SortingOrder: 3
+  m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 356220108, guid: 8e8aa6680771ee641ad36966917865e3, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -168,6 +168,11 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   _heightFollowSpeed: 12
+  _maxTravelSeconds: 2
+  _maxDistanceSpeedMultiplier: 5
+  _bounceStepSeconds: 0.2
+  _bounceSquashScale: {x: 1.08, y: 0.92}
+  _bounceStretchScale: {x: 0.96, y: 1.08}
 --- !u!114 &5522655604432876151
 MonoBehaviour:
   m_ObjectHideFlags: 0
