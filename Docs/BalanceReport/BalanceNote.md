@@ -204,30 +204,71 @@ Codex 웨이브 기본 EHP:
 
 점령은 현재 인구 성장의 핵심 공급원이다. 점령을 많이 할수록 인구와 자원 노드가 늘고, 적 강화 페널티가 누적된다.
 
-현재 점령 페널티 방향:
+현재 점령 페널티 방향 (2026-08-18 마릿수 전용 전환 이후):
 
 | 지형 | 강화 방향 |
 |---|---|
-| Snow | 체력 + 공격 |
-| Volcano | 공격 + 체력 |
-| Desert | 이동속도 + 스폰밀도 |
-| Rock | 체력 + 방어막 |
+| Snow | 마릿수 (힐러·팔라딘 계열) |
+| Volcano | 마릿수 (폭탄병·파괴자 계열) |
+| Desert | 마릿수 (저격·비행 계열) |
+| Rock | 마릿수 (기본·실드 계열) |
 
-스폰 보너스 재분배:
+스탯 보정(`_maxHealth`, `_shieldAmount`, `_attackPower`, `_moveSpeed`, `_spawnInterval`)은 28개 프로필 전부 0이다.
+시스템은 그대로 살아 있고 데이터만 중립화한 상태라, 필요하면 값만 다시 넣으면 복구된다.
 
-| 몬스터군 | 기존 | 1차 재분배 후 |
-|---|---:|---:|
-| Ground Basic | +4 | +3 |
-| Ground Attack | +3 | +3 |
-| Ground Ranged | +3 | +3 |
-| Air Basic | +2 | +3 |
+프로필별 규칙: **청크 하나당 몬스터 1종의 마릿수를 +1.**
 
-적용 변경:
++1을 받을 몬스터는 **등급이 아니라 프로필이 붙은 청크 수로** 골랐다. 같은 프로필이 N청크에 붙어 있으면
+지형을 전부 점령했을 때 그 몬스터가 +N이 되기 때문이다.
 
-| 청크 | 기존 | 변경 |
-|---|---|---|
-| `(0, 2)` | Rock Minor Basic Reinforcement | Rock Minor |
-| `(3, 2)` | Snow Major | Snow Major Air Reinforcement |
+- 여러 청크에 반복되는 프로필(2~3청크)일수록 **가볍거나 그 포탈 웨이브에 흔한** 몬스터를 맡는다.
+- 1청크짜리 프로필일수록 **무겁거나 드문** 몬스터를 맡는다.
+- 보스(`Boss_*`)와 정예(`Elite_*`)는 등급과 무관하게 항상 0이다.
+
+그래서 "Minor는 잡몹, Major는 대형" 같은 등급별 규칙은 성립하지 않는다. 예를 들어 `Volcano_Major`는
+1청크뿐이라 Ground_Attack(40 EHP)을, `Volcano_Standard`는 3청크라 Ground_Destroyer(80 EHP)를 맡는다.
+프로필을 다른 청크로 옮기면 이 균형이 깨지므로, 배선을 바꿀 때는 아래 청크 수 열을 반드시 같이 본다.
+
+| 프로필 | +1 대상 | 붙은 청크 수 |
+|---|---|---:|
+| `Penalty_Rock_Minor` | Ground_Basic | 3 |
+| `Penalty_Rock_Standard` | Ground_ShieldGenerator | 2 |
+| `Penalty_Rock_Standard_AttackReinforcement` | Ground_Attack | 1 |
+| `Penalty_Rock_Major` | Ground_StoneArmor | 2 |
+| `Penalty_Rock_Major_AirReinforcement` | Air_Basic | 1 |
+| `Penalty_Volcano_Minor` | Ground_Bomber | 3 |
+| `Penalty_Volcano_Minor_BasicReinforcement` | Ground_Basic | 1 |
+| `Penalty_Volcano_Standard` | Ground_Destroyer | 3 |
+| `Penalty_Volcano_Standard_AttackReinforcement` | Ground_Attack | 1 |
+| `Penalty_Volcano_Major` | Ground_Attack | 1 |
+| `Penalty_Volcano_Major_RangedReinforcement` | Ground_Ranged | 1 |
+| `Penalty_Desert_Minor` | Air_Ranged | 2 |
+| `Penalty_Desert_Minor_BasicReinforcement` | Ground_Basic | 1 |
+| `Penalty_Desert_Standard` | Ground_Sniper | 2 |
+| `Penalty_Desert_Standard_AttackReinforcement` | Ground_Attack | 1 |
+| `Penalty_Desert_Major` | Ground_DragonHunter | 1 |
+| `Penalty_Desert_Major_AirReinforcement` | Air_Basic | 1 |
+| `Penalty_Desert_Major_RangedReinforcement` | Ground_Ranged | 1 |
+| `Penalty_Snow_Minor` | Ground_Protector | 1 |
+| `Penalty_Snow_Minor_BasicReinforcement` | Ground_Basic | 1 |
+| `Penalty_Snow_Standard` | Ground_Healer | 2 |
+| `Penalty_Snow_Major` | Ground_Paladin | 2 |
+| `Penalty_Snow_Major_AirReinforcement` | Air_Basic | 1 |
+| `Penalty_Snow_Major_RangedReinforcement` | Ground_Ranged | 1 |
+
+어느 청크에도 붙어 있지 않은 4개(`Rock_Minor_BasicReinforcement`, `Rock_Major_RangedReinforcement`,
+`Snow_Standard_AttackReinforcement`, `Volcano_Major_AirReinforcement`)도 같은 규칙으로 채워 뒀지만 현재는 동작하지 않는다.
+
+지형 전체를 점령했을 때 그 지형이 배정된 포탈에 누적되는 마릿수:
+
+| 지형 | 청크 | 누적 |
+|---|---:|---|
+| Rock (서) | 9 | Ground_Basic +3, Ground_ShieldGenerator +2, Ground_StoneArmor +2, Ground_Attack +1, Air_Basic +1 |
+| Volcano (남) | 10 | Ground_Bomber +3, Ground_Destroyer +3, Ground_Attack +2, Ground_Basic +1, Ground_Ranged +1 |
+| Desert (동) | 9 | Air_Ranged +2, Ground_Sniper +2, Ground_Basic +1, Ground_Attack +1, Ground_Ranged +1, Ground_DragonHunter +1, Air_Basic +1 |
+| Snow (북) | 8 | Ground_Healer +2, Ground_Paladin +2, Ground_Protector +1, Ground_Basic +1, Ground_Ranged +1, Air_Basic +1 |
+
+같은 프로필이 여러 청크에 붙어 있으면 그 수만큼 누적되므로, 프로필 배선을 옮길 때는 위 청크 수를 함께 확인한다.
 
 페널티 밀도 제한:
 
@@ -235,8 +276,9 @@ Codex 웨이브 기본 EHP:
 |---|---:|
 | 대상 프로필 | 28개 |
 | 프로필당 대상 몬스터 수 | 5종 |
-| 변경 방식 | 기존 룰 수치 유지, 대상 몬스터만 분산 |
-| 시각화 문서 | `Docs/BalanceReport/ConquestPenaltyMap.html` |
+| 프로필당 마릿수 부여 대상 | 1종 (+1) |
+| 스탯 보정 | 전부 0 (시스템은 유지) |
+| 시각화 문서 | `Docs/BalanceReport/ConquestPenaltyMap.html` (**미갱신 — 스탯 기준으로 만들어진 구버전**) |
 
 `ConquestPenaltyMap.html`은 현재 YAML/CSV 데이터를 읽어 생성한 정적 리포트다. 브라우저에서 열 때 SO를 실시간 참조하지는 않으므로,
 점령 페널티 SO나 청크 테이블을 다시 수정하면 HTML도 다시 생성해야 한다.
@@ -566,3 +608,41 @@ Codex 웨이브 기본 EHP:
 - 2주기 초입에서 새 포탈 방어선을 구축할 시간이 생기는가?
 - 24~27일차 `Only_*` 순차 투입이 "준비하면 대응 가능"한 압박으로 느껴지는가?
 - 점령 페널티가 특정 청크 하나로 전역 난이도를 급격히 올리는 느낌을 줄였는가?
+
+### 2026-08-18 적용: 점령 페널티를 마릿수 전용으로 전환
+
+| 항목 | 이전 | 현재 |
+|---|---|---|
+| 스탯 보정 | 지형별 체력·실드·공격·이속·스폰간격 배율 (최대 HP ×1.32) | 28개 프로필 전부 **0** |
+| 마릿수 보정 | 4개 Reinforcement 프로필만 특정 몬스터 +1 | **모든 프로필이 몬스터 1종 +1** |
+| 코드 | — | 변경 없음 (`EnemyEnhancementRule`·`Resolver`·`WaveRoutePlanner` 그대로) |
+
+의사결정 메모:
+
+- 스탯 강화는 체감이 안 나면서 계산만 복잡해진다는 판단으로, 이번 테스트에서는 **페널티를 "몬스터가 더 온다" 하나로 단순화**한다.
+- 스탯 시스템 자체는 살려 둔다. 프로필 값만 0으로 되돌린 것이라, 되살릴 때 데이터만 다시 넣으면 된다.
+- 보스(`Boss_*`)와 정예(`Elite_*`)는 마릿수 +0으로 고정했다. 1마리 추가의 무게가 다른 몬스터와 비교가 안 된다(Boss_4 = 4,000 EHP).
+- 같은 프로필이 최대 3청크에 붙어 있어서, 값은 전부 0 또는 1로만 두고 누적은 청크 수로 만들었다.
+
+Codex 웨이브 후반(22~28일, 4포탈 전부 개방) 기준 **모든 청크를 점령했을 때**의 정적 추정:
+
+| 지표 | 페널티 없음 | 이전(스탯+마릿수) | 현재(마릿수만) |
+|---|---:|---:|---:|
+| 총 마릿수 | 572 | 655 (+14.5%) | 723 (**+26.4%**) |
+| 총 기본 EHP | 41,350 | 45,500 (+10.0%) | 48,960 (**+18.4%**) |
+
+- 즉 페널티 총량은 이전의 약 1.8배다. `밸런스분석_2026-08-18.md` §8-A가 제안한 3~5배 상향은 적용하지 않았다.
+- **위 EHP는 하한이다.** Rock의 `Ground_ShieldGenerator`, Snow의 `Ground_Healer`·`Ground_Protector`는 다른 몬스터의
+  생존력을 올려 주는 보조 유닛인데, 표는 이들을 자기 체력(80/100/110)으로만 계산한다. 서문·북문 체감은 +18.4%보다 높다.
+- 밤당 편차가 있다. 가장 센 밤은 25일차 서문(기본 18마리 1,050 EHP → 27마리 1,730 EHP, +65%), 가장 약한 밤은 25일차 북문(+15%)이다.
+- `_spawnInterval` 감소 보정이 사라져 스폰 간격은 원래 값으로 돌아왔다. 마릿수가 늘어난 만큼 **밤이 길어진다.**
+  특히 Desert는 전 청크 점령 시 스폰 간격이 ×0.72까지 줄었었는데 이제 ×1.0이다. 동문은 "빨리 몰려오는 압박"을
+  잃고 "수가 많은 압박"으로 성격이 바뀐다.
+- 북문(Snow)은 프로필이 겨냥하는 힐러·프로텍터·팔라딘이 후반 북문 웨이브에 거의 안 나와서 페널티가 잘 안 걸린다. 웨이브 편성 쪽 문제라 이번 변경에서는 손대지 않았다.
+
+적용 후 확인할 것:
+
+- 점령을 많이 한 방향의 포탈이 실제로 더 버겁게 느껴지는가?
+- 마릿수 증가로 밤이 길어져 지루해지지 않는가?
+- 점령 창(`UI_ConquestWindow`)에 "몬스터 +1"이 제대로 보이는가? (스탯 표기가 사라져 마릿수 줄만 남는다)
+- `ConquestPenaltyMap.html`은 스탯 기준으로 만들어진 구버전이라 재생성이 필요하다.

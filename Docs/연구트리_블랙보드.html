@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연구 시스템 블랙보드 - Tower and Dragons</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --grid-color: #2a2a2a;
+            --text-main: #e0e0e0;
+            --text-muted: #888888;
+            --branch-tower: #ff6b6b;
+            --branch-production: #4ecdc4;
+            --branch-convenience: #ffe66d;
+            --node-bg: #2d2d2d;
+            --node-border: #444444;
+            --panel-bg: #252526;
+            --accent: #007acc;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--node-border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            justify-content: space-between;
+        }
+
+        .toolbar-title {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: var(--text-main);
+        }
+
+        .toolbar-actions button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin-left: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        .toolbar-actions button:hover {
+            background-color: #005f9e;
+        }
+
+        .toolbar-actions button.secondary {
+            background-color: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .toolbar-actions button.secondary:hover {
+            background-color: rgba(0, 122, 204, 0.1);
+        }
+
+        /* Canvas Area */
+        .canvas-container {
+            position: absolute;
+            top: 50px;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            overflow: hidden;
+            cursor: grab;
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        .canvas-container:active {
+            cursor: grabbing;
+        }
+
+        .canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5000px;
+            height: 5000px;
+            transform-origin: 0 0;
+        }
+
+        /* Nodes */
+        .node {
+            position: absolute;
+            width: 220px;
+            background-color: var(--node-bg);
+            border: 2px solid var(--node-border);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            user-select: none;
+            transition: transform 0.1s, box-shadow 0.1s;
+            z-index: 10;
+        }
+
+        .node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+            z-index: 11;
+        }
+
+        .node.dragging {
+            opacity: 0.8;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .node-branch-indicator {
+            height: 6px;
+            width: 100%;
+            border-radius: 3px;
+            margin-bottom: 8px;
+        }
+
+        .node[data-branch="tower"] .node-branch-indicator { background-color: var(--branch-tower); }
+        .node[data-branch="production"] .node-branch-indicator { background-color: var(--branch-production); }
+        .node[data-branch="convenience"] .node-branch-indicator { background-color: var(--branch-convenience); }
+
+        .node[data-branch="tower"] { border-left: 4px solid var(--branch-tower); }
+        .node[data-branch="production"] { border-left: 4px solid var(--branch-production); }
+        .node[data-branch="convenience"] { border-left: 4px solid var(--branch-convenience); }
+
+        .node-tier {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .node-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: white;
+        }
+
+        .node-desc {
+            font-size: 0.85rem;
+            color: #b0b0b0;
+            line-height: 1.4;
+        }
+
+        .node-id {
+            margin-top: 10px;
+            font-size: 0.7rem;
+            color: #555;
+            font-family: monospace;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal {
+            background-color: var(--panel-bg);
+            border-radius: 8px;
+            width: 400px;
+            padding: 24px;
+            border: 1px solid var(--node-border);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+        }
+
+        .modal h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 8px;
+            background-color: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: white;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            height: 80px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 25px;
+            gap: 10px;
+        }
+
+        .modal-actions button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+
+        .btn-cancel {
+            background-color: transparent;
+            color: var(--text-muted);
+            border: 1px solid #555 !important;
+        }
+
+        .btn-save {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: #d32f2f;
+            color: white;
+            margin-right: auto;
+        }
+
+        /* Connecting Lines SVG */
+        .svg-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+        
+        /* Tier Headers in background */
+        .tier-headers {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .tier-col {
+            position: absolute;
+            top: 0; bottom: 0;
+            border-left: 1px dashed rgba(255,255,255,0.1);
+        }
+        .tier-label {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: rgba(255,255,255,0.1);
+            text-transform: uppercase;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <div class="toolbar-title">연구 시스템 기획 블랙보드</div>
+        <div class="toolbar-actions">
+            <button class="secondary" onclick="resetView()">뷰 초기화</button>
+            <button class="secondary" onclick="exportData()">데이터 내보내기</button>
+            <button onclick="openAddModal()">+ 새 노드 추가</button>
+        </div>
+    </div>
+
+    <div class="canvas-container" id="canvasContainer">
+        <div class="canvas" id="canvas">
+            <!-- Tier Columns Background -->
+            <div class="tier-headers" id="tierHeaders"></div>
+            
+            <svg class="svg-canvas" id="svgCanvas"></svg>
+            <div id="nodesContainer"></div>
+        </div>
+    </div>
+
+    <!-- Edit/Add Modal -->
+    <div class="modal-overlay" id="nodeModal">
+        <div class="modal">
+            <h2 id="modalTitle">노드 편집</h2>
+            <input type="hidden" id="nodeOriginalId">
+            
+            <div class="form-group">
+                <label>노드 ID (영문/스네이크 케이스)</label>
+                <input type="text" id="nodeId" placeholder="예: tower_damage_2">
+            </div>
+            
+            <div class="form-group">
+                <label>표시 이름</label>
+                <input type="text" id="nodeName" placeholder="예: 포탑 강화 II">
+            </div>
+            
+            <div class="form-group">
+                <label>분류 (갈래)</label>
+                <select id="nodeBranch">
+                    <option value="tower">타워 (Tower)</option>
+                    <option value="production">생산 시설 (Production)</option>
+                    <option value="convenience">편의 기능 (Convenience)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>해금 주기 (Tier 1~4)</label>
+                <input type="number" id="nodeTier" min="1" max="4" value="1">
+            </div>
+            
+            <div class="form-group">
+                <label>효과 설명</label>
+                <textarea id="nodeDesc" placeholder="노드의 실제 게임 내 효과를 적어주세요."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-delete" id="btnDelete" onclick="deleteNode()">삭제</button>
+                <button type="button" class="btn-cancel" onclick="closeModal()">취소</button>
+                <button type="button" class="btn-save" onclick="saveNode()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 초기 데이터 세팅 (로컬라이징 파일 및 문서 기반)
+        const initialNodes = [
+            // 타워 (Tower)
+            { id: 'tower_damage', name: '기본 훈련', desc: '전 타워 공격력 +10%', branch: 'tower', tier: 1 },
+            { id: 'tower_range_1', name: '사거리 확장 I', desc: '사거리 +15%', branch: 'tower', tier: 1 },
+            { id: 'tower_firerate_1', name: '연사 개량 I', desc: '공격속도 +12%', branch: 'tower', tier: 1 },
+            { id: 'tower_elemental_unlock', name: '속성 타워 해금', desc: '바이옴 특화 타워 건설 가능', branch: 'tower', tier: 2 },
+            { id: 'tower_manpower_1', name: '인력 효율 I', desc: '타워 필요 인구 -1 (하한 1)', branch: 'tower', tier: 2 },
+            { id: 'tower_pierce_splash', name: '관통/스플래시', desc: '다중 타격 계열 해금', branch: 'tower', tier: 3 },
+            { id: 'tower_reverse_engineering', name: '역설계', desc: '타워 원형 랜드마크 점령 보상', branch: 'tower', tier: 3 },
+            { id: 'tower_elemental_branch', name: '속성 특화 분기', desc: '속성별 특화 효과 강화', branch: 'tower', tier: 4 },
+            
+            // 생산 (Production)
+            { id: 'grass_cultivation', name: '초원 경작', desc: '농장·광산 생산량 +10%', branch: 'production', tier: 1 },
+            { id: 'production_outer_basic', name: '외곽 기초자원 채집', desc: '외곽 바이옴 기초 4자원 채집 해금', branch: 'production', tier: 2 },
+            { id: 'production_specialized', name: '특화 생산 시설', desc: '바이옴 특화 자원 효율 +20%', branch: 'production', tier: 2 },
+            { id: 'production_slime_farm', name: '슬라임 양식', desc: '특화 지역 슬라임 생산 +25%', branch: 'production', tier: 3 },
+            { id: 'production_diagonal', name: '대각선 지대 개발', desc: '고수익 대각선 지대 생산 보너스', branch: 'production', tier: 3 },
+            { id: 'production_optimize', name: '생산 최적화', desc: '생산 시설 필요 인구 -1 (하한 1)', branch: 'production', tier: 4 },
+            { id: 'production_auto_line', name: '자동 생산 라인', desc: '정산 시 일부 자원 자동 증산', branch: 'production', tier: 4 },
+
+            // 편의 (Convenience)
+            { id: 'convenience_scout_1', name: '정찰 I', desc: '전장의 안개 가시 반경 +1단계', branch: 'convenience', tier: 1 },
+            { id: 'convenience_castle_regen_1', name: '성 자동 회복 I', desc: '매일 낮 성 체력 패시브 회복', branch: 'convenience', tier: 1 },
+            { id: 'convenience_lab_expand_1', name: '연구소 증축 I', desc: '연구소 배치 가능 최대 인구 +N', branch: 'convenience', tier: 2 },
+            { id: 'convenience_tower_move', name: '타워 이동 해금', desc: '철거 없이 타워 이동 가능', branch: 'convenience', tier: 2 },
+            { id: 'convenience_castle_repair', name: '성 긴급 수리', desc: '낮 자원 소모 즉시 수리 효율↑', branch: 'convenience', tier: 2 },
+            { id: 'convenience_scout_2', name: '정찰 II', desc: '가시 반경 대폭 확장 + 랜드마크 표시', branch: 'convenience', tier: 3 },
+            { id: 'convenience_expedition_logistics', name: '원정 물류', desc: '점령 출격 비용/소요 감소', branch: 'convenience', tier: 3 },
+            { id: 'convenience_batch_manage', name: '일괄 배치/관리', desc: '타워·인구 배치 편의 UI 해금', branch: 'convenience', tier: 3 },
+            { id: 'convenience_lab_expand_2', name: '연구소 증축 II', desc: '연구소 배치 가능 최대 인구 추가 확장', branch: 'convenience', tier: 4 },
+            { id: 'convenience_auto_settle', name: '자동 정산 보조', desc: '정산·배분 자동화 편의', branch: 'convenience', tier: 4 }
+        ];
+
+        let nodes = [];
+        let transform = { x: 50, y: 50, scale: 1 };
+        
+        const container = document.getElementById('canvasContainer');
+        const canvas = document.getElementById('canvas');
+        const nodesContainer = document.getElementById('nodesContainer');
+
+        // 상태 로드 또는 초기화
+        function loadData() {
+            const saved = localStorage.getItem('td_research_nodes');
+            if (saved) {
+                try {
+                    nodes = JSON.parse(saved);
+                } catch(e) {
+                    initDefaultLayout();
+                }
+            } else {
+                initDefaultLayout();
+            }
+        }
+
+        function initDefaultLayout() {
+            nodes = JSON.parse(JSON.stringify(initialNodes));
+            
+            // 기본 레이아웃 계산
+            const columnWidth = 350;
+            const rowHeight = 160;
+            const branchOffsets = { 'tower': 0, 'production': 500, 'convenience': 1000 };
+            const tierCounts = { 'tower': [0,0,0,0,0], 'production': [0,0,0,0,0], 'convenience': [0,0,0,0,0] };
+
+            nodes.forEach(node => {
+                const b = node.branch;
+                const t = node.tier;
+                
+                node.x = (t - 1) * columnWidth;
+                node.y = branchOffsets[b] + (tierCounts[b][t] * rowHeight);
+                
+                tierCounts[b][t]++;
+            });
+        }
+
+        function saveData() {
+            localStorage.setItem('td_research_nodes', JSON.stringify(nodes));
+        }
+
+        // 배경 티어 가이드라인 그리기
+        function drawTierHeaders() {
+            const th = document.getElementById('tierHeaders');
+            th.innerHTML = '';
+            const columnWidth = 350;
+            
+            for(let i=1; i<=5; i++) {
+                const div = document.createElement('div');
+                div.className = 'tier-col';
+                div.style.left = ((i-1) * columnWidth) + 'px';
+                div.style.width = columnWidth + 'px';
+                
+                const label = document.createElement('div');
+                label.className = 'tier-label';
+                label.innerText = `주기 ${i}`;
+                
+                div.appendChild(label);
+                th.appendChild(div);
+            }
+        }
+
+        function renderNodes() {
+            nodesContainer.innerHTML = '';
+            nodes.forEach(node => {
+                const el = document.createElement('div');
+                el.className = 'node';
+                el.dataset.id = node.id;
+                el.dataset.branch = node.branch;
+                
+                // 위치 설정
+                el.style.left = node.x + 'px';
+                el.style.top = node.y + 'px';
+
+                el.innerHTML = `
+                    <div class="node-branch-indicator"></div>
+                    <div class="node-tier">주기 ${node.tier}</div>
+                    <div class="node-title">${node.name}</div>
+                    <div class="node-desc">${node.desc}</div>
+                    <div class="node-id">${node.id}</div>
+                `;
+
+                // 드래그 앤 드롭
+                el.addEventListener('mousedown', (e) => startDragNode(e, el, node));
+                el.addEventListener('dblclick', (e) => openEditModal(node));
+
+                nodesContainer.appendChild(el);
+            });
+            drawTierHeaders();
+        }
+
+        // 캔버스 팬 (이동)
+        let isPanning = false;
+        let startPan = { x: 0, y: 0 };
+
+        container.addEventListener('mousedown', (e) => {
+            if (e.target === container || e.target.closest('.tier-headers') || e.target === canvas) {
+                isPanning = true;
+                startPan = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isPanning) {
+                transform.x = e.clientX - startPan.x;
+                transform.y = e.clientY - startPan.y;
+                updateCanvasTransform();
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isPanning = false;
+        });
+
+        function updateCanvasTransform() {
+            canvas.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
+        }
+
+        function resetView() {
+            transform = { x: 50, y: 50, scale: 1 };
+            updateCanvasTransform();
+        }
+
+        // 노드 드래그
+        let activeNodeEl = null;
+        let activeNodeData = null;
+        let startNodePos = { x: 0, y: 0 };
+        let startMousePos = { x: 0, y: 0 };
+
+        function startDragNode(e, el, node) {
+            e.stopPropagation();
+            activeNodeEl = el;
+            activeNodeData = node;
+            startNodePos = { x: node.x, y: node.y };
+            startMousePos = { x: e.clientX, y: e.clientY };
+            el.classList.add('dragging');
+            
+            const mouseMoveHandler = (ev) => {
+                const dx = (ev.clientX - startMousePos.x) / transform.scale;
+                const dy = (ev.clientY - startMousePos.y) / transform.scale;
+                
+                // Snap to grid (10px)
+                const newX = Math.round((startNodePos.x + dx) / 10) * 10;
+                const newY = Math.round((startNodePos.y + dy) / 10) * 10;
+                
+                activeNodeData.x = newX;
+                activeNodeData.y = newY;
+                
+                el.style.left = newX + 'px';
+                el.style.top = newY + 'px';
+            };
+
+            const mouseUpHandler = () => {
+                window.removeEventListener('mousemove', mouseMoveHandler);
+                window.removeEventListener('mouseup', mouseUpHandler);
+                if (activeNodeEl) {
+                    activeNodeEl.classList.remove('dragging');
+                    activeNodeEl = null;
+                    activeNodeData = null;
+                    saveData();
+                }
+            };
+
+            window.addEventListener('mousemove', mouseMoveHandler);
+            window.addEventListener('mouseup', mouseUpHandler);
+        }
+
+        // 모달 관리
+        const modal = document.getElementById('nodeModal');
+
+        function openAddModal() {
+            document.getElementById('modalTitle').innerText = "새 연구 노드 추가";
+            document.getElementById('nodeOriginalId').value = "";
+            document.getElementById('nodeId').value = "";
+            document.getElementById('nodeName').value = "";
+            document.getElementById('nodeBranch').value = "tower";
+            document.getElementById('nodeTier').value = "1";
+            document.getElementById('nodeDesc').value = "";
+            document.getElementById('btnDelete').style.display = 'none';
+            
+            modal.style.display = 'flex';
+        }
+
+        function openEditModal(node) {
+            document.getElementById('modalTitle').innerText = "연구 노드 편집";
+            document.getElementById('nodeOriginalId').value = node.id;
+            document.getElementById('nodeId').value = node.id;
+            document.getElementById('nodeName').value = node.name;
+            document.getElementById('nodeBranch').value = node.branch;
+            document.getElementById('nodeTier').value = node.tier;
+            document.getElementById('nodeDesc').value = node.desc;
+            document.getElementById('btnDelete').style.display = 'block';
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        function saveNode() {
+            const originalId = document.getElementById('nodeOriginalId').value;
+            const newId = document.getElementById('nodeId').value.trim();
+            const name = document.getElementById('nodeName').value.trim();
+            const branch = document.getElementById('nodeBranch').value;
+            const tier = parseInt(document.getElementById('nodeTier').value);
+            const desc = document.getElementById('nodeDesc').value.trim();
+
+            if (!newId || !name) {
+                alert("ID와 이름을 모두 입력해주세요.");
+                return;
+            }
+
+            if (originalId) {
+                // 수정
+                const idx = nodes.findIndex(n => n.id === originalId);
+                if (idx > -1) {
+                    nodes[idx].id = newId;
+                    nodes[idx].name = name;
+                    nodes[idx].branch = branch;
+                    nodes[idx].tier = tier;
+                    nodes[idx].desc = desc;
+                }
+            } else {
+                // 새로 추가 - 화면 중앙쯤에 배치
+                nodes.push({
+                    id: newId,
+                    name: name,
+                    branch: branch,
+                    tier: tier,
+                    desc: desc,
+                    x: (-transform.x + window.innerWidth/2) / transform.scale,
+                    y: (-transform.y + window.innerHeight/2) / transform.scale
+                });
+            }
+
+            saveData();
+            renderNodes();
+            closeModal();
+        }
+
+        function deleteNode() {
+            const originalId = document.getElementById('nodeOriginalId').value;
+            if (originalId && confirm("정말로 이 노드를 삭제하시겠습니까?")) {
+                nodes = nodes.filter(n => n.id !== originalId);
+                saveData();
+                renderNodes();
+                closeModal();
+            }
+        }
+
+        // 데이터 내보내기 (JSON 포맷을 화면에 띄움)
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(nodes, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", "research_nodes_export.json");
+            dlAnchorElem.click();
+        }
+
+        // 초기화 실행
+        loadData();
+        renderNodes();
+        updateCanvasTransform();
+
+    </script>
+</body>
+</html>
