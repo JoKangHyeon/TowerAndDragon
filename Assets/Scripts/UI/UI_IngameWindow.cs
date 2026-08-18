@@ -124,6 +124,12 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("설정 창(Config_window). 버튼 클릭 시 토글한다.")]
     [SerializeField] private UI_ConfigWindow _configWindow;
 
+    [Header("도움말 (Button_Help)")]
+    [Tooltip("도감형 도움말 창 토글 버튼.")]
+    [SerializeField] private Button _buttonHelp;
+    [Tooltip("도움말 창(Help_window_Blocker). 버튼 클릭 시 토글한다.")]
+    [SerializeField] private UI_HelpWindow _helpWindow;
+
     [Header("웨이브 진행 바 (Panel_TopCenter/BossWave)")]
     [Tooltip("웨이브 진행 슬라이더(Slider_wave).")]
     [SerializeField] private Slider _waveSlider;
@@ -200,6 +206,12 @@ public class UI_IngameWindow : MonoBehaviour
         if (_buttonSetting != null && _configWindow != null)
         {
             _buttonSetting.onClick.AddListener(_configWindow.ToggleFromEntryPoint);
+        }
+
+        // 클릭음은 창의 Open/Close가 내므로 여기서 SoundManager를 중복으로 부르지 않는다.
+        if (_buttonHelp != null && _helpWindow != null)
+        {
+            _buttonHelp.onClick.AddListener(_helpWindow.ToggleFromEntryPoint);
         }
     }
 

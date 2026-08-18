@@ -1,6 +1,10 @@
 /// <summary>
-/// 행동형 단계를 끝내는 조건. 조건 자체는 이벤트 훅이라 본질적으로 코드이고,
-/// 여기서는 "어느 훅을 볼지"만 데이터로 고른다. 실제 구독은 TutorialRunner가 한다.
+/// 게임 이벤트 훅 카탈로그. 조건 자체는 이벤트 훅이라 본질적으로 코드이고,
+/// 여기서는 "어느 훅을 볼지"만 데이터로 고른다.
+///
+/// 이름은 튜토리얼에서 시작했지만 튜토리얼 전용이 아니다 - 실제 구독은 TutorialRunner ·
+/// TutorialObjectiveController · HelpDiscoveryController가 각자 한다.
+/// (이름 정리는 리뷰 면적이 커서 알파 후 별도 리팩터로 미뤄 뒀다.)
 /// </summary>
 public enum TutorialConditionType
 {
@@ -103,4 +107,26 @@ public enum TutorialConditionType
     // ExclusiveModeClosed로는 대체할 수 없다 - 알을 받기 전에 인벤토리를 한 번 열었다 닫기만 해도
     // 통과해 안내가 시작되기도 전에 목표가 완료됐다.
     BabyDragonEggChecked,
+
+    // ResourceManager.ResourceChanged - 지정한 자원을 손에 넣었다(보유량이 1 이상이 된 시점).
+    // 어느 자원인지는 TutorialTriggerSpec.TargetResource로 지정한다.
+    // 복원 경로가 보유량 0인 자원까지 전부 발화하므로, 구독하는 쪽에서 수량 검사를 반드시 한다.
+    ResourceGained,
+
+    // DragonEggInventorySystem.OnEggHatched - 알이 부화해 새끼용이 됐다.
+    // 속성을 가리려면 TutorialTriggerSpec.TargetDragon을 함께 지정한다.
+    DragonEggHatched,
+
+    // ConquestManager.OnConquestCompleted - 점령 원정이 끝나 땅을 얻었다.
+    ConquestCompleted,
+
+    // LandmarkManager.OnLandmarkClaimed - 랜드마크를 확보했다.
+    LandmarkClaimed,
+
+    // CycleManager.OnNightStart - 밤이 시작됐다.
+    NightStarted,
+
+    // WaveCycleProgression.CycleCompleted - 한 주기를 끝냈다(주기 말 보스 웨이브를 넘겼다는 뜻).
+    // 보스 웨이브 전용 이벤트는 없고, 주기 완료가 곧 보스를 넘긴 시점이다.
+    WaveCycleCompleted,
 }
