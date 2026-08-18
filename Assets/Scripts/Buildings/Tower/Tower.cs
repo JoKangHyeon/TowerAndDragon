@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Events;
 
 [RequireComponent(typeof(Health))]
 [RequireComponent(typeof(TowerAttack))]
@@ -16,6 +17,16 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     private CancellationTokenSource _reviveCts;
     private CancellationTokenSource _paralysisCts;
     protected Animator _animator;
+
+    // 체력이 0이 되어 비활성화된 순간 알린다("파괴 대신 비활성화" - 타워는 사라지지 않는다).
+    // 연출(수비병이 튕겨 나오는 그림 등)이 붙는 자리이므로, 구독자가 없어도 게임 규칙은 그대로다.
+    // 필드 초기화 시점에 생성해 구독자의 Awake/OnEnable 순서와 무관하게 안전하다
+    // (BuildingPlacementController.BuildingSelected와 같은 방식).
+    public UnityEvent<Tower> Disabled = new();
+
+    // 비활성화됐던 타워가 다시 가동되는 순간 알린다(부활 대기 완료, 아침 복구 양쪽 모두).
+    // 비활성화 동안 띄워 둔 연출을 걷어내는 짝이 되는 이벤트다.
+    public UnityEvent<Tower> Reactivated = new();
 
     private bool _isInitialized;
     private bool _isDisabled;
@@ -164,6 +175,8 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         {
             _animator.SetBool(BROKEN_ANIM_KEY, true);
         }
+
+        Disabled.Invoke(this);
     }
 
     public void RestoreAtMorning()
@@ -253,6 +266,8 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         Debug.Log(
             $"[Tower] {name}이 재활성화되었습니다. 실제 비활성화 시간: {disabledDuration:F2}초",
             this);
+
+        Reactivated.Invoke(this);
     }
 
     private void OnDestroy()

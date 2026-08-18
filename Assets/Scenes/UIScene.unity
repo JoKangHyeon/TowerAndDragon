@@ -130,6 +130,7 @@ GameObject:
   - component: {fileID: 37122975}
   - component: {fileID: 37122977}
   - component: {fileID: 37122976}
+  - component: {fileID: 37122978}
   m_Layer: 0
   m_Name: WorkerModeController
   m_TagString: Untagged
@@ -187,6 +188,7 @@ MonoBehaviour:
   _countOverlay: {fileID: 37122976}
   _landmarkManager: {fileID: 0}
   _warningWindow: {fileID: 1971629096}
+  _villagerDispatch: {fileID: 1356859337}
   _assignAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _bulkModifierAction: {fileID: 0}
@@ -201,6 +203,22 @@ MonoBehaviour:
   _nightLockedBuildingTint: {r: 0.7, g: 0.7, b: 0.7, a: 1}
   _countLabelColor: {r: 1, g: 1, b: 1, a: 1}
   _dragThreshold: 10
+--- !u!114 &37122978
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 37122974}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ffd849062f520745991860abeda62cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerDisableDebugClicker
+  _gridMap: {fileID: 313449541}
+  _mouseSelectController: {fileID: 250167905}
+  _cycleManager: {fileID: 914589611}
+  _isEnabled: 1
 --- !u!1 &61071321
 GameObject:
   m_ObjectHideFlags: 0
@@ -2522,6 +2540,8 @@ MonoBehaviour:
   _waveCycleProgression: {fileID: 704850240}
   _castle: {fileID: 1161439827}
   _landmarkManager: {fileID: 0}
+  _buildingCatalog: {fileID: 0}
+  _babyDragonPlacementCoordinator: {fileID: 0}
   _thumbnailCapturer: {fileID: 914589627}
   _isAutoSaveEnabled: 1
   _debugForceContinue: 0
@@ -6650,6 +6670,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 914589613}
     - target: {fileID: 5354572978010979659, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _villagerDispatch
+      value: 
+      objectReference: {fileID: 1356859337}
+    - target: {fileID: 5354572978010979659, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _populationManager
       value: 
       objectReference: {fileID: 914589617}
@@ -7555,7 +7579,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6864070389072513261, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -49.999878
+      value: -50.00006
       objectReference: {fileID: 0}
     - target: {fileID: 6874002290473965843, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
@@ -7957,6 +7981,10 @@ PrefabInstance:
       propertyPath: _resourceManager
       value: 
       objectReference: {fileID: 914589613}
+    - target: {fileID: 7546850575924265391, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _villagerDispatch
+      value: 
+      objectReference: {fileID: 1356859337}
     - target: {fileID: 7546850575924265391, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _populationManager
       value: 
@@ -9389,6 +9417,7 @@ GameObject:
   - component: {fileID: 1356859334}
   - component: {fileID: 1356859335}
   - component: {fileID: 1356859336}
+  - component: {fileID: 1356859337}
   m_Layer: 0
   m_Name: PopulationSystem
   m_TagString: Untagged
@@ -9508,6 +9537,60 @@ MonoBehaviour:
   _gridMap: {fileID: 313449541}
   _resourceManager: {fileID: 914589613}
   _terrainPenaltySystem: {fileID: 1652351659}
+--- !u!114 &1356859337
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1356859329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f6c466e4ce2e604aaad063812200a6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VillagerDispatchSystem
+  _gridMap: {fileID: 313449541}
+  _populationManager: {fileID: 914589617}
+  _conquestManager: {fileID: 1721790482}
+  _cycleManager: {fileID: 914589611}
+  _landmarkManager: {fileID: 0}
+  _appearancePools:
+  - Appearance: 1
+    Prefabs:
+    - {fileID: 8530332446029054838, guid: 5b129bd1788f3d443901e6071dabd726, type: 3}
+    - {fileID: 8417502329417195272, guid: eaeeca9d59739c44badb9d33f7e41ac8, type: 3}
+    - {fileID: 1151122358958166380, guid: 3bf62a8f267d04e4b9449937ab13794a, type: 3}
+    - {fileID: 2623045603609409182, guid: df9c4cc4822477c498f2239a7c2f5798, type: 3}
+    - {fileID: 8842397632679128471, guid: b79f49eb40dec4a4fa2be291af7d23cd, type: 3}
+  - Appearance: 0
+    Prefabs:
+    - {fileID: 7598504497918407867, guid: 4d62f20c89780d344bed3f81e8ce2c80, type: 3}
+    - {fileID: 2416865664836822023, guid: 7b132273a865b9341ac166c78f4ff7ee, type: 3}
+    - {fileID: 6494992667666638688, guid: 1d4ba34b8f375fb418b362e4f25fbbab, type: 3}
+    - {fileID: 6461166466151819320, guid: 4b0773d855cc50c44bc1f16de74424cf, type: 3}
+    - {fileID: 5522655604432876151, guid: ccc494bbf8fc3744a89e4c9056a56ffa, type: 3}
+  - Appearance: 2
+    Prefabs:
+    - {fileID: 7598504497918407867, guid: 4d62f20c89780d344bed3f81e8ce2c80, type: 3}
+    - {fileID: 2416865664836822023, guid: 7b132273a865b9341ac166c78f4ff7ee, type: 3}
+    - {fileID: 6494992667666638688, guid: 1d4ba34b8f375fb418b362e4f25fbbab, type: 3}
+    - {fileID: 6461166466151819320, guid: 4b0773d855cc50c44bc1f16de74424cf, type: 3}
+    - {fileID: 5522655604432876151, guid: ccc494bbf8fc3744a89e4c9056a56ffa, type: 3}
+  _villagerRoot: {fileID: 0}
+  _moveSpeed: 2.5
+  _cheerSeconds: 0.1
+  _fadeOutSeconds: 0.2
+  _attackIntervalSeconds: 1
+  _conquestCompletionEffectPrefab: {fileID: 753293567017306486, guid: 1937130aef1e12a43bbad61ab4da7177, type: 3}
+  _conquestCompletionIdleSeconds: 1
+  _conquestCompletionEffectLifetimeSeconds: 3
+  _towerEjectionEffectPrefab: {fileID: 2395260373604045706, guid: 008c56ead7cc31b4ea3c0d480179f4a6, type: 3}
+  _ejectDistance: 1
+  _ejectHeight: 0.9
+  _ejectSeconds: 0.6
+  _ejectLingerSeconds: 1
+  _spreadRadius: 0.45
+  _maxActiveVillagers: 60
 --- !u!114 &1368852691 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7988158261880957332, guid: e091b5dd15ea87a4da8ffc0996241271, type: 3}
@@ -10477,6 +10560,10 @@ PrefabInstance:
     - target: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: m_Name
       value: Grid_HeightVariant
+      objectReference: {fileID: 0}
+    - target: {fileID: 4676293131000406741, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6681738151754636705, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
       propertyPath: _gameManager

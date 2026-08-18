@@ -128,6 +128,10 @@ public class UI_ConquestWindow : MonoBehaviour
     [SerializeField]
     private ConquestModeController _conquestModeController;
 
+    [Tooltip("원정 발송 시 성에서 크루가 걸어 나오는 연출. 비워두면 연출만 생략된다.")]
+    [SerializeField]
+    private VillagerDispatchSystem _villagerDispatch;
+
     [SerializeField]
     private UIManager _uiManager;
 
@@ -617,6 +621,14 @@ public class UI_ConquestWindow : MonoBehaviour
                 _resourceManager.Spend(cost); // 자원 차감(원정 발송 시점) - 인구 배치/반환/보상은 ConquestPopulationCoordinator가 처리
 
             _conquestModeController.RefreshConquerableHighlights(); // 원정 중인 청크는 CanSendExpedition이 false가 되므로 즉시 갱신
+
+            // 크루가 성에서 걸어 나오는 연출. ConquestManager.OnExpeditionSent가 아니라 여기서 알리는
+            // 이유: 그 이벤트는 세이브 복원(RestoreExpeditions)이 재발화하므로, 구독하면 로드할 때마다
+            // 성에서 인파가 쏟아진다. 사용자가 실제로 버튼을 누른 이 지점은 복원 경로에 없다.
+            if (_villagerDispatch != null)
+            {
+                _villagerDispatch.NotifyExpeditionSent(coord);
+            }
         }
 
         Close();

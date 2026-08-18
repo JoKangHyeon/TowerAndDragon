@@ -54,6 +54,9 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("Esc로 닫을 때 튜토리얼 관문(CanCloseExclusive)을 묻는 데 쓴다.")]
     [SerializeField] private UIManager _uiManager;
 
+    [Tooltip("성에서 캐릭터가 걸어 나오는 연출. 비워두면 연출만 생략되고 배치 자체는 그대로 동작한다.")]
+    [SerializeField] private VillagerDispatchSystem _villagerDispatch;
+
     [Header("Keys")]
     [Tooltip("창을 닫는 키 - 보통 Esc.")]
     [SerializeField] private InputActionReference _closeAction;
@@ -410,8 +413,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
         if (CanEditTarget())
         {
-            PopulationAssignmentRules.TryAssignClamped(
-                _selectedTarget, _populationManager, POPULATION_STEP);
+            RunAssign(POPULATION_STEP);
         }
     }
 
@@ -421,8 +423,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
         if (CanEditTarget())
         {
-            PopulationAssignmentRules.TryUnassignClamped(
-                _selectedTarget, POPULATION_STEP);
+            RunUnassign(POPULATION_STEP);
         }
     }
 
@@ -432,8 +433,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
         if (CanEditTarget())
         {
-            PopulationAssignmentRules.TryAssignClamped(
-                _selectedTarget, _populationManager, _selectedTarget.AvailableCapacity);
+            RunAssign(_selectedTarget.AvailableCapacity);
         }
     }
 
@@ -443,8 +443,32 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
         if (CanEditTarget())
         {
-            PopulationAssignmentRules.TryUnassignClamped(
-                _selectedTarget, _selectedTarget.AssignedPopulation);
+            RunUnassign(_selectedTarget.AssignedPopulation);
+        }
+    }
+
+    // 네 버튼이 같은 뒤처리(연출 통지)를 하므로 실제 호출을 여기 둘로 모았다.
+    // 연출은 "실제로 몇 명이 움직였는지"를 조작 전후 값의 차이로 관측한다 - 클램프 규칙
+    // (PopulationAssignmentRules)을 여기서 다시 계산하면 규칙이 두 곳으로 갈라지기 때문이다.
+    private void RunAssign(int requested)
+    {
+        int assignedBefore = _selectedTarget.AssignedPopulation;
+
+        if (PopulationAssignmentRules.TryAssignClamped(_selectedTarget, _populationManager, requested) &&
+            _villagerDispatch != null)
+        {
+            _villagerDispatch.NotifyAllocationChanged(_selectedTarget, assignedBefore);
+        }
+    }
+
+    private void RunUnassign(int requested)
+    {
+        int assignedBefore = _selectedTarget.AssignedPopulation;
+
+        if (PopulationAssignmentRules.TryUnassignClamped(_selectedTarget, requested) &&
+            _villagerDispatch != null)
+        {
+            _villagerDispatch.NotifyAllocationChanged(_selectedTarget, assignedBefore);
         }
     }
 

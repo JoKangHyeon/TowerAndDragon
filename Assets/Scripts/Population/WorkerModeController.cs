@@ -50,6 +50,10 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode, IExclusiveMod
     [SerializeField]
     private UI_WarningWindow _warningWindow;
 
+    [Tooltip("성에서 캐릭터가 걸어 나오는 연출. 비워두면 연출만 생략되고 배치 자체는 그대로 동작한다.")]
+    [SerializeField]
+    private VillagerDispatchSystem _villagerDispatch;
+
     [Tooltip("인구를 배치하는 액션 - 건설 확정과 공유하는 좌클릭 액션(Confirm).")]
     [SerializeField]
     private InputActionReference _assignAction;
@@ -345,7 +349,16 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode, IExclusiveMod
             return;
 
         int requested = ResolveRequestedAmount(target.AvailableCapacity);
-        PopulationAssignmentRules.TryAssignClamped(target, _populationManager, requested);
+
+        // 연출은 "실제로 몇 명이 움직였는지"를 조작 전후 값의 차이로 관측한다 - 클램프 규칙
+        // (PopulationAssignmentRules)을 여기서 다시 계산하면 규칙이 두 곳으로 갈라지기 때문이다.
+        int assignedBefore = target.AssignedPopulation;
+
+        if (PopulationAssignmentRules.TryAssignClamped(target, _populationManager, requested) &&
+            _villagerDispatch != null)
+        {
+            _villagerDispatch.NotifyAllocationChanged(target, assignedBefore);
+        }
     }
 
     // 우클릭 회수. 우클릭은 카메라 드래그에 쓰이지 않아 누른 시점에 바로 판정한다
@@ -362,7 +375,13 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode, IExclusiveMod
             return;
 
         int requested = ResolveRequestedAmount(target.AssignedPopulation);
-        PopulationAssignmentRules.TryUnassignClamped(target, requested);
+        int assignedBefore = target.AssignedPopulation;
+
+        if (PopulationAssignmentRules.TryUnassignClamped(target, requested) &&
+            _villagerDispatch != null)
+        {
+            _villagerDispatch.NotifyAllocationChanged(target, assignedBefore);
+        }
     }
 
     // Shift는 최대치(호출자가 넘긴 남은 정원 또는 현재 배치 인원), Ctrl은 묶음 단위, 그 외 한 명.
