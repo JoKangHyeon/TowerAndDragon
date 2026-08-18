@@ -641,6 +641,13 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
         _hintText.text = StringTable.GetString(locKey);
         _hintText.gameObject.SetActive(true);
 
+        // 힌트가 붙으면 말풍선이 그만큼 자란다. 이 자리에서 확정하지 않으면 한 프레임 늦게 반영돼
+        // 문구는 그대로인데 말풍선만 뒤늦게 늘어난다(SetVisualsActive가 같은 이유로 쓰는 호출이다).
+        if (_bubbleRoot != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_bubbleRoot);
+        }
+
         _hintSequence++;
         HideHintLaterAsync(_hintSequence, durationSeconds).Forget();
     }
