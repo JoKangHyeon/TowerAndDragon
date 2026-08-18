@@ -1,0 +1,1035 @@
+<title>Tower and Dragons — 밸런스 시뮬레이터</title>
+
+<style>
+/* ── 토큰 ────────────────────────────────────────────────────────────────
+   중성색은 순회색이 아니라 파랑-슬레이트로 살짝 기울였다. 강조는 용의 불씨 하나뿐.
+   차트 계열색은 dataviz 검증기 전 항목 PASS:
+     라이트 #0369A1 #C2410C #7E22CE #15803D
+     다크   #0284C7 #EA580C #9333EA #16A34A                                */
+:root {
+  --bg:#eef0f4; --surface:#ffffff; --surface-2:#f6f7f9; --sunken:#e4e7ed;
+  --ink:#12161d; --ink-2:#464e5c; --muted:#7b8393; --line:#d8dce4; --line-2:#c2c8d3;
+  --accent:#c2410c; --accent-soft:#fdeee6;
+  --s1:#0369a1; --s2:#c2410c; --s3:#7e22ce; --s4:#15803d;
+  --crit:#9f1239; --crit-soft:#fce7ec;
+  --mono:ui-monospace,"Cascadia Mono","Consolas","DejaVu Sans Mono",monospace;
+  --sans:"Segoe UI Variable Text","Segoe UI","Malgun Gothic",system-ui,sans-serif;
+  --r:3px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0d1015; --surface:#161a21; --surface-2:#1c212a; --sunken:#0a0d11;
+    --ink:#e7eaf0; --ink-2:#a6aebc; --muted:#707988; --line:#272d38; --line-2:#38404e;
+    --accent:#ea580c; --accent-soft:#2a1710;
+    --s1:#0284c7; --s2:#ea580c; --s3:#9333ea; --s4:#16a34a;
+    --crit:#e11d48; --crit-soft:#2c0f18;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1015; --surface:#161a21; --surface-2:#1c212a; --sunken:#0a0d11;
+  --ink:#e7eaf0; --ink-2:#a6aebc; --muted:#707988; --line:#272d38; --line-2:#38404e;
+  --accent:#ea580c; --accent-soft:#2a1710;
+  --s1:#0284c7; --s2:#ea580c; --s3:#9333ea; --s4:#16a34a;
+  --crit:#e11d48; --crit-soft:#2c0f18;
+}
+:root[data-theme="light"]{
+  --bg:#eef0f4; --surface:#ffffff; --surface-2:#f6f7f9; --sunken:#e4e7ed;
+  --ink:#12161d; --ink-2:#464e5c; --muted:#7b8393; --line:#d8dce4; --line-2:#c2c8d3;
+  --accent:#c2410c; --accent-soft:#fdeee6;
+  --s1:#0369a1; --s2:#c2410c; --s3:#7e22ce; --s4:#15803d;
+  --crit:#9f1239; --crit-soft:#fce7ec;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;text-wrap:balance;font-weight:600}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted)}
+
+/* ── 셸 ── */
+.shell{display:grid;grid-template-columns:min(360px,34vw) 1fr;min-height:100vh}
+@media (max-width:900px){.shell{grid-template-columns:1fr}}
+.rail{background:var(--surface);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;max-height:100vh;position:sticky;top:0}
+@media (max-width:900px){.rail{position:static;max-height:none;border-right:0;
+  border-bottom:1px solid var(--line)}}
+.rail-head{padding:16px 18px 12px;border-bottom:1px solid var(--line);
+  display:flex;flex-direction:column;gap:10px}
+.rail-body{overflow-y:auto;flex:1;padding-bottom:40px}
+.stage{padding:22px 26px 60px;min-width:0;display:flex;flex-direction:column;gap:22px}
+@media (max-width:640px){.stage{padding:16px 14px 48px}}
+
+/* ── 판정 헤더 ── */
+.verdict{display:flex;flex-wrap:wrap;align-items:flex-end;gap:22px 34px;
+  padding:18px 20px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.verdict-main{display:flex;flex-direction:column;gap:2px}
+.verdict-num{font-family:var(--mono);font-size:46px;line-height:1;font-weight:600;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.verdict-num.bad{color:var(--crit)}
+.verdict-num.good{color:var(--s4)}
+.stat{display:flex;flex-direction:column;gap:1px;min-width:74px}
+.stat b{font-family:var(--mono);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.delta{font-family:var(--mono);font-size:11px}
+.delta.up{color:var(--s4)} .delta.down{color:var(--crit)} .delta.same{color:var(--muted)}
+
+/* ── 카드 ── */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:16px 18px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap}
+.card h2{font-size:13px;letter-spacing:.01em}
+.card .note{font-size:11.5px;color:var(--muted);max-width:62ch}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:1100px){.grid2{grid-template-columns:1fr}}
+
+/* ── 범례 ── */
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:10px;height:10px;border-radius:2px;flex:none}
+.swatch.line{height:3px;width:14px;border-radius:2px}
+
+/* ── 차트 ── */
+.plot{width:100%;display:block;overflow:visible}
+.scroller{overflow-x:auto}
+.axis{fill:var(--muted);font-family:var(--mono);font-size:9.5px}
+.gridline{stroke:var(--line);stroke-width:1}
+.axisline{stroke:var(--line-2);stroke-width:1}
+
+/* ── 28일 스트립 ── */
+.strip{display:grid;grid-template-columns:repeat(28,minmax(20px,1fr));gap:2px;min-width:620px}
+.cell{display:flex;flex-direction:column;gap:3px;align-items:stretch;cursor:default;
+  border:0;background:none;padding:0;font:inherit;color:inherit}
+.cell:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cell .bar{height:56px;background:var(--sunken);border-radius:2px;position:relative;overflow:hidden}
+.cell .fill{position:absolute;inset:auto 0 0 0;background:var(--s4)}
+.cell.lost .fill{background:var(--crit)}
+.cell.unreached .bar{background:repeating-linear-gradient(135deg,var(--sunken) 0 3px,transparent 3px 6px)}
+.cell .stripe{height:3px;border-radius:2px;background:var(--line-2)}
+.cell.lost .stripe{background:var(--crit)}
+.cell.ok .stripe{background:var(--s4)}
+.cell .d{font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center}
+.cell.boss .d{color:var(--accent);font-weight:700}
+.cell:hover .bar{outline:2px solid var(--ink-2);outline-offset:1px}
+
+/* ── 표 ── */
+table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:11.5px;
+  font-variant-numeric:tabular-nums}
+th,td{padding:4px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500;text-align:right;position:sticky;top:0;
+  background:var(--surface);font-size:10px;letter-spacing:.05em;text-transform:uppercase}
+th:first-child,td:first-child{text-align:left}
+tr.lost td{background:var(--crit-soft)}
+tr.lost td:first-child{box-shadow:inset 2px 0 0 var(--crit)}
+
+/* ── 조정 패널 ── */
+details.group{border-bottom:1px solid var(--line)}
+details.group>summary{padding:9px 18px;cursor:pointer;font-size:12px;font-weight:600;
+  display:flex;justify-content:space-between;align-items:center;gap:8px;list-style:none;
+  background:var(--surface-2)}
+details.group>summary::-webkit-details-marker{display:none}
+details.group>summary::after{content:"+";font-family:var(--mono);color:var(--muted)}
+details.group[open]>summary::after{content:"\2212"}
+details.group>summary:hover{color:var(--accent)}
+details.group>summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.group-body{padding:10px 18px 14px;display:flex;flex-direction:column;gap:9px}
+.knob{display:grid;grid-template-columns:1fr 78px;gap:4px 8px;align-items:center}
+.knob label{font-size:11.5px;color:var(--ink-2);line-height:1.3}
+.knob .unit{color:var(--muted);font-size:10px}
+.knob input[type=number]{width:100%;font-family:var(--mono);font-size:11.5px;
+  padding:3px 5px;border:1px solid var(--line-2);border-radius:2px;
+  background:var(--surface);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+.knob input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--accent);margin:0}
+.knob.changed label{color:var(--accent);font-weight:600}
+.knob.changed input[type=number]{border-color:var(--accent)}
+.knob .base{grid-column:1/-1;font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:-3px}
+select,input[type=text]{font-family:var(--mono);font-size:11.5px;padding:3px 5px;
+  border:1px solid var(--line-2);border-radius:2px;background:var(--surface);color:var(--ink);width:100%}
+.btn{font-family:var(--mono);font-size:11px;padding:5px 10px;border:1px solid var(--line-2);
+  border-radius:2px;background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08);color:#fff}
+.btnrow{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:2px;
+  background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent)}
+.assume{background:var(--sunken)}
+.assume .group-body{background:var(--sunken)}
+
+/* ── 변경 목록 ── */
+.diff{font-family:var(--mono);font-size:10.5px;max-height:150px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:2px}
+.diff div{display:flex;justify-content:space-between;gap:8px;color:var(--ink-2)}
+.diff b{color:var(--accent);font-weight:600}
+
+/* ── 툴팁 ── */
+#tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .09s;z-index:50;
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r);
+  padding:8px 10px;font-family:var(--mono);font-size:11px;line-height:1.5;
+  box-shadow:0 6px 22px rgba(0,0,0,.16);max-width:280px;font-variant-numeric:tabular-nums}
+#tip b{color:var(--accent)}
+#tip .row{display:flex;justify-content:space-between;gap:14px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-head">
+      <div>
+        <div class="eyebrow">Tower and Dragons</div>
+        <h1 style="font-size:16px">밸런스 시뮬레이터</h1>
+      </div>
+      <div class="btnrow">
+        <button class="btn" id="reset">전부 되돌리기</button>
+        <button class="btn primary" id="export">변경분 내보내기</button>
+      </div>
+      <div>
+        <div class="eyebrow" style="margin-bottom:4px">출고값 대비 변경 <span id="diffcount" class="chip">0</span></div>
+        <div class="diff" id="diff"></div>
+      </div>
+    </div>
+    <div class="rail-body" id="knobs"></div>
+  </aside>
+
+  <main class="stage">
+    <section class="verdict">
+      <div class="verdict-main">
+        <div class="eyebrow">시뮬 결과</div>
+        <div class="verdict-num" id="v-main">—</div>
+        <div class="delta" id="v-delta">&nbsp;</div>
+      </div>
+      <div class="stat"><span class="eyebrow">최종 인구</span><b id="v-pop">—</b><span class="delta" id="v-pop-d">&nbsp;</span></div>
+      <div class="stat"><span class="eyebrow">점령 청크</span><b id="v-own">—</b><span class="delta" id="v-own-d">&nbsp;</span></div>
+      <div class="stat"><span class="eyebrow">총 누수</span><b id="v-leak">—</b><span class="delta" id="v-leak-d">&nbsp;</span></div>
+      <div class="stat"><span class="eyebrow">타워 파괴</span><b id="v-tl">—</b><span class="delta" id="v-tl-d">&nbsp;</span></div>
+      <div class="stat" style="min-width:120px"><span class="eyebrow">계산</span><b id="v-ms">—</b><span class="delta same">밀리초</span></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>28일 판정</h2>
+          <p class="note">막대 높이 = 그 밤이 끝났을 때 남은 성 체력. 빗금은 도달하지 못한 날.
+            주황색 일차는 보스 웨이브(7·14·21·28).</p>
+        </div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--s4)"></i>방어 성공</span>
+          <span><i class="swatch" style="background:var(--crit)"></i>패배</span>
+        </div>
+      </div>
+      <div class="scroller"><div class="strip" id="strip"></div></div>
+    </section>
+
+    <div class="grid2">
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>화력 곡선 — 초당 피해량</h2>
+            <p class="note">둘 다 비율(DPS)이라 직접 비교된다. 적은 그 밤에 스폰되는 전 개체의
+              공격력 합, 플레이어는 배치 인구가 실제로 내는 타워 DPS 총합이다.</p>
+          </div>
+        </div>
+        <div class="legend">
+          <span><i class="swatch line" style="background:var(--s2)"></i>적 총 공격 DPS</span>
+          <span><i class="swatch line" style="background:var(--s1)"></i>플레이어 타워 DPS</span>
+        </div>
+        <svg class="plot" id="plot-dps" viewBox="0 0 560 250" role="img"
+             aria-label="일차별 적 공격 DPS와 플레이어 타워 DPS 곡선"></svg>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>인구 배분</h2>
+            <p class="note">판정이 정책 탓인지 밸런스 탓인지 가리려면 이게 같이 보여야 한다.
+              막대 전체 높이가 그날의 최대 인구다.</p>
+          </div>
+        </div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--s4)"></i>농장</span>
+          <span><i class="swatch" style="background:var(--s3)"></i>벌목·채석·연구</span>
+          <span><i class="swatch" style="background:var(--s1)"></i>타워</span>
+          <span><i class="swatch" style="background:var(--s2)"></i>원정</span>
+        </div>
+        <svg class="plot" id="plot-pop" viewBox="0 0 560 250" role="img"
+             aria-label="일차별 인구 배분 누적 막대"></svg>
+      </section>
+    </div>
+
+    <section class="card">
+      <div class="card-head">
+        <div><h2>일차별 상세</h2></div>
+        <div class="legend"><span>PW = 타워 배치 인구 · 충원율 = 타워 정원 대비</span></div>
+      </div>
+      <div class="scroller" style="max-height:420px;overflow-y:auto">
+        <table id="tbl"><thead></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><div><h2>이 시뮬이 무엇을 하고 무엇을 안 하는가</h2></div></div>
+      <div class="note" style="max-width:none;display:grid;gap:10px;grid-template-columns:1fr 1fr">
+        <div>
+          <p class="eyebrow" style="margin-bottom:4px">게임 코드에서 그대로 가져온 규칙</p>
+          <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:2px">
+            <li>타워 발사 간격 = <code>Interval / 충원율 / 공속배율</code> (TowerAttack.cs:187)</li>
+            <li>몬스터는 사거리 안에 타워가 들어오면 <b>멈춰서</b> 때린다 (MonsterAttack.SetCurrentTarget)</li>
+            <li>타워는 단일 대상을 잡고 죽거나 벗어날 때까지 유지 — 광역 타워만 예외</li>
+            <li>성에 도달한 몬스터는 성을 직접 때린다 (BaseMonster.HandleArrivedAtCastle)</li>
+            <li>폭탄병 폭발은 타워만 맞는다. 성은 <code>IMonsterTarget</code>이 아니라 안 맞는다</li>
+            <li>보호막 오라는 대상당 1회만 부여(<code>_grantedOnce</code>), 범위 이탈 시 회수</li>
+            <li>점령 페널티는 <b>점령한 청크의 지형이 배정된 포탈</b>에만 적용</li>
+            <li>속성 규칙(Only/Immune/AllImmune)이 실제로 피해를 차단한다</li>
+          </ul>
+        </div>
+        <div>
+          <p class="eyebrow" style="margin-bottom:4px">모델의 한계 — 결과를 이만큼 의심할 것</p>
+          <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:2px">
+            <li><b>경로 길이·방어선 깊이는 추정값</b>이다. 실제 맵 스플라인을 쓰지 않았다.
+              출고값 기준 7일차 사망(플레이 테스트 관측 7~10일차)에 맞춰 보정했고,
+              경로 길이 16~45 전 구간에서 같은 판정이 나온다.</li>
+            <li>타워를 어디에 놓는지는 모델링하지 않는다. "포탈 접근로에 고르게 편다"로 추상화했다.</li>
+            <li>한 포탈의 루트 2개는 성 앞에서 합류한다고 본다. 타겟 경합은 유지된다.</li>
+            <li>인구 배분은 정책 슬라이더가 자동으로 굴린다. 실제 플레이어의 판단은 더 좋을 수도 나쁠 수도 있다.</li>
+            <li>기아 페널티, 새끼용, 랜드마크, 봉인석, 지형 유지비는 아직 안 들어갔다.</li>
+          </ul>
+          <p style="margin:8px 0 0">시뮬 결과가 <code>밸런스분석_2026-08-18.md</code>의 실측 결론과 어긋나면
+            <b>실측이 옳고 시뮬 파라미터가 틀린 것</b>이다. 이 도구는 방향을 보는 물건이지 진실의 원천이 아니다.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script id="bundle" type="application/json">/*__BUNDLE__*/</script>
+<script>/*__SIM__*/</script>
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   UI — 조정 → 재시뮬 → 렌더
+   ══════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  var S = globalThis.BalanceSim;
+  var BASE = JSON.parse(document.getElementById('bundle').textContent);
+  var cur = JSON.parse(JSON.stringify(BASE));
+
+  var policy = {
+    foodMargin: 1.05, minLogging: 1, minQuarry: 1, labs: 1,
+    towerShare: 0.75, towerSpread: 2.5, parallelConquest: 1, conquestReserve: 8,
+    farmYield: 30, woodYield: 26, stoneYield: 39,
+    conquestDirection: ['Volcano', 'Rock', 'Desert', 'Snow']
+  };
+  var basePolicy = JSON.parse(JSON.stringify(policy));
+  var assumptions = { laneLength: 30, defenseDepth: 3 };
+  var baseAssume = JSON.parse(JSON.stringify(assumptions));
+  var towerPriority = ['TD_Arrow', 'TD_CrossBow', 'TD_Musket'];
+  var dragonSkill = '';
+
+  /* ── 경로 접근자 ── */
+  function get(o, p) { return p.split('.').reduce(function (a, k) {
+    return a == null ? undefined : a[/^\d+$/.test(k) ? +k : k]; }, o); }
+  function set(o, p, v) {
+    var ks = p.split('.'), last = ks.pop();
+    var t = ks.reduce(function (a, k) { return a[/^\d+$/.test(k) ? +k : k]; }, o);
+    t[/^\d+$/.test(last) ? +last : last] = v;
+  }
+
+  /* ── 공유 에셋 인덱스 ────────────────────────────────────────────────
+     같은 AttackSO/DamageEffect를 여러 몬스터·타워가 공유한다.
+     예: MA_DamageEffect.asset 하나를 16종이 쓴다.
+     에셋을 하나 고치면 참조자 전부가 바뀌므로, 시뮬도 반드시 같이 바꿔야
+     apply_balance.py가 실제로 만드는 결과와 일치한다.                          */
+  var effectRefs = {}, attackRefs = {};
+  (function indexRefs() {
+    function scan(basePath, atk) {
+      if (!atk) return;
+      if (atk.file) (attackRefs[atk.file] = attackRefs[atk.file] || []).push(basePath);
+      (atk.effects || []).forEach(function (e, i) {
+        if (e.file) (effectRefs[e.file] = effectRefs[e.file] || []).push(basePath + '.effects.' + i);
+      });
+    }
+    ['towers', 'babyDragons', 'monsters'].forEach(function (grp) {
+      Object.keys(BASE[grp] || {}).forEach(function (k) {
+        scan(grp + '.' + k + '.attack', BASE[grp][k].attack);
+      });
+    });
+  })();
+
+  // parse_attack과 같은 규칙으로 damage를 다시 접는다(DamageEffectSO 합).
+  function recomputeDamage() {
+    ['towers', 'babyDragons', 'monsters'].forEach(function (grp) {
+      Object.keys(cur[grp] || {}).forEach(function (k) {
+        var a = cur[grp][k].attack;
+        if (!a) return;
+        var d = 0;
+        (a.effects || []).forEach(function (e) {
+          if (e.cls === 'DamageEffectSO' && e.amount != null) d += e.amount;
+        });
+        a.damage = d;
+      });
+    });
+  }
+  function setEffectAmount(file, value) {
+    (effectRefs[file] || []).forEach(function (p) { set(cur, p + '.amount', value); });
+    recomputeDamage();
+  }
+  function setAttackField(file, field, value) {
+    (attackRefs[file] || []).forEach(function (p) { set(cur, p + '.' + field, value); });
+  }
+  function shareCount(file, table) { return (table[file] || []).length; }
+
+  /* ── 조정 항목 정의 ──────────────────────────────────────────────────
+     asset/field가 있는 항목만 Unity로 내보낸다. 정책·가정은 시뮬 전용이다.  */
+  var KNOBS = [];
+  function K(o) { KNOBS.push(o); return o; }
+  function repaintAll() {
+    KNOBS.forEach(function (k) { if (k._paint) k._paint(); });
+  }
+
+  // 경제
+  var ECON = [
+    { path: 'economy.startFood', label: '시작 식량', min: 0, max: 800, step: 10, asset: BASE.economy.sceneFile, field: '_initialResources[Food]' },
+    { path: 'economy.startWood', label: '시작 나무', min: 0, max: 800, step: 10, asset: BASE.economy.sceneFile, field: '_initialResources[Wood]' },
+    { path: 'economy.startStone', label: '시작 돌', min: 0, max: 800, step: 10, asset: BASE.economy.sceneFile, field: '_initialResources[Stone]' },
+    { path: 'economy.startPop', label: '시작 최대 인구', min: 10, max: 200, step: 5, asset: BASE.economy.sceneFile, field: '_maxPopulation' },
+    { path: 'economy.castleHp', label: '성 체력', min: 50, max: 2000, step: 25, asset: 'Assets/Prefabs/Building/Castle.prefab', field: '_maxHealth' },
+    { path: 'economy.foodUpkeepPerPop', label: '인구당 식량 유지비', min: 0, max: 3, step: 0.05, asset: BASE.economy.file, field: '_foodUpkeepPerPopulation' },
+    { path: 'production.RPD_FarmField.pop', label: '농장 정원', min: 1, max: 20, step: 1, asset: BASE.production.RPD_FarmField.file, field: '_populationCapacity' },
+    { path: 'production.RPD_LoggingCamp.pop', label: '벌목장 정원', min: 1, max: 20, step: 1, asset: BASE.production.RPD_LoggingCamp.file, field: '_populationCapacity' },
+    { path: 'production.RPD_Quarry.pop', label: '채석장 정원', min: 1, max: 20, step: 1, asset: BASE.production.RPD_Quarry.file, field: '_populationCapacity' }
+  ];
+
+  // 타워
+  var TOWER_ORDER = ['TD_Arrow', 'TD_CrossBow', 'TD_Musket', 'TD_FireTower', 'TD_IceTower', 'TD_StoneTower', 'TD_TimeTower'];
+  var TOWER_LABEL = { TD_Arrow: '화살', TD_CrossBow: '석궁', TD_Musket: '머스킷',
+    TD_FireTower: '불', TD_IceTower: '얼음', TD_StoneTower: '암석', TD_TimeTower: '시간' };
+
+  function towerKnobs(key) {
+    var t = BASE.towers[key], out = [], nm = TOWER_LABEL[key] || key;
+    if (t.attack) {
+      var af = t.attack.file;
+      var dmgEf = null;
+      t.attack.effects.forEach(function (e, i) { if (dmgEf === null && e.cls === 'DamageEffectSO') dmgEf = i; });
+      if (dmgEf !== null) {
+        var ef = t.attack.effects[dmgEf].file;
+        out.push({ kind: 'effectAmount', file: ef, shared: shareCount(ef, effectRefs),
+          path: 'towers.' + key + '.attack.effects.' + dmgEf + '.amount',
+          label: nm + ' 피해', min: 0, max: 120, step: 1, asset: ef, field: '_amount' });
+      }
+      [['interval', '공격 간격', 0.1, 5, 0.05, '_interval', '초'],
+       ['range', '사거리', 1, 12, 0.5, '_range', ''],
+       ['area', '광역 반경', 0, 6, 0.5, '_areaRadius', '']].forEach(function (spec) {
+        out.push({ kind: 'attackField', file: af, field2: spec[0], shared: shareCount(af, attackRefs),
+          path: 'towers.' + key + '.attack.' + spec[0], label: nm + ' ' + spec[1],
+          unit: spec[6] || undefined, min: spec[2], max: spec[3], step: spec[4],
+          asset: af, field: spec[5] });
+      });
+    }
+    out.push({ path: 'towers.' + key + '.pop', label: nm + ' 정원', min: 1, max: 15, step: 1,
+      asset: t.file, field: '_populationCapacity' });
+    out.push({ path: 'towers.' + key + '.hp', label: nm + ' 체력', min: 20, max: 1000, step: 10,
+      asset: t.file, field: '_maxHealth' });
+    out.push({ path: 'towers.' + key + '.revive', label: nm + ' 부활 시간', unit: '초',
+      min: 1, max: 90, step: 1, asset: t.file, field: '_reviveDelay' });
+    ['Wood', 'Stone'].forEach(function (r) {
+      if (t.cost[r] == null) return;
+      out.push({ path: 'towers.' + key + '.cost.' + r, label: nm + ' 건설비 ' + (r === 'Wood' ? '나무' : '돌'),
+        min: 0, max: 300, step: 5, asset: t.file, field: '_buildCost[' + r + ']' });
+    });
+    return out;
+  }
+
+  function monsterKnobs(key) {
+    var m = BASE.monsters[key], out = [], nm = key.replace('MD_', '');
+    out.push({ path: 'monsters.' + key + '.hp', label: nm + ' 체력', min: 1, max: 8000, step: 10,
+      asset: m.file, field: '_maxHealth' });
+    out.push({ path: 'monsters.' + key + '.speed', label: nm + ' 이동속도', min: 0.1, max: 8, step: 0.1,
+      asset: m.file, field: '_moveSpeed' });
+    if (m.attack) {
+      var maf = m.attack.file;
+      var di = null;
+      m.attack.effects.forEach(function (e, i) { if (di === null && e.amount != null) di = i; });
+      if (di !== null) {
+        var mef = m.attack.effects[di].file;
+        out.push({ kind: 'effectAmount', file: mef, shared: shareCount(mef, effectRefs),
+          path: 'monsters.' + key + '.attack.effects.' + di + '.amount',
+          label: nm + ' 공격력', min: 0, max: 200, step: 1, asset: mef, field: '_amount' });
+      }
+      out.push({ kind: 'attackField', file: maf, field2: 'interval', shared: shareCount(maf, attackRefs),
+        path: 'monsters.' + key + '.attack.interval', label: nm + ' 공격 간격', unit: '초',
+        min: 0.2, max: 8, step: 0.1, asset: maf, field: '_interval' });
+    }
+    if (m.hasShield) {
+      out.push({ path: 'monsters.' + key + '.shield', label: nm + ' 방어막', min: 0, max: 500, step: 5,
+        asset: m.file, field: '_shieldAmount' });
+    }
+    return out;
+  }
+
+  var RESEARCH_EFFECTS = [
+    { path: 'research.RN_TowerDamage.effects.0.ratio', label: '연구: 타워 피해 +', unit: '비율', min: 0, max: 1, step: 0.05,
+      asset: 'Assets/Data/Research/RE_TowerDamageIncrease.asset', field: '_bonusRatio' },
+    { path: 'research.RN_TowerFireRate1.effects.0.ratio', label: '연구: 타워 공속 +', unit: '비율', min: 0, max: 1, step: 0.05,
+      asset: 'Assets/Data/Research/RE_TowerFireRateIncrease.asset', field: '_bonusRatio' },
+    { path: 'research.RN_TowerRange1.effects.0.ratio', label: '연구: 타워 사거리 +', unit: '비율', min: 0, max: 1, step: 0.05,
+      asset: 'Assets/Data/Research/RE_TowerRangeIncrease.asset', field: '_bonusRatio' }
+  ].filter(function (k) { return get(BASE, k.path) !== undefined; });
+
+  var POLICY_KNOBS = [
+    { obj: 'policy', path: 'towerShare', label: '방어 배분 — 남는 인구 중 타워로 가는 비율', min: 0, max: 1, step: 0.05 },
+    { obj: 'policy', path: 'towerSpread', label: '얇게 펴기 — 정원 대비 몇 배로 지을지', min: 1, max: 6, step: 0.5 },
+    { obj: 'policy', path: 'foodMargin', label: '식량 안전 마진', min: 1, max: 2, step: 0.05 },
+    { obj: 'policy', path: 'conquestReserve', label: '원정용 인구 상한', min: 0, max: 60, step: 1 },
+    { obj: 'policy', path: 'parallelConquest', label: '동시 원정 건수', min: 0, max: 6, step: 1 },
+    { obj: 'policy', path: 'minLogging', label: '벌목장 수', min: 0, max: 8, step: 1 },
+    { obj: 'policy', path: 'minQuarry', label: '채석장 수', min: 0, max: 8, step: 1 },
+    { obj: 'policy', path: 'labs', label: '연구소 수', min: 0, max: 8, step: 1 },
+    { obj: 'policy', path: 'farmYield', label: '농장 1채 만충 산출(식량/일)', min: 5, max: 90, step: 1 },
+    { obj: 'policy', path: 'woodYield', label: '벌목장 1채 만충 산출(나무/일)', min: 5, max: 90, step: 1 },
+    { obj: 'policy', path: 'stoneYield', label: '채석장 1채 만충 산출(돌/일)', min: 5, max: 90, step: 1 }
+  ];
+  var ASSUME_KNOBS = [
+    { obj: 'assumptions', path: 'laneLength', label: '포탈→성 경로 길이(타일)', min: 8, max: 60, step: 1 },
+    { obj: 'assumptions', path: 'defenseDepth', label: '방어선 깊이(타일)', min: 1, max: 14, step: 1 }
+  ];
+
+  /* ── 렌더: 조정 패널 ── */
+  function knobRow(k) {
+    var wrap = document.createElement('div');
+    wrap.className = 'knob';
+    var isSim = !!k.obj;
+    var host = isSim ? (k.obj === 'policy' ? policy : assumptions) : cur;
+    var baseHost = isSim ? (k.obj === 'policy' ? basePolicy : baseAssume) : BASE;
+    var v = isSim ? host[k.path] : get(cur, k.path);
+    var bv = isSim ? baseHost[k.path] : get(BASE, k.path);
+
+    var lab = document.createElement('label');
+    lab.textContent = k.label + (k.unit ? ' ' : '');
+    if (k.shared > 1) {
+      var sh = document.createElement('span');
+      sh.className = 'unit';
+      sh.textContent = ' \u2014 이 에셋을 ' + k.shared + '종이 공유';
+      sh.style.color = 'var(--accent)';
+      lab.appendChild(sh);
+    }
+    if (k.unit) { var u = document.createElement('span'); u.className = 'unit'; u.textContent = '(' + k.unit + ')'; lab.appendChild(u); }
+    var num = document.createElement('input');
+    num.type = 'number'; num.min = k.min; num.max = k.max; num.step = k.step; num.value = v;
+    var rng = document.createElement('input');
+    rng.type = 'range'; rng.min = k.min; rng.max = k.max; rng.step = k.step; rng.value = v;
+    rng.setAttribute('aria-label', k.label);
+    var base = document.createElement('div');
+    base.className = 'base';
+
+    function paint() {
+      var now = isSim ? host[k.path] : get(cur, k.path);
+      var changed = Math.abs(now - bv) > 1e-9;
+      wrap.classList.toggle('changed', changed);
+      base.textContent = changed ? '출고값 ' + bv : '';
+      num.value = now; rng.value = now;
+    }
+    function apply(val) {
+      var n = +val; if (isNaN(n)) return;
+      if (isSim) host[k.path] = n;
+      else if (k.kind === 'effectAmount') setEffectAmount(k.file, n);
+      else if (k.kind === 'attackField') setAttackField(k.file, k.field2, n);
+      else set(cur, k.path, n);
+      // 공유 에셋 편집은 다른 노브의 표시값까지 바꾼다 — 전부 다시 그린다.
+      repaintAll(); schedule();
+    }
+    num.addEventListener('input', function () { apply(num.value); });
+    rng.addEventListener('input', function () { apply(rng.value); });
+    wrap.append(lab, num, rng, base);
+    k._paint = paint; paint();
+    return wrap;
+  }
+
+  function group(title, items, opts) {
+    var d = document.createElement('details');
+    d.className = 'group' + ((opts && opts.assume) ? ' assume' : '');
+    if (opts && opts.open) d.open = true;
+    var s = document.createElement('summary'); s.textContent = title;
+    var body = document.createElement('div'); body.className = 'group-body';
+    items.forEach(function (k) { K(k); body.appendChild(knobRow(k)); });
+    if (opts && opts.extra) body.appendChild(opts.extra);
+    d.append(s, body);
+    return d;
+  }
+
+  var knobHost = document.getElementById('knobs');
+
+  // 정책: 셀렉트 몇 개 추가
+  var polExtra = document.createElement('div');
+  polExtra.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:4px';
+  polExtra.innerHTML =
+    '<label style="font-size:11.5px;color:var(--ink-2)">타워 건설 우선순위' +
+    '<select id="sel-tower"><option value="TD_Arrow,TD_CrossBow,TD_Musket">화살 → 석궁 → 머스킷</option>' +
+    '<option value="TD_CrossBow,TD_Arrow,TD_Musket">석궁 우선</option>' +
+    '<option value="TD_Musket,TD_Arrow,TD_CrossBow">머스킷 우선</option>' +
+    '<option value="TD_StoneTower,TD_Arrow">암석(광역) 우선</option></select></label>' +
+    '<label style="font-size:11.5px;color:var(--ink-2)">확장 방향(지형 우선순위)' +
+    '<select id="sel-dir"><option value="Volcano,Rock,Desert,Snow">화산(남서) 먼저</option>' +
+    '<option value="Rock,Volcano,Desert,Snow">암석(북서) 먼저 — 21일차까지 페널티 0</option>' +
+    '<option value="Snow,Desert,Volcano,Rock">설원(북동) 먼저 — 1일차부터 페널티</option></select></label>' +
+    '<label style="font-size:11.5px;color:var(--ink-2)">어미용 액티브' +
+    '<select id="sel-dragon"><option value="">사용 안 함</option>' +
+    '<option value="SK_Dragon_GlobalDamage">불 — 전역 현재 체력 30%</option>' +
+    '<option value="SK_Dragon_Meteor">암석 — 메테오 고정 40</option></select></label>';
+
+  knobHost.appendChild(group('정책 — 플레이어가 어떻게 굴리는가', POLICY_KNOBS, { open: true, extra: polExtra }));
+  knobHost.appendChild(group('경제 · 시작값', ECON));
+  TOWER_ORDER.forEach(function (k) {
+    if (BASE.towers[k]) knobHost.appendChild(group('타워 — ' + (TOWER_LABEL[k] || k), towerKnobs(k)));
+  });
+  if (RESEARCH_EFFECTS.length) knobHost.appendChild(group('연구 효과', RESEARCH_EFFECTS));
+
+  // 점령: 전역 배율
+  var conquestScale = { penalty: 1, reward: 1, cost: 1 };
+  var cqExtra = document.createElement('div');
+  cqExtra.style.cssText = 'display:flex;flex-direction:column;gap:9px';
+  [['penalty', '스폰 수 보너스 배율', 0, 8], ['reward', '인구 보상 배율', 0, 4], ['cost', '점령 비용 배율', 0, 4]]
+    .forEach(function (spec) {
+      var row = document.createElement('div'); row.className = 'knob';
+      row.innerHTML = '<label>' + spec[1] + '</label>';
+      var n = document.createElement('input'); n.type = 'number'; n.min = spec[2]; n.max = spec[3]; n.step = 0.1; n.value = 1;
+      var r = document.createElement('input'); r.type = 'range'; r.min = spec[2]; r.max = spec[3]; r.step = 0.1; r.value = 1;
+      r.setAttribute('aria-label', spec[1]);
+      var b = document.createElement('div'); b.className = 'base';
+      function ap(v) {
+        conquestScale[spec[0]] = +v; n.value = v; r.value = v;
+        var ch = Math.abs(+v - 1) > 1e-9;
+        row.classList.toggle('changed', ch); b.textContent = ch ? '출고값 1' : '';
+        applyConquestScale(); schedule();
+      }
+      n.addEventListener('input', function () { ap(n.value); });
+      r.addEventListener('input', function () { ap(r.value); });
+      row.append(n, r, b); cqExtra.appendChild(row);
+    });
+  var cqGroup = document.createElement('details'); cqGroup.className = 'group';
+  var cqS = document.createElement('summary'); cqS.textContent = '점령 — 전역 배율';
+  var cqB = document.createElement('div'); cqB.className = 'group-body';
+  var cqNote = document.createElement('p');
+  cqNote.className = 'note';
+  cqNote.style.cssText = 'font-size:11px;margin:0 0 4px';
+  cqNote.textContent = '현재 프로파일 28개에는 스탯 배율이 하나도 없다(전부 0). 페널티는 오직 스폰 수 +1뿐이다. ' +
+    '지형 전량 점령 시 추가 스폰: 설원 +21 · 화산 +20 · 사막 +27 · 암석 +20. 이 배율은 그 스폰 보너스에 곱한다.';
+  cqB.append(cqNote, cqExtra); cqGroup.append(cqS, cqB); knobHost.appendChild(cqGroup);
+
+  function applyConquestScale() {
+    Object.keys(cur.profiles).forEach(function (pn) {
+      cur.profiles[pn].rules.forEach(function (r, i) {
+        var b = BASE.profiles[pn].rules[i];
+        ['hp', 'shield', 'atk', 'speed', 'iv'].forEach(function (st) {
+          r[st][1] = b[st][1] * conquestScale.penalty;
+        });
+        r.spawn = Math.round(b.spawn * conquestScale.penalty);
+      });
+    });
+    cur.chunks.forEach(function (c, i) {
+      var b = BASE.chunks[i];
+      c.reward = Math.round(b.reward * conquestScale.reward);
+      c.wood = Math.round(b.wood * conquestScale.cost);
+      c.stone = Math.round(b.stone * conquestScale.cost);
+      c.food = Math.round(b.food * conquestScale.cost);
+    });
+  }
+
+  // 몬스터: 검색 + 목록
+  var monWrap = document.createElement('details'); monWrap.className = 'group';
+  var monS = document.createElement('summary'); monS.textContent = '몬스터 (31종)';
+  var monB = document.createElement('div'); monB.className = 'group-body';
+  var search = document.createElement('input');
+  search.type = 'text'; search.placeholder = '이름으로 거르기 — 예: Boss, Tank, Air';
+  search.setAttribute('aria-label', '몬스터 이름 필터');
+  var monList = document.createElement('div');
+  monList.style.cssText = 'display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto';
+  var MON_KEYS = Object.keys(BASE.monsters).sort(function (a, b) {
+    return BASE.monsters[b].hp - BASE.monsters[a].hp; });
+  function renderMonsters(q) {
+    monList.textContent = '';
+    MON_KEYS.filter(function (k) { return !q || k.toLowerCase().indexOf(q.toLowerCase()) >= 0; })
+      .slice(0, 8).forEach(function (k) {
+        var box = document.createElement('div');
+        box.style.cssText = 'border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:8px';
+        monsterKnobs(k).forEach(function (kn) { K(kn); box.appendChild(knobRow(kn)); });
+        monList.appendChild(box);
+      });
+  }
+  search.addEventListener('input', function () { renderMonsters(search.value); });
+  renderMonsters('Boss');
+  monB.append(search, monList); monWrap.append(monS, monB); knobHost.appendChild(monWrap);
+
+  // 가정 (별도 취급)
+  var assumeNote = document.createElement('p');
+  assumeNote.className = 'note';
+  assumeNote.style.cssText = 'font-size:11px;margin:0 0 6px';
+  assumeNote.textContent = '에셋에서 읽은 값이 아니라 모델의 추정 파라미터다. 밸런스 다이얼이 아니라 오차 범위를 재는 손잡이로 쓸 것. 출고값 기준으로 경로 길이 16~45 전 구간에서 7일차 사망이 나온다.';
+  knobHost.appendChild(group('⚠ 추정 파라미터', ASSUME_KNOBS, { assume: true, extra: assumeNote }));
+
+  document.getElementById('sel-tower').addEventListener('change', function (e) {
+    towerPriority = e.target.value.split(','); schedule(); });
+  document.getElementById('sel-dir').addEventListener('change', function (e) {
+    policy.conquestDirection = e.target.value.split(','); schedule(); });
+  document.getElementById('sel-dragon').addEventListener('change', function (e) {
+    dragonSkill = e.target.value; schedule(); });
+
+  /* ── 시뮬 실행 ── */
+  var baselineRun = null, lastRun = null, timer = null;
+
+  function cfg() {
+    return {
+      policy: policy, assumptions: assumptions, towerPriority: towerPriority,
+      researchOrder: ['tower_damage', 'tower_firerate_1', 'tower_manpower_1', 'tower_range_1', 'production_optimize', 'convenience_castle_regen_1'],
+      dragonSkill: dragonSkill || null
+    };
+  }
+  function run(bundle, c) {
+    var t0 = performance.now();
+    var days = S.runCampaign(S.prepare(bundle), c);
+    return { days: days, ms: Math.round(performance.now() - t0) };
+  }
+  function summarize(r) {
+    var last = r.days[r.days.length - 1];
+    var leak = 0, tl = 0;
+    r.days.forEach(function (d) { leak += d.night.leaked; tl += d.night.towersLost; });
+    return { died: last.night.survived ? null : last.day, reached: r.days.length,
+      pop: last.pop, owned: last.owned, leak: leak, tl: tl, ms: r.ms, days: r.days };
+  }
+  function schedule() {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      lastRun = summarize(run(cur, cfg()));
+      render();
+    }, 140);
+  }
+
+  /* ── 렌더 ── */
+  function deltaEl(id, now, base, higherBetter) {
+    var el = document.getElementById(id);
+    if (base == null || now == null) { el.textContent = ' '; el.className = 'delta same'; return; }
+    var d = now - base;
+    if (Math.abs(d) < 1e-9) { el.textContent = '기준선과 동일'; el.className = 'delta same'; return; }
+    var good = higherBetter ? d > 0 : d < 0;
+    el.textContent = (d > 0 ? '+' : '') + (Math.round(d * 100) / 100) + ' vs 기준선';
+    el.className = 'delta ' + (good ? 'up' : 'down');
+  }
+
+  function render() {
+    var r = lastRun, b = baselineRun;
+    var main = document.getElementById('v-main');
+    if (r.died === null) { main.textContent = '28일 생존'; main.className = 'verdict-num good'; }
+    else { main.textContent = r.died + '일차 사망'; main.className = 'verdict-num bad'; }
+    var reachedNow = r.died === null ? 29 : r.died;
+    var reachedBase = b ? (b.died === null ? 29 : b.died) : null;
+    deltaEl('v-delta', reachedNow, reachedBase, true);
+
+    document.getElementById('v-pop').textContent = r.pop;
+    document.getElementById('v-own').textContent = r.owned;
+    document.getElementById('v-leak').textContent = r.leak;
+    document.getElementById('v-tl').textContent = r.tl;
+    document.getElementById('v-ms').textContent = r.ms;
+    deltaEl('v-pop-d', r.pop, b && b.pop, true);
+    deltaEl('v-own-d', r.owned, b && b.owned, true);
+    deltaEl('v-leak-d', r.leak, b && b.leak, false);
+    deltaEl('v-tl-d', r.tl, b && b.tl, false);
+
+    renderStrip(r); renderDps(r); renderPop(r); renderTable(r); renderDiff();
+  }
+
+  var BOSS = { 7: 1, 14: 1, 21: 1, 28: 1 };
+
+  function renderStrip(r) {
+    var host = document.getElementById('strip');
+    host.textContent = '';
+    var byDay = {}; r.days.forEach(function (d) { byDay[d.day] = d; });
+    var maxHp = cur.economy.castleHp || 100;
+    for (var i = 1; i <= 28; i++) {
+      var d = byDay[i];
+      var cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cell' + (BOSS[i] ? ' boss' : '') +
+        (!d ? ' unreached' : (d.night.survived ? ' ok' : ' lost'));
+      var bar = document.createElement('div'); bar.className = 'bar';
+      if (d) {
+        var f = document.createElement('div'); f.className = 'fill';
+        f.style.height = Math.max(2, (d.night.castleHp / maxHp) * 100) + '%';
+        bar.appendChild(f);
+      }
+      var st = document.createElement('div'); st.className = 'stripe';
+      var lb = document.createElement('div'); lb.className = 'd'; lb.textContent = i;
+      cell.append(bar, st, lb);
+      if (d) bindTip(cell, dayTip(d));
+      else bindTip(cell, '<b>' + i + '일차</b><div>도달하지 못함</div>');
+      host.appendChild(cell);
+    }
+  }
+
+  function dayTip(d) {
+    var n = d.night;
+    function row(a, b) { return '<div class="row"><span>' + a + '</span><span>' + b + '</span></div>'; }
+    return '<b>' + d.day + '일차' + (BOSS[d.day] ? ' · 보스' : '') + '</b>' +
+      row('판정', n.survived ? '방어 성공' : '패배') +
+      row('성 체력', n.castleHp + ' / ' + (cur.economy.castleHp || 100)) +
+      row('처치', n.killed + ' / ' + n.total) +
+      row('누수', n.leaked) +
+      row('타워 파괴', n.towersLost + '회 (배치 ' + n.towerCount + '기)') +
+      row('교전 시간', n.seconds + '초') +
+      '<hr style="border:0;border-top:1px solid var(--line);margin:5px 0">' +
+      row('최대 인구', d.pop) +
+      row('농장 / 후방', d.plan.farmPop + ' / ' + (d.plan.prodPop + d.plan.labPop)) +
+      row('타워 / 원정', d.plan.towerPop + ' / ' + d.plan.conquestPop) +
+      row('점령 청크', d.owned) +
+      row('식/목/석', d.food + ' / ' + d.wood + ' / ' + d.stone);
+  }
+
+  /* ── SVG 유틸 ── */
+  var NS = 'http://www.w3.org/2000/svg';
+  function el(n, a) { var e = document.createElementNS(NS, n);
+    for (var k in a) e.setAttribute(k, a[k]); return e; }
+  var PAD = { l: 40, r: 14, t: 10, b: 22 }, W = 560, H = 250;
+
+  function axes(svg, maxY, ticks) {
+    var iw = W - PAD.l - PAD.r, ih = H - PAD.t - PAD.b;
+    for (var i = 0; i <= ticks; i++) {
+      var y = PAD.t + ih - (i / ticks) * ih;
+      svg.appendChild(el('line', { x1: PAD.l, x2: W - PAD.r, y1: y, y2: y, class: 'gridline' }));
+      var t = el('text', { x: PAD.l - 6, y: y + 3, class: 'axis', 'text-anchor': 'end' });
+      t.textContent = Math.round(maxY * i / ticks);
+      svg.appendChild(t);
+    }
+    svg.appendChild(el('line', { x1: PAD.l, x2: W - PAD.r, y1: PAD.t + ih, y2: PAD.t + ih, class: 'axisline' }));
+    [1, 7, 14, 21, 28].forEach(function (d) {
+      var x = PAD.l + ((d - 1) / 27) * iw;
+      var t = el('text', { x: x, y: H - 6, class: 'axis', 'text-anchor': 'middle' });
+      t.textContent = d; svg.appendChild(t);
+    });
+    return { iw: iw, ih: ih };
+  }
+
+  function renderDps(r) {
+    var svg = document.getElementById('plot-dps');
+    svg.textContent = '';
+    var enemy = [], player = [];
+    r.days.forEach(function (d) { enemy.push(d.night.enemyDps || 0); player.push(d.night.playerDps || 0); });
+    var maxY = Math.max(10, Math.max.apply(null, enemy.concat(player)) * 1.12);
+    var g = axes(svg, maxY, 4);
+    function path(arr, color) {
+      if (!arr.length) return;
+      var dstr = arr.map(function (v, i) {
+        var x = PAD.l + (i / 27) * g.iw, y = PAD.t + g.ih - (v / maxY) * g.ih;
+        return (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+      }).join(' ');
+      svg.appendChild(el('path', { d: dstr, fill: 'none', stroke: color, 'stroke-width': 2,
+        'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+      var lx = PAD.l + ((arr.length - 1) / 27) * g.iw;
+      var ly = PAD.t + g.ih - (arr[arr.length - 1] / maxY) * g.ih;
+      svg.appendChild(el('circle', { cx: lx, cy: ly, r: 3.5, fill: color,
+        stroke: 'var(--surface)', 'stroke-width': 2 }));
+    }
+    path(enemy, 'var(--s2)'); path(player, 'var(--s1)');
+    // 보스 표시
+    [7, 14, 21, 28].forEach(function (d) {
+      var x = PAD.l + ((d - 1) / 27) * g.iw;
+      svg.appendChild(el('line', { x1: x, x2: x, y1: PAD.t, y2: PAD.t + g.ih,
+        stroke: 'var(--line-2)', 'stroke-width': 1, 'stroke-dasharray': '2 3' }));
+    });
+    hoverLayer(svg, g, r, function (d) {
+      return '<b>' + d.day + '일차</b>' +
+        '<div class="row"><span style="color:var(--s2)">적 공격 DPS</span><span>' + Math.round(d.night.enemyDps) + '</span></div>' +
+        '<div class="row"><span style="color:var(--s1)">플레이어 타워 DPS</span><span>' + Math.round(d.night.playerDps) + '</span></div>' +
+        '<div class="row"><span>배율</span><span>' + (d.night.enemyDps ? (d.night.playerDps / d.night.enemyDps).toFixed(2) : '—') + '×</span></div>';
+    });
+  }
+
+  function renderPop(r) {
+    var svg = document.getElementById('plot-pop');
+    svg.textContent = '';
+    var maxY = Math.max.apply(null, r.days.map(function (d) { return d.pop; })) * 1.1 || 60;
+    var g = axes(svg, maxY, 4);
+    var bw = Math.max(3, g.iw / 28 - 3);
+    r.days.forEach(function (d, i) {
+      var x = PAD.l + (i / 27) * g.iw - bw / 2;
+      var segs = [
+        [d.plan.farmPop, 'var(--s4)'],
+        [d.plan.prodPop + d.plan.labPop, 'var(--s3)'],
+        [d.plan.towerPop, 'var(--s1)'],
+        [d.plan.conquestPop, 'var(--s2)']
+      ];
+      var acc = 0;
+      segs.forEach(function (s) {
+        if (s[0] <= 0) return;
+        var h = (s[0] / maxY) * g.ih;
+        var y = PAD.t + g.ih - (acc / maxY) * g.ih - h;
+        svg.appendChild(el('rect', { x: x, y: y, width: bw, height: Math.max(1, h - 2),
+          fill: s[1], rx: 1 }));
+        acc += s[0];
+      });
+    });
+    hoverLayer(svg, g, r, function (d) {
+      function row(a, b, c) { return '<div class="row"><span style="color:' + c + '">' + a + '</span><span>' + b + '</span></div>'; }
+      return '<b>' + d.day + '일차 · 최대 인구 ' + d.pop + '</b>' +
+        row('농장', d.plan.farmPop + ' (' + d.plan.farms + '채)', 'var(--s4)') +
+        row('벌목·채석·연구', d.plan.prodPop + d.plan.labPop, 'var(--s3)') +
+        row('타워', d.plan.towerPop, 'var(--s1)') +
+        row('원정', d.plan.conquestPop, 'var(--s2)');
+    });
+  }
+
+  function hoverLayer(svg, g, r, fmt) {
+    var overlay = el('rect', { x: PAD.l, y: PAD.t, width: g.iw, height: g.ih,
+      fill: 'transparent', style: 'cursor:crosshair' });
+    var line = el('line', { y1: PAD.t, y2: PAD.t + g.ih, stroke: 'var(--ink-2)',
+      'stroke-width': 1, opacity: 0 });
+    svg.append(line, overlay);
+    overlay.addEventListener('mousemove', function (ev) {
+      var box = svg.getBoundingClientRect();
+      var rel = (ev.clientX - box.left) / box.width * W;
+      var i = Math.round((rel - PAD.l) / g.iw * 27);
+      i = Math.max(0, Math.min(r.days.length - 1, i));
+      var d = r.days[i]; if (!d) return;
+      var x = PAD.l + (i / 27) * g.iw;
+      line.setAttribute('x1', x); line.setAttribute('x2', x); line.setAttribute('opacity', .5);
+      showTip(ev, fmt(d));
+    });
+    overlay.addEventListener('mouseleave', function () { line.setAttribute('opacity', 0); hideTip(); });
+  }
+
+  /* ── 툴팁 ── */
+  var tip = document.getElementById('tip');
+  function showTip(ev, html) {
+    tip.innerHTML = html; tip.style.opacity = 1;
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = ev.clientX + 14, y = ev.clientY + 14;
+    if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+    if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+    tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px';
+  }
+  function hideTip() { tip.style.opacity = 0; }
+  function bindTip(node, html) {
+    node.addEventListener('mousemove', function (e) { showTip(e, html); });
+    node.addEventListener('mouseleave', hideTip);
+    node.addEventListener('focus', function () {
+      var b = node.getBoundingClientRect();
+      showTip({ clientX: b.left, clientY: b.bottom }, html);
+    });
+    node.addEventListener('blur', hideTip);
+  }
+
+  /* ── 표 ── */
+  var COLS = [['일차', 'day'], ['판정', 'res'], ['성HP', 'hp'], ['처치', 'kill'], ['누수', 'leak'],
+    ['타워파괴', 'tl'], ['타워수', 'tc'], ['적DPS', 'edps'], ['내DPS', 'pdps'],
+    ['인구', 'pop'], ['농장', 'fp'], ['후방', 'bp'], ['타워PW', 'twp'], ['충원율', 'st'],
+    ['원정', 'cp'], ['점령', 'own'], ['식량', 'food'], ['나무', 'wood'], ['돌', 'stone'], ['연구', 'res2']];
+  function renderTable(r) {
+    var tbl = document.getElementById('tbl');
+    var thead = tbl.querySelector('thead'), tb = tbl.querySelector('tbody');
+    thead.textContent = ''; tb.textContent = '';
+    var hr = document.createElement('tr');
+    COLS.forEach(function (c) { var th = document.createElement('th'); th.textContent = c[0]; hr.appendChild(th); });
+    thead.appendChild(hr);
+    r.days.forEach(function (d) {
+      var n = d.night, tr = document.createElement('tr');
+      if (!n.survived) tr.className = 'lost';
+      var vals = [d.day, n.survived ? '방어' : '패배', n.castleHp, n.killed + '/' + n.total,
+        n.leaked, n.towersLost, n.towerCount, Math.round(n.enemyDps), Math.round(n.playerDps),
+        d.pop, d.plan.farmPop, d.plan.prodPop + d.plan.labPop, d.plan.towerPop,
+        Math.round((n.staffing || 0) * 100) + '%', d.plan.conquestPop, d.owned,
+        d.food, d.wood, d.stone, d.research];
+      vals.forEach(function (v) { var td = document.createElement('td'); td.textContent = v; tr.appendChild(td); });
+      tb.appendChild(tr);
+    });
+  }
+
+  /* ── 변경 목록 / 내보내기 ── */
+  function collectDiff() {
+    var out = [];
+    KNOBS.forEach(function (k) {
+      if (k.obj) {
+        var host = k.obj === 'policy' ? policy : assumptions;
+        var bh = k.obj === 'policy' ? basePolicy : baseAssume;
+        if (Math.abs(host[k.path] - bh[k.path]) > 1e-9)
+          out.push({ sim: true, label: k.label, from: bh[k.path], to: host[k.path] });
+        return;
+      }
+      var now = get(cur, k.path), bv = get(BASE, k.path);
+      if (Math.abs(now - bv) > 1e-9)
+        out.push({ label: k.label, from: bv, to: now, asset: k.asset, field: k.field });
+    });
+    if (Math.abs(conquestScale.penalty - 1) > 1e-9)
+      out.push({ scale: 'penalty', label: '점령 페널티 강도 배율', from: 1, to: conquestScale.penalty });
+    if (Math.abs(conquestScale.reward - 1) > 1e-9)
+      out.push({ scale: 'reward', label: '점령 인구 보상 배율', from: 1, to: conquestScale.reward });
+    if (Math.abs(conquestScale.cost - 1) > 1e-9)
+      out.push({ scale: 'cost', label: '점령 비용 배율', from: 1, to: conquestScale.cost });
+    return out;
+  }
+  function renderDiff() {
+    var d = collectDiff(), host = document.getElementById('diff');
+    document.getElementById('diffcount').textContent = d.length;
+    host.textContent = '';
+    if (!d.length) {
+      var p = document.createElement('div');
+      p.style.color = 'var(--muted)'; p.textContent = '출고값 그대로';
+      host.appendChild(p); return;
+    }
+    d.forEach(function (x) {
+      var row = document.createElement('div');
+      var a = document.createElement('span'); a.textContent = x.label + (x.sim ? ' (시뮬 전용)' : '');
+      var b = document.createElement('b'); b.textContent = x.from + ' → ' + x.to;
+      row.append(a, b); host.appendChild(row);
+    });
+  }
+
+  document.getElementById('export').addEventListener('click', function () {
+    var d = collectDiff();
+    var payload = {
+      generatedBy: 'BalanceSimulator.html',
+      note: 'apply_balance.py로 적용한다. asset/field가 있는 항목만 Unity 에셋에 반영된다.',
+      simulation: { policy: policy, assumptions: assumptions, towerPriority: towerPriority,
+        dragonSkill: dragonSkill || null, conquestScale: conquestScale,
+        verdict: lastRun.died === null ? '28일 생존' : lastRun.died + '일차 사망' },
+      changes: d.filter(function (x) { return x.asset && x.field; })
+        .map(function (x) { return { asset: x.asset, field: x.field, from: x.from, to: x.to, label: x.label }; }),
+      unappliable: d.filter(function (x) { return !(x.asset && x.field); })
+        .map(function (x) { return { label: x.label, from: x.from, to: x.to,
+          reason: x.sim ? '시뮬 전용 파라미터' : '전역 배율 — 수동 반영 필요' }; })
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'balance-changes.json';
+    a.click(); URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById('reset').addEventListener('click', function () {
+    cur = JSON.parse(JSON.stringify(BASE));
+    policy = JSON.parse(JSON.stringify(basePolicy));
+    assumptions = JSON.parse(JSON.stringify(baseAssume));
+    conquestScale = { penalty: 1, reward: 1, cost: 1 };
+    location.reload();
+  });
+
+  /* ── 콘솔 디버그 훅 ── */
+  globalThis.balanceSim = {
+    get current() { return cur; },
+    get baseline() { return BASE; },
+    get policy() { return policy; },
+    get assumptions() { return assumptions; },
+    get lastRun() { return lastRun; },
+    effectRefs: effectRefs, attackRefs: attackRefs, knobs: KNOBS
+  };
+
+  /* ── 시작 ── */
+  baselineRun = summarize(run(BASE, {
+    policy: basePolicy, assumptions: baseAssume,
+    towerPriority: ['TD_Arrow', 'TD_CrossBow', 'TD_Musket'],
+    researchOrder: ['tower_damage', 'tower_firerate_1', 'tower_manpower_1', 'tower_range_1', 'production_optimize', 'convenience_castle_regen_1'],
+    dragonSkill: null
+  }));
+  lastRun = baselineRun;
+  render();
+})();
+</script>

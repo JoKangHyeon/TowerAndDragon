@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tower and Dragons 점령 페널티 맵</title>
+<style>
+body{margin:0;background:#f4f1ea;color:#202020;font-family:Segoe UI,system-ui,sans-serif}main{max-width:1500px;margin:0 auto;padding:24px}h1{margin:0 0 8px;font-size:30px;letter-spacing:0}h2{font-size:18px;margin:0 0 12px;letter-spacing:0}p{color:#665f56;line-height:1.5}.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0}.stat,.panel{background:#fffdf8;border:1px solid #cdc5b8;border-radius:8px;box-shadow:0 12px 26px #30261c1f}.stat{padding:12px;min-height:78px}.stat strong{display:block;font-size:22px}.stat span{font-size:13px;color:#665f56}.layout{display:grid;grid-template-columns:minmax(880px,1fr) 430px;gap:16px;align-items:start}.mapWrap{padding:16px;overflow:auto}.map{position:relative;width:1120px;height:780px;margin:0 auto;background:linear-gradient(90deg,#0000000a 1px,transparent 1px),linear-gradient(0deg,#0000000a 1px,transparent 1px);background-size:56px 56px;border-radius:8px}.chunk{position:absolute;width:120px;height:92px;padding:8px;border:2px solid #0005;border-radius:8px;box-shadow:0 8px 18px #0002;display:grid;grid-template-rows:auto 1fr auto;gap:4px}.chunk b{font-size:12px}.name{font-size:12px;font-weight:800;line-height:1.15;overflow-wrap:anywhere}.badges{display:flex;gap:4px;flex-wrap:wrap}.badge{background:#ffffffc7;border:1px solid #0002;border-radius:4px;padding:2px 4px;font-size:11px;font-weight:800}.Rock{background:#b8b5b1}.Volcano{background:#e17761}.Desert{background:#e0c375}.Snow{background:#a8cfdf}.None{background:#d8d1c6}.home{background:#232323;color:white}.side{padding:16px;position:sticky;top:16px}.legend{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}.legend div{display:flex;gap:8px;align-items:center}.sw{width:18px;height:18px;border-radius:4px;border:1px solid #0004}.tables{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}.tablePanel{padding:16px;overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid #eee5d8;text-align:left;vertical-align:top}th{background:#fbf6ec;color:#665f56}.right{text-align:right}details{border-bottom:1px solid #eee5d8;padding:8px 0}summary{cursor:pointer;font-weight:800}@media(max-width:1180px){.layout{grid-template-columns:1fr}.summary{grid-template-columns:repeat(2,1fr)}.side{position:static}}
+</style></head><body><main>
+<h1>점령 페널티 / 보상 맵</h1>
+<p>기준 에셋: <code>Data_ConquestChunkCostTable_Alpha</code> · 프로필당 최대 5종 몬스터 룰 · 지형별 페널티 방향은 유지하고 적용 대상만 분산 축소</p>
+<section class="summary">
+<div class="stat"><strong>41</strong><span>점령 테이블 청크</span></div>
+<div class="stat"><strong>36/41</strong><span>페널티 청크</span></div>
+<div class="stat"><strong>5</strong><span>청크당 최대 대상 몬스터</span></div>
+<div class="stat"><strong>+228</strong><span>전체 인구 보상</span></div>
+<div class="stat"><strong>Desert 9 &#183; None 5 &#183; Rock 9 &#183; Snow 8 &#183; Volcano 10</strong><span>페널티 계열 분포</span></div>
+</section><section class="layout"><div class="panel mapWrap"><div class="map">
+<div class="chunk Desert" style="left:514px;top:18px" title="((0, -4)) Penalty_Desert_Major_AirReinforcement: 대상 5종 / 스폰 +1마리 x1 / 이속 +2% x5 / 간격 -4% x5">
+<b>(0, -4) · Desert</b>
+<div class="name">Desert Major AirReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">4일</span></div></div>
+<div class="chunk Volcano" style="left:294px;top:114px" title="((-2, -3)) Penalty_Volcano_Major_RangedReinforcement: 대상 5종 / 스폰 +1마리 x1 / 체력 +2% x5 / 공격 +4% x5">
+<b>(-2, -3) · Volcano</b>
+<div class="name">Volcano Major RangedReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">3일</span></div></div>
+<div class="chunk Volcano" style="left:418px;top:114px" title="((-1, -3)) Penalty_Volcano_Standard: 대상 5종 / 체력 +1% x5 / 공격 +2% x5">
+<b>(-1, -3) · Volcano</b>
+<div class="name">Volcano Standard</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">3일</span></div></div>
+<div class="chunk Volcano" style="left:542px;top:114px" title="((0, -3)) Penalty_Volcano_Standard_AttackReinforcement: 대상 5종 / 스폰 +1마리 x1 / 체력 +1% x5 / 공격 +2% x5">
+<b>(0, -3) · Volcano</b>
+<div class="name">Volcano Standard AttackReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">3일</span></div></div>
+<div class="chunk Desert" style="left:666px;top:114px" title="((1, -3)) Penalty_Desert_Standard: 대상 5종 / 이속 +2% x5 / 간격 -2% x5">
+<b>(1, -3) · Desert</b>
+<div class="name">Desert Standard</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">4일</span></div></div>
+<div class="chunk Desert" style="left:790px;top:114px" title="((2, -3)) Penalty_Desert_Major_RangedReinforcement: 대상 5종 / 스폰 +1마리 x1 / 이속 +2% x5 / 간격 -4% x5">
+<b>(2, -3) · Desert</b>
+<div class="name">Desert Major RangedReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">4일</span></div></div>
+<div class="chunk Volcano" style="left:142px;top:210px" title="((-3, -2)) Penalty_Volcano_Major: 대상 5종 / 체력 +2% x5 / 공격 +4% x5">
+<b>(-3, -2) · Volcano</b>
+<div class="name">Volcano Major</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">3일</span></div></div>
+<div class="chunk Volcano" style="left:390px;top:210px" title="((-1, -2)) Penalty_Volcano_Minor: 대상 5종 / 공격 +2% x5">
+<b>(-1, -2) · Volcano</b>
+<div class="name">Volcano Minor</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">3일</span></div></div>
+<div class="chunk Volcano" style="left:514px;top:210px" title="((0, -2)) Penalty_Volcano_Minor_BasicReinforcement: 대상 5종 / 스폰 +1마리 x1 / 공격 +2% x5">
+<b>(0, -2) · Volcano</b>
+<div class="name">Volcano Minor BasicReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">2일</span></div></div>
+<div class="chunk Desert" style="left:638px;top:210px" title="((1, -2)) Penalty_Desert_Minor: 대상 5종 / 이속 +1% x5 / 간격 -2% x5">
+<b>(1, -2) · Desert</b>
+<div class="name">Desert Minor</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">4일</span></div></div>
+<div class="chunk Desert" style="left:886px;top:210px" title="((3, -2)) Penalty_Desert_Major: 대상 5종 / 이속 +2% x5 / 간격 -4% x5">
+<b>(3, -2) · Desert</b>
+<div class="name">Desert Major</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">4일</span></div></div>
+<div class="chunk Volcano" style="left:170px;top:306px" title="((-3, -1)) Penalty_Volcano_Standard: 대상 5종 / 체력 +1% x5 / 공격 +2% x5">
+<b>(-3, -1) · Volcano</b>
+<div class="name">Volcano Standard</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">3일</span></div></div>
+<div class="chunk Volcano" style="left:294px;top:306px" title="((-2, -1)) Penalty_Volcano_Minor: 대상 5종 / 공격 +2% x5">
+<b>(-2, -1) · Volcano</b>
+<div class="name">Volcano Minor</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">3일</span></div></div>
+<div class="chunk None" style="left:542px;top:306px" title="((0, -1)) None: 강화 없음">
+<b>(0, -1) · Grass</b>
+<div class="name">강화 없음</div>
+<div class="badges"><span class="badge">대상 0</span><span class="badge">+3명</span><span class="badge">1일</span></div></div>
+<div class="chunk Desert" style="left:790px;top:306px" title="((2, -1)) Penalty_Desert_Minor: 대상 5종 / 이속 +1% x5 / 간격 -2% x5">
+<b>(2, -1) · Desert</b>
+<div class="name">Desert Minor</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">4일</span></div></div>
+<div class="chunk Desert" style="left:914px;top:306px" title="((3, -1)) Penalty_Desert_Standard: 대상 5종 / 이속 +2% x5 / 간격 -2% x5">
+<b>(3, -1) · Desert</b>
+<div class="name">Desert Standard</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">4일</span></div></div>
+<div class="chunk Rock" style="left:18px;top:402px" title="((-4, 0)) Penalty_Rock_Major_AirReinforcement: 대상 5종 / 스폰 +1마리 x1 / 체력 +4% x5 / 실드 +4% x1">
+<b>(-4, 0) · Rock</b>
+<div class="name">Rock Major AirReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">2일</span></div></div>
+<div class="chunk Volcano" style="left:142px;top:402px" title="((-3, 0)) Penalty_Volcano_Standard: 대상 5종 / 체력 +1% x5 / 공격 +2% x5">
+<b>(-3, 0) · Volcano</b>
+<div class="name">Volcano Standard</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">3일</span></div></div>
+<div class="chunk Volcano" style="left:266px;top:402px" title="((-2, 0)) Penalty_Volcano_Minor: 대상 5종 / 공격 +2% x5">
+<b>(-2, 0) · Volcano</b>
+<div class="name">Volcano Minor</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">2일</span></div></div>
+<div class="chunk None" style="left:390px;top:402px" title="((-1, 0)) None: 강화 없음">
+<b>(-1, 0) · Grass</b>
+<div class="name">강화 없음</div>
+<div class="badges"><span class="badge">대상 0</span><span class="badge">+3명</span><span class="badge">1일</span></div></div>
+<div class="chunk home" style="left:514px;top:402px" title="((0, 0)) None: 강화 없음">
+<b>(0, 0) · Grass</b>
+<div class="name">강화 없음</div>
+<div class="badges"><span class="badge">대상 0</span><span class="badge">+0명</span><span class="badge">1일</span></div></div>
+<div class="chunk None" style="left:638px;top:402px" title="((1, 0)) None: 강화 없음">
+<b>(1, 0) · Grass</b>
+<div class="name">강화 없음</div>
+<div class="badges"><span class="badge">대상 0</span><span class="badge">+3명</span><span class="badge">1일</span></div></div>
+<div class="chunk Desert" style="left:762px;top:402px" title="((2, 0)) Penalty_Desert_Minor_BasicReinforcement: 대상 5종 / 스폰 +1마리 x1 / 이속 +1% x5 / 간격 -2% x5">
+<b>(2, 0) · Desert</b>
+<div class="name">Desert Minor BasicReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">3일</span></div></div>
+<div class="chunk Desert" style="left:886px;top:402px" title="((3, 0)) Penalty_Desert_Standard_AttackReinforcement: 대상 5종 / 스폰 +1마리 x1 / 이속 +2% x5 / 간격 -2% x5">
+<b>(3, 0) · Desert</b>
+<div class="name">Desert Standard AttackReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">4일</span></div></div>
+<div class="chunk Snow" style="left:1010px;top:402px" title="((4, 0)) Penalty_Snow_Major: 대상 5종 / 체력 +3% x4 / 체력 +2% x1 / 공격 +2% x4 / 공격 +1% x1">
+<b>(4, 0) · Snow</b>
+<div class="name">Snow Major</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">3일</span></div></div>
+<div class="chunk Rock" style="left:170px;top:498px" title="((-3, 1)) Penalty_Rock_Standard: 대상 5종 / 체력 +3% x5 / 실드 +2% x1">
+<b>(-3, 1) · Rock</b>
+<div class="name">Rock Standard</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">2일</span></div></div>
+<div class="chunk Rock" style="left:294px;top:498px" title="((-2, 1)) Penalty_Rock_Minor: 대상 5종 / 체력 +2% x5">
+<b>(-2, 1) · Rock</b>
+<div class="name">Rock Minor</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">2일</span></div></div>
+<div class="chunk None" style="left:542px;top:498px" title="((0, 1)) None: 강화 없음">
+<b>(0, 1) · Grass</b>
+<div class="name">강화 없음</div>
+<div class="badges"><span class="badge">대상 0</span><span class="badge">+3명</span><span class="badge">1일</span></div></div>
+<div class="chunk Snow" style="left:790px;top:498px" title="((2, 1)) Penalty_Snow_Minor: 대상 5종 / 체력 +1% x5 / 공격 +1% x5">
+<b>(2, 1) · Snow</b>
+<div class="name">Snow Minor</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">3일</span></div></div>
+<div class="chunk Snow" style="left:914px;top:498px" title="((3, 1)) Penalty_Snow_Standard: 대상 5종 / 체력 +2% x5 / 공격 +1% x5">
+<b>(3, 1) · Snow</b>
+<div class="name">Snow Standard</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">3일</span></div></div>
+<div class="chunk Rock" style="left:142px;top:594px" title="((-3, 2)) Penalty_Rock_Major: 대상 5종 / 체력 +4% x4 / 체력 +2% x1 / 실드 +4% x1">
+<b>(-3, 2) · Rock</b>
+<div class="name">Rock Major</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">2일</span></div></div>
+<div class="chunk Rock" style="left:390px;top:594px" title="((-1, 2)) Penalty_Rock_Minor: 대상 5종 / 체력 +2% x5">
+<b>(-1, 2) · Rock</b>
+<div class="name">Rock Minor</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">2일</span></div></div>
+<div class="chunk Rock" style="left:514px;top:594px" title="((0, 2)) Penalty_Rock_Minor: 대상 5종 / 체력 +2% x5">
+<b>(0, 2) · Rock</b>
+<div class="name">Rock Minor</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">1일</span></div></div>
+<div class="chunk Snow" style="left:638px;top:594px" title="((1, 2)) Penalty_Snow_Minor_BasicReinforcement: 대상 5종 / 스폰 +1마리 x1 / 체력 +1% x5 / 공격 +1% x5">
+<b>(1, 2) · Snow</b>
+<div class="name">Snow Minor BasicReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+5명</span><span class="badge">3일</span></div></div>
+<div class="chunk Snow" style="left:886px;top:594px" title="((3, 2)) Penalty_Snow_Major_AirReinforcement: 대상 5종 / 스폰 +1마리 x1 / 체력 +3% x5 / 공격 +2% x5">
+<b>(3, 2) · Snow</b>
+<div class="name">Snow Major AirReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">3일</span></div></div>
+<div class="chunk Rock" style="left:294px;top:690px" title="((-2, 3)) Penalty_Rock_Major: 대상 5종 / 체력 +4% x4 / 체력 +2% x1 / 실드 +4% x1">
+<b>(-2, 3) · Rock</b>
+<div class="name">Rock Major</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">2일</span></div></div>
+<div class="chunk Rock" style="left:418px;top:690px" title="((-1, 3)) Penalty_Rock_Standard: 대상 5종 / 체력 +3% x5 / 실드 +2% x1">
+<b>(-1, 3) · Rock</b>
+<div class="name">Rock Standard</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">2일</span></div></div>
+<div class="chunk Rock" style="left:542px;top:690px" title="((0, 3)) Penalty_Rock_Standard_AttackReinforcement: 대상 5종 / 스폰 +1마리 x1 / 체력 +3% x5 / 실드 +2% x1">
+<b>(0, 3) · Rock</b>
+<div class="name">Rock Standard AttackReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">2일</span></div></div>
+<div class="chunk Snow" style="left:666px;top:690px" title="((1, 3)) Penalty_Snow_Standard: 대상 5종 / 체력 +2% x5 / 공격 +1% x5">
+<b>(1, 3) · Snow</b>
+<div class="name">Snow Standard</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+6명</span><span class="badge">3일</span></div></div>
+<div class="chunk Snow" style="left:790px;top:690px" title="((2, 3)) Penalty_Snow_Major: 대상 5종 / 체력 +3% x4 / 체력 +2% x1 / 공격 +2% x4 / 공격 +1% x1">
+<b>(2, 3) · Snow</b>
+<div class="name">Snow Major</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">3일</span></div></div>
+<div class="chunk Snow" style="left:514px;top:786px" title="((0, 4)) Penalty_Snow_Major_RangedReinforcement: 대상 5종 / 스폰 +1마리 x1 / 체력 +3% x5 / 공격 +2% x5">
+<b>(0, 4) · Snow</b>
+<div class="name">Snow Major RangedReinforcement</div>
+<div class="badges"><span class="badge">대상 5</span><span class="badge">+7명</span><span class="badge">3일</span></div></div>
+</div></div><aside class="panel side">
+<h2>색상 범례</h2><div class="legend">
+<div><span class="sw Rock"></span><span>Rock - 체력 / 실드</span></div>
+<div><span class="sw Volcano"></span><span>Volcano - 공격 / 체력</span></div>
+<div><span class="sw Desert"></span><span>Desert - 이속 / 스폰간격</span></div>
+<div><span class="sw Snow"></span><span>Snow - 체력 / 공격</span></div>
+<div><span class="sw None"></span><span>None - 페널티 없음</span></div>
+</div><h2 style="margin-top:22px">운영 기준</h2>
+<p>각 칸의 <b>대상</b> 숫자는 그 청크 점령 시 강화되는 몬스터 종류 수입니다. 현재 모든 페널티 청크는 최대 5종 이하로 제한됩니다.</p>
+</aside></section><section class="tables"><div class="panel tablePanel">
+<h2>청크 상세</h2><table><thead><tr><th>좌표</th><th>지형</th><th>상태</th><th class="right">비용</th><th class="right">보상</th><th>해금</th><th>페널티</th></tr></thead><tbody>
+<tr><td>(0, -4)</td><td>Desert</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>4일</td><td class="right">+7</td><td>불꽃의 심장</td><td>Desert Major AirReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 이속 +2% x5 / 간격 -4% x5</span></td></tr>
+<tr><td>(-2, -3)</td><td>Volcano</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+7</td><td>불꽃의 심장</td><td>Volcano Major RangedReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 체력 +2% x5 / 공격 +4% x5</span></td></tr>
+<tr><td>(-1, -3)</td><td>Volcano</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+6</td><td>불꽃의 심장</td><td>Volcano Standard<br><span style="color:#665f56">대상 5종 / 체력 +1% x5 / 공격 +2% x5</span></td></tr>
+<tr><td>(0, -3)</td><td>Volcano</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+6</td><td>불꽃의 심장</td><td>Volcano Standard AttackReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 체력 +1% x5 / 공격 +2% x5</span></td></tr>
+<tr><td>(1, -3)</td><td>Desert</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>4일</td><td class="right">+6</td><td>불꽃의 심장</td><td>Desert Standard<br><span style="color:#665f56">대상 5종 / 이속 +2% x5 / 간격 -2% x5</span></td></tr>
+<tr><td>(2, -3)</td><td>Desert</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>4일</td><td class="right">+7</td><td>불꽃의 심장</td><td>Desert Major RangedReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 이속 +2% x5 / 간격 -4% x5</span></td></tr>
+<tr><td>(-3, -2)</td><td>Volcano</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+7</td><td>석재, 현자의 돌</td><td>Volcano Major<br><span style="color:#665f56">대상 5종 / 체력 +2% x5 / 공격 +4% x5</span></td></tr>
+<tr><td>(-1, -2)</td><td>Volcano</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+5</td><td>불꽃의 심장</td><td>Volcano Minor<br><span style="color:#665f56">대상 5종 / 공격 +2% x5</span></td></tr>
+<tr><td>(0, -2)</td><td>Volcano</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>2일</td><td class="right">+5</td><td>불꽃의 심장</td><td>Volcano Minor BasicReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 공격 +2% x5</span></td></tr>
+<tr><td>(1, -2)</td><td>Desert</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>4일</td><td class="right">+5</td><td>불꽃의 심장</td><td>Desert Minor<br><span style="color:#665f56">대상 5종 / 이속 +1% x5 / 간격 -2% x5</span></td></tr>
+<tr><td>(3, -2)</td><td>Desert</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>4일</td><td class="right">+7</td><td>석재, 시간의 모래</td><td>Desert Major<br><span style="color:#665f56">대상 5종 / 이속 +2% x5 / 간격 -4% x5</span></td></tr>
+<tr><td>(-3, -1)</td><td>Volcano</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+6</td><td>석재, 현자의 돌</td><td>Volcano Standard<br><span style="color:#665f56">대상 5종 / 체력 +1% x5 / 공격 +2% x5</span></td></tr>
+<tr><td>(-2, -1)</td><td>Volcano</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+5</td><td>석재, 현자의 돌</td><td>Volcano Minor<br><span style="color:#665f56">대상 5종 / 공격 +2% x5</span></td></tr>
+<tr><td>(0, -1)</td><td>Grass</td><td>Visible</td><td class="right">인구 5<br>식량 5 / 목재 20 / 석재 15<br>1일</td><td class="right">+3</td><td>식량, 목재</td><td>강화 없음<br><span style="color:#665f56">강화 없음</span></td></tr>
+<tr><td>(2, -1)</td><td>Desert</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>4일</td><td class="right">+5</td><td>석재, 시간의 모래</td><td>Desert Minor<br><span style="color:#665f56">대상 5종 / 이속 +1% x5 / 간격 -2% x5</span></td></tr>
+<tr><td>(3, -1)</td><td>Desert</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>4일</td><td class="right">+6</td><td>석재, 시간의 모래</td><td>Desert Standard<br><span style="color:#665f56">대상 5종 / 이속 +2% x5 / 간격 -2% x5</span></td></tr>
+<tr><td>(-4, 0)</td><td>Rock</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>2일</td><td class="right">+7</td><td>석재, 현자의 돌</td><td>Rock Major AirReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 체력 +4% x5 / 실드 +4% x1</span></td></tr>
+<tr><td>(-3, 0)</td><td>Volcano</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+6</td><td>석재, 현자의 돌</td><td>Volcano Standard<br><span style="color:#665f56">대상 5종 / 체력 +1% x5 / 공격 +2% x5</span></td></tr>
+<tr><td>(-2, 0)</td><td>Volcano</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>2일</td><td class="right">+5</td><td>석재, 현자의 돌</td><td>Volcano Minor<br><span style="color:#665f56">대상 5종 / 공격 +2% x5</span></td></tr>
+<tr><td>(-1, 0)</td><td>Grass</td><td>Visible</td><td class="right">인구 5<br>식량 5 / 목재 20 / 석재 15<br>1일</td><td class="right">+3</td><td>식량, 목재</td><td>강화 없음<br><span style="color:#665f56">강화 없음</span></td></tr>
+<tr><td>(0, 0)</td><td>Grass</td><td>Conquered</td><td class="right">인구 5<br>식량 5 / 목재 20 / 석재 15<br>1일</td><td class="right">+0</td><td>식량, 목재</td><td>강화 없음<br><span style="color:#665f56">강화 없음</span></td></tr>
+<tr><td>(1, 0)</td><td>Grass</td><td>Visible</td><td class="right">인구 5<br>식량 5 / 목재 20 / 석재 15<br>1일</td><td class="right">+3</td><td>식량, 목재</td><td>강화 없음<br><span style="color:#665f56">강화 없음</span></td></tr>
+<tr><td>(2, 0)</td><td>Desert</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+5</td><td>석재, 시간의 모래</td><td>Desert Minor BasicReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 이속 +1% x5 / 간격 -2% x5</span></td></tr>
+<tr><td>(3, 0)</td><td>Desert</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>4일</td><td class="right">+6</td><td>석재, 시간의 모래</td><td>Desert Standard AttackReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 이속 +2% x5 / 간격 -2% x5</span></td></tr>
+<tr><td>(4, 0)</td><td>Snow</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+7</td><td>석재, 시간의 모래</td><td>Snow Major<br><span style="color:#665f56">대상 5종 / 체력 +3% x4 / 체력 +2% x1 / 공격 +2% x4 / 공격 +1% x1</span></td></tr>
+<tr><td>(-3, 1)</td><td>Rock</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>2일</td><td class="right">+6</td><td>석재, 현자의 돌</td><td>Rock Standard<br><span style="color:#665f56">대상 5종 / 체력 +3% x5 / 실드 +2% x1</span></td></tr>
+<tr><td>(-2, 1)</td><td>Rock</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>2일</td><td class="right">+5</td><td>석재, 현자의 돌</td><td>Rock Minor<br><span style="color:#665f56">대상 5종 / 체력 +2% x5</span></td></tr>
+<tr><td>(0, 1)</td><td>Grass</td><td>Visible</td><td class="right">인구 5<br>식량 5 / 목재 20 / 석재 15<br>1일</td><td class="right">+3</td><td>식량, 목재</td><td>강화 없음<br><span style="color:#665f56">강화 없음</span></td></tr>
+<tr><td>(2, 1)</td><td>Snow</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+5</td><td>석재, 시간의 모래</td><td>Snow Minor<br><span style="color:#665f56">대상 5종 / 체력 +1% x5 / 공격 +1% x5</span></td></tr>
+<tr><td>(3, 1)</td><td>Snow</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+6</td><td>석재, 시간의 모래</td><td>Snow Standard<br><span style="color:#665f56">대상 5종 / 체력 +2% x5 / 공격 +1% x5</span></td></tr>
+<tr><td>(-3, 2)</td><td>Rock</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>2일</td><td class="right">+7</td><td>석재, 현자의 돌</td><td>Rock Major<br><span style="color:#665f56">대상 5종 / 체력 +4% x4 / 체력 +2% x1 / 실드 +4% x1</span></td></tr>
+<tr><td>(-1, 2)</td><td>Rock</td><td>Hidden</td><td class="right">인구 10<br>식량 15 / 목재 45 / 석재 55<br>2일</td><td class="right">+5</td><td>식량, 목재, 석재, 눈의 결정</td><td>Rock Minor<br><span style="color:#665f56">대상 5종 / 체력 +2% x5</span></td></tr>
+<tr><td>(0, 2)</td><td>Rock</td><td>Hidden</td><td class="right">인구 10<br>식량 15 / 목재 45 / 석재 55<br>1일</td><td class="right">+5</td><td>식량, 목재, 석재, 눈의 결정</td><td>Rock Minor<br><span style="color:#665f56">대상 5종 / 체력 +2% x5</span></td></tr>
+<tr><td>(1, 2)</td><td>Snow</td><td>Hidden</td><td class="right">인구 10<br>식량 15 / 목재 45 / 석재 55<br>3일</td><td class="right">+5</td><td>식량, 목재, 석재, 눈의 결정</td><td>Snow Minor BasicReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 체력 +1% x5 / 공격 +1% x5</span></td></tr>
+<tr><td>(3, 2)</td><td>Snow</td><td>Hidden</td><td class="right">인구 8<br>식량 10 / 목재 30 / 석재 30<br>3일</td><td class="right">+7</td><td>석재, 시간의 모래</td><td>Snow Major AirReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 체력 +3% x5 / 공격 +2% x5</span></td></tr>
+<tr><td>(-2, 3)</td><td>Rock</td><td>Hidden</td><td class="right">인구 10<br>식량 15 / 목재 45 / 석재 55<br>2일</td><td class="right">+7</td><td>식량, 목재, 석재, 눈의 결정</td><td>Rock Major<br><span style="color:#665f56">대상 5종 / 체력 +4% x4 / 체력 +2% x1 / 실드 +4% x1</span></td></tr>
+<tr><td>(-1, 3)</td><td>Rock</td><td>Hidden</td><td class="right">인구 10<br>식량 15 / 목재 45 / 석재 55<br>2일</td><td class="right">+6</td><td>식량, 목재, 석재, 눈의 결정</td><td>Rock Standard<br><span style="color:#665f56">대상 5종 / 체력 +3% x5 / 실드 +2% x1</span></td></tr>
+<tr><td>(0, 3)</td><td>Rock</td><td>Hidden</td><td class="right">인구 10<br>식량 15 / 목재 45 / 석재 55<br>2일</td><td class="right">+6</td><td>식량, 목재, 석재, 눈의 결정</td><td>Rock Standard AttackReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 체력 +3% x5 / 실드 +2% x1</span></td></tr>
+<tr><td>(1, 3)</td><td>Snow</td><td>Hidden</td><td class="right">인구 10<br>식량 15 / 목재 45 / 석재 55<br>3일</td><td class="right">+6</td><td>식량, 목재, 석재, 눈의 결정</td><td>Snow Standard<br><span style="color:#665f56">대상 5종 / 체력 +2% x5 / 공격 +1% x5</span></td></tr>
+<tr><td>(2, 3)</td><td>Snow</td><td>Hidden</td><td class="right">인구 10<br>식량 15 / 목재 45 / 석재 55<br>3일</td><td class="right">+7</td><td>식량, 목재, 석재, 눈의 결정</td><td>Snow Major<br><span style="color:#665f56">대상 5종 / 체력 +3% x4 / 체력 +2% x1 / 공격 +2% x4 / 공격 +1% x1</span></td></tr>
+<tr><td>(0, 4)</td><td>Snow</td><td>Hidden</td><td class="right">인구 10<br>식량 15 / 목재 45 / 석재 55<br>3일</td><td class="right">+7</td><td>식량, 목재, 석재, 눈의 결정</td><td>Snow Major RangedReinforcement<br><span style="color:#665f56">대상 5종 / 스폰 +1마리 x1 / 체력 +3% x5 / 공격 +2% x5</span></td></tr>
+</tbody></table></div><div class="panel tablePanel"><h2>프로필별 대상 몬스터</h2>
+<details><summary>Desert Major · Desert · 대상 5종</summary>
+<p>대상 5종 / 이속 +2% x5 / 간격 -4% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Ranged</td><td>이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Ground_Sniper</td><td>이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Ground_DragonHunter</td><td>이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Ground_Elite_DragonHunter</td><td>이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Air_Sniper</td><td>이속 +2%, 간격 -4%</td></tr>
+</tbody></table></details>
+<details><summary>Desert Major AirReinforcement · Desert · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 이속 +2% x5 / 간격 -4% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Air_Basic</td><td>스폰 +1, 이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Air_Ranged</td><td>이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Air_Sniper</td><td>이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Ground_Ranged</td><td>이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Ground_Sniper</td><td>이속 +2%, 간격 -4%</td></tr>
+</tbody></table></details>
+<details><summary>Desert Major RangedReinforcement · Desert · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 이속 +2% x5 / 간격 -4% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Ranged</td><td>스폰 +1, 이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Ground_Sniper</td><td>이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Ground_DragonHunter</td><td>이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Air_Basic</td><td>이속 +2%, 간격 -4%</td></tr>
+<tr><td>MD_Air_Sniper</td><td>이속 +2%, 간격 -4%</td></tr>
+</tbody></table></details>
+<details><summary>Desert Minor · Desert · 대상 5종</summary>
+<p>대상 5종 / 이속 +1% x5 / 간격 -2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Ranged</td><td>이속 +1%, 간격 -2%</td></tr>
+<tr><td>MD_Ground_Sniper</td><td>이속 +1%, 간격 -2%</td></tr>
+<tr><td>MD_Ground_DragonHunter</td><td>이속 +1%, 간격 -2%</td></tr>
+<tr><td>MD_Air_Basic</td><td>이속 +1%, 간격 -2%</td></tr>
+<tr><td>MD_Air_Ranged</td><td>이속 +1%, 간격 -2%</td></tr>
+</tbody></table></details>
+<details><summary>Desert Minor BasicReinforcement · Desert · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 이속 +1% x5 / 간격 -2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Basic</td><td>스폰 +1, 이속 +1%, 간격 -2%</td></tr>
+<tr><td>MD_Ground_Ranged</td><td>이속 +1%, 간격 -2%</td></tr>
+<tr><td>MD_Ground_Sniper</td><td>이속 +1%, 간격 -2%</td></tr>
+<tr><td>MD_Ground_DragonHunter</td><td>이속 +1%, 간격 -2%</td></tr>
+<tr><td>MD_Air_Basic</td><td>이속 +1%, 간격 -2%</td></tr>
+</tbody></table></details>
+<details><summary>Desert Standard · Desert · 대상 5종</summary>
+<p>대상 5종 / 이속 +2% x5 / 간격 -2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Ranged</td><td>이속 +2%, 간격 -2%</td></tr>
+<tr><td>MD_Ground_Sniper</td><td>이속 +2%, 간격 -2%</td></tr>
+<tr><td>MD_Ground_DragonHunter</td><td>이속 +2%, 간격 -2%</td></tr>
+<tr><td>MD_Air_Ranged</td><td>이속 +2%, 간격 -2%</td></tr>
+<tr><td>MD_Air_Sniper</td><td>이속 +2%, 간격 -2%</td></tr>
+</tbody></table></details>
+<details><summary>Desert Standard AttackReinforcement · Desert · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 이속 +2% x5 / 간격 -2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Attack</td><td>스폰 +1, 이속 +2%, 간격 -2%</td></tr>
+<tr><td>MD_Ground_Ranged</td><td>이속 +2%, 간격 -2%</td></tr>
+<tr><td>MD_Ground_Sniper</td><td>이속 +2%, 간격 -2%</td></tr>
+<tr><td>MD_Air_Ranged</td><td>이속 +2%, 간격 -2%</td></tr>
+<tr><td>MD_Air_Sniper</td><td>이속 +2%, 간격 -2%</td></tr>
+</tbody></table></details>
+<details><summary>Rock Major · Rock · 대상 5종</summary>
+<p>대상 5종 / 체력 +4% x4 / 체력 +2% x1 / 실드 +4% x1</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Tank</td><td>체력 +4%</td></tr>
+<tr><td>MD_Ground_StoneArmor</td><td>체력 +4%, 실드 +4%</td></tr>
+<tr><td>MD_Ground_ShieldGenerator</td><td>체력 +4%</td></tr>
+<tr><td>MD_Ground_Elite_VoidShell</td><td>체력 +4%</td></tr>
+<tr><td>MD_Boss_3</td><td>체력 +2%</td></tr>
+</tbody></table></details>
+<details><summary>Rock Major AirReinforcement · Rock · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 체력 +4% x5 / 실드 +4% x1</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Air_Basic</td><td>스폰 +1, 체력 +4%</td></tr>
+<tr><td>MD_Air_Ranged</td><td>체력 +4%</td></tr>
+<tr><td>MD_Ground_Tank</td><td>체력 +4%</td></tr>
+<tr><td>MD_Ground_StoneArmor</td><td>체력 +4%, 실드 +4%</td></tr>
+<tr><td>MD_Ground_ShieldGenerator</td><td>체력 +4%</td></tr>
+</tbody></table></details>
+<details><summary>Rock Major RangedReinforcement · Rock · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 체력 +4% x5 / 실드 +4% x1</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Ranged</td><td>스폰 +1, 체력 +4%</td></tr>
+<tr><td>MD_Ground_Sniper</td><td>체력 +4%</td></tr>
+<tr><td>MD_Ground_Tank</td><td>체력 +4%</td></tr>
+<tr><td>MD_Ground_StoneArmor</td><td>체력 +4%, 실드 +4%</td></tr>
+<tr><td>MD_Ground_ShieldGenerator</td><td>체력 +4%</td></tr>
+</tbody></table></details>
+<details><summary>Rock Minor · Rock · 대상 5종</summary>
+<p>대상 5종 / 체력 +2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Basic</td><td>체력 +2%</td></tr>
+<tr><td>MD_Ground_Tank</td><td>체력 +2%</td></tr>
+<tr><td>MD_Ground_StoneArmor</td><td>체력 +2%</td></tr>
+<tr><td>MD_Ground_ShieldGenerator</td><td>체력 +2%</td></tr>
+<tr><td>MD_Ground_Paladin</td><td>체력 +2%</td></tr>
+</tbody></table></details>
+<details><summary>Rock Minor BasicReinforcement · Rock · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 체력 +2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Basic</td><td>스폰 +1, 체력 +2%</td></tr>
+<tr><td>MD_Ground_Tank</td><td>체력 +2%</td></tr>
+<tr><td>MD_Ground_StoneArmor</td><td>체력 +2%</td></tr>
+<tr><td>MD_Ground_ShieldGenerator</td><td>체력 +2%</td></tr>
+<tr><td>MD_Ground_Paladin</td><td>체력 +2%</td></tr>
+</tbody></table></details>
+<details><summary>Rock Standard · Rock · 대상 5종</summary>
+<p>대상 5종 / 체력 +3% x5 / 실드 +2% x1</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Tank</td><td>체력 +3%</td></tr>
+<tr><td>MD_Ground_StoneArmor</td><td>체력 +3%, 실드 +2%</td></tr>
+<tr><td>MD_Ground_ShieldGenerator</td><td>체력 +3%</td></tr>
+<tr><td>MD_Ground_Elite_VoidShell</td><td>체력 +3%</td></tr>
+<tr><td>MD_Ground_Paladin</td><td>체력 +3%</td></tr>
+</tbody></table></details>
+<details><summary>Rock Standard AttackReinforcement · Rock · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 체력 +3% x5 / 실드 +2% x1</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Attack</td><td>스폰 +1, 체력 +3%</td></tr>
+<tr><td>MD_Ground_Tank</td><td>체력 +3%</td></tr>
+<tr><td>MD_Ground_StoneArmor</td><td>체력 +3%, 실드 +2%</td></tr>
+<tr><td>MD_Ground_ShieldGenerator</td><td>체력 +3%</td></tr>
+<tr><td>MD_Ground_Elite</td><td>체력 +3%</td></tr>
+</tbody></table></details>
+<details><summary>Snow Major · Snow · 대상 5종</summary>
+<p>대상 5종 / 체력 +3% x4 / 체력 +2% x1 / 공격 +2% x4 / 공격 +1% x1</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Healer</td><td>체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Protector</td><td>체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Paladin</td><td>체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Elite_DragonHunter</td><td>체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Boss_4</td><td>체력 +2%, 공격 +1%</td></tr>
+</tbody></table></details>
+<details><summary>Snow Major AirReinforcement · Snow · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 체력 +3% x5 / 공격 +2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Air_Basic</td><td>스폰 +1, 체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Air_Ranged</td><td>체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Air_Sniper</td><td>체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Healer</td><td>체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Protector</td><td>체력 +3%, 공격 +2%</td></tr>
+</tbody></table></details>
+<details><summary>Snow Major RangedReinforcement · Snow · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 체력 +3% x5 / 공격 +2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Ranged</td><td>스폰 +1, 체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Sniper</td><td>체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_DragonHunter</td><td>체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Healer</td><td>체력 +3%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Elite_DragonHunter</td><td>체력 +3%, 공격 +2%</td></tr>
+</tbody></table></details>
+<details><summary>Snow Minor · Snow · 대상 5종</summary>
+<p>대상 5종 / 체력 +1% x5 / 공격 +1% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Healer</td><td>체력 +1%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Protector</td><td>체력 +1%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Paladin</td><td>체력 +1%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Immune_Ice</td><td>체력 +1%, 공격 +1%</td></tr>
+<tr><td>MD_Air_Sniper</td><td>체력 +1%, 공격 +1%</td></tr>
+</tbody></table></details>
+<details><summary>Snow Minor BasicReinforcement · Snow · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 체력 +1% x5 / 공격 +1% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Basic</td><td>스폰 +1, 체력 +1%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Healer</td><td>체력 +1%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Protector</td><td>체력 +1%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Paladin</td><td>체력 +1%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Immune_Ice</td><td>체력 +1%, 공격 +1%</td></tr>
+</tbody></table></details>
+<details><summary>Snow Standard · Snow · 대상 5종</summary>
+<p>대상 5종 / 체력 +2% x5 / 공격 +1% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Healer</td><td>체력 +2%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Protector</td><td>체력 +2%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Paladin</td><td>체력 +2%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Elite_DragonHunter</td><td>체력 +2%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Immune_Ice</td><td>체력 +2%, 공격 +1%</td></tr>
+</tbody></table></details>
+<details><summary>Snow Standard AttackReinforcement · Snow · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 체력 +2% x5 / 공격 +1% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Attack</td><td>스폰 +1, 체력 +2%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Healer</td><td>체력 +2%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Protector</td><td>체력 +2%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Paladin</td><td>체력 +2%, 공격 +1%</td></tr>
+<tr><td>MD_Ground_Elite_DragonHunter</td><td>체력 +2%, 공격 +1%</td></tr>
+</tbody></table></details>
+<details><summary>Volcano Major · Volcano · 대상 5종</summary>
+<p>대상 5종 / 체력 +2% x5 / 공격 +4% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Attack</td><td>체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Ground_Destroyer</td><td>체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Ground_Bomber</td><td>체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Ground_Elite</td><td>체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Ground_Elite_DragonHunter</td><td>체력 +2%, 공격 +4%</td></tr>
+</tbody></table></details>
+<details><summary>Volcano Major AirReinforcement · Volcano · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 체력 +2% x5 / 공격 +4% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Air_Basic</td><td>스폰 +1, 체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Air_Ranged</td><td>체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Air_Sniper</td><td>체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Ground_Attack</td><td>체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Ground_Bomber</td><td>체력 +2%, 공격 +4%</td></tr>
+</tbody></table></details>
+<details><summary>Volcano Major RangedReinforcement · Volcano · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 체력 +2% x5 / 공격 +4% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Ranged</td><td>스폰 +1, 체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Ground_DragonHunter</td><td>체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Ground_Elite_DragonHunter</td><td>체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Ground_Destroyer</td><td>체력 +2%, 공격 +4%</td></tr>
+<tr><td>MD_Ground_Bomber</td><td>체력 +2%, 공격 +4%</td></tr>
+</tbody></table></details>
+<details><summary>Volcano Minor · Volcano · 대상 5종</summary>
+<p>대상 5종 / 공격 +2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Attack</td><td>공격 +2%</td></tr>
+<tr><td>MD_Ground_Destroyer</td><td>공격 +2%</td></tr>
+<tr><td>MD_Ground_Bomber</td><td>공격 +2%</td></tr>
+<tr><td>MD_Ground_Paralyzer</td><td>공격 +2%</td></tr>
+<tr><td>MD_Ground_Elite</td><td>공격 +2%</td></tr>
+</tbody></table></details>
+<details><summary>Volcano Minor BasicReinforcement · Volcano · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 공격 +2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Basic</td><td>스폰 +1, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Attack</td><td>공격 +2%</td></tr>
+<tr><td>MD_Ground_Destroyer</td><td>공격 +2%</td></tr>
+<tr><td>MD_Ground_Bomber</td><td>공격 +2%</td></tr>
+<tr><td>MD_Ground_Elite</td><td>공격 +2%</td></tr>
+</tbody></table></details>
+<details><summary>Volcano Standard · Volcano · 대상 5종</summary>
+<p>대상 5종 / 체력 +1% x5 / 공격 +2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Attack</td><td>체력 +1%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Destroyer</td><td>체력 +1%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Bomber</td><td>체력 +1%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Elite</td><td>체력 +1%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_DragonHunter</td><td>체력 +1%, 공격 +2%</td></tr>
+</tbody></table></details>
+<details><summary>Volcano Standard AttackReinforcement · Volcano · 대상 5종</summary>
+<p>대상 5종 / 스폰 +1마리 x1 / 체력 +1% x5 / 공격 +2% x5</p><table><thead><tr><th>몬스터</th><th>효과</th></tr></thead><tbody>
+<tr><td>MD_Ground_Attack</td><td>스폰 +1, 체력 +1%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Destroyer</td><td>체력 +1%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Bomber</td><td>체력 +1%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Elite</td><td>체력 +1%, 공격 +2%</td></tr>
+<tr><td>MD_Ground_Paralyzer</td><td>체력 +1%, 공격 +2%</td></tr>
+</tbody></table></details>
+</div></section></main></body></html>

@@ -86,7 +86,7 @@ public class UI_DragonSkillNode : MonoBehaviour
         DragonSkillNodeData node,
         ProgressionNodeState state,
         Color attributeColor,
-        Sprite kinIcon,
+        Sprite centerIcon,
         string badgeText,
         Action<DragonSkillNodeData> onClick)
     {
@@ -111,9 +111,9 @@ public class UI_DragonSkillNode : MonoBehaviour
 
         if (_icon != null)
         {
-            bool hasIcon = style.IsKin && kinIcon != null;
+            bool hasIcon = centerIcon != null;
             _icon.gameObject.SetActive(hasIcon);
-            _icon.sprite = kinIcon;
+            _icon.sprite = centerIcon;
             _icon.color = DragonSkillNodePalette.IconColor(state);
         }
 

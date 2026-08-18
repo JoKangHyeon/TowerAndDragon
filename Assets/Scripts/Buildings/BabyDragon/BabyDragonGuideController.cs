@@ -692,7 +692,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         // 새끼용 안내는 전부 눌러보게 하는 단계라 대상을 막지 않는다.
         // 딤과 입력 차단은 넘기지 않는다 - 오버레이가 대상·확인 버튼 유무로 스스로 정한다.
         _overlay.Show(this, GuidePriority.BABY_DRAGON_GUIDE, target, locKey,
-            blocksTargetInteraction: false, showConfirmButton, slot, args);
+            blocksTargetInteraction: false, keepsInputOpen: false, showConfirmButton, slot, args);
     }
 
     // 말풍선 자리는 그 단계가 무엇을 가리지 말아야 하는지로 정한다.

@@ -30,15 +30,19 @@ public class UI_NotificationToast : MonoBehaviour
     public float TotalDuration => _fadeDuration + _showDuration + _fadeDuration;
 
     // 포맷된 결과가 아니라 원재료(키 + 인자)를 쌓는다 - 대기 중에 언어가 바뀌어도 새 언어로 뜬다.
+    // 유지 시간을 메시지마다 들고 있는 이유: 같은 토스트로 나가는 알림이라도 읽는 데 걸리는 시간이 다르다.
+    // 컴포넌트 값 하나로 묶으면 긴 안내에 맞춰 올린 시간이 짧은 알림까지 늘어지게 만든다.
     private readonly struct Message
     {
         public readonly string LocKey;
         public readonly object[] Args;
+        public readonly float ShowDuration;
 
-        public Message(string locKey, object[] args)
+        public Message(string locKey, object[] args, float showDuration)
         {
             LocKey = locKey;
             Args = args;
+            ShowDuration = showDuration;
         }
 
         public string Resolve()
@@ -89,14 +93,22 @@ public class UI_NotificationToast : MonoBehaviour
     }
 
     // 문구는 호출부가 로컬 키로 넘긴다 - 이 컴포넌트는 문자열 리터럴을 갖지 않는다.
-    public void Show(string locKey, params object[] args)
+    public void Show(string locKey, params object[] args) =>
+        ShowFor(_showDuration, locKey, args);
+
+    /// <summary>
+    /// 유지 시간을 그 알림만 따로 정해 띄운다. 한 번 읽고 외워야 하는 조작 안내처럼 기본값으로는
+    /// 너무 빨리 지나가는 문구에 쓴다 - 컴포넌트의 <see cref="_showDuration"/>을 올리면
+    /// 같은 토스트로 나가는 다른 알림까지 함께 늘어진다.
+    /// </summary>
+    public void ShowFor(float showSeconds, string locKey, params object[] args)
     {
         if (_messageRoot == null || _messageText == null)
         {
             return;
         }
 
-        _pendingMessages.Enqueue(new Message(locKey, args));
+        _pendingMessages.Enqueue(new Message(locKey, args, showSeconds));
 
         if (!_isShowing)
         {
@@ -125,7 +137,7 @@ public class UI_NotificationToast : MonoBehaviour
             // 일시정지(Time.timeScale == 0) 중에도 알림 토스트는 정상적으로 페이드 인/아웃되어야 한다.
             .SetUpdate(true)
             .Append(_messageGroup.DOFade(1f, _fadeDuration))
-            .AppendInterval(_showDuration)
+            .AppendInterval(_currentMessage.ShowDuration)
             .Append(_messageGroup.DOFade(0f, _fadeDuration))
             .OnComplete(() =>
             {

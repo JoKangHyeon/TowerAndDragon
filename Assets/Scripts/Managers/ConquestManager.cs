@@ -5,6 +5,8 @@ using UnityEngine.Events;
 public class ConquestManager : MonoBehaviour
 {
     private const int MINIMUM_DAYS_REQUIRED = 1;
+    private const int DEFAULT_NEAR_CASTLE_DISTANCE_THRESHOLD = 2;
+    private const int DEFAULT_NEAR_CASTLE_DAYS_REDUCTION = 1;
 
     // 코디네이터(ConquestResearchCoordinator)가 배선한다 - 배선되지 않은 씬에서는 null로 남아
     // 할인·기간감소가 적용되지 않는다(기존 동작 유지).
@@ -24,6 +26,15 @@ public class ConquestManager : MonoBehaviour
 
     [SerializeField]
     private ConquestChunkCostTable _chunkCostTable;
+
+    [SerializeField]
+    private Vector2Int _castleChunkCoord = Vector2Int.zero;
+
+    [SerializeField]
+    private int _nearCastleDistanceThreshold = DEFAULT_NEAR_CASTLE_DISTANCE_THRESHOLD;
+
+    [SerializeField]
+    private int _nearCastleDaysReduction = DEFAULT_NEAR_CASTLE_DAYS_REDUCTION;
 
     private readonly List<ConquestExpedition> _activeExpeditions = new();
     public IReadOnlyList<ConquestExpedition> ActiveExpeditions => _activeExpeditions;
@@ -82,7 +93,9 @@ public class ConquestManager : MonoBehaviour
     public int GetDaysRequired(Vector2Int chunkCoord)
     {
         Chunk chunk = _gridMap.GetChunk(chunkCoord);
-        return ResolveDaysRequired(_durationTable.ResolveDaysRequired(chunk.DominantTerrain));
+        return ResolveDaysRequired(
+            chunkCoord,
+            _durationTable.ResolveDaysRequired(chunk.DominantTerrain));
     }
 
     private ResourceCost ApplyCostReduction(ResourceCost baseCost)
@@ -102,10 +115,17 @@ public class ConquestManager : MonoBehaviour
     private static int ReduceAmount(int amount, float reductionRatio) =>
         Mathf.Max(0, Mathf.RoundToInt(amount * (1f - reductionRatio)));
 
-    private int ResolveDaysRequired(int baseDaysRequired)
+    private int ResolveDaysRequired(Vector2Int targetChunkCoord, int baseDaysRequired)
     {
         int daysReduction = ResearchModifierQuery?.GetConquestDaysReduction() ?? 0;
-        return Mathf.Max(MINIMUM_DAYS_REQUIRED, baseDaysRequired - daysReduction);
+        return ConquestDurationRules.ResolveDaysRequired(
+            baseDaysRequired,
+            daysReduction,
+            targetChunkCoord,
+            _castleChunkCoord,
+            _nearCastleDistanceThreshold,
+            _nearCastleDaysReduction,
+            MINIMUM_DAYS_REQUIRED);
     }
 
     public EnemyEnhancementProfileSO PreviewEnemyEnhancementProfile(Vector2Int chunkCoord) =>
@@ -197,7 +217,9 @@ public class ConquestManager : MonoBehaviour
         }
 
         Chunk chunk = _gridMap.GetChunk(targetChunkCoord);
-        int daysRequired = ResolveDaysRequired(_durationTable.ResolveDaysRequired(chunk.DominantTerrain));
+        int daysRequired = ResolveDaysRequired(
+            targetChunkCoord,
+            _durationTable.ResolveDaysRequired(chunk.DominantTerrain));
 
         _activeExpeditions.Add(new ConquestExpedition(targetChunkCoord, cost, daysRequired));
         OnExpeditionSent?.Invoke(targetChunkCoord, cost);
