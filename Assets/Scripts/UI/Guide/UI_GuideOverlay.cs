@@ -23,6 +23,13 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     private const float DEFAULT_PULSE_SCALE = 1.06f;
     private const float HALF = 0.5f;
 
+    // 1920 기준 화면의 절반가량. 말풍선이 화면을 가로지르지 않으면서 문단도 서너 줄로 접힌다.
+    private const float DEFAULT_BUBBLE_MAX_WIDTH = 900f;
+
+    // GetPreferredValues에 넘길 "제한 없음". <b>0을 넘기면 제한 없음이 아니라 0으로 제한된다</b> -
+    // 그래서 폭을 0으로 물었을 때 짧은 문구가 몇십 픽셀로, 높이를 0으로 물었을 때 세 줄로 나왔다.
+    private const float UNCONSTRAINED_SIZE = 100000f;
+
     private static readonly Vector2 CENTER_PIVOT = new Vector2(HALF, HALF);
 
     [Tooltip("화면 전체를 덮는 루트. 딤 패널 4장이 이 밑에 런타임 생성된다. " +
@@ -33,6 +40,10 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
              "아래 지정한 자리로 옮긴다. _overlayRoot의 자식이어야 한다.")]
     [SerializeField] private RectTransform _bubbleRoot;
     [SerializeField] private TMP_Text _bubbleText;
+
+    [Tooltip("말풍선 글상자의 최대 폭(px). 이보다 길어지는 문구만 줄바꿈해 접는다. " +
+             "0이면 제한하지 않는다(예전 동작).")]
+    [SerializeField] private float _bubbleMaxWidth = DEFAULT_BUBBLE_MAX_WIDTH;
 
     [Tooltip("말풍선을 옮길 위치 표식(빈 RectTransform). 그리드를 가리면 안 되는 단계에 쓴다. " +
              "비워두면 그 슬롯을 요구해도 기본 자리에 그대로 뜬다.")]
@@ -253,6 +264,61 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
         _bubbleText.text = _currentArgs == null || _currentArgs.Length == 0
             ? raw
             : string.Format(raw, _currentArgs);
+
+        ClampBubbleWidth();
+    }
+
+    /// <summary>
+    /// 말풍선이 화면 밖으로 뻗지 않게 폭을 제한한다.
+    ///
+    /// 말풍선 루트는 ContentSizeFitter로 내용에 맞춰 늘어나고 글상자는 줄바꿈이 꺼져 있다.
+    /// 한 줄짜리 안내에서는 이것이 딱 맞는 설정이지만, 문단이 들어오면 글이 한 줄로 뻗어
+    /// 말풍선이 화면 폭을 넘고 <b>확인 버튼이 화면 밖으로 밀려난다</b> - 실제로 그렇게 갇혔다.
+    ///
+    /// 짧은 문구는 손대지 않는다. 자연 폭이 상한 안에 들어오면 그 폭을 그대로 선호 폭으로 넘기므로
+    /// 지금까지의 말풍선 모양이 하나도 바뀌지 않고, 넘칠 때만 줄바꿈이 켜지며 접힌다.
+    /// </summary>
+    private void ClampBubbleWidth()
+    {
+        if (_bubbleMaxWidth <= 0f)
+        {
+            return;
+        }
+
+        var textRect = _bubbleText.transform as RectTransform;
+
+        if (textRect == null)
+        {
+            return;
+        }
+
+        // 재기 전에 줄바꿈을 반드시 꺼 둔다. 이 컴포넌트는 안내마다 재사용되므로 앞 문구가 켜 둔
+        // 줄바꿈이 남아 있으면 자연 폭 대신 "좁게 접었을 때의 폭"이 나온다 -
+        // 짧은 문구가 몇십 픽셀로 찌그러진다.
+        _bubbleText.enableWordWrapping = false;
+
+        float naturalWidth = _bubbleText
+            .GetPreferredValues(_bubbleText.text, UNCONSTRAINED_SIZE, UNCONSTRAINED_SIZE).x;
+
+        bool needsWrap = naturalWidth > _bubbleMaxWidth;
+
+        _bubbleText.enableWordWrapping = needsWrap;
+
+        var element = _bubbleText.GetComponent<LayoutElement>();
+
+        if (element == null)
+        {
+            element = _bubbleText.gameObject.AddComponent<LayoutElement>();
+        }
+
+        float width = needsWrap ? _bubbleMaxWidth : naturalWidth;
+        element.preferredWidth = width;
+
+        // 높이도 <b>같은 폭에서 잰 값</b>으로 함께 못박는다. 폭만 정하면 레이아웃이 글상자에 물어보는
+        // 선호 높이가 그때의 rect 폭 기준이라, 접힌 뒤의 실제 높이와 어긋나 글이 상자를 넘고
+        // 아래 버튼 위로 겹쳐 그려진다.
+        element.preferredHeight = _bubbleText
+            .GetPreferredValues(_bubbleText.text, width, UNCONSTRAINED_SIZE).y;
     }
 
     private void KillPulses()

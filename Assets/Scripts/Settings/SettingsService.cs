@@ -23,6 +23,7 @@ public class SettingsService : MonoBehaviour
     private const string FULL_SCREEN_PREF_KEY = "settings_full_screen";
     private const string LANGUAGE_PREF_KEY = "settings_language";
     private const string KEY_BINDINGS_PREF_KEY = "settings_key_bindings";
+    private const string GUIDE_LEVEL_PREF_KEY = "settings_guide_level";
 
     // AudioMixer에 노출된 파라미터 이름. Assets/AudioMixer.mixer의 m_ExposedParameters와 일치해야 한다.
     private const string MASTER_VOLUME_MIXER_PARAM = "MasterVolume";
@@ -65,6 +66,15 @@ public class SettingsService : MonoBehaviour
     /// <summary>키 바인딩이 바뀌었을 때(리바인딩·기본값 복원) 발화한다. UI가 표기를 다시 그린다.</summary>
     public event Action OnKeyBindingsChanged;
 
+    /// <summary>가이드 수준이 바뀌었다. 퀘스트 목록·카드가 이걸 듣고 즉시 표시를 바꾼다.</summary>
+    public event Action OnGuideLevelChanged;
+
+    /// <summary>
+    /// 가이드 퀘스트를 얼마나 보여줄지. 런이 아니라 <b>플레이어 설정</b>이므로 여기(PlayerPrefs)에 둔다 -
+    /// 새 게임을 시작해도 이전에 고른 수준이 그대로 이어지고, 세이브에는 "조언자에게 답했는가"만 남는다.
+    /// </summary>
+    public GuideLevel Guide { get; private set; } = GuideLevel.Full;
+
     private readonly Dictionary<AudioChannel, float> _volumes = new();
     private readonly List<Vector2Int> _resolutions = new();
 
@@ -97,6 +107,7 @@ public class SettingsService : MonoBehaviour
         BuildResolutionList();
         LoadDisplay();
         LoadKeyBindings();
+        LoadGuideLevel();
     }
 
     private void Start()
@@ -198,6 +209,29 @@ public class SettingsService : MonoBehaviour
         _inputActions.RemoveAllBindingOverrides();
         PlayerPrefs.DeleteKey(KEY_BINDINGS_PREF_KEY);
         OnKeyBindingsChanged?.Invoke();
+    }
+
+    /// <summary>가이드 수준을 바꾼다. 조언자 퀘스트의 선택지와 설정 창이 함께 쓴다.</summary>
+    public void SetGuideLevel(GuideLevel level)
+    {
+        if (Guide == level)
+        {
+            return;
+        }
+
+        Guide = level;
+        PlayerPrefs.SetInt(GUIDE_LEVEL_PREF_KEY, (int)level);
+        OnGuideLevelChanged?.Invoke();
+    }
+
+    // 다른 설정과 달리 적용할 시스템이 없어 Start를 기다리지 않는다 - 값을 읽어 두기만 하면 되고,
+    // 구독자(GuideQuestController)가 Awake에서 이 값을 물어볼 수 있어야 한다.
+    private void LoadGuideLevel()
+    {
+        int stored = PlayerPrefs.GetInt(GUIDE_LEVEL_PREF_KEY, (int)GuideLevel.Full);
+
+        // 저장값이 지금 없는 수준을 가리키면(값이 지워졌거나 손상) 기본값으로 되돌린다.
+        Guide = Enum.IsDefined(typeof(GuideLevel), stored) ? (GuideLevel)stored : GuideLevel.Full;
     }
 
     public void Save()

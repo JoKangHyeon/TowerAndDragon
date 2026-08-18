@@ -42,6 +42,7 @@ public sealed class SaveGameDto
     public MapStateDto Map;
     public CastleStateDto Castle;
     public LandmarkStateDto Landmarks;
+    public GuideQuestStateDto GuideQuests;
 
     /// <summary>
     /// 복원 착수 전에 부르는 유일한 검증 지점. 한 번 복원을 시작하면 여러 매니저에 이미 쓴 뒤라
@@ -81,6 +82,9 @@ public sealed class SaveGameDto
         // 랜드마크 도입 전에 저장된 슬롯에는 이 필드가 없다 - 빈 상태로 채워 하위 호환을 유지한다.
         Landmarks ??= new LandmarkStateDto();
 
+        // 가이드 퀘스트 도입 전에 저장된 슬롯에도 이 필드가 없다 - 같은 이유로 빈 상태로 채운다.
+        GuideQuests ??= new GuideQuestStateDto();
+
         Run.Normalize();
         Resources.Normalize();
         Population.Normalize();
@@ -90,6 +94,7 @@ public sealed class SaveGameDto
         Map.Normalize();
         Castle.Normalize();
         Landmarks.Normalize();
+        GuideQuests.Normalize();
 
         // 건물의 새끼용 인덱스는 Run.Normalize가 인벤토리를 확정한 뒤에야 검증할 수 있다.
         Map.NormalizeBabyDragonReferences(Run.BabyDragons.Count);
@@ -370,6 +375,28 @@ public sealed class LandmarkOperationDto
     public void Normalize()
     {
         AssignedPopulation = Mathf.Max(0, AssignedPopulation);
+    }
+}
+
+/// <summary>
+/// 가이드 퀘스트 진행도. 랜드마크와 같은 방식으로 <b>필드 추가만</b> 하므로
+/// SaveSchema.CURRENT_VERSION은 올리지 않는다 - 이 필드가 없던 세이브는 빈 상태로 접힌다(규약 2).
+///
+/// 가이드 <b>수준</b>은 여기 없다. 그것은 런이 아니라 플레이어 설정이라
+/// SettingsService의 PlayerPrefs에 있다 - 새 게임을 시작해도 이어져야 하기 때문이다.
+/// </summary>
+public sealed class GuideQuestStateDto
+{
+    /// <summary>완료한 퀘스트의 QuestId.</summary>
+    public List<string> CompletedQuestIds;
+
+    /// <summary>조언자 카드에 이미 답했는가. 이 런에서 카드를 다시 띄우지 않는 기준이다.</summary>
+    public bool IsIntroAnswered;
+
+    public void Normalize()
+    {
+        CompletedQuestIds ??= new List<string>();
+        CompletedQuestIds.RemoveAll(string.IsNullOrWhiteSpace);
     }
 }
 

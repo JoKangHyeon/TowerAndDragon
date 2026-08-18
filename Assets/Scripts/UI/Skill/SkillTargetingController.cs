@@ -36,6 +36,13 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
     [Tooltip("타겟팅 중 같은 좌클릭이 건물 배치/선택으로도 처리되지 않도록 입력을 억제할 대상.")]
     [SerializeField] private BuildingPlacementController _buildingPlacementController;
 
+    /// <summary>
+    /// 스킬이 실제로 발동됐다. 발동 경로가 즉시·지점·적 셋으로 갈려 있으므로 이 이벤트는
+    /// <see cref="ActivateSkill"/> 한곳에서만 발화한다 - 경로가 늘어도 여기만 지나면 따라온다.
+    /// (가이드 퀘스트가 "밤에 용 스킬을 써 봤는가"를 이 신호로 판정한다.)
+    /// </summary>
+    public UnityEngine.Events.UnityEvent<Skill> SkillUsed = new();
+
     private Camera _cam;
     private Skill _pendingSkill;
     private BaseMonster _hoveredEnemy;
@@ -89,7 +96,7 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
 
         if (skill.Targeting == SkillTargeting.Instant)
         {
-            skill.Activate(new SkillCastContext(
+            ActivateSkill(skill, new SkillCastContext(
                 Vector3.zero,
                 null,
                 CasterObject,
@@ -223,7 +230,7 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
         Skill skill = _pendingSkill;
         Vector3 snappedPoint = skill.GetTargetCenter(worldPoint);
         CancelTargeting();
-        skill.Activate(new SkillCastContext(snappedPoint, null, CasterObject));
+        ActivateSkill(skill, new SkillCastContext(snappedPoint, null, CasterObject));
     }
 
     private void ConfirmEnemy(Vector3 worldPoint, BaseMonster target)
@@ -234,7 +241,14 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
 
         Skill skill = _pendingSkill;
         CancelTargeting();
-        skill.Activate(new SkillCastContext(worldPoint, target, CasterObject));
+        ActivateSkill(skill, new SkillCastContext(worldPoint, target, CasterObject));
+    }
+
+    // 발동 경로 세 곳이 반드시 지나는 관문. 여기서만 SkillUsed를 발화한다.
+    private void ActivateSkill(Skill skill, SkillCastContext context)
+    {
+        skill.Activate(context);
+        SkillUsed.Invoke(skill);
     }
 
     private Vector3 GetMouseWorldPoint()

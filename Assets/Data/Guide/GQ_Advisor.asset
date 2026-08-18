@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 377a7482a2d6fb44d816cee0b0bd6a54, type: 3}
+  m_Name: GQ_Advisor
+  m_EditorClassIdentifier: Assembly-CSharp::GuideQuestSO
+  _questId: advisor
+  _titleLocKey: guide_advisor_title
+  _bodyLocKey: guide_advisor_body
+  _tipLocKey: 
+  _recommendedDay: 1
+  _isCoreStep: 0
+  _completionTrigger:
+    _condition: 0
+    _targetMode: 0
+    _targetBuilding: 0
+    _targetFactoryData: {fileID: 0}
+    _targetResource: 0
+    _filterByDragon: 0
+    _targetDragon: 0
+  _requiredCount: 1
+  _choices:
+  - _labelLocKey: guide_advisor_choice_full
+    _setsGuideLevel: 1
+    _guideLevel: 0
+    _rewards: []
+  - _labelLocKey: guide_advisor_choice_tips
+    _setsGuideLevel: 1
+    _guideLevel: 1
+    _rewards: []
+  - _labelLocKey: guide_advisor_choice_off
+    _setsGuideLevel: 1
+    _guideLevel: 2
+    _rewards:
+    - Type: 2
+      Amount: 1
+  _rewards: []
+  _anchorId: 0
