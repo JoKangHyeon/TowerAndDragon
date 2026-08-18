@@ -28,6 +28,16 @@ public static class TutorialTargetMatcher
     }
 
     /// <summary>
+    /// 맵을 덮는 창인지. 이 창이 열려 있는 동안은 맵 위의 대상을 가리켜도 창에 가려 보이지 않고,
+    /// 딤이 창 위에 깔려 클릭도 창 닫기도 막힌다(안내를 보류해야 하는 경우다).
+    ///
+    /// 건설·일꾼·점령은 맵 위에서 조작하는 모드라 여기 넣지 않는다 - 패널이 한쪽에 있을 뿐 대상은 그대로 보인다.
+    /// 넣으면 그 모드에서 건물을 클릭하게 하는 단계가 화면에서 사라진다.
+    /// </summary>
+    public static bool CoversWorld(MonoBehaviour mode) =>
+        mode is UI_ResearchWindow || mode is UI_DragonWindow;
+
+    /// <summary>
     /// 성은 게임 시작 시 RegisterFootprint로 같은 이벤트를 발행하므로(GridMap의 사전 배치 경로),
     /// 종류를 반드시 확인해야 시작 즉시 오발화하지 않는다.
     /// </summary>

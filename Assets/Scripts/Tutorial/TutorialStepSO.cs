@@ -12,6 +12,7 @@ public sealed class TutorialStepSO : ScriptableObject
     // 0을 허용하면 확인 버튼이 없는 지금은 그 단계에서 영영 멈춘다.
     private const float MIN_ACKNOWLEDGE_SECONDS = 0.5f;
     private const int MIN_REQUIRED_POPULATION = 1;
+    private const int MIN_REQUIRED_COUNT = 1;
 
     [Tooltip("진행도 저장 키. 에셋 이름을 바꿔도 진행도가 유지되도록 따로 둔다. 시퀀스 안에서 중복되면 안 된다.")]
     [SerializeField] private string _stepId;
@@ -60,6 +61,19 @@ public sealed class TutorialStepSO : ScriptableObject
     [Min(MIN_REQUIRED_POPULATION)]
     [SerializeField] private int _requiredPopulation = MIN_REQUIRED_POPULATION;
 
+    [Tooltip("BuildingCountReached 조건에서 서 있어야 할 건물 수. 증가분이 아니라 총량이다.")]
+    [Min(MIN_REQUIRED_COUNT)]
+    [SerializeField] private int _requiredCount = MIN_REQUIRED_COUNT;
+
+    [Tooltip("BuildingCountReached 조건에서 정원을 채운 것만 셀지. 타워는 충원율이 곧 화력이라 " +
+             "개수만 채운 것으로는 밤을 넘기는 기준이 되지 않는다.")]
+    [SerializeField] private bool _requiresStaffed;
+
+    [Tooltip("이 배타 창이 이미 열려 있으면 이 단계를 건너뛴다. 창으로 가는 통로를 시키는 단계에 쓴다 - " +
+             "성을 클릭하게 하는 단계인데 플레이어가 이미 용 창에 들어가 있으면, 성 선택이 풀려 있어 " +
+             "조건이 영영 거짓인 채로 딤만 남는다.")]
+    [SerializeField] private TutorialExclusiveModeKind _skipIfModeOpen = TutorialExclusiveModeKind.None;
+
     [Header("Acknowledge 전용")]
     [Tooltip("확인 버튼을 눌러 넘긴다. 읽는 속도는 사람마다 달라 설명형에는 이 방식을 권한다.")]
     [SerializeField] private bool _waitForConfirm = true;
@@ -81,6 +95,9 @@ public sealed class TutorialStepSO : ScriptableObject
     public TutorialBuildingKind TargetBuilding => _targetBuilding;
     public ResourceProductionData TargetFactoryData => _targetFactoryData;
     public int RequiredPopulation => _requiredPopulation;
+    public int RequiredCount => _requiredCount;
+    public bool RequiresStaffed => _requiresStaffed;
+    public TutorialExclusiveModeKind SkipIfModeOpen => _skipIfModeOpen;
     public bool WaitForConfirm => _waitForConfirm;
     public float AutoAdvanceSeconds => _autoAdvanceSeconds;
 
@@ -95,9 +112,11 @@ public sealed class TutorialStepSO : ScriptableObject
             Debug.LogWarning($"[TutorialStepSO] {name}: 진행도 저장 키(_stepId)가 비어 있습니다.", this);
         }
 
-        if (string.IsNullOrWhiteSpace(_messageLocKey))
+        // 문구가 없는 행동형은 '이음매' 컷이다 - 다른 안내가 화면을 쓰는 동안 조건만 기다린다
+        // (TutorialRunner.Render 참고). 설명형은 문구가 곧 내용이므로 비면 뜻이 없다.
+        if (string.IsNullOrWhiteSpace(_messageLocKey) && _kind == TutorialStepKind.Acknowledge)
         {
-            Debug.LogWarning($"[TutorialStepSO] {name}: 문구 키(_messageLocKey)가 비어 있습니다.", this);
+            Debug.LogWarning($"[TutorialStepSO] {name}: 설명형인데 문구 키(_messageLocKey)가 비어 있습니다.", this);
         }
 
         if (_kind == TutorialStepKind.WaitForAction && _condition == TutorialConditionType.None)
@@ -124,7 +143,8 @@ public sealed class TutorialStepSO : ScriptableObject
         }
 
         // 선택 해제·정원 충족은 무엇이 골라져 있는지로 판정하므로 건물 종류가 필요 없다.
-        bool needsBuildingKind = _condition == TutorialConditionType.BuildingConstructed ||
+        bool needsBuildingKind = _condition == TutorialConditionType.BuildingCountReached ||
+                                 _condition == TutorialConditionType.BuildingConstructed ||
                                  _condition == TutorialConditionType.BuildingSelectedForPlacement ||
                                  _condition == TutorialConditionType.BuildingSelectedOnGrid ||
                                  _condition == TutorialConditionType.BuildingRemoved ||
@@ -133,6 +153,13 @@ public sealed class TutorialStepSO : ScriptableObject
         if (needsBuildingKind && _targetBuilding == TutorialBuildingKind.None)
         {
             Debug.LogWarning($"[TutorialStepSO] {name}: 기다릴 건물 종류를 지정하지 않았습니다.", this);
+        }
+
+        // 설명형은 확인 버튼으로 넘어가므로 건너뛸 이유가 없다 - 설정해 두면 의도가 있는 것처럼 보여 헷갈린다.
+        if (_kind == TutorialStepKind.Acknowledge && _skipIfModeOpen != TutorialExclusiveModeKind.None)
+        {
+            Debug.LogWarning(
+                $"[TutorialStepSO] {name}: 설명형에는 건너뛸 배타 모드가 쓰이지 않습니다.", this);
         }
     }
 }

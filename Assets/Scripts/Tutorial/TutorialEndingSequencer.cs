@@ -36,6 +36,13 @@ public sealed class TutorialEndingSequencer : MonoBehaviour
             _gameManager.GameOverOccurred.AddListener(HandleGameOver);
         }
 
+        // 정상 결말은 이쪽이다 - 세 밤을 지켜내면 TutorialDayLoopController가 Victory를 건다.
+        // 위의 게임오버 구독은 성 보호가 어떤 이유로 실패했을 때를 위한 안전망으로 남겨 둔다.
+        if (_gameManager != null && _gameManager.VictoryOccurred != null)
+        {
+            _gameManager.VictoryOccurred.AddListener(HandleGameOver);
+        }
+
         if (_panel != null)
         {
             _panel.NextClicked += HandleNextClicked;
@@ -47,6 +54,11 @@ public sealed class TutorialEndingSequencer : MonoBehaviour
         if (_gameManager != null && _gameManager.GameOverOccurred != null)
         {
             _gameManager.GameOverOccurred.RemoveListener(HandleGameOver);
+        }
+
+        if (_gameManager != null && _gameManager.VictoryOccurred != null)
+        {
+            _gameManager.VictoryOccurred.RemoveListener(HandleGameOver);
         }
 
         if (_panel != null)
