@@ -77,8 +77,8 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 561869287
-  m_SortingLayer: 0
+  m_SortingLayerID: -1328854079
+  m_SortingLayer: 1
   m_SortingOrder: 2
   m_MaskInteraction: 0
   m_Sprite: {fileID: -1869374846, guid: bfdd77a8044e6d24b9c45b0c7c5a6311, type: 3}
@@ -156,6 +156,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e86e13f9fcdec3445a953521c956b4db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Villager
+  _fallbackAnimatorController: {fileID: 9100000, guid: 955cb22c2334b7d408e44fdfe13acd34, type: 2}
 --- !u!114 &3789014069929500205
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -192,7 +193,6 @@ GameObject:
   - component: {fileID: 2348181942215397492}
   - component: {fileID: 6270585473376102288}
   - component: {fileID: 5301671291240810309}
-  - component: {fileID: 6194636759761590854}
   m_Layer: 0
   m_Name: Graphics
   m_TagString: Untagged
@@ -285,7 +285,7 @@ Animator:
   m_GameObject: {fileID: 7148967031010292672}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 2a9aeef69db0c87408c80e98eb079268, type: 2}
+  m_Controller: {fileID: 9100000, guid: 955cb22c2334b7d408e44fdfe13acd34, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -297,17 +297,3 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &6194636759761590854
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7148967031010292672}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6ac3894736ba7d849a9cc7dd8ff15337, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  enemyBehaviour: {fileID: 0}
-  enemyEntity: {fileID: 0}

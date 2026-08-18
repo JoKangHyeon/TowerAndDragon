@@ -534,97 +534,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
---- !u!1 &163258688
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 163258690}
-  - component: {fileID: 163258689}
-  m_Layer: 0
-  m_Name: Square
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!212 &163258689
-SpriteRenderer:
-  serializedVersion: 2
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 163258688}
-  m_Enabled: 1
-  m_CastShadows: 0
-  m_ReceiveShadows: 0
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 0
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 0
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_FlipX: 0
-  m_FlipY: 0
-  m_DrawMode: 0
-  m_Size: {x: 1, y: 1}
-  m_AdaptiveModeThreshold: 0.5
-  m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
-  m_SpriteSortPoint: 0
---- !u!4 &163258690
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 163258688}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &186235708 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6081676269779260075, guid: e091b5dd15ea87a4da8ffc0996241271, type: 3}
@@ -9635,21 +9544,26 @@ MonoBehaviour:
     - {fileID: 8417502329417195272, guid: eaeeca9d59739c44badb9d33f7e41ac8, type: 3}
     - {fileID: 1151122358958166380, guid: 3bf62a8f267d04e4b9449937ab13794a, type: 3}
     - {fileID: 2623045603609409182, guid: df9c4cc4822477c498f2239a7c2f5798, type: 3}
+    - {fileID: 8842397632679128471, guid: b79f49eb40dec4a4fa2be291af7d23cd, type: 3}
   - Appearance: 0
     Prefabs:
-    - {fileID: 8530332446029054838, guid: 5b129bd1788f3d443901e6071dabd726, type: 3}
-    - {fileID: 8417502329417195272, guid: eaeeca9d59739c44badb9d33f7e41ac8, type: 3}
-    - {fileID: 1151122358958166380, guid: 3bf62a8f267d04e4b9449937ab13794a, type: 3}
-    - {fileID: 2623045603609409182, guid: df9c4cc4822477c498f2239a7c2f5798, type: 3}
+    - {fileID: 7598504497918407867, guid: 4d62f20c89780d344bed3f81e8ce2c80, type: 3}
+    - {fileID: 2416865664836822023, guid: 7b132273a865b9341ac166c78f4ff7ee, type: 3}
+    - {fileID: 6494992667666638688, guid: 1d4ba34b8f375fb418b362e4f25fbbab, type: 3}
+    - {fileID: 6461166466151819320, guid: 4b0773d855cc50c44bc1f16de74424cf, type: 3}
+    - {fileID: 5522655604432876151, guid: ccc494bbf8fc3744a89e4c9056a56ffa, type: 3}
   - Appearance: 2
     Prefabs:
-    - {fileID: 8530332446029054838, guid: 5b129bd1788f3d443901e6071dabd726, type: 3}
-    - {fileID: 8417502329417195272, guid: eaeeca9d59739c44badb9d33f7e41ac8, type: 3}
-    - {fileID: 1151122358958166380, guid: 3bf62a8f267d04e4b9449937ab13794a, type: 3}
-    - {fileID: 2623045603609409182, guid: df9c4cc4822477c498f2239a7c2f5798, type: 3}
+    - {fileID: 7598504497918407867, guid: 4d62f20c89780d344bed3f81e8ce2c80, type: 3}
+    - {fileID: 2416865664836822023, guid: 7b132273a865b9341ac166c78f4ff7ee, type: 3}
+    - {fileID: 6494992667666638688, guid: 1d4ba34b8f375fb418b362e4f25fbbab, type: 3}
+    - {fileID: 6461166466151819320, guid: 4b0773d855cc50c44bc1f16de74424cf, type: 3}
+    - {fileID: 5522655604432876151, guid: ccc494bbf8fc3744a89e4c9056a56ffa, type: 3}
   _villagerRoot: {fileID: 0}
   _moveSpeed: 2.5
-  _cheerSeconds: 1.5
+  _cheerSeconds: 0.1
+  _fadeOutSeconds: 0.2
+  _attackIntervalSeconds: 1
   _spreadRadius: 0.45
   _maxActiveVillagers: 60
 --- !u!114 &1368852691 stripped
@@ -10846,4 +10760,3 @@ SceneRoots:
   - {fileID: 649848423}
   - {fileID: 1162929304}
   - {fileID: 944163938}
-  - {fileID: 163258690}

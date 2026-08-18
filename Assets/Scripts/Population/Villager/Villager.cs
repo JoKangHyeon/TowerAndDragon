@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>목적지에 도착한 뒤의 행동. 세 프로파일이 다른 지점은 이것뿐이라 이동·좌표해석·정렬은 전부 공유한다.</summary>
 public enum VillagerProfile
@@ -145,13 +149,31 @@ public readonly struct VillagerOrder
 [RequireComponent(typeof(VillagerMovement))]
 public sealed class Villager : MonoBehaviour
 {
-    private const string MOVE_ANIM_KEY = "Move";
+    private const int BASE_LAYER_INDEX = 0;
+    private const string BASE_LAYER_NAME = "Base Layer";
+    private const string IDLE_ANIM_STATE = "Idle";
+    // 컨트롤러마다 가진 파라미터가 조금씩 다르므로 실제 호출은 HasParameter 가드로 걸러낸다.
     private const string WORK_ANIM_KEY = "Work";
     private const string CHEER_ANIM_KEY = "Cheer";
+    private const string IDLE_ANIM_STATE_PATH = BASE_LAYER_NAME + "." + IDLE_ANIM_STATE;
+    private const string MOVE_ANIM_STATE_PATH = BASE_LAYER_NAME + "." + Defines.ANIM_MOVE;
+    private const string WORK_ANIM_STATE_PATH = BASE_LAYER_NAME + "." + WORK_ANIM_KEY;
+#if UNITY_EDITOR
+    private const string CONTROLLER_ASSET_DIRECTORY = "Assets/Prefabs/Villager/Animator/";
+    private const string CONTROLLER_ASSET_EXTENSION = ".controller";
+    private const string CLONE_NAME_SUFFIX = "(Clone)";
+#endif
 
-    private static readonly int MOVE_ANIM_HASH = Animator.StringToHash(MOVE_ANIM_KEY);
+    private static readonly int MOVE_ANIM_HASH = Animator.StringToHash(Defines.ANIM_MOVE);
+    private static readonly int ATTACK_ANIM_HASH = Animator.StringToHash(Defines.ANIM_ENEMY_ATTACK);
     private static readonly int WORK_ANIM_HASH = Animator.StringToHash(WORK_ANIM_KEY);
     private static readonly int CHEER_ANIM_HASH = Animator.StringToHash(CHEER_ANIM_KEY);
+    private static readonly int IDLE_STATE_HASH = Animator.StringToHash(IDLE_ANIM_STATE_PATH);
+    private static readonly int MOVE_STATE_HASH = Animator.StringToHash(MOVE_ANIM_STATE_PATH);
+    private static readonly int WORK_STATE_HASH = Animator.StringToHash(WORK_ANIM_STATE_PATH);
+    private static readonly int IDLE_SHORT_STATE_HASH = Animator.StringToHash(IDLE_ANIM_STATE);
+    private static readonly int MOVE_SHORT_STATE_HASH = Animator.StringToHash(Defines.ANIM_MOVE);
+    private static readonly int WORK_SHORT_STATE_HASH = Animator.StringToHash(WORK_ANIM_KEY);
 
     // 상주 중인 캐릭터가 기다리는 지시. 취소 토큰 대신 플래그를 쓰는 이유:
     // 귀환은 "취소된 뒤에도 계속 이동해야 하는" 동작이라 토큰으로 표현하면 새 토큰을 다시 만들어야 한다.
@@ -165,12 +187,28 @@ public sealed class Villager : MonoBehaviour
     /// <summary>소멸 직전에 알린다 - VillagerDispatchSystem이 활성 목록에서 지운다.</summary>
     public event Action<Villager> Finished;
 
+    [SerializeField] private RuntimeAnimatorController _fallbackAnimatorController;
+
     private VillagerMovement _movement;
     private Animator _animator;
+    private SpriteRenderer[] _renderers;
+    private readonly HashSet<int> _animatorParameterHashes = new();
+    private RuntimeAnimatorController _cachedAnimatorController;
 
     private VillagerOrder _order;
     private VillagerCommand _command = VillagerCommand.None;
     private float _cheerSeconds;
+    private float _fadeOutSeconds;
+    private float _attackIntervalSeconds;
+    private bool _hasFinished;
+    private bool _hasCachedParameters;
+    private bool _wantsMove;
+    private bool _wantsWork;
+    private bool _hasDesiredState;
+    private bool _hasAppliedState;
+    private int _desiredStateHash;
+    private int _desiredShortStateHash;
+    private int _appliedStateHash;
 
     private void Awake()
     {
@@ -180,11 +218,23 @@ public sealed class Villager : MonoBehaviour
         // 자기 자신을 먼저 보므로 루트에 붙인 프리팹도 그대로 동작한다.
         // BaseMonster는 루트 GetComponent를 쓰는데, 그 차이를 놓치면 조용히 무동작한다.
         _animator = GetComponentInChildren<Animator>();
+        EnsureAnimatorController();
+
+        // 사라질 때 같이 흐려져야 하므로 그림자 등 자식 스프라이트까지 전부 잡는다
+        // (IsometricDepthSorter가 정렬에 쓰는 것과 같은 집합. 저쪽은 sortingOrder만 건드려 충돌하지 않는다).
+        _renderers = GetComponentsInChildren<SpriteRenderer>(true);
     }
 
-    public void Construct(GridMap gridMap, float moveSpeed, float cheerSeconds)
+    public void Construct(
+        GridMap gridMap,
+        float moveSpeed,
+        float cheerSeconds,
+        float fadeOutSeconds,
+        float attackIntervalSeconds)
     {
         _cheerSeconds = cheerSeconds;
+        _fadeOutSeconds = fadeOutSeconds;
+        _attackIntervalSeconds = attackIntervalSeconds;
         _movement.Construct(gridMap);
         _movement.SetSpeed(moveSpeed);
     }
@@ -226,9 +276,13 @@ public sealed class Villager : MonoBehaviour
     // TutorialEndingSequencer.PlayAsync와 같은 형태다.
     private async UniTaskVoid RunAsync(CancellationToken token)
     {
+        // Instantiate와 같은 프레임에는 자식 Animator가 아직 초기화되지 않아 파라미터를 읽을 수 없다.
+        // 위치는 Dispatch의 Warp에서 이미 잡아뒀으므로 한 프레임 미뤄도 눈에 띄지 않는다.
+        await UniTask.Yield(PlayerLoopTiming.Update, token);
+
         if (_order.HasOutboundLeg && !await WalkToWorkAsync(token))
         {
-            Finish();
+            await FinishAsync(token);
             return;
         }
 
@@ -244,8 +298,19 @@ public sealed class Villager : MonoBehaviour
                 break;
 
             default:
-                PlayWork();
-                await UniTask.WaitUntil(() => _command != VillagerCommand.None, cancellationToken: token);
+                // 상주(생산시설·연구소·랜드마크)와 원정 크루 모두 "일하는 중"을 보여줘야 한다.
+                // 컨트롤러에 계속 유지되는 Work 상태가 있으면 그걸 쓰고(Villager_WorkerDig 같은 전용
+                // 컨트롤러), 없으면 PixelWorld 원본에 있는 EnemyAttack 트리거를 반복해 흉내낸다.
+                // 덕분에 프리팹마다 컨트롤러가 달라도 같은 코드로 굴러간다.
+                if (HasParameter(WORK_ANIM_HASH))
+                {
+                    PlayWork();
+                    await UniTask.WaitUntil(() => _command != VillagerCommand.None, cancellationToken: token);
+                }
+                else
+                {
+                    await AttackUntilCommandedAsync(token);
+                }
 
                 if (_command == VillagerCommand.SendHome)
                 {
@@ -255,7 +320,7 @@ public sealed class Villager : MonoBehaviour
                 break;
         }
 
-        Finish();
+        await FinishAsync(token);
     }
 
     private UniTask<bool> WalkToWorkAsync(CancellationToken token) =>
@@ -267,6 +332,29 @@ public sealed class Villager : MonoBehaviour
         _order.HasFixedCastleWorldPosition
             ? WalkToWorldAsync(_order.CastleWorldPosition, token)
             : WalkToAsync(_order.CastleCell, token);
+
+    // 자리에 선 캐릭터(상주·원정 크루)가 소멸/귀환 지시를 받을 때까지 계속 모션을 반복한다.
+    // EnemyAttack은 Bool이 아니라 Trigger이고 그 상태는 한 번 재생하면 Idle로 빠지므로
+    // (PixelWorld 컨트롤러의 m_HasExitTime: 1), 이어지는 그림을 만들려면 주기적으로 다시 쏴야 한다.
+    // Work 상태를 가진 컨트롤러에서는 이 경로를 타지 않는다.
+    private async UniTask AttackUntilCommandedAsync(CancellationToken token)
+    {
+        SetLocomotionState(isMoving: false, isWorking: false);
+
+        while (_command == VillagerCommand.None)
+        {
+            SetTrigger(ATTACK_ANIM_HASH);
+
+            // 대기 중에도 지시를 확인한다 - 그냥 기다리면 점령이 끝나고도 한 박자 늦게 출발한다.
+            float elapsed = 0f;
+
+            while (elapsed < _attackIntervalSeconds && _command == VillagerCommand.None)
+            {
+                elapsed += Time.deltaTime;
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
+            }
+        }
+    }
 
     // 목적지에 닿았으면 true. 도중에 Despawn 지시를 받아 중단했으면 false.
     // 이동 중에도 지시를 확인하는 이유: 밤이 시작되는 순간 걸어가던 캐릭터까지 즉시 사라져야 한다.
@@ -302,10 +390,71 @@ public sealed class Villager : MonoBehaviour
         return _command != VillagerCommand.Despawn;
     }
 
+    // 사라지기 전에 서서히 투명해진다. 모든 소멸 경로(타워 방문 종료·회수 도착·상주 해제·밤 정리)가
+    // 이 한 곳을 지나므로 어느 경우든 툭 사라지지 않는다.
+    private async UniTask FinishAsync(CancellationToken token)
+    {
+        await FadeOutAsync(token);
+        Finish();
+    }
+
+    private async UniTask FadeOutAsync(CancellationToken token)
+    {
+        if (_fadeOutSeconds <= 0f || _renderers.Length == 0)
+        {
+            return;
+        }
+
+        float elapsed = 0f;
+
+        // Time.deltaTime을 쓰므로 일시정지·배속(GameSpeedManager)에 이동과 똑같이 따라간다.
+        while (elapsed < _fadeOutSeconds)
+        {
+            elapsed += Time.deltaTime;
+            SetAlpha(1f - Mathf.Clamp01(elapsed / _fadeOutSeconds));
+
+            await UniTask.Yield(PlayerLoopTiming.Update, token);
+        }
+    }
+
+    private void SetAlpha(float alpha)
+    {
+        foreach (SpriteRenderer spriteRenderer in _renderers)
+        {
+            if (spriteRenderer == null)
+            {
+                continue;
+            }
+
+            Color color = spriteRenderer.color;
+            color.a = alpha;
+            spriteRenderer.color = color;
+        }
+    }
+
     private void Finish()
     {
+        if (_hasFinished)
+        {
+            return;
+        }
+
+        _hasFinished = true;
         Finished?.Invoke(this);
         Destroy(gameObject);
+    }
+
+    // 페이드 도중에 밖에서 파괴되면(씬 언로드 등) Finish가 돌지 못해 디스패치의 활성 목록에
+    // 죽은 항목이 남는다 - 그 경우에도 반드시 알린다.
+    private void OnDestroy()
+    {
+        if (_hasFinished)
+        {
+            return;
+        }
+
+        _hasFinished = true;
+        Finished?.Invoke(this);
     }
 
     private void PlayMove() => SetLocomotionState(isMoving: true, isWorking: false);
@@ -317,22 +466,215 @@ public sealed class Villager : MonoBehaviour
     private void PlayCheer()
     {
         SetLocomotionState(isMoving: false, isWorking: false);
+        SetTrigger(CHEER_ANIM_HASH);
+    }
 
-        if (_animator != null)
+    // 원하는 상태를 기록만 하고, 실제 반영은 Update가 매 프레임 한다.
+    // 여기서 바로 SetBool을 부르면 애니메이터 초기화 타이밍에 걸린다 - 자식 Animator는 루트보다
+    // 늦게 준비될 수 있는데, 상태 전환은 걷기 시작할 때 "한 번"만 일어나므로 그 한 번을 놓치면
+    // 걷는 내내 애니메이션이 죽는다. 매 프레임 다시 넣으면 언제 준비되든 반드시 반영된다.
+    private void SetLocomotionState(bool isMoving, bool isWorking)
+    {
+        _wantsMove = isMoving;
+        _wantsWork = isWorking;
+        _desiredStateHash = ResolveStateHash(isMoving, isWorking);
+        _desiredShortStateHash = ResolveShortStateHash(isMoving, isWorking);
+        _hasDesiredState = true;
+
+        if (!_hasAppliedState || _appliedStateHash != _desiredStateHash)
         {
-            _animator.SetTrigger(CHEER_ANIM_HASH);
+            _hasAppliedState = false;
         }
     }
 
-    // 애니메이터가 없어도(프리팹에 아직 안 붙였거나 테스트용) 이동 자체는 동작해야 한다.
-    private void SetLocomotionState(bool isMoving, bool isWorking)
+    private void Update()
     {
         if (_animator == null)
         {
             return;
         }
 
-        _animator.SetBool(MOVE_ANIM_HASH, isMoving);
-        _animator.SetBool(WORK_ANIM_HASH, isWorking);
+        EnsureAnimatorController();
+
+        SetBool(MOVE_ANIM_HASH, _wantsMove);
+        SetBool(WORK_ANIM_HASH, _wantsWork);
+        ApplyDesiredState();
     }
+
+    // 컨트롤러마다 있는 파라미터가 다르다(PixelWorld 원본에는 Move/EnemyAttack만 있다).
+    // 없는 파라미터에 값을 넣으면 Unity가 매 호출마다 경고를 뱉으므로 미리 걸러낸다.
+    private void SetBool(int hash, bool value)
+    {
+        if (HasParameter(hash))
+        {
+            _animator.SetBool(hash, value);
+        }
+    }
+
+    private void SetTrigger(int hash)
+    {
+        if (HasParameter(hash))
+        {
+            _animator.SetTrigger(hash);
+        }
+    }
+
+    private bool HasParameter(int hash)
+    {
+        if (_animator == null)
+        {
+            return false;
+        }
+
+        EnsureAnimatorController();
+        EnsureParameterCache();
+        return _animatorParameterHashes.Contains(hash);
+    }
+
+    private static int ResolveStateHash(bool isMoving, bool isWorking)
+    {
+        if (isMoving)
+        {
+            return MOVE_STATE_HASH;
+        }
+
+        return isWorking ? WORK_STATE_HASH : IDLE_STATE_HASH;
+    }
+
+    private static int ResolveShortStateHash(bool isMoving, bool isWorking)
+    {
+        if (isMoving)
+        {
+            return MOVE_SHORT_STATE_HASH;
+        }
+
+        return isWorking ? WORK_SHORT_STATE_HASH : IDLE_SHORT_STATE_HASH;
+    }
+
+    private void ApplyDesiredState()
+    {
+        EnsureAnimatorController();
+
+        if (!_hasDesiredState ||
+            _hasAppliedState ||
+            !_animator.isInitialized ||
+            _animator.runtimeAnimatorController == null)
+        {
+            return;
+        }
+
+        if (!TryPlayState(_desiredStateHash) && !TryPlayState(_desiredShortStateHash))
+        {
+            return;
+        }
+
+        _appliedStateHash = _desiredStateHash;
+        _hasAppliedState = true;
+    }
+
+    private bool TryPlayState(int stateHash)
+    {
+        if (!_animator.HasState(BASE_LAYER_INDEX, stateHash))
+        {
+            return false;
+        }
+
+        _animator.Play(stateHash, BASE_LAYER_INDEX);
+        return true;
+    }
+
+    // Animator는 자식(Graphics)에 있어 루트의 Awake보다 늦게 초기화될 수 있다. 그 시점에
+    // controller/parameters를 읽으면 비어 보이므로, 실제 컨트롤러가 잡힌 뒤에만 캐시를 확정한다.
+    private void EnsureParameterCache()
+    {
+        EnsureAnimatorController();
+
+        if (!_animator.isInitialized)
+        {
+            return;
+        }
+
+        RuntimeAnimatorController controller = _animator.runtimeAnimatorController;
+
+        if (controller == null)
+        {
+            _hasCachedParameters = false;
+            _cachedAnimatorController = null;
+            _animatorParameterHashes.Clear();
+            return;
+        }
+
+        if (_hasCachedParameters && _cachedAnimatorController == controller)
+        {
+            return;
+        }
+
+        AnimatorControllerParameter[] parameters = _animator.parameters;
+
+        if (parameters.Length == 0)
+        {
+            _hasCachedParameters = false;
+            _cachedAnimatorController = controller;
+            _animatorParameterHashes.Clear();
+            return;
+        }
+
+        _cachedAnimatorController = controller;
+        _hasCachedParameters = true;
+        _hasAppliedState = false;
+        _animatorParameterHashes.Clear();
+
+        foreach (AnimatorControllerParameter parameter in parameters)
+        {
+            _animatorParameterHashes.Add(parameter.nameHash);
+        }
+    }
+
+    private void EnsureAnimatorController()
+    {
+        if (_animator == null || _animator.runtimeAnimatorController != null)
+        {
+            return;
+        }
+
+        RuntimeAnimatorController controller = _fallbackAnimatorController;
+
+#if UNITY_EDITOR
+        if (controller == null)
+        {
+            controller = LoadEditorAnimatorController();
+        }
+#endif
+
+        if (controller == null)
+        {
+            return;
+        }
+
+        _animator.runtimeAnimatorController = controller;
+        _cachedAnimatorController = null;
+        _hasCachedParameters = false;
+        _hasAppliedState = false;
+        _animatorParameterHashes.Clear();
+    }
+
+#if UNITY_EDITOR
+    private RuntimeAnimatorController LoadEditorAnimatorController()
+    {
+        string controllerPath = CONTROLLER_ASSET_DIRECTORY + ResolveControllerAssetName() + CONTROLLER_ASSET_EXTENSION;
+        return AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(controllerPath);
+    }
+
+    private string ResolveControllerAssetName()
+    {
+        string objectName = gameObject.name;
+
+        if (objectName.EndsWith(CLONE_NAME_SUFFIX, StringComparison.Ordinal))
+        {
+            return objectName.Substring(0, objectName.Length - CLONE_NAME_SUFFIX.Length);
+        }
+
+        return objectName;
+    }
+#endif
 }

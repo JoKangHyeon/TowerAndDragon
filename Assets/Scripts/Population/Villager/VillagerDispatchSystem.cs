@@ -32,6 +32,8 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     private const float DEFAULT_MOVE_SPEED = 2.5f;
     private const float DEFAULT_CHEER_SECONDS = 1.5f;
+    private const float DEFAULT_FADE_OUT_SECONDS = 0.4f;
+    private const float DEFAULT_ATTACK_INTERVAL_SECONDS = 1f;
     private const float DEFAULT_SPREAD_RADIUS = 0.45f;
     private const int DEFAULT_MAX_ACTIVE_VILLAGERS = 60;
     private const float CASTLE_SPAWN_WORLD_X = 0f;
@@ -73,8 +75,14 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     [SerializeField] private float _moveSpeed = DEFAULT_MOVE_SPEED;
 
-    [Tooltip("타워에 도착한 캐릭터가 모션을 보여주고 사라지기까지의 시간(초).")]
+    [Tooltip("타워에 도착한 캐릭터가 모션을 보여주고 사라지기 시작할 때까지의 시간(초).")]
     [SerializeField] private float _cheerSeconds = DEFAULT_CHEER_SECONDS;
+
+    [Tooltip("사라질 때 투명해지는 데 걸리는 시간(초). 0이면 즉시 사라진다. 모든 소멸 경로에 적용된다.")]
+    [SerializeField] private float _fadeOutSeconds = DEFAULT_FADE_OUT_SECONDS;
+
+    [Tooltip("점령지에 선 크루가 공격 모션을 다시 재생하는 간격(초). 공격 클립 길이에 맞추면 자연스럽다.")]
+    [SerializeField] private float _attackIntervalSeconds = DEFAULT_ATTACK_INTERVAL_SECONDS;
 
     [Tooltip("같은 자리에 여럿이 설 때 흩어지는 반경. 아이소메트릭 종횡비로 눌러 화면상 원형이 된다.")]
     [SerializeField] private float _spreadRadius = DEFAULT_SPREAD_RADIUS;
@@ -357,15 +365,16 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
         foreach (Vector2Int chunkCoord in _pendingReturns)
         {
+            // 떠날 때 모여 있던 그 자리에서 출발해야 이어지는 그림이 된다 - SpawnCrew와 같은 기준 칸을 쓴다.
+            if (!TryResolveCrewAnchorCell(chunkCoord, out Vector3Int originCell))
+            {
+                continue;
+            }
+
             int crewSize = ResolveCrewSize(chunkCoord);
 
             for (int i = 0; i < crewSize; i++)
             {
-                if (!TryPickChunkLandCell(chunkCoord, i, out Vector3Int originCell))
-                {
-                    break;
-                }
-
                 // 행동은 Recall(성으로 걸어가 사라짐)이지만 겉모습은 원정 크루여야 한다.
                 Spawn(
                     new VillagerOrder(
@@ -373,7 +382,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
                         originCell,
                         castleCell,
                         castleCell,
-                        ResolveSpreadOffset(StableHash(chunkCoord.x, chunkCoord.y, i)),
+                        ResolveRingOffset(i, crewSize),
                         hasOutboundLeg: true,
                         hasFixedOriginWorldPosition: false,
                         originWorldPosition: default(Vector3),
@@ -402,12 +411,20 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
         foreach (IPopulationAllocationTarget target in _residentRemovalScratch)
         {
-            // 캐릭터가 이미 파괴된 것도 걷어낼 대상에 포함되므로(IsResidentStale) 널 검사가 필요하다.
-            Villager villager = _residents[target].Villager;
+            ResidentEntry entry = _residents[target];
 
-            if (villager != null)
+            // 캐릭터가 이미 파괴된 것도 걷어낼 대상에 포함되므로(IsResidentStale) 널 검사가 필요하다.
+            if (entry.Villager != null)
             {
-                villager.Despawn();
+                // 일이 끝나 물러나는 것이면 그 자리에서 일하던 그 캐릭터가 직접 성으로 걸어간다.
+                if (IsRetiringResident(target, entry))
+                {
+                    entry.Villager.SendHome();
+                }
+                else
+                {
+                    entry.Villager.Despawn();
+                }
             }
 
             _residents.Remove(target);
@@ -485,6 +502,17 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         target.IsInitialized &&
         target.AssignedPopulation > 0;
 
+    // 상주가 "일을 마치고 물러나는" 경우인지. 이때만 성으로 걸어 돌아가는 연출을 붙인다.
+    // 건물이 철거됐거나(대상이 사라짐) 자리를 옮긴 경우(건물 이동)에는 걸어갈 맥락이 없으므로
+    // 그 자리에서 조용히 사라져야 한다.
+    private bool IsRetiringResident(IPopulationAllocationTarget target, ResidentEntry entry)
+    {
+        return IsAlive(target) &&
+            target.AssignedPopulation == 0 &&
+            TryResolveWorkCell(target, out Vector3Int workCell) &&
+            workCell == entry.WorkCell;
+    }
+
     private bool IsResidentStale(IPopulationAllocationTarget target, ResidentEntry entry)
     {
         if (!IsAlive(target) || entry.Villager == null || !_wantedResidents.Contains(target))
@@ -539,25 +567,25 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             return;
         }
 
+        // 등록되지 않은 청크나 육지가 없는 청크는 연출을 건너뛴다 - GetChunkCenterWorld의
+        // "미등록이면 Vector3.zero" 실패 모드를 아예 밟지 않는다.
+        if (!TryResolveCrewAnchorCell(chunkCoord, out Vector3Int workCell))
+        {
+            return;
+        }
+
         int crewSize = ResolveCrewSize(chunkCoord);
         var crew = new List<Villager>(crewSize);
 
         for (int i = 0; i < crewSize; i++)
         {
-            // 등록되지 않은 청크나 육지가 없는 청크는 연출을 건너뛴다 - GetChunkCenterWorld의
-            // "미등록이면 Vector3.zero" 실패 모드를 아예 밟지 않는다.
-            if (!TryPickChunkLandCell(chunkCoord, i, out Vector3Int workCell))
-            {
-                break;
-            }
-
             Villager villager = Spawn(
                 new VillagerOrder(
                     VillagerProfile.Expedition,
                     castleCell,
                     workCell,
                     castleCell,
-                    ResolveSpreadOffset(StableHash(chunkCoord.x, chunkCoord.y, i)),
+                    ResolveRingOffset(i, crewSize),
                     hasOutboundLeg,
                     hasFixedOriginWorldPosition: true,
                     originWorldPosition: CASTLE_SPAWN_WORLD_POSITION,
@@ -623,21 +651,30 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
                 continue;
             }
 
-            int delta = target.AssignedPopulation - pair.Value;
+            // 타워만 인원 수만큼 캐릭터가 오간다 - 타워에는 상주가 없기 때문이다.
+            // 생산시설·연구소·랜드마크는 몇 명을 넣든 상주 한 명만 서 있으므로, 인원 수만큼 만들면
+            // 있지도 않던 사람이 우르르 걸어나온다. 그쪽의 배치·회수 연출은 상주 한 명의 등장과
+            // 퇴장으로 표현되며 ReconcileResidents가 담당한다.
+            if (target is not TowerPopulation)
+            {
+                continue;
+            }
 
-            // 겉모습은 어디서 나온 인원인지를 따른다 - 타워에서 빠져나오면 병사, 시설에서 나오면 일꾼.
-            bool isTower = target is TowerPopulation;
-            VillagerAppearance appearance = isTower ? VillagerAppearance.Soldier : VillagerAppearance.Worker;
+            int delta = target.AssignedPopulation - pair.Value;
 
             if (delta < 0)
             {
-                // 회수 - 빠져나온 인원만큼 건물에서 성으로 돌아간다.
-                SpawnGroup(VillagerProfile.Recall, workCell, castleCell, castleCell, -delta, workCell, appearance);
+                // 회수 - 빠져나온 인원만큼 타워에서 성으로 돌아간다.
+                SpawnGroup(
+                    VillagerProfile.Recall, workCell, castleCell, castleCell,
+                    -delta, workCell, VillagerAppearance.Soldier);
             }
-            else if (delta > 0 && isTower)
+            else if (delta > 0)
             {
-                // 타워 - 배치된 인원만큼 성에서 나와, 도착 후 모션 한 번 하고 사라진다.
-                SpawnGroup(VillagerProfile.TowerVisit, castleCell, workCell, castleCell, delta, workCell, appearance);
+                // 배치 - 배치된 인원만큼 성에서 나와, 도착 후 모션 한 번 하고 사라진다.
+                SpawnGroup(
+                    VillagerProfile.TowerVisit, castleCell, workCell, castleCell,
+                    delta, workCell, VillagerAppearance.Soldier);
             }
         }
     }
@@ -683,7 +720,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         _activeVillagers.Add(villager);
         villager.Finished += HandleVillagerFinished;
 
-        villager.Construct(_gridMap, _moveSpeed, _cheerSeconds);
+        villager.Construct(_gridMap, _moveSpeed, _cheerSeconds, _fadeOutSeconds, _attackIntervalSeconds);
         villager.Dispatch(order);
 
         return villager;
@@ -937,7 +974,11 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private static int ResolveFrontCellScore(Vector3Int cell) =>
         cell.x + cell.y;
 
-    private bool TryPickChunkLandCell(Vector2Int chunkCoord, int index, out Vector3Int cell)
+    // 크루 전원이 모여 설 기준 칸. 청크의 육지 칸 중 "가운데에 가장 가까운" 칸을 고른다.
+    // 예전처럼 인원마다 다른 칸을 고르면 청크 전체(수십 칸)에 흩어져 한 무리로 안 보인다.
+    // 셀 좌표 평균으로 중심을 잡는 이유: 월드 좌표(GetChunkCenterWorld)는 고저차가 섞여 있어
+    // 언덕이 낀 청크에서 중심이 밀린다.
+    private bool TryResolveCrewAnchorCell(Vector2Int chunkCoord, out Vector3Int cell)
     {
         cell = default;
 
@@ -948,22 +989,45 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             return false;
         }
 
-        // LandCellCoords는 인덱서가 없는 HashSet이지만 생성 후 변하지 않아 열거 순서가 런 내내 안정적이다.
-        // 청크는 작아서 순회 비용도 무시할 수 있다.
-        int offset = (int)(StableHash(chunkCoord.x, chunkCoord.y, index) % (uint)chunk.LandCellCoords.Count);
+        Vector3 sum = Vector3.zero;
 
         foreach (Vector3Int coord in chunk.LandCellCoords)
         {
-            if (offset == 0)
-            {
-                cell = coord;
-                return true;
-            }
-
-            offset--;
+            sum += coord;
         }
 
-        return false;
+        Vector3 center = sum / chunk.LandCellCoords.Count;
+        float bestDistanceSqr = float.MaxValue;
+
+        foreach (Vector3Int coord in chunk.LandCellCoords)
+        {
+            float distanceSqr = ((Vector3)coord - center).sqrMagnitude;
+
+            if (distanceSqr < bestDistanceSqr)
+            {
+                bestDistanceSqr = distanceSqr;
+                cell = coord;
+            }
+        }
+
+        return true;
+    }
+
+    // 한 칸에 여럿이 설 때 겹치지 않도록 고르게 원형으로 벌린다. 해시로 각도를 뽑으면 같은 각이
+    // 겹쳐 두 명이 포개지므로, 인원 수를 아는 크루는 인덱스로 균등 배치한다.
+    private Vector3 ResolveRingOffset(int index, int count)
+    {
+        if (count <= 1)
+        {
+            return Vector3.zero;
+        }
+
+        float angle = index * (FULL_TURN_RADIANS / count);
+
+        return new Vector3(
+            Mathf.Cos(angle) * _spreadRadius,
+            Mathf.Sin(angle) * _spreadRadius * IsometricMath.RADIUS_Y_RATIO,
+            0f);
     }
 
     private static int ResolveCrewSize(Vector2Int chunkCoord) =>

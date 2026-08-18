@@ -19,8 +19,13 @@ public sealed class VillagerMovement : MonsterMovement
     // 고저차는 셀 단위로 계단처럼 끊겨 있어 샘플값을 그대로 쓰면 셀 경계마다 Y가 튄다 -
     // 목표 높이로 부드럽게 수렴시킨다. GroundSplineMovement와 같은 값을 쓴다.
     private const float DEFAULT_HEIGHT_FOLLOW_SPEED = 12f;
+    private const float DEFAULT_MAX_TRAVEL_SECONDS = 4f;
+    private const float DEFAULT_MAX_DISTANCE_SPEED_MULTIPLIER = 4f;
+    private const float MIN_DISTANCE_SPEED_MULTIPLIER = 1f;
 
     [SerializeField] private float _heightFollowSpeed = DEFAULT_HEIGHT_FOLLOW_SPEED;
+    [SerializeField] private float _maxTravelSeconds = DEFAULT_MAX_TRAVEL_SECONDS;
+    [SerializeField] private float _maxDistanceSpeedMultiplier = DEFAULT_MAX_DISTANCE_SPEED_MULTIPLIER;
 
     private GridMap _gridMap;
 
@@ -28,6 +33,7 @@ public sealed class VillagerMovement : MonsterMovement
     private Vector3 _flatPosition;
     private Vector3 _flatDestination;
 
+    private float _baseSpeed;
     private float _currentHeightOffset;
     private bool _hasHeightOffset;
     private bool _hasDestination;
@@ -36,6 +42,12 @@ public sealed class VillagerMovement : MonsterMovement
 
     public override float MovementDirectionX =>
         _isMoving && _hasDestination ? _flatDestination.x - _flatPosition.x : 0f;
+
+    public override void SetSpeed(float speed)
+    {
+        _baseSpeed = speed;
+        _speed = speed;
+    }
 
     /// <summary>스포너(VillagerDispatchSystem)가 주입한다. GroundSplineMovement처럼 스스로 찾지 않는
     /// 이유: 이 컴포넌트는 항상 GridMap을 이미 알고 있는 시스템이 생성하므로 씬 전역 검색이 낭비다.</summary>
@@ -75,9 +87,7 @@ public sealed class VillagerMovement : MonsterMovement
     /// 성 → 건물 → 성처럼 여러 구간을 한 인스턴스로 이어 달릴 수 있다(재스폰 불필요).</summary>
     public void SetDestination(Vector3Int cell, Vector3 spreadOffset)
     {
-        _flatDestination = ToFlatWorld(cell) + spreadOffset;
-        _hasDestination = true;
-        HasArrived = false;
+        SetFlatDestination(ToFlatWorld(cell) + spreadOffset);
     }
 
     public void SetDestinationWorld(Vector3 worldPosition)
@@ -93,8 +103,33 @@ public sealed class VillagerMovement : MonsterMovement
             _flatDestination = worldPosition - new Vector3(0f, heightOffset, 0f);
         }
 
+        SetFlatDestination(_flatDestination);
+    }
+
+    private void SetFlatDestination(Vector3 flatDestination)
+    {
+        _flatDestination = flatDestination;
         _hasDestination = true;
         HasArrived = false;
+        RefreshSegmentSpeed();
+    }
+
+    private void RefreshSegmentSpeed()
+    {
+        if (_baseSpeed <= 0f)
+        {
+            _speed = _baseSpeed;
+            return;
+        }
+
+        float distance = Vector3.Distance(_flatPosition, _flatDestination);
+        float speedForTravelTime = _maxTravelSeconds > 0f ? distance / _maxTravelSeconds : _baseSpeed;
+        float maxSpeed = _baseSpeed * Mathf.Max(MIN_DISTANCE_SPEED_MULTIPLIER, _maxDistanceSpeedMultiplier);
+
+        _speed = Mathf.Clamp(
+            Mathf.Max(_baseSpeed, speedForTravelTime),
+            _baseSpeed,
+            maxSpeed);
     }
 
     private void Update()

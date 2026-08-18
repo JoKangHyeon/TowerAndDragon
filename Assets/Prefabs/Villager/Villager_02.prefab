@@ -77,8 +77,8 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 561869287
-  m_SortingLayer: 0
+  m_SortingLayerID: -1328854079
+  m_SortingLayer: 1
   m_SortingOrder: 2
   m_MaskInteraction: 0
   m_Sprite: {fileID: -1869374846, guid: bfdd77a8044e6d24b9c45b0c7c5a6311, type: 3}
@@ -156,6 +156,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e86e13f9fcdec3445a953521c956b4db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Villager
+  _fallbackAnimatorController: {fileID: 9100000, guid: 9c232924065958b4494f87ec464eaa8d, type: 2}
 --- !u!114 &7438505002727014929
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -284,7 +285,7 @@ Animator:
   m_GameObject: {fileID: 8277499835272269950}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 0a978f213851c134fa179a9bb52bcff6, type: 2}
+  m_Controller: {fileID: 9100000, guid: 9c232924065958b4494f87ec464eaa8d, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
