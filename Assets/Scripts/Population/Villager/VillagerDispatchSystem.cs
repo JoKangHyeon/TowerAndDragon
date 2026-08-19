@@ -43,10 +43,11 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private const float DEFAULT_SPREAD_RADIUS = 0.45f;
     private const int DEFAULT_MAX_ACTIVE_VILLAGERS = 60;
 
-    // 한 번에 몰리는 인원은 원정 크루 5~7명(CREW_SIZE_MIN/RANGE)과 타워 정원 4~7명이 최대인데,
-    // 그 인원이 계열 안의 프리팹 여러 종에 무작위로 흩어진다(TryPickPrefab). 그래서 프리팹당 이 정도면
-    // 대개의 몰림을 새로 만들지 않고 받아낸다.
-    private const int DEFAULT_PREWARM_COUNT_PER_PREFAB = 4;
+    // 겉모습 프리팹이 계열마다 5종이고(병사와 원정은 같은 묶음을 공유하는 배선이라 고유 10종),
+    // 한 번에 몰리는 인원은 일괄 배치 최대 10명 · 원정 크루 5~7명(CREW_SIZE_MIN/RANGE) · 타워 정원
+    // 4~7명이다. 몰림은 계열 안 5종에만 흩어지므로 프리팹당 2개는 있어야 그 한 번을 새로 만들지 않고
+    // 받아낸다. 효과는 초반 한 번뿐이다 - 풀은 반납분 재사용으로 최대 동시 인원까지 저절로 자란다.
+    private const int DEFAULT_PREWARM_COUNT = 20;
     private const float CASTLE_SPAWN_WORLD_X = 0f;
     private const float CASTLE_SPAWN_WORLD_Y = 1f;
 
@@ -129,10 +130,11 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     [Tooltip("동시에 존재할 수 있는 캐릭터 수 상한. 초과분은 조용히 생성하지 않는다.")]
     [SerializeField] private int _maxActiveVillagers = DEFAULT_MAX_ACTIVE_VILLAGERS;
 
-    [Tooltip("겉모습 프리팹 하나당 로딩 중에 미리 만들어 둘 캐릭터 수. 플레이 중 Instantiate로 생기는 " +
-             "프레임 끊김을 로딩 구간으로 옮긴다. 0이면 미리 만들지 않고 필요할 때 만든다.")]
+    [Tooltip("로딩 중에 미리 만들어 둘 캐릭터 총 개수. 겉모습 프리팹들에 고르게 나눠 만든다. " +
+             "플레이 중 Instantiate로 생기는 프레임 끊김을 로딩 구간으로 옮긴다. " +
+             "0이면 미리 만들지 않고 필요할 때 만든다.")]
     [Min(0)]
-    [SerializeField] private int _prewarmCountPerPrefab = DEFAULT_PREWARM_COUNT_PER_PREFAB;
+    [SerializeField] private int _prewarmCount = DEFAULT_PREWARM_COUNT;
 
     // 건물·랜드마크 상주. 컴포넌트 인스턴스 자체가 키다 - 좌표를 키로 쓰면 건물 이동에서 깨지고,
     // 랜드마크는 Building이 아니라 좌표 체계가 아예 다르다.
@@ -378,24 +380,40 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     // 이펙트 풀은 대상이 아니다 - 프리팹이 인스펙터에 하나씩뿐이고 등장 빈도도 낮아 미리 만들 이득이 없다.
     private void PrewarmVillagerPool()
     {
-        if (_prewarmCountPerPrefab <= 0)
+        if (_prewarmCount <= 0)
         {
             return;
         }
 
         // 겉모습 계열이 프리팹을 공유한다(병사와 원정이 같은 묶음을 쓰는 배선이 흔하다) -
         // 중복으로 두 배 만들지 않도록 걸러낸다.
-        var prewarmed = new HashSet<Villager>();
+        var distinctPrefabs = new List<Villager>();
+        var seen = new HashSet<Villager>();
 
         foreach (Villager[] prefabs in _prefabsByAppearance.Values)
         {
             foreach (Villager prefab in prefabs)
             {
-                if (prefab != null && prewarmed.Add(prefab))
+                if (prefab != null && seen.Add(prefab))
                 {
-                    _villagerPool.Prewarm(prefab, _prewarmCountPerPrefab);
+                    distinctPrefabs.Add(prefab);
                 }
             }
+        }
+
+        if (distinctPrefabs.Count == 0)
+        {
+            return;
+        }
+
+        // 총량을 프리팹 수로 나눠 고르게 배분한다. 어느 겉모습이 뽑혀도(TryPickPrefab은 무작위다)
+        // 미리 만든 것이 있어야 하므로 한 프리팹에 몰아주지 않는다. 나머지는 앞쪽이 하나씩 더 가져간다.
+        int countPerPrefab = _prewarmCount / distinctPrefabs.Count;
+        int remainder = _prewarmCount % distinctPrefabs.Count;
+
+        for (int i = 0; i < distinctPrefabs.Count; i++)
+        {
+            _villagerPool.Prewarm(distinctPrefabs[i], countPerPrefab + (i < remainder ? 1 : 0));
         }
     }
 
