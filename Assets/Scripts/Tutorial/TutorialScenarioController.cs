@@ -218,4 +218,38 @@ public sealed class TutorialScenarioController : MonoBehaviour
 
     /// <summary>[테스트 전용] 아직 열지 못하고 대기 중인 챕터가 있는지. 밤을 넘겨야 열린다.</summary>
     public bool DebugHasPendingChapter => _pendingIndex >= 0;
+
+    /// <summary>[테스트 전용] 등록된 챕터 수.</summary>
+    public int DebugChapterCount => _chapters.Count;
+
+    /// <summary>[테스트 전용] 지금 몇 번째 챕터인지. 아직 시작 전이면 음수다.</summary>
+    public int DebugCurrentIndex => _currentIndex;
+
+    /// <summary>[테스트 전용] 그 자리의 러너. 비어 있으면 null.</summary>
+    public TutorialRunner DebugGetRunner(int index) =>
+        TryGetRunner(index, out TutorialRunner runner) ? runner : null;
+
+    /// <summary>[테스트 전용] 그 챕터의 시작 일차.</summary>
+    public int DebugGetStartDay(int index) =>
+        index >= 0 && index < _chapters.Count ? _chapters[index].StartDay : 0;
+
+    /// <summary>
+    /// [테스트 전용] 지정한 챕터로 곧바로 옮긴다. 앞 챕터는 꺼지고, 그 일차가 아직 오지 않았으면
+    /// 평소와 같이 대기 상태가 된다(그날 아침에 열린다).
+    ///
+    /// <b>건너뛴 챕터의 부수 효과는 일어나지 않는다</b> - 자원 선지급(<c>_grantStartingResources</c>)과
+    /// 단계 진행도 기록이 그렇다. 뒤 챕터만 확인하려고 앞을 건너뛰면 그 챕터가 기대하는 물건이
+    /// 없을 수 있다(예: 새끼용 챕터를 건너뛰면 초원 슬라임 선지급이 없다).
+    /// </summary>
+    public void DebugJumpToChapter(int index)
+    {
+        if (index < 0 || index >= _chapters.Count)
+        {
+            Debug.LogWarning($"[TutorialScenarioController] 챕터 {index}는 범위 밖입니다.", this);
+            return;
+        }
+
+        _pendingIndex = -1;
+        EnterChapter(index);
+    }
 }

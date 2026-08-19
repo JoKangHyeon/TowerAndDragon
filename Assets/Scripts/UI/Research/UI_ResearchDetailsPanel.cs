@@ -27,6 +27,12 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
     private ResearchNodeData _selectedNode;
     private Action _onChanged;
 
+    /// <summary>
+    /// 지금 화면에 떠 있는지. 연구 창이 Esc를 창 닫기에 쓸지 이 패널 닫기에 쓸지 정하는 데 본다
+    /// (<see cref="UI_ResearchWindow.OnCloseActionPerformed"/>).
+    /// </summary>
+    public bool IsShown => _root != null && _root.activeSelf;
+
     public void Construct(
         ResearchManager researchManager,
         ResourceManager resourceManager,
