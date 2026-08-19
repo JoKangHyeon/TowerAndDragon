@@ -69,6 +69,10 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private Button _guidePrevButton;
     [Tooltip("드롭다운을 열지 않고 다음 수준으로 넘기는 화살표.")]
     [SerializeField] private Button _guideNextButton;
+    [Tooltip("튜토리얼 섹션 제목(Guide_Header). 타이틀 화면에서는 줄째 접는다.")]
+    [SerializeField] private GameObject _guideHeader;
+    [Tooltip("튜토리얼 안내 드롭다운 줄(Guide_Panel).")]
+    [SerializeField] private GameObject _guidePanel;
 
     [Header("키")]
     [Tooltip("우측 키 섹션. 줄은 이 컴포넌트가 액션 목록을 훑어 스스로 만든다.")]
@@ -165,6 +169,7 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         }
 
         RenderSlotButtons();
+        RenderGuideSection();
 
         _volumeRows = GetComponentsInChildren<UI_VolumeRow>(true);
         foreach (UI_VolumeRow row in _volumeRows)
@@ -230,7 +235,11 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
-    // 타이틀 화면 인스턴스에는 UIManager도 게임도 없어 null이다 - 그쪽에서는 멈출 것이 없다.
+    // 같은 프리팹을 타이틀 화면과 인게임이 나눠 쓴다. 타이틀 화면 인스턴스에는 UIManager도
+    // 게임도 없어 null이다 - 인게임 전용 항목을 접을지 여기 한 곳에서 판정한다.
+    private bool IsTitleScreenInstance => _uiManager == null;
+
+    // 멈출 게임이 없는 타이틀 화면에서는 null이다.
     private GameSpeedManager GameSpeed => _uiManager != null ? _uiManager.GameSpeed : null;
 
     public void OnCloseActionPerformed(InputAction.CallbackContext context)
@@ -521,6 +530,25 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         if (_slotButtonRow != null)
         {
             _slotButtonRow.SetActive(HasSlotWindow);
+        }
+    }
+
+    // 안내 수준은 인게임 조언자 퀘스트를 다루는 설정이라, 게임이 없는 타이틀 화면에서는 의미가 없다.
+    // 배선은 인스펙터에서 정해지고 런타임에 바뀌지 않으므로 Awake에서 한 번만 반영한다
+    // (RenderSlotButtons와 같은 처리). 헤더와 줄이 세로 레이아웃의 별도 형제라 둘 다 꺼야
+    // VerticalLayoutGroup이 자리째 거둔다.
+    private void RenderGuideSection()
+    {
+        bool isVisible = !IsTitleScreenInstance;
+
+        if (_guideHeader != null)
+        {
+            _guideHeader.SetActive(isVisible);
+        }
+
+        if (_guidePanel != null)
+        {
+            _guidePanel.SetActive(isVisible);
         }
     }
 

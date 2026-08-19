@@ -25,9 +25,14 @@ public class UI_IngameWindow : MonoBehaviour
     private const string DAY_LOC_KEY = "main_day";
     private static string DayFormat => StringTable.GetString(DAY_LOC_KEY);
 
-    // 밤 진입 확인 문구. {0} = 모자란 식량, {1} = 굶어 죽을 시민 수.
+    // 밤 진입 확인 문구. 해당하는 경고만 골라 순서대로 이어 붙이고, 마지막에 질문 줄을 붙인다.
     // 서식은 확인창(UI_ConfirmPopup)이 채우므로 여기서는 key만 지목한다.
+    // {0} = 모자란 식량, {1} = 굶어 죽을 시민 수.
     private const string STARVATION_CONFIRM_LOC_KEY = "night_confirm_starvation_message";
+    // {0} = 어디에도 배치되지 않은 시민 수.
+    private const string IDLE_POPULATION_CONFIRM_LOC_KEY = "night_confirm_idle_population_message";
+    // 경고 뒤에 붙는 질문 줄. 경고가 몇 줄이든 마지막에 한 번만 온다.
+    private const string PROCEED_QUESTION_LOC_KEY = "night_confirm_proceed_question";
 
     // 자원 표기(보유량 + 순증감)의 서식과 색 판정은 ResourceAmountFormatter가 갖는다 -
     // 용 창의 슬라임 칸(ResourceAmountView)과 같은 규칙으로 보이게 하기 위함.
@@ -65,10 +70,13 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private GameObject _buttonNextNight;
     [Tooltip("밤에 켜질 속도 조절 UI.")]
     [SerializeField] private GameObject _speedSetting;
-    [Tooltip("굶주림처럼 되돌릴 수 없는 결과가 예상될 때 띄우는 확인창. " +
+    [Tooltip("굶주림·유휴 인구처럼 밤을 넘기기 전에 짚어야 할 상황이 있을 때 띄우는 확인창. " +
         "비우면 확인 없이 곧장 밤으로 넘어간다(기존 동작).")]
     [WiringOptional]
     [SerializeField] private UI_ConfirmPopup _confirmPopup;
+
+    // 밤 진입 확인창에 넘길 문구 줄의 재사용 버퍼. 확인창이 내용을 자기 쪽으로 복사하므로 재사용해도 안전하다.
+    private readonly List<ConfirmMessageLine> _nightConfirmLines = new();
 
     [Header("자원 표시 (Panel_TopLeft)")]
     [SerializeField] private ResourceManager _resourceManager;
@@ -283,8 +291,10 @@ public class UI_IngameWindow : MonoBehaviour
     }
 
     /// <summary>
-    /// 밤 진입. 다음 아침 정산에서 굶어 죽을 시민이 있으면 곧장 넘기지 않고 한 번 확인받는다 -
-    /// 밤은 되돌릴 수 없는데, 인구 표기 옆의 (-N)만으로는 놓치기 쉽다.
+    /// 밤 진입. 굶어 죽을 시민이 있거나 놀고 있는 시민이 남아 있으면 곧장 넘기지 않고 한 번 확인받는다 -
+    /// 밤은 되돌릴 수 없는데, 인구 표기의 (-N)이나 가용/총 숫자만으로는 놓치기 쉽다.
+    ///
+    /// 둘 다 해당해도 창은 하나다. 확인을 두 번 누르게 하면 두 번째 창을 읽지 않고 넘기게 된다.
     ///
     /// 기아 자체는 밤이 아니라 <b>다음 낮 시작</b>(OnDayStartUpkeep)에 일어나므로, 여기서 보는 값은
     /// 예측이다. HUD 인구 표기와 같은 GetPopulationUpkeepPreview를 쓰므로 화면과 어긋나지 않는다.
@@ -306,21 +316,49 @@ public class UI_IngameWindow : MonoBehaviour
             return;
         }
 
-        PopulationUpkeepPreview preview = _populationManager != null
-            ? GetPopulationUpkeepPreview(_populationManager.CurrentState)
-            : default;
+        CollectNightConfirmWarnings();
 
-        if (preview.PopulationLost > 0 && _confirmPopup != null)
+        if (_nightConfirmLines.Count == 0 || _confirmPopup == null)
         {
-            _confirmPopup.Open(
-                STARVATION_CONFIRM_LOC_KEY,
-                _cycleManager.EndDay,
-                preview.FoodShortage,
-                preview.PopulationLost);
+            _cycleManager.EndDay();
             return;
         }
 
-        _cycleManager.EndDay();
+        // 질문은 경고를 다 읽은 뒤에 와야 하므로 항상 마지막 줄이다.
+        _nightConfirmLines.Add(new ConfirmMessageLine(PROCEED_QUESTION_LOC_KEY));
+
+        _confirmPopup.Open(_cycleManager.EndDay, _nightConfirmLines);
+    }
+
+    // 지금 밤으로 넘어갈 때 짚어야 할 경고를 _nightConfirmLines에 모은다(질문 줄은 제외).
+    // 해당 사항이 없으면 비워 둔 채로 끝나고, 그때는 확인 없이 곧장 밤으로 넘어간다.
+    private void CollectNightConfirmWarnings()
+    {
+        _nightConfirmLines.Clear();
+
+        if (_populationManager == null)
+        {
+            return;
+        }
+
+        PopulationState state = _populationManager.CurrentState;
+        PopulationUpkeepPreview preview = GetPopulationUpkeepPreview(state);
+
+        if (preview.PopulationLost > 0)
+        {
+            _nightConfirmLines.Add(new ConfirmMessageLine(
+                STARVATION_CONFIRM_LOC_KEY,
+                preview.FoodShortage,
+                preview.PopulationLost));
+        }
+
+        // 놀고 있는 시민은 생산·방어·점령 어디에도 기여하지 않으면서 식량은 그대로 먹는다.
+        if (state.HasIdlePopulation)
+        {
+            _nightConfirmLines.Add(new ConfirmMessageLine(
+                IDLE_POPULATION_CONFIRM_LOC_KEY,
+                state.AvailablePopulation));
+        }
     }
 
     private void OnDisable()

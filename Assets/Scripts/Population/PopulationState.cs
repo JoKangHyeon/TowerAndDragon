@@ -9,6 +9,10 @@ public readonly struct PopulationState
     public int AvailablePopulation =>
         MaxPopulation - AssignedPopulation;
 
+    /// <summary>어디에도 배치되지 않아 놀고 있는 시민이 있는지. 놀아도 식량은 먹으므로 경고 대상이다.</summary>
+    public bool HasIdlePopulation =>
+        AvailablePopulation > 0;
+
     public PopulationState(
         int maxPop,
         int assignedPop
