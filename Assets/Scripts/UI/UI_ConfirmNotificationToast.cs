@@ -157,6 +157,10 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
         public Tween StackMoveTween;
         public bool IsTransitioning;
 
+        // SlideTween은 등장과 퇴장에 같이 쓰인다. 스택 재배치가 둘을 구분해야 하므로
+        // (등장은 목적지를 새 자리로 바꿔 다시 재생, 퇴장은 그대로 내보냄) 어느 쪽인지 남긴다.
+        public bool IsDismissing;
+
         // 이 카드가 실제로 차지하는 높이. 선택지 수에 따라 카드마다 다르다.
         public float Height;
 
@@ -226,6 +230,10 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
         BuildFollowerList();
         _messageRoot.SetActive(false);
         RepositionFollowers(false);
+
+        // 여기서 한 번 재두지 않으면 첫 LateUpdate가 실제로는 안 바뀐 높이를 변화로 보고
+        // 재배치를 돌린다. 첫 프레임에 뜨는 카드(조언자)가 그 재배치에 휩쓸린다.
+        _lastHeaderHeight = TotalHeaderHeight();
     }
 
     private void Start()
@@ -756,6 +764,7 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
         SoundManager.Play(SoundId.UiButtonClick);
 
         card.IsTransitioning = true;
+        card.IsDismissing = true;
         SetInteraction(card, false);
         card.SlideTween?.Kill();
         card.StackMoveTween?.Kill();
@@ -801,11 +810,40 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
         return isValidIndex ? card.Message.Choices[choiceIndex].Picked : null;
     }
 
+    /// <summary>
+    /// 카드들을 지금의 제자리로 다시 옮긴다. 스택 트윈과 슬라이드 트윈은 같은 anchoredPosition을
+    /// 건드리므로, 슬라이드 중인 카드를 스택 트윈으로 덮으면 둘이 서로 당겨 연출이 깨진다.
+    /// 그래서 카드 상태별로 다르게 처리한다.
+    /// </summary>
     private void RepositionVisibleCards()
     {
         for (int i = 0; i < _activeCards.Count; i++)
         {
             ActiveCard card = _activeCards[i];
+
+            // 등장 게이트를 기다리는 카드는 화면 밖 제자리에 그대로 둔다 - 여기서 끌어오면
+            // 게이트가 열릴 때 슬라이드인이 출발할 곳이 없어 연출이 사라진다.
+            if (_initialSlideWaitingCards.Contains(card))
+            {
+                continue;
+            }
+
+            // 퇴장 중인 카드는 자기 슬라이드아웃에 맡긴다. 스택으로 다시 끌어오면 안 된다.
+            if (card.IsDismissing)
+            {
+                continue;
+            }
+
+            // 등장 중인 카드는 목적지만 새 자리로 바꿔 다시 슬라이드한다. 스택 트윈으로 갈아치우면
+            // 슬라이드인의 OnComplete가 사라져 IsTransitioning이 영구히 참으로 남고, 그 카드는
+            // 다시는 눌리지 않는다.
+            if (card.IsTransitioning)
+            {
+                card.SlideTween?.Kill();
+                PlaySlideIn(card);
+                continue;
+            }
+
             card.StackMoveTween?.Kill();
             card.StackMoveTween = card.RootRect
                 .DOAnchorPos(GetCardPosition(i), _stackMoveDuration)
