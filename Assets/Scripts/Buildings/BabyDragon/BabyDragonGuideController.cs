@@ -341,6 +341,10 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
             _cycleManager.RemoveDayEndBlocker(this);
         }
 
+        // 방금 뗐으므로 래치도 같이 내린다 - 안 그러면 배치 도중 껐다 켰을 때
+        // UpdateDayEndGate가 "이미 막는 중"으로 보고 잠금을 다시 걸지 않는다.
+        _isBlockingDayEnd = false;
+
         // 목록에서 빠지면 오버레이가 더 이상 묻지 않으므로 떠 있던 딤·말풍선도 다음 프레임에 걷힌다.
         if (_overlay != null)
         {

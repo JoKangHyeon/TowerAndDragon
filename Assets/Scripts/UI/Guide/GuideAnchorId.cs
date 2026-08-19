@@ -118,4 +118,8 @@ public enum GuideAnchorId
     // 성 위에 떠 있는 어미용 속성 아이콘(Overlay_MotherDragon_Type).
     // 월드 스페이스 캔버스라 WorldRectGuideAnchor가 화면 자리를 매 프레임 따라간다.
     MotherDragonTypeIcon,
+
+    // 밤에만 뜨는 HUD 액티브 스킬 칸(SkillHudBinder가 켜고 끈다).
+    // 낮에는 등록조차 되지 않으므로 이 앵커를 가리키는 안내는 밤에만 그려진다.
+    NightSkillSlot,
 }

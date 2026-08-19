@@ -3,8 +3,9 @@ using UnityEngine;
 using UnityEngine.Events;
 
 /// <summary>
-/// 2일차 이후의 자유 목표를 추적한다. TutorialRunner와 달리 순서를 강제하지 않고, 밤 진입도 막지 않는다 -
-/// 목표는 통과 관문이 아니라 권장 학습 항목이다.
+/// 2일차 이후의 목표를 추적한다. TutorialRunner와 달리 순서를 강제하지는 않지만, 오늘 목록에 남은 것을
+/// 다 끝내기 전에는 밤으로 넘어갈 수 없다 - 목표는 그날 배워야 할 것의 통과 관문이다.
+/// (밤을 넘겨야 완료되는 목표만 예외다. 그것을 세면 밤 버튼이 자기 자신을 막는다.)
 ///
 /// **항상 켜 두어야 한다.** 강제 시퀀스가 도는 1일차부터 게임 이벤트를 듣고 있어야, 안내보다 먼저
 /// 해 버린 행동도 완료로 잡힌다. 표시(UI_TutorialObjectiveWindow)만 나중에 켜면 된다 -
@@ -17,14 +18,20 @@ using UnityEngine.Events;
 public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQuery
 {
     // 완료 알림은 쓰지 않는다 - 목록의 체크 표시가 같은 말을 이미 하고 있다.
-    // 남은 것은 밤으로 넘어가기 직전의 상기뿐이다(목록을 늘 띄워 두어도, 결정 직전에는 한 번 짚어 준다).
-    // 밤 진입이 막혔을 때 띄운다. 막는 주체는 안내 러너나 새끼용 가이드지만 문구는 여기서 낸다 -
-    // 플레이어가 알아야 하는 것은 "누가 막았는가"가 아니라 "오늘 할 일이 남았다"이고, 그 목록이 여기에 있다.
+    // 밤 진입이 막혔을 때만 말을 건다. 막는 주체는 여럿이지만 문구는 여기서 낸다 -
+    // 플레이어가 알아야 하는 것은 "누가 막았는가"가 아니라 무엇이 남았는가이고, 그 목록이 여기에 있다.
+
+    // "안내가 끝나면 밤으로 넘어갈 수 있습니다." - 목표는 다 찼는데 안내가 도는 중일 때.
     private const string NIGHT_BLOCKED_LOC_KEY = "tutorial_night_blocked";
-    // "아직 해보지 않은 것이 {0}가지 남았습니다." - 밤으로 넘어가기 직전 1회 상기.
+    // "아직 해보지 않은 것이 {0}가지 남았습니다." - 목표가 막았을 때.
     private const string OBJECTIVE_REMAINING_LOC_KEY = "tutorial_objective_remaining";
+    // "이제 타워를 더 설치해서 보스를 막아보세요..." - 마지막 날 관문이 열린 순간 1회.
+    private const string BOSS_PREPARATION_LOC_KEY = "tutorial_day3_ready_for_boss";
 
     private const int FIRST_DAY_NUMBER = 1;
+    private const int DEFAULT_BOSS_PREPARATION_DAY_NUMBER = 3;
+    // 기본 유지 시간으로는 두 문장을 읽기 전에 사라진다.
+    private const float DEFAULT_BOSS_PREPARATION_SHOW_SECONDS = 6f;
 
     [Tooltip("추적할 목표들. 순서는 목록에 보이는 순서다.")]
     [SerializeField] private List<TutorialObjectiveSO> _objectives = new();
@@ -32,10 +39,10 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     [Tooltip("완료 기록을 남길 런. 없으면 완료가 기록되지 않는다.")]
     [SerializeField] private GameManager _gameManager;
 
-    [Tooltip("권장 일차를 판정하고 밤 진입 상기를 띄우는 데 쓴다.")]
+    [Tooltip("권장 일차를 판정하고 밤 진입 관문을 거는 데 쓴다.")]
     [SerializeField] private CycleManager _cycleManager;
 
-    [Tooltip("완료·상기 알림을 띄운다.")]
+    [Tooltip("밤 진입이 막힌 이유를 띄운다.")]
     [SerializeField] private UI_NotificationToast _toast;
 
     [Header("완료 조건을 듣는 대상")]
@@ -54,6 +61,15 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     [Tooltip("어미용 속성 변경을 완료 조건으로 쓰는 목표에 필요하다.")]
     [SerializeField] private DragonTreeManager _dragonTreeManager;
 
+    [Header("마지막 날 관문이 열렸을 때")]
+    [Tooltip("이 일차에 목표를 다 채우면 보스 준비 안내를 한 번 띄운다.")]
+    [Min(FIRST_DAY_NUMBER)]
+    [SerializeField] private int _bossPreparationDayNumber = DEFAULT_BOSS_PREPARATION_DAY_NUMBER;
+
+    [Tooltip("그 안내를 띄워 둘 시간(초).")]
+    [Min(0f)]
+    [SerializeField] private float _bossPreparationShowSeconds = DEFAULT_BOSS_PREPARATION_SHOW_SECONDS;
+
     /// <summary>
     /// 목록에 보일 것이 바뀌었다(목표가 열렸거나 완료됐거나 날짜가 바뀌었다).
     /// 표시하는 쪽은 이것만 구독하고 어떤 목표가 왜 바뀌었는지는 다시 물어본다 -
@@ -65,6 +81,8 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     private readonly List<TutorialObjectiveSO> _visibleObjectives = new();
     // 속성 변경 알림이 실제 변경인지 새날·복원 갱신인지 가르는 기준값.
     private DragonType? _lastSeenAttribute;
+    // 보스 준비 안내는 한 번만 낸다 - 목록이 다시 그려질 때마다 같은 말을 반복하게 된다.
+    private bool _hasAnnouncedBossPreparation;
 
     private RunData CurrentRun => _gameManager == null ? null : _gameManager.CurrentRun;
 
@@ -80,19 +98,20 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     }
 
     /// <summary>
-    /// <b>목표는 밤 진입을 막지 않는다.</b> 항상 true를 돌려준다.
+    /// 목록에 남은 목표를 다 끝내야 밤으로 넘어간다(밤을 넘겨야 완료되는 목표는 제외).
     ///
-    /// 예전에는 오늘 목표를 다 채워야 밤으로 넘어갈 수 있었는데, 그 구조에는 풀 수 없는 잠금이 있었다 -
-    /// 3일차 보스 밤이 "어미용 속성 변경"(하루 1회 제한)과 "연구 완료"(지급 타이밍 의존) 뒤에 잠기고,
-    /// 2일차는 건설 목표 셋이 동시에 관문이 되어 자원이 모자라면 회복할 방법이 사라진다.
-    /// 목표는 통과 관문이 아니라 권장 학습 항목이므로, 미완료는 다음 날로 이월시키고 밤은 그대로 보낸다.
+    /// <b>여기 걸리는 목표는 전부 "그날 낮 안에" 달성 가능해야 한다.</b> 한때 이 관문을 열어 둔 적이
+    /// 있는데, 그때의 우려는 3일차가 어미용 속성 변경과 연구 완료 뒤에 잠긴다는 것이었다. 확인해 보니
+    /// 둘 다 잠그지 않는다 - Dragon.TryChangeType에는 횟수 제한이 없고 3일차 강제 챕터가 속성 변경을
+    /// 직접 시키며(TS_311), 연구는 ResearchManager.TryResearch가 구매 즉시 NodeCompleted를 발화하고
+    /// 포인트도 2일차 아침에 채워진다. 목표를 새로 걸 때 이 조건이 깨지면 그날 밤이 영영 오지 않는다.
     ///
-    /// 인터페이스 구현 자체는 남겨 둔다 - 등록/해제 배선과 DayEndBlocked 상기 문구가 이 자리에 묶여 있고,
-    /// 나중에 "이 목표만은 막는다"가 필요해지면 여기 한 곳만 고치면 된다.
+    /// 런이 없으면 막지 않는다 - IsCompleted가 전부 false를 돌려주므로, 배선이 빠진 씬에서
+    /// 경고 한 줄로 끝나던 것이 눌리지 않는 밤 버튼이 된다.
     /// </summary>
-    bool IDayEndBlockQuery.CanEndDay() => true;
+    bool IDayEndBlockQuery.CanEndDay() => CurrentRun == null || RemainingObjectiveCount == 0;
 
-    /// <summary>아직 끝내지 않은 오늘의 목표 수. 밤 버튼을 누를 때 한 번 상기하는 데 쓴다.</summary>
+    /// <summary>아직 끝내지 않은 오늘의 목표 수. 밤을 막을지와 막힌 이유를 정하는 데 쓴다.</summary>
     private int RemainingObjectiveCount
     {
         get
@@ -165,6 +184,7 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleAttributeChanged);
+            _dragonTreeManager.NodeUnlocked.AddListener(HandleDragonNodeUnlocked);
 
             // 구독 직후 현재 값을 한 번 반영해 둔다 - 이 값이 없으면 구독 후 첫 발화가
             // 새날 갱신인지 실제 변경인지 가릴 수 없다.
@@ -174,7 +194,6 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         if (_cycleManager != null)
         {
             _cycleManager.OnDayStart.AddListener(HandleDayStart);
-            _cycleManager.OnDayEnd.AddListener(HandleDayEnd);
             _cycleManager.OnNightEnd.AddListener(HandleNightEnd);
             _cycleManager.DayEndBlocked.AddListener(HandleDayEndBlocked);
             _cycleManager.AddDayEndBlocker(this);
@@ -227,12 +246,12 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleAttributeChanged);
+            _dragonTreeManager.NodeUnlocked.RemoveListener(HandleDragonNodeUnlocked);
         }
 
         if (_cycleManager != null)
         {
             _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
-            _cycleManager.OnDayEnd.RemoveListener(HandleDayEnd);
             _cycleManager.OnNightEnd.RemoveListener(HandleNightEnd);
             _cycleManager.DayEndBlocked.RemoveListener(HandleDayEndBlocked);
             _cycleManager.RemoveDayEndBlocker(this);
@@ -240,27 +259,25 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     }
 
     // 막힌 이유를 말해 주지 않으면 버튼이 고장 난 것으로 보인다.
-    // 이제 목표는 밤을 막지 않으므로, 이 신호는 1일차 안내 러너처럼 다른 관문이 걸었을 때만 온다.
+    //
+    // 막는 주체가 목표만이 아니라서(1일차 안내 러너·새끼용 가이드도 같은 신호를 낸다) 어느 쪽이
+    // 걸었는지를 남은 목표 수로 가른다. 남은 것이 있으면 그것이 이유고, 없으면 안내가 도는 중이다 -
+    // 반대로 말하면 두 문구가 서로의 상황에서 거짓말이 되므로 하나로 합칠 수 없다.
     private void HandleDayEndBlocked()
     {
-        if (_toast != null)
+        if (_toast == null)
         {
-            _toast.Show(NIGHT_BLOCKED_LOC_KEY);
+            return;
         }
-    }
 
-    /// <summary>
-    /// 밤으로 넘어가는 순간 남은 목표 수를 한 번 짚어 준다. 막지는 않는다 -
-    /// 목록은 늘 화면에 있지만, 되돌릴 수 없는 결정 직전에는 한 번 더 말해 주는 편이 낫다.
-    /// 남은 것이 없으면 아무 말도 하지 않는다.
-    /// </summary>
-    private void HandleDayEnd(int _)
-    {
         int remaining = RemainingObjectiveCount;
-        if (remaining > 0 && _toast != null)
+        if (remaining > 0)
         {
             _toast.Show(OBJECTIVE_REMAINING_LOC_KEY, remaining);
+            return;
         }
+
+        _toast.Show(NIGHT_BLOCKED_LOC_KEY);
     }
 
     private void Start()
@@ -363,6 +380,13 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     private void HandleEggCheckGuideFinished() =>
         TryCompleteMatching(TutorialConditionType.BabyDragonEggChecked, null);
 
+    // 어느 노드인지 가리지 않는다 - 목표는 "스킬 하나를 연다"이지 특정 노드가 아니다(연구와 같은 기준).
+    //
+    // 세이브 복원(ProgressionManagerBase.RestoreUnlockedNodes)도 이 신호를 재발화하므로, 이어하기로
+    // 들어오면 이미 연 노드가 그 자리에서 목표를 채운다. 그것이 맞다 - 실제로 연 적이 있기 때문이다.
+    private void HandleDragonNodeUnlocked(ProgressionNodeData _) =>
+        TryCompleteMatching(TutorialConditionType.DragonSkillNodeUnlocked, null);
+
     // 어느 속성으로 바꿨는지는 묻지 않는다 - 목표는 "바꿔본다"이지 특정 속성이 아니다.
     private void HandleAttributeChanged(DragonType attribute)
     {
@@ -464,5 +488,38 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         }
 
         ObjectivesChanged.Invoke();
+        TryAnnounceBossPreparation();
+    }
+
+    /// <summary>
+    /// 마지막 날의 목표를 다 채운 순간, 이제 무엇을 하면 되는지 한 번 짚어 준다.
+    ///
+    /// 목록에서 체크가 전부 들어간 것만으로는 "밤 버튼이 풀렸다"가 전달되지 않는다 - 그 전까지
+    /// 버튼을 눌러도 막히기만 했으므로, 플레이어는 아직 잠겨 있다고 여기고 다시 누르지 않는다.
+    /// 챕터 컷이 아니라 알림인 이유는 이 시점이 자유 조작 구간이기 때문이다. 딤을 치면
+    /// 정작 하라고 한 일(타워 더 짓기)을 못 한다.
+    /// </summary>
+    private void TryAnnounceBossPreparation()
+    {
+        if (_hasAnnouncedBossPreparation ||
+            CurrentDayNumber != _bossPreparationDayNumber ||
+            CurrentRun == null ||
+            RemainingObjectiveCount > 0)
+        {
+            return;
+        }
+
+        // 목록이 아직 비어 있으면(에셋 배선 누락) 다 채운 것이 아니라 셀 것이 없는 것이다.
+        if (_visibleObjectives.Count == 0)
+        {
+            return;
+        }
+
+        _hasAnnouncedBossPreparation = true;
+
+        if (_toast != null)
+        {
+            _toast.ShowFor(_bossPreparationShowSeconds, BOSS_PREPARATION_LOC_KEY);
+        }
     }
 }
