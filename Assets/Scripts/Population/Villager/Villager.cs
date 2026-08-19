@@ -215,6 +215,9 @@ public sealed class Villager : MonoBehaviour
     private Animator _animator;
     private MonsterSpriteFlipper _spriteFlipper;
     private SpriteRenderer[] _renderers;
+
+    // 프리팹 상태의 렌더러 색. 페이드로 뭉갠 알파를 되돌릴 때 쓴다(그림자의 반투명도까지 그대로 보존).
+    private Color[] _originalColors;
     private readonly HashSet<int> _animatorParameterHashes = new();
     private RuntimeAnimatorController _cachedAnimatorController;
     private Tween _fadeTween;
@@ -254,8 +257,49 @@ public sealed class Villager : MonoBehaviour
         // (IsometricDepthSorter가 정렬에 쓰는 것과 같은 집합. 저쪽은 sortingOrder만 건드려 충돌하지 않는다).
         _renderers = GetComponentsInChildren<SpriteRenderer>(true);
 
+        // 페이드는 모든 렌더러를 같은 알파로 덮어쓴다. 그런데 그림자처럼 원래부터 반투명한 렌더러가
+        // 섞여 있어(Shadow의 알파는 0.3 남짓), 되돌릴 때 일괄 1로 올리면 그림자가 짙어진다.
+        // 프리팹 상태의 색을 그대로 잡아뒀다가 그 값으로 복원한다.
+        _originalColors = new Color[_renderers.Length];
+
+        for (int i = 0; i < _renderers.Length; i++)
+        {
+            _originalColors[i] = _renderers[i] != null ? _renderers[i].color : Color.white;
+        }
+
         // 재사용할 때 지난 생애의 좌우 반전을 되돌리기 위해서만 잡는다. 없는 프리팹도 있어 널을 허용한다.
         _spriteFlipper = GetComponent<MonsterSpriteFlipper>();
+    }
+
+    // 알파를 되돌리는 일은 반드시 "비활성화되기 전"에 끝나야 한다.
+    //
+    // 프리팹이 KeepAnimatorStateOnDisable을 끄고 있어 Animator는 SetActive(true)마다 리바인딩하면서
+    // 그 시점의 프로퍼티 값을 기본값으로 다시 스냅샷한다. 페이드로 알파가 0이 된 채 반납하면 그 0이
+    // 새 기본값이 되고, 이후 Animator가 매 프레임 0으로 되돌려 버린다. 풀에서 꺼낸 뒤에 고치는 것으로는
+    // 늦는 이유가 이것이다(PrefabPool.Acquire가 SetActive를 먼저 한다).
+    private void OnDisable()
+    {
+        _fadeTween?.Kill();
+        _fadeTween = null;
+        _isFading = false;
+        _fadeAlpha = 1f;
+        RestoreOriginalColors();
+    }
+
+    private void RestoreOriginalColors()
+    {
+        if (_originalColors == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _renderers.Length; i++)
+        {
+            if (_renderers[i] != null)
+            {
+                _renderers[i].color = _originalColors[i];
+            }
+        }
     }
 
     public void Construct(
@@ -287,11 +331,12 @@ public sealed class Villager : MonoBehaviour
         _idleBeforeHomeSeconds = 0f;
 
         // 페이드가 알파를 0까지 내려놓은 채 끝난다 - 되돌리지 않으면 재사용한 캐릭터가 투명한 채로 돌아다닌다.
+        // 실제 복원은 OnDisable(반납 직전)이 담당하고, 여기서는 그 경로를 타지 않은 경우를 위한 보강이다.
         _fadeTween?.Kill();
         _fadeTween = null;
         _isFading = false;
         _fadeAlpha = 1f;
-        SetAlpha(_fadeAlpha);
+        RestoreOriginalColors();
 
         // SetLocomotionState는 "원하는 상태가 바뀔 때만" 재적용 플래그를 내린다. 재활성화된 애니메이터는
         // 기본 상태로 되감겨 있는데 지난 생애와 같은 상태를 원하면(상주 → 상주) 해시가 같아 재적용을
