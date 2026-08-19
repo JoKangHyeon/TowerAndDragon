@@ -680,6 +680,23 @@ public class GridMap : MonoBehaviour
         return null;
     }
 
+    // 건물 인스턴스가 점유한 셀 하나. 좌표를 받는 API(BuildingPlacementController.SelectExistingBuildingAt 등)에
+    // Building 객체를 넘겨야 할 때 쓰는, FindBuilding<T>의 "타입이 아니라 인스턴스로 찾는" 판이다.
+    // GetOccupiedCoords/GetFootprintCoords로도 되짚을 수 있지만 리스트를 새로 할당하고 첫 원소만 쓰게 된다.
+    public bool TryGetOccupiedCoord(Building building, out Vector3Int occupiedCoord)
+    {
+        if (building != null
+            && _buildingFootprintCells.TryGetValue(building, out List<GridCell> footprint)
+            && footprint.Count > 0)
+        {
+            occupiedCoord = footprint[0].Coord;
+            return true;
+        }
+
+        occupiedCoord = default;
+        return false;
+    }
+
     public bool HasBuilding<T>() where T : Building
     {
         foreach (Building building in _buildingFootprintCells.Keys)

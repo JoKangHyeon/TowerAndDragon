@@ -75,6 +75,11 @@ public class Building : MonoBehaviour
     // GridMap 전용. 셀 점유와 앵커가 어긋나면 세이브가 엉뚱한 자리에 건물을 되살린다.
     public void SetPlacementAnchor(Vector3Int anchor) => PlacementAnchor = anchor;
 
+    // 이 건물에 마지막으로 적용된 화면 정렬 순서(IsometricMath.ComputeDepthSortOrder). 클수록 앞쪽이다.
+    // 겹친 건물의 클릭 후보를 "보이는 순서"대로 줄 세울 때 쓴다(BuildingClickCycle) - 앵커로 다시
+    // 계산하지 않고 실제로 적용된 값을 읽어야, 렌더 순서와 선택 순서가 갈라지지 않는다.
+    public int DepthSortOrder { get; private set; }
+
     // 원본(회전 0도) 모양 - 회전 계산의 기준이 된다.
     public FootprintShape BaseFootprintShape => _footprintShape;
 
@@ -195,24 +200,19 @@ public class Building : MonoBehaviour
     // 자식 정렬을 갱신할 지점은 이 하나로 충분하다.
     public virtual void SetDepthSortOrder(int sortingOrder)
     {
+        // 조기 반환보다 앞에서 기록한다 - 스프라이트가 없는 건물도 클릭 후보 정렬에는 참여한다.
+        DepthSortOrder = sortingOrder;
+
         if (_spriteRenderer == null)
             return;
 
         _spriteRenderer.sortingOrder = sortingOrder;
     }
 
-    /// <summary>월드 좌표가 이 건물의 스프라이트 안인지. 클릭 판정은 기본적으로 그리드 셀 기준이라
+    /// <summary>월드 좌표가 이 건물의 스프라이트 몸통 안인지. 클릭 판정은 기본적으로 그리드 셀 기준이라
     /// (GridMap.PickCellAtWorldPoint) 스프라이트가 자기 footprint보다 훨씬 높게 그려진 건물은
-    /// 몸통을 눌러도 빈 땅으로 판정된다. 그때 쓰는 보조 판정이며, SpriteHoverFade와 같은 기준이라
-    /// "반투명해진 곳 = 눌리는 곳"이 일치한다.</summary>
-    public bool ContainsWorldPoint(Vector3 worldPoint)
-    {
-        if (_spriteRenderer == null)
-            return false;
-
-        Bounds bounds = _spriteRenderer.bounds;
-        worldPoint.z = bounds.center.z;
-
-        return bounds.Contains(worldPoint);
-    }
+    /// 몸통을 눌러도 빈 땅으로 판정된다. 그 몸통까지 클릭 후보로 잡기 위한 판정이며
+    /// (BuildingClickCycle), SpriteHoverFade와 같은 함수를 쓰므로 "반투명해진 곳 = 눌리는 곳"이 일치한다.</summary>
+    public bool ContainsWorldPoint(Vector3 worldPoint) =>
+        SpriteHitTest.Contains(_spriteRenderer, worldPoint);
 }

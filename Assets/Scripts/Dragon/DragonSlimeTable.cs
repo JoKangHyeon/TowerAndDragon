@@ -19,6 +19,12 @@ public static class DragonSlimeTable
     // 정방향 표를 뒤집어 만든다. 두 방향을 따로 적으면 한쪽만 고쳤을 때 조용히 어긋난다.
     private static readonly Dictionary<ResourceType, DragonType> ATTRIBUTE_BY_SLIME = BuildReverse();
 
+    /// <summary>
+    /// 슬라임 자원 전체. 슬라임 목록을 다른 곳에 다시 적지 않고 이 표에서만 받아 쓴다
+    /// (HUD 요약 칸이 5종을 순회할 때 사용).
+    /// </summary>
+    public static IReadOnlyCollection<ResourceType> AllSlimes => ATTRIBUTE_BY_SLIME.Keys;
+
     public static bool TryGetFeedSlime(DragonType dragonType, out ResourceType slimeType) =>
         SLIME_BY_ATTRIBUTE.TryGetValue(dragonType, out slimeType);
 
