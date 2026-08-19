@@ -13,4 +13,8 @@ public static class GuidePriority
 
     public const int BABY_DRAGON_GUIDE = 100;
     public const int DAY_ONE_TUTORIAL = 200;
+
+    // 밤 스킬 유도. 가장 낮다 - 낮 안내와 겹칠 일은 없지만, 겹친다면 그쪽이 이겨야 한다
+    // (낮 안내는 순서를 강제하는 반면 이쪽은 놓쳐도 진행이 막히지 않는다).
+    public const int NIGHT_SKILL_PROMPT = 50;
 }
