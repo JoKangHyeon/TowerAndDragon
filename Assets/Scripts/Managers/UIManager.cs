@@ -225,7 +225,7 @@ public class UIManager : MonoBehaviour
                 continue;
             }
 
-            label = action.action.GetBindingDisplayString();
+            label = InputBindingLabel.Resolve(action.action);
             return !string.IsNullOrWhiteSpace(label);
         }
 

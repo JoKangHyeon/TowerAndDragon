@@ -708,8 +708,18 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
         // 배치할 타일을 클릭해야 하므로 그리드를 가리면 안 된다.
         PLACE_DRAGON_TILE_LOC_KEY => GuideBubbleSlot.Bottom,
 
+        // 목록에서 새끼용을 고른 다음 타일까지 클릭해야 한다 - 위 단계와 같은 이유로 그리드를 비운다.
+        PLACE_DRAGON_LOC_KEY => GuideBubbleSlot.Bottom,
+
         // 관리창은 화면 왼쪽에 붙으므로 기본 자리와 겹친다 - 가운데로 옮겨 둘 다 보이게 한다.
         MODE_HINT_LOC_KEY => GuideBubbleSlot.Center,
+
+        // 인벤토리 버튼·탭·닫기 버튼은 모두 화면 위쪽에 있어 기본 자리와 겹친다.
+        // 가리키는 대상과 말풍선이 붙어 버리면 어느 쪽을 읽어야 할지 알 수 없다.
+        OPEN_INVENTORY_LOC_KEY => GuideBubbleSlot.Center,
+        REOPEN_INVENTORY_LOC_KEY => GuideBubbleSlot.Center,
+        SWITCH_TAB_LOC_KEY => GuideBubbleSlot.Center,
+        CLOSE_INVENTORY_LOC_KEY => GuideBubbleSlot.Center,
 
         _ => GuideBubbleSlot.Default,
     };
@@ -721,7 +731,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
     {
         return _inventoryToggleAction == null || _inventoryToggleAction.action == null
             ? string.Empty
-            : _inventoryToggleAction.action.GetBindingDisplayString();
+            : InputBindingLabel.Resolve(_inventoryToggleAction.action);
     }
 
     private bool IsInventoryOpen => _inventoryWindow != null && _inventoryWindow.IsOpen;

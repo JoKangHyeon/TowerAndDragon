@@ -20,7 +20,6 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     IHudControlBlockQuery, IBuildModeInteractionQuery, IShortcutBlockQuery, IGuideRequestProvider
 {
     private const float DEFAULT_HAND_OVER_DELAY = 1.5f;
-    private const float DEFAULT_STALL_ESCAPE_SECONDS = 45f;
 
     [SerializeField] private TutorialSequenceSO _sequence;
     [SerializeField] private GameManager _gameManager;
@@ -73,11 +72,6 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     [Tooltip("마지막 안내가 끝나고 다음 가이드에 넘기기까지 쉬는 시간(초). 0이면 곧바로 이어져 숨 돌릴 틈이 없다.")]
     [Min(0f)]
     [SerializeField] private float _handOverDelaySeconds = DEFAULT_HAND_OVER_DELAY;
-
-    [Tooltip("행동형 단계가 이 시간(초) 동안 진행되지 않으면 확인 버튼을 띄워 넘어갈 수 있게 한다. " +
-             "0이면 쓰지 않는다 - 배선이 잘못됐을 때 플레이어가 갇히는 것을 막는 마지막 장치다.")]
-    [Min(0f)]
-    [SerializeField] private float _stallEscapeSeconds = DEFAULT_STALL_ESCAPE_SECONDS;
 
     [Header("시작 자원 지급")]
     [Tooltip("행동형 단계는 그 행동이 실제로 가능해야 성립한다. 자원이 모자라면 안내해도 못 하고 단계가 영영 안 넘어간다.")]
@@ -155,9 +149,6 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     // 이 단계에 들어선 뒤 스킬 노드를 해금했는지. 노드 해금은 흔적을 남기지만 "이번 단계에 했는가"는
     // 총량으로 알 수 없다(이미 해금된 것이 있을 수 있다) - 이벤트를 받아 여기 적는다.
     private bool _hasUnlockedDragonSkillNode;
-
-    // 지금 단계가 오래 진행되지 않아 확인 버튼을 내준 상태. 단계를 넘길 때마다 풀린다.
-    private bool _isStalled;
 
     // 마지막으로 사유 문구를 낸 시각(정지 중에도 흘러야 하므로 unscaled). 연타 대응 잠금에 쓴다.
     private float _lastBlockedHintTime = float.NegativeInfinity;
@@ -621,7 +612,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
         bool isAcknowledged = _activeStep.Kind == TutorialStepKind.Acknowledge && _activeStep.WaitForConfirm;
 
-        if (isAcknowledged || _isStalled)
+        if (isAcknowledged)
         {
             _isConfirmedByClick = true;
             Advance();
@@ -701,10 +692,6 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     {
         UnsubscribeConditions();
 
-        // 새 단계는 막히지 않은 상태에서 시작한다 - 앞 단계에서 내준 확인 버튼이 따라오면
-        // 행동형 단계를 눌러서 건너뛸 수 있게 된다.
-        _isStalled = false;
-
         // 대상 판정도 단계마다 새로 시작한다. 앞 단계의 캐시가 남으면 지나간 곳을 가리킨다.
         _resolvedTarget = null;
         _resolvedWorldTarget = null;
@@ -773,13 +760,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         ResolveStepTarget();
 
         // 확인 버튼을 쓰는 설명은 누를 때까지 기다린다(OnConfirmClicked). 그 외에는 시간으로 넘긴다.
+        // 행동형은 아무것도 걸지 않는다 - 완료 조건이 올 때까지 기다리는 것이 전부다.
         if (_activeStep.Kind == TutorialStepKind.Acknowledge && !_activeStep.WaitForConfirm)
         {
             AutoAdvanceAsync(_activeStep).Forget();
-        }
-        else if (_activeStep.Kind == TutorialStepKind.WaitForAction && _stallEscapeSeconds > 0f)
-        {
-            WatchStallAsync(_activeStep).Forget();
         }
     }
 
@@ -913,7 +897,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     private bool IsTargetWaitExpired => Time.unscaledTime - _stepEnteredTime >= TARGET_WAIT_SECONDS;
 
     // 지금 확인 버튼을 내주는지. 갇힌 단계에서는 행동형에도 띄운다 - 그것이 유일한 빠져나갈 길이다.
-    private bool ShowsConfirmButtonNow => _activeStep != null && (_activeStep.ShowsConfirmButton || _isStalled);
+    private bool ShowsConfirmButtonNow => _activeStep != null && _activeStep.ShowsConfirmButton;
 
     /// <summary>
     /// 이번 프레임에 이 단계가 가리킬 곳과 진행률을 잡아 둔다. <b>Update에서만 부른다</b> -
@@ -1081,7 +1065,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
         bool hasTarget = _resolvedTarget != null || _resolvedWorldTarget != null;
 
-        if (!hasTarget && DeclaresTarget(_activeStep) && !_isStalled)
+        if (!hasTarget && DeclaresTarget(_activeStep))
         {
             if (!_hasEverResolvedTarget)
             {
@@ -1153,56 +1137,6 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
         return null;
     }
-
-    /// <summary>
-    /// 행동형 단계가 오래 진행되지 않으면 확인 버튼을 띄워 넘어갈 길을 만든다.
-    ///
-    /// 자동으로 넘기지 않는 이유: 천천히 하는 플레이어의 단계를 멋대로 건너뛰면 안내가 어긋난다.
-    /// 게이트를 여는 방식도 쓰지 않는다 - 아직 설명하지 않은 창이 열리거나 밤으로 넘어가면
-    /// 무엇을 하라는 안내인지 알 수 없게 되고, 그건 갇히는 것보다 나쁘다.
-    /// 버튼만 내주면 플레이어가 고를 수 있고, 어느 단계에서 막혔는지는 로그로 남는다.
-    ///
-    /// <b>스스로 여러 번 해야 하는 단계는 대상에서 뺀다.</b> 타워를 몇 기 더 짓고 정원까지 채우는 데는
-    /// 45초보다 오래 걸리는 것이 정상인데, 그때 확인 버튼을 내주면 <b>딤이 함께 깔려</b>
-    /// (오버레이가 확인 버튼 유무로 입력 차단을 정한다) 정작 시키던 건설을 할 수 없게 된다 -
-    /// 배선 오류를 잡으려던 장치가 정상 진행을 멈추는 쪽으로 작동한다.
-    /// </summary>
-    private async UniTaskVoid WatchStallAsync(TutorialStepSO step)
-    {
-        if (IsSelfPacedStep(step))
-        {
-            return;
-        }
-
-        await UniTask.WaitForSeconds(
-            _stallEscapeSeconds,
-            ignoreTimeScale: true,
-            cancellationToken: this.GetCancellationTokenOnDestroy());
-
-        // 그 사이 넘어갔으면(다른 단계이거나 끝났으면) 할 일이 없다.
-        if (!_isRunning || _activeStep != step)
-        {
-            return;
-        }
-
-        _isStalled = true;
-        Debug.LogError(
-            $"[TutorialRunner] '{step.StepId}' 단계가 {_stallEscapeSeconds}초 동안 진행되지 않아 " +
-            "확인 버튼으로 넘어갈 수 있게 합니다. 완료 조건 배선을 확인하세요.", this);
-    }
-
-    // 스톨 감시를 걸지 않는 단계.
-    //
-    // 개수 채우기·알 확인은 플레이어가 자기 속도로 여러 번 해야 하는 일이라 45초보다 오래 걸리는 것이 정상이다.
-    // 밤 버튼을 누르라는 단계도 같다 - 추가 건설·인구 재배치·자원 확인을 마치고 누르는 자리라 오래 머무는 것이
-    // 정상인데, 여기서 확인 버튼이 뜨면 딤이 함께 깔려 정작 그 준비를 할 수 없게 된다.
-    // 문구가 없는 이음매 컷은 이유가 다르다 - 화면을 다른 안내에 넘긴 컷이라 확인 버튼을 띄울 말풍선 자체가
-    // 없다. 감시해봐야 넘어갈 길은 생기지 않고 콘솔에 거짓 경보만 남는다.
-    private static bool IsSelfPacedStep(TutorialStepSO step) =>
-        step.Condition == TutorialConditionType.BuildingCountReached ||
-        step.Condition == TutorialConditionType.BabyDragonEggChecked ||
-        step.Condition == TutorialConditionType.NightStarted ||
-        string.IsNullOrWhiteSpace(step.MessageLocKey);
 
     /// <summary>
     /// 이 단계가 가리킬 UI를 찾는다. 못 찾으면 null이고, 그때 무엇을 할지는 호출부가 정한다.

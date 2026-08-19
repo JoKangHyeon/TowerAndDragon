@@ -69,7 +69,7 @@ public class UI_KeyBindingRow : MonoBehaviour
             return;
         }
 
-        _keyLabel.text = _action.GetBindingDisplayString(_bindingIndex);
+        _keyLabel.text = InputBindingLabel.Resolve(_action, _bindingIndex);
     }
 
     /// <summary>키 입력을 기다리는 중임을 보여준다. 문구는 리바인딩이 끝날 때까지 남는다.</summary>
