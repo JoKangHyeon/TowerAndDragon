@@ -57,17 +57,26 @@ public class BabyDragonTower : Tower, ITowerStaffing
 
     private static readonly int TYPE_ANIM_KEY = Animator.StringToHash("Type");
 
+    // 굶으면 공격/버프가 멈추므로(CanOperate) 체력 0으로 멈춘 타워와 같은 쓰러진 자세로 보여준다.
+    // 두 사유가 겹칠 수 있어(굶은 채로 파괴) Tower가 OR로 합쳐 판정한다 - 아침에 먹이를 줘도
+    // 아직 부활 대기 중이면 쓰러진 자세가 유지된다.
+    protected override bool IsBrokenPose => base.IsBrokenPose || !_isFed;
+
     // 밤 이동 제한은 BuildingPlacementController.CanMoveNow(모든 건물 공통)가 담당한다.
     protected void Start()
     {
         var anim = GetComponent<Animator>();
         if(anim != null)
             anim.SetInteger(TYPE_ANIM_KEY, (int)DragonData.DragonType);
+
+        // 아침 정산(SetFed)이 Start보다 먼저 돌았을 수 있다 - 속성과 함께 자세도 한 번 맞춰 둔다.
+        RefreshBrokenAnimation();
     }
 
     public void SetFed(bool isFed)
     {
         _isFed = isFed;
+        RefreshBrokenAnimation();
     }
 
     // BabyDragonPlacementCoordinator.HandleBuildingAdded가 배치 시 호출한다.
