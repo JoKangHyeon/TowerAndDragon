@@ -58,7 +58,7 @@ public class PortalWavePreviewRenderer : MonoBehaviour
     private readonly Dictionary<BaseMonster, Sprite> _iconByMonsterPrefab = new();
     private readonly Dictionary<MonsterData, int> _entryIndexByMonster = new();
     private readonly List<RouteSpawnPlan> _sortedRoutes = new();
-    private readonly List<(Sprite Icon, int Count, MonsterData Data)> _entryBuffer = new();
+    private readonly List<(Sprite Icon, int Count, MonsterData Data, EnemyEnhancementSnapshot Enhancement)> _entryBuffer = new();
 
     private ComponentPool<UI_PortalWavePreviewCard> _cardPool;
     private bool _isRefreshQueued;
@@ -337,8 +337,14 @@ public class PortalWavePreviewRenderer : MonoBehaviour
 
                 if (_entryIndexByMonster.TryGetValue(monsterData, out int existingIndex))
                 {
-                    (Sprite icon, int count, MonsterData data) = _entryBuffer[existingIndex];
-                    _entryBuffer[existingIndex] = (icon, count + spawnGroup.SpawnCount, data);
+                    // 강화는 첫 무리 것을 유지한다 - 같은 적은 어느 경로로 오든 같은 강화를 받으므로
+                    // (EnemyEnhancementResolver가 몬스터 종류로만 규칙을 고른다) 덮어써도 같은 값이다.
+                    (Sprite icon, int count, MonsterData data, EnemyEnhancementSnapshot enhancement) =
+                        _entryBuffer[existingIndex];
+
+                    _entryBuffer[existingIndex] =
+                        (icon, count + spawnGroup.SpawnCount, data, enhancement);
+
                     continue;
                 }
 
@@ -347,7 +353,8 @@ public class PortalWavePreviewRenderer : MonoBehaviour
                 _entryBuffer.Add((
                     ResolveMonsterIcon(spawnGroup.Source.MonsterPrefab),
                     spawnGroup.SpawnCount,
-                    monsterData));
+                    monsterData,
+                    spawnGroup.Enhancement));
             }
         }
     }

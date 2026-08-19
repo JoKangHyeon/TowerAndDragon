@@ -30,6 +30,10 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
     // Awake에서 한 번에 모을 수 없어, 슬롯을 처음 꺼낼 때 채운다.
     private readonly List<UI_TooltipTrigger> _slotTooltipTriggers = new();
 
+    // 전역 강화 줄을 담는 재사용 버퍼. 툴팁 문구는 SetContent가 즉시 문자열로 만들어 가지므로
+    // 칸마다 다시 채워 써도 앞 칸의 툴팁이 망가지지 않는다.
+    private readonly List<MonsterStatusLine> _statusLines = new();
+
     private void Awake()
     {
         if (_slotPrefab != null && _slotContainer != null)
@@ -39,11 +43,14 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
         }
     }
 
-    // 적 종류별 (아이콘, 마릿수, 데이터) 목록을 받아 슬롯을 채운다.
+    // 적 종류별 (아이콘, 마릿수, 데이터, 강화) 목록을 받아 슬롯을 채운다.
     // 슬롯은 풀로 재사용하고, 이번에 쓰지 않은 슬롯은 비활성화한다.
     // presenter는 칸에 마우스를 올렸을 때 설명을 그릴 표시기다. 비어 있으면 툴팁만 뜨지 않는다.
+    //
+    // 강화를 함께 받는 이유는 툴팁이 밤에 실제로 만날 수치를 적어야 하기 때문이다 -
+    // MonsterData의 설계값만 쓰면 점령 강화가 걸린 밤에 낮에 본 숫자와 실제 적이 달라진다.
     public void Setup(
-        IReadOnlyList<(Sprite Icon, int Count, MonsterData Data)> entries,
+        IReadOnlyList<(Sprite Icon, int Count, MonsterData Data, EnemyEnhancementSnapshot Enhancement)> entries,
         UI_TooltipPresenter presenter)
     {
         if (_slotPool == null)
@@ -53,13 +60,13 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
 
         for (int i = 0; i < entries.Count; i++)
         {
-            (Sprite icon, int count, MonsterData data) = entries[i];
+            (Sprite icon, int count, MonsterData data, EnemyEnhancementSnapshot enhancement) = entries[i];
 
             // 몬스터 아이콘은 인게임 스프라이트를 그대로 쓰므로 틴트 없이 원색으로 표시한다.
             UI_ConquestRewardSlot slot = _slotPool.Get(i);
             slot.Setup(icon, Color.white, string.Format(CountFormat, count));
 
-            SetupTooltip(i, slot, data, presenter);
+            SetupTooltip(i, slot, data, enhancement, presenter);
         }
 
         _slotPool.DeactivateFrom(entries.Count);
@@ -79,6 +86,7 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
         int slotIndex,
         UI_ConquestRewardSlot slot,
         MonsterData data,
+        in EnemyEnhancementSnapshot enhancement,
         UI_TooltipPresenter presenter)
     {
         while (_slotTooltipTriggers.Count <= slotIndex)
@@ -98,7 +106,11 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
 
         UI_TooltipTrigger trigger = _slotTooltipTriggers[slotIndex];
 
+        _statusLines.Clear();
+        EnemyEnhancementStatusLines.Collect(enhancement, _statusLines);
+
         trigger.SetPresenter(presenter);
-        trigger.SetContent(MonsterTooltipBuilder.Build(data));
+        trigger.SetContent(MonsterTooltipBuilder.Build(
+            MonsterTooltipInput.ForPreview(data, enhancement, _statusLines)));
     }
 }

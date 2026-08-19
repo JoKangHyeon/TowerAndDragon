@@ -12,4 +12,7 @@ public interface IShieldInfo
     bool IsIntact { get; }
 
     float CurrentShield { get; }
+
+    // 툴팁이 "20 / 50"처럼 남은 양을 전체와 견주어 적기 위해 필요하다.
+    float MaxShield { get; }
 }

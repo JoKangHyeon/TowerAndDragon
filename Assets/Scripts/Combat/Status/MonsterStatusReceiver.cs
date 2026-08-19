@@ -34,14 +34,20 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         public float RemainingSeconds;
         public float TickTimer;
     }
-    // 다른 두 Entry와 달리 Source/Element를 보관하지 않는다 - 스택은 임계치에 도달하는 순간
-    // 그 자리에서 곧바로 TriggerStatus를  부여하므로, 나중에 되읽을 값이 없다.
+    // Element는 보관하지 않는다 - 스택은 임계치에 도달하는 순간 그 자리에서 곧바로
+    // TriggerStatus를 부여하므로 나중에 되읽을 일이 없다.
+    // Source는 툴팁이 이름과 임계치("냉기 중첩 2 / 3")를 적기 위해 보관한다.
     private struct StackEntry
     {
+        public StackingStatusEffectSO Source;
         public bool IsInfinite;
         public float RemainingSeconds;
         public int Stacks;
     }
+
+    // 남은 시간은 소수점 한 자리까지만 적는다 - 툴팁을 0.25초마다 갱신하므로 그보다 잘게 적으면
+    // 숫자가 쉴 새 없이 흔들려 읽을 수 없다.
+    private const string REMAINING_SECONDS_FORMAT = "0.#";
 
     private readonly Dictionary<string, MoveSpeedEntry> _moveSpeedStatuses = new();
     private readonly Dictionary<string, DotEntry> _dotStatuses = new();
@@ -173,6 +179,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         
         _stackStatuses[key] = new StackEntry
         {
+            Source = status,
             IsInfinite = status.IsInfinite,
             RemainingSeconds = status.DurationSeconds,
             Stacks = stacks,
@@ -378,6 +385,97 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
                 _dotStatuses[key] = entry;
             }
         }
+    }
+
+    /// <summary>
+    /// 지금 걸려 있는 상태를 툴팁용 줄로 만들어 buffer에 덧붙인다(비우지 않는다 -
+    /// 전역 줄과 한 목록에 모으기 때문이다).
+    ///
+    /// 딕셔너리를 그대로 노출하지 않고 호출자가 준 버퍼를 채우는 이유는 두 가지다.
+    /// 만료·재적용을 이 컴포넌트만 관리한다는 캡슐화를 지키고, 툴팁이 0.25초마다 다시 만드는
+    /// 목록이라 매번 새 컬렉션을 할당하지 않기 위해서다.
+    /// </summary>
+    public void CollectActiveStatuses(List<MonsterStatusLine> buffer)
+    {
+        if (buffer == null)
+        {
+            return;
+        }
+
+        // 빙결 중에는 둔화를 적지 않는다 - MoveSpeedMultiplier가 이미 빙결을 우선해 0으로 만들므로,
+        // 둘 다 적으면 지금 효과가 없는 둔화가 작동 중인 것처럼 읽힌다.
+        bool isFrozen = _freezeStatuses.Count > 0;
+
+        foreach (FreezeEntry entry in _freezeStatuses.Values)
+        {
+            AppendLine(buffer, entry.Source, entry.IsInfinite, entry.RemainingSeconds);
+        }
+
+        if (!isFrozen)
+        {
+            foreach (MoveSpeedEntry entry in _moveSpeedStatuses.Values)
+            {
+                AppendLine(buffer, entry.Source, entry.IsInfinite, entry.RemainingSeconds);
+            }
+        }
+
+        foreach (DotEntry entry in _dotStatuses.Values)
+        {
+            AppendLine(buffer, entry.Source, entry.IsInfinite, entry.RemainingSeconds);
+        }
+
+        foreach (StackEntry entry in _stackStatuses.Values)
+        {
+            AppendStackLine(buffer, entry);
+        }
+    }
+
+    // 이름 키가 없는 상태는 줄을 만들지 않는다(StatusEffectSO.HasDisplayName 주석 참고).
+    private static void AppendLine(
+        List<MonsterStatusLine> buffer,
+        StatusEffectSO source,
+        bool isInfinite,
+        float remainingSeconds)
+    {
+        if (source == null || !source.HasDisplayName)
+        {
+            return;
+        }
+
+        buffer.Add(new MonsterStatusLine(
+            MonsterStatusScope.Instance,
+            StringTable.GetString(source.DisplayNameLocKey),
+            FormatRemaining(isInfinite, remainingSeconds)));
+    }
+
+    // 스택은 남은 시간이 아니라 "몇 개를 쌓았는지"가 판단 근거다 - 임계치까지 한 번 더 때리면
+    // 되는지가 보여야 한다.
+    private static void AppendStackLine(List<MonsterStatusLine> buffer, StackEntry entry)
+    {
+        if (entry.Source == null || !entry.Source.HasDisplayName)
+        {
+            return;
+        }
+
+        buffer.Add(new MonsterStatusLine(
+            MonsterStatusScope.Instance,
+            StringTable.GetString(entry.Source.DisplayNameLocKey),
+            string.Format(
+                StringTable.GetString(StatusLocKeys.ROW_STACKS),
+                entry.Stacks,
+                entry.Source.StacksToTrigger)));
+    }
+
+    private static string FormatRemaining(bool isInfinite, float remainingSeconds)
+    {
+        if (isInfinite)
+        {
+            return StringTable.GetString(StatusLocKeys.ROW_INFINITE);
+        }
+
+        return string.Format(
+            StringTable.GetString(StatusLocKeys.ROW_DURATION),
+            remainingSeconds.ToString(REMAINING_SECONDS_FORMAT));
     }
 
     private static string ResolveKey(StatusEffectSO status) =>

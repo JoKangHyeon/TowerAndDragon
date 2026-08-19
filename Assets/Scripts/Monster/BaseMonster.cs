@@ -39,6 +39,20 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
 
     // 현재 체력 비례 데미지(스킬 등)를 산정하기 위해 노출한다 - Health 자체는 계속 private로 캡슐화.
     public float CurrentHealth => _health == null ? 0f : _health.CurrentHealth;
+
+    // 툴팁이 "42 / 120"을 적으려면 최대 체력도 필요하다. MonsterData.MaxHealth로는 안 된다 -
+    // Setup에서 강화 배율이 곱해지므로 설계 원본값과 실제 개체의 최대 체력이 다르다.
+    public float MaxHealth => _health == null ? 0f : _health.MaxHealth;
+
+    // 방어막은 표시용 계약만 넘긴다 - 툴팁이 MonsterShield의 Absorb/Clear까지 만질 이유가 없다.
+    public IShieldInfo Shield => _shield;
+
+    // 이 개체에 적용된 전역 강화. 낮의 출현 예고 카드가 밤의 실제 수치와 같은 값을 보여주는 데 쓴다.
+    public EnemyEnhancementSnapshot Enhancement => _enhancement;
+
+    /// <summary>지금 걸린 상태이상을 툴팁용 줄로 buffer에 덧붙인다(수신기는 계속 private로 캡슐화).</summary>
+    public void CollectActiveStatuses(System.Collections.Generic.List<MonsterStatusLine> buffer) =>
+        _statusReceiver?.CollectActiveStatuses(buffer);
     public Transform TargetTransform => transform;
     public GameObject TargetObject => gameObject;
     public MonsterAttack Attack => _attack;

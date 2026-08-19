@@ -10,10 +10,6 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class SkillTargetingController : MonoBehaviour, IExclusiveMode
 {
-    private const float ENEMY_PICK_RADIUS = 0.3f;
-    // 스프라이트가 놓인 월드 Z 평면 - GetMouseWorldPoint가 이 평면 위의 지점을 구하는 데 사용한다.
-    private const float TARGET_PLANE_WORLD_Z = 0f;
-
     [Tooltip("타겟 지정을 확정하는 액션 - 보통 좌클릭.")]
     [SerializeField] private InputActionReference _confirmAction;
     [Tooltip("타겟팅 모드를 취소하는 액션 - 보통 우클릭/ESC.")]
@@ -256,43 +252,13 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
         if (_cam == null)
             _cam = Camera.main;
 
-        if (_cam == null || Mouse.current == null)
-            return Vector3.zero;
-
-        Vector3 screenPos = Mouse.current.position.ReadValue();
-
-        // 오쏘그래픽 카메라의 ScreenToWorldPoint z는 "카메라로부터의 거리"이지 월드 Z가 아니다.
-        // 카메라 Z(예: -10)를 그대로 0으로 두면 카메라 자기 위치(니어클립 안쪽)가 나와
-        // 물리 판정(2D라 Z 무관)엔 문제없지만 시각 요소(LineRenderer 등)는 화면에 보이지 않는다.
-        screenPos.z = TARGET_PLANE_WORLD_Z - _cam.transform.position.z;
-        return _cam.ScreenToWorldPoint(screenPos);
+        return MonsterPicker.GetMouseWorldPoint(_cam);
     }
 
-    // 작은 적 콜라이더를 클릭으로 정확히 맞추기 어려우므로 반경을 두고 주운 뒤, 가장 가까운 적을 고른다.
-    private static BaseMonster FindEnemyUnderPointer(Vector3 worldPoint, LayerMask layers)
-    {
-        Collider2D[] hits = Physics2D.OverlapCircleAll(worldPoint, ENEMY_PICK_RADIUS, layers);
-        BaseMonster closest = null;
-        float closestSqrDistance = float.MaxValue;
-
-        foreach (Collider2D hit in hits)
-        {
-            BaseMonster monster = hit.GetComponentInParent<BaseMonster>();
-
-            if (monster == null || monster.IsDead)
-                continue;
-
-            float sqrDistance = (monster.TargetTransform.position - worldPoint).sqrMagnitude;
-
-            if (sqrDistance < closestSqrDistance)
-            {
-                closestSqrDistance = sqrDistance;
-                closest = monster;
-            }
-        }
-
-        return closest;
-    }
+    // 판정 자체는 MonsterPicker가 갖는다 - 호버 툴팁이 같은 규칙을 써야 "스킬은 걸리는데
+    // 툴팁은 안 뜨는" 자리가 생기지 않는다.
+    private static BaseMonster FindEnemyUnderPointer(Vector3 worldPoint, LayerMask layers) =>
+        MonsterPicker.FindUnderPointer(worldPoint, layers);
 
     bool IExclusiveMode.IsOpen => IsTargeting;
 

@@ -8,6 +8,13 @@ public abstract class StatusEffectSO : ScriptableObject
     // 같은 Id를 가진 상태끼리만 "동일 상태의 갱신"으로 취급한다(MonsterStatusReceiver 참고).
     [SerializeField] private string _statusId;
 
+    // 툴팁에 적을 이름의 스트링테이블 키. StatusId와 따로 두는 이유는 Id가 출처별로 갈리기 때문이다 -
+    // tower_ice_slow / baby_ice_slow / dragon_ice_slow는 화면에 전부 "둔화"로 나와야 한다.
+    // 비워 두면 그 상태는 툴팁에 줄을 만들지 않는다 - 키를 안 채운 애셋이 빈 줄이나
+    // 키 문자열을 그대로 노출하는 것보다 조용히 빠지는 편이 낫다.
+    [Tooltip("툴팁에 표시할 이름의 스트링테이블 키. 비우면 툴팁에 나오지 않는다.")]
+    [SerializeField] private string _displayNameLocKey;
+
     // 0 이하 = 무한 지속(별도 해제 시점까지 유지). 불 패시브(상시 화상)처럼 발동 조건이
     // 사라질 때까지 계속돼야 하는 상태에 쓴다.
     [SerializeField] private float _durationSeconds;
@@ -21,6 +28,8 @@ public abstract class StatusEffectSO : ScriptableObject
     [SerializeField] private bool _piercesCrowdControlImmunity;
 
     public string StatusId => _statusId;
+    public string DisplayNameLocKey => _displayNameLocKey;
+    public bool HasDisplayName => !string.IsNullOrEmpty(_displayNameLocKey);
     public float DurationSeconds => _durationSeconds;
     public bool IsInfinite => _durationSeconds <= 0f;
     public bool PiercesCrowdControlImmunity => _piercesCrowdControlImmunity;

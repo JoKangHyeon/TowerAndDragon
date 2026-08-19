@@ -6,6 +6,9 @@ public static class MonsterLocKeys
     // 툴팁 한 줄: "{0}" 스탯 이름, "{1}" 값.
     public const string TOOLTIP_ROW = "monster_tooltip_row";
 
+    // 살아 있는 개체의 값: "{0}" 현재, "{1}" 최대. 예고 카드처럼 개체가 없으면 쓰지 않는다.
+    public const string STAT_CURRENT_OF_MAX = "monster_stat_current_of_max";
+
     public const string STAT_HEALTH = "monster_stat_health";
     public const string STAT_MOVE_SPEED = "monster_stat_move_speed";
     public const string STAT_MOVEMENT = "monster_stat_movement";
