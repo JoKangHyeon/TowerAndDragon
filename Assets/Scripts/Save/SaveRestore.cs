@@ -46,6 +46,13 @@ public static class SaveRestore
         //    RestoreInventory는 데이터만 세팅하므로 스킬트리에 의존하지 않는다.
         RestoreRun(dto.Run, context.GameManager.CurrentRun);
 
+        //    가이드 퀘스트 진행도도 RunData에만 쓰므로 같은 자리에서 함께 복원한다.
+        //    다른 시스템을 건드리지 않아 순서 의존성이 없다 - 표시(UI_GuideQuestWindow)는
+        //    ResumeDay 뒤에 오는 QuestsChanged로 따라온다.
+        context.GameManager.CurrentRun.RestoreGuideQuests(
+            dto.GuideQuests.CompletedQuestIds,
+            dto.GuideQuests.IsIntroAnswered);
+
         // 6. 용 스킬트리.
         if (context.DragonTreeManager != null)
         {

@@ -26,11 +26,26 @@ public sealed class TutorialTriggerSpec
     [WiringOptional]
     [SerializeField] private ResourceProductionData _targetFactoryData;
 
+    [Tooltip("ResourceGained 조건에서 기다릴 자원. None이면 \"지정 안 함\"이다.")]
+    [SerializeField] private ResourceType _targetResource = ResourceType.None;
+
+    [Tooltip("용 조건에서 속성까지 가릴 때만 켠다. 끄면 어떤 속성이든 통과한다 - " +
+             "DragonType에는 None이 없어 값만으로는 \"지정 안 함\"을 나타낼 수 없다.")]
+    [SerializeField] private bool _filterByDragon;
+
+    [Tooltip("DragonEggGranted / DragonEggHatched 조건에서 기다릴 용 속성. 위 스위치를 켜야 쓰인다.")]
+    [SerializeField] private DragonType _targetDragon = DragonType.Ice;
+
     public TutorialConditionType Condition => _condition;
     public TutorialExclusiveModeKind TargetMode => _targetMode;
     public TutorialBuildingKind TargetBuilding => _targetBuilding;
     public ResourceProductionData TargetFactoryData => _targetFactoryData;
+    public ResourceType TargetResource => _targetResource;
+    public bool FilterByDragon => _filterByDragon;
+    public DragonType TargetDragon => _targetDragon;
 
     public bool MatchesBuilding(Building building) =>
         TutorialTargetMatcher.MatchesBuilding(building, _targetBuilding, _targetFactoryData);
+
+    public bool MatchesDragon(DragonType type) => !_filterByDragon || _targetDragon == type;
 }

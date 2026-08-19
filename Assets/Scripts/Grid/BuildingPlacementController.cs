@@ -60,6 +60,11 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private float _dragThreshold = 10f;
 
+    [Tooltip("직전 클릭에서 이 픽셀 이내면 '같은 자리를 다시 눌렀다'로 보고 겹친 건물 중 다음 것을 고른다. " +
+        "_dragThreshold와 값은 비슷하지만 뜻이 다르다 - 저쪽은 한 번의 누름 안에서의 이동량, 이쪽은 클릭과 클릭 사이의 거리다.")]
+    [SerializeField]
+    private float _reclickCycleRadius = 10f;
+
     // 건물 철거 시 돌려주는 비율의 출처(밸런싱 대상이라 상수가 아니라 에셋에서 읽는다).
     // 미연결이면 환급하지 않는다 - 되돌려줄 비율을 모르는 채 임의 값으로 자원을 주지 않기 위함.
     [SerializeField]
@@ -79,6 +84,10 @@ public class BuildingPlacementController : MonoBehaviour
     private bool _isPressValid;
     // 롱프레스가 이 누름을 이동 모드 진입으로 이미 소비했다. 뗄 때 확정을 한 번 더 하지 않도록 막는다.
     private bool _longPressConsumedPress;
+
+    // 같은 자리를 다시 눌렀을 때 겹친 건물 사이를 돌리는 상태. Awake의 가드를 통과해야 만들어지므로
+    // 인스펙터 배선이 빠진 인스턴스에서는 null이다.
+    private BuildingClickCycle _clickCycle;
 
     private readonly List<IBuildModeInteractionQuery> _interactionQueries = new();
 
@@ -186,6 +195,7 @@ public class BuildingPlacementController : MonoBehaviour
         }
 
         _gridMap.OnCellChanged.AddListener(HandleCellChanged);
+        _clickCycle = new BuildingClickCycle(_gridMap);
     }
 
     private void OnDestroy()
@@ -207,6 +217,7 @@ public class BuildingPlacementController : MonoBehaviour
             // 남은 상태로 확정되지 않도록 여기서 지운다.
             _isPressValid = false;
             _holdCoord = null;
+            _clickCycle?.Reset();
             return;
         }
 
@@ -321,6 +332,9 @@ public class BuildingPlacementController : MonoBehaviour
         if (!IsDayForBuildActions)
             return;
 
+        // 후보 하나가 사라지므로 순환 목록을 그대로 둘 수 없다.
+        _clickCycle?.Reset();
+
         Building building = _gridMap.GetBuildingAt(_selectedExistingBuildingCoord.Value);
         bool removed = _gridMap.RemoveBuilding(_selectedExistingBuildingCoord.Value);
 
@@ -380,6 +394,9 @@ public class BuildingPlacementController : MonoBehaviour
         if (!CanMoveNow(building))
             return;
 
+        // 선택이 이동 대상으로 승격된다 - 이동을 마치고 같은 자리를 눌렀을 때 순환 도중부터 이어지지 않게 한다.
+        _clickCycle?.Reset();
+
         CancelBuildMode();
         _moveSourceCoord = _selectedExistingBuildingCoord;
         _selectedExistingBuildingCoord = null;
@@ -405,6 +422,8 @@ public class BuildingPlacementController : MonoBehaviour
 
     public void Deselect()
     {
+        // 선택을 완전히 걷는 경로다. 다음 클릭은 순환 도중이 아니라 처음부터 시작해야 한다.
+        _clickCycle?.Reset();
         ClearSelectionWithoutNotify();
         NotifySelectedBuildingChanged();
     }
@@ -629,26 +648,32 @@ public class BuildingPlacementController : MonoBehaviour
             return;
         }
 
-        SelectExistingBuildingAt(ResolveClickedCell());
+        SelectCycledBuildingAtPointer();
     }
 
-    // 성은 그리드 정중앙에 3x3만 점유하는데(Castle.RegisterCenterFootprint) 스프라이트는 그보다
-    // 훨씬 높게 그려져 있어, 탑 몸통을 눌러도 셀 판정으로는 빈 땅이 나온다. 그 경우에 한해 성
-    // 스프라이트 안인지 한 번 더 보고 성의 셀로 돌린다.
-    // 셀에 건물이 있으면 그대로 두므로, 성 앞을 가리는 타워를 못 고르게 되는 일은 없다.
-    private Vector3Int ResolveClickedCell()
+    // 지면 셀만 보면, 스프라이트가 자기 풋프린트보다 높게 그려진 건물(성 등)의 몸통 아래는 빈 땅이라
+    // 몸통을 눌러도 아무것도 잡히지 않는다. 그래서 몸통에 걸린 건물까지 후보로 모으고, 겹친 후보가
+    // 여럿이면 같은 자리를 다시 누를 때마다 뒤쪽 건물로 넘어간다(BuildingClickCycle).
+    private void SelectCycledBuildingAtPointer()
     {
         Vector3Int hoveredCell = _mouseSelectController.GetHoveredCell();
 
-        if (_gridMap.GetBuildingAt(hoveredCell) != null)
-            return hoveredCell;
+        Building next = _clickCycle?.ResolveNext(
+            _mouseSelectController.GetPointerWorldPoint(),
+            hoveredCell,
+            PointerScreenPosition(),
+            _reclickCycleRadius);
 
-        Castle castle = _gridMap.FindBuilding<Castle>(out Vector3Int castleCoord);
+        // 후보가 없거나(빈 땅) 좌표를 되짚지 못하면 선택 해제로 확정한다 - 여기서 그냥 돌아가면
+        // BuildingSelected(null)가 나가지 않아 해제를 기다리던 구독자가 그대로 열려 있는다.
+        if (next == null || !_gridMap.TryGetOccupiedCoord(next, out Vector3Int coord))
+        {
+            _clickCycle?.Reset();
+            ApplySelectionAt(hoveredCell);
+            return;
+        }
 
-        if (castle == null || !castle.ContainsWorldPoint(_mouseSelectController.GetPointerWorldPoint()))
-            return hoveredCell;
-
-        return castleCoord;
+        ApplySelectionAt(coord);
     }
 
     public bool TryConstructAt(Vector3Int anchor)
@@ -700,6 +725,9 @@ public class BuildingPlacementController : MonoBehaviour
             _resourceManager.Spend(cost);
 
         SoundManager.Play(SoundId.BuildPlace);
+
+        // 새 건물이 후보 집합에 들어온다.
+        _clickCycle?.Reset();
 
         CancelBuildMode();
         return true;
@@ -796,13 +824,28 @@ public class BuildingPlacementController : MonoBehaviour
 
         building.NotifyMoved();
         building.SetHighlighted(false, default);
+
+        // 자리가 바뀌면 정렬 순서도 바뀌어 후보 순서가 달라진다.
+        _clickCycle?.Reset();
+
         _moveSourceCoord = null;
         _mouseSelectController.SetPlacementActive(false);
         _mouseSelectController.ClearHighlights();
         return true;
     }
 
+    /// <summary>좌표로 직접 선택한다(롱프레스 이동·튜토리얼 등 클릭 순환을 거치지 않는 경로).
+    /// 여기로 들어온 선택은 순환의 기준점이 될 수 없으므로 순환을 처음부터 다시 시작시킨다.</summary>
     public void SelectExistingBuildingAt(Vector3Int coord)
+    {
+        _clickCycle?.Reset();
+        ApplySelectionAt(coord);
+    }
+
+    // 선택 상태만 바꾼다. 순환 상태는 건드리지 않으므로, 순환 중인 클릭이 자기 기준점을 지우지 않는다.
+    // 이 안에서 부르는 CancelBuildMode/CancelMove/ClearSelectionWithoutNotify에도 같은 이유로
+    // 순환 리셋을 넣으면 안 된다.
+    private void ApplySelectionAt(Vector3Int coord)
     {
         Building building = _gridMap.GetBuildingAt(coord);
 

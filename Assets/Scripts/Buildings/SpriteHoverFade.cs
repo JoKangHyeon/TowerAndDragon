@@ -55,10 +55,10 @@ public class SpriteHoverFade : MonoBehaviour
                 return false;
         }
 
+        // 클릭 후보 판정(Building.ContainsWorldPoint)과 같은 함수를 쓴다 -
+        // 기준이 갈라지면 "반투명해졌는데 안 눌리는" 영역이 생긴다.
         Vector3 mouseWorld = _cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
-        Bounds bounds = _spriteRenderer.bounds;
-        mouseWorld.z = bounds.center.z;
 
-        return bounds.Contains(mouseWorld);
+        return SpriteHitTest.Contains(_spriteRenderer, mouseWorld);
     }
 }

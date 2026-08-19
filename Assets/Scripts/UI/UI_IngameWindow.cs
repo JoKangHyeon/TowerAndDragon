@@ -64,8 +64,8 @@ public class UI_IngameWindow : MonoBehaviour
 
     [Header("자원 표시 (Panel_TopLeft)")]
     [SerializeField] private ResourceManager _resourceManager;
-    [Tooltip("자원 종류별 수량 텍스트. 현재는 기본 3종(식량·통나무·돌) + 특화 4종만 배선돼 있다 - " +
-        "슬라임 5종은 이 창에 표시하지 않는다(용 창에서 확인한다).")]
+    [Tooltip("자원 종류별 수량 텍스트. 기본 3종(식량·통나무·돌) + 특화 4종만 배선한다 - " +
+        "슬라임 5종은 칸을 따로 두지 않고 _slimeSummary가 기호 하나로 요약한다.")]
     [SerializeField] private ResourceSlot[] _resourceSlots;
     [Tooltip("하루 예상 증감 표기용. 각 자원 보유량 옆에 (+증가) 또는 (-감소)로 노출한다.")]
     [FormerlySerializedAs("_productionForecast")]
@@ -77,6 +77,9 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private Color _productionColor = PRODUCTION_COLOR_DEFAULT;
     [Tooltip("자원 칸 툴팁을 그릴 표시기. 각 자원 행의 UI_TooltipTrigger에 주입한다.")]
     [SerializeField] private UI_TooltipPresenter _tooltipPresenter;
+    [Tooltip("특화자원 행 오른쪽 끝의 슬라임 요약 칸. 슬라임 5종은 _resourceSlots에 넣지 않고 " +
+        "이 칸이 기호 하나로 요약하고, 자세한 값은 호버 패널에서 보여준다.")]
+    [SerializeField] private UI_SlimeSummaryIndicator _slimeSummary;
 
     // _resourceSlots와 인덱스가 대응하는 툴팁 트리거 캐시.
     private UI_TooltipTrigger[] _resourceTooltipTriggers;
@@ -123,6 +126,12 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private Button _buttonSetting;
     [Tooltip("설정 창(Config_window). 버튼 클릭 시 토글한다.")]
     [SerializeField] private UI_ConfigWindow _configWindow;
+
+    [Header("도움말 (Button_Help)")]
+    [Tooltip("도감형 도움말 창 토글 버튼.")]
+    [SerializeField] private Button _buttonHelp;
+    [Tooltip("도움말 창(Help_window_Blocker). 버튼 클릭 시 토글한다.")]
+    [SerializeField] private UI_HelpWindow _helpWindow;
 
     [Header("웨이브 진행 바 (Panel_TopCenter/BossWave)")]
     [Tooltip("웨이브 진행 슬라이더(Slider_wave).")]
@@ -201,6 +210,12 @@ public class UI_IngameWindow : MonoBehaviour
         {
             _buttonSetting.onClick.AddListener(_configWindow.ToggleFromEntryPoint);
         }
+
+        // 클릭음은 창의 Open/Close가 내므로 여기서 SoundManager를 중복으로 부르지 않는다.
+        if (_buttonHelp != null && _helpWindow != null)
+        {
+            _buttonHelp.onClick.AddListener(_helpWindow.ToggleFromEntryPoint);
+        }
     }
 
     private void OnEnable()
@@ -212,6 +227,12 @@ public class UI_IngameWindow : MonoBehaviour
         }
 
         ResolveResourceTooltipTriggers();
+
+        // 슬라임 요약 칸은 자원 출처를 스스로 배선하지 않는다(프리팹 안쪽이라 씬 참조를 넣을 수 없다).
+        if (_slimeSummary != null)
+        {
+            _slimeSummary.Construct(_resourceManager, _resourceForecast);
+        }
 
         // 예측이 바뀌면(건물/인구/버프/지형 변경) 보유량 옆 증감 표기와 툴팁을 다시 그린다.
         // 자원 보유량 참조와 무관하게 구독해야, ResourceManager 미연결 씬에서도 표기가 갱신된다.
@@ -374,6 +395,12 @@ public class UI_IngameWindow : MonoBehaviour
     {
         RenderResource(type, amount);
 
+        // 슬라임은 _resourceSlots에 없으므로 RenderResource가 아무것도 하지 않는다 - 요약 칸이 받는다.
+        if (_slimeSummary != null && DragonSlimeTable.TryGetAttribute(type, out _))
+        {
+            _slimeSummary.Refresh();
+        }
+
         if (type == ResourceType.Food && _populationManager != null)
         {
             RenderPopulation(_populationManager.CurrentState);
@@ -447,6 +474,11 @@ public class UI_IngameWindow : MonoBehaviour
         foreach (ResourceSlot slot in _resourceSlots)
         {
             RenderResource(slot.Type, _resourceManager.GetAmount(slot.Type));
+        }
+
+        if (_slimeSummary != null)
+        {
+            _slimeSummary.Refresh();
         }
     }
 

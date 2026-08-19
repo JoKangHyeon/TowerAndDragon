@@ -68,6 +68,9 @@ public static class TutorialTargetMatcher
             case TutorialBuildingKind.Castle:
                 return building is Castle;
 
+            case TutorialBuildingKind.SealStone:
+                return building is SealStone;
+
             default:
                 return false;
         }

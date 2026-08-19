@@ -26,6 +26,7 @@ public static class SaveCapture
             Map = CaptureMap(context.ConquestManager, context.GridMap, run),
             Castle = CaptureCastle(context.Castle),
             Landmarks = CaptureLandmarks(context.LandmarkManager),
+            GuideQuests = CaptureGuideQuests(run),
         };
 
         dto.Meta = CaptureMeta(context, dto.Run, dto.Resources, slotIndex, isAutoSave);
@@ -347,6 +348,16 @@ public static class SaveCapture
         }
 
         return dto;
+    }
+
+    private static GuideQuestStateDto CaptureGuideQuests(RunData run)
+    {
+        return new GuideQuestStateDto
+        {
+            // 완료 순서는 복원에 쓰이지 않으므로 정렬해 둔다 - 같은 상태가 항상 같은 바이트가 된다.
+            CompletedQuestIds = ToSortedList(run.CompletedGuideQuestIds),
+            IsIntroAnswered = run.IsGuideIntroAnswered,
+        };
     }
 
     // 같은 상태가 항상 같은 바이트로 저장되도록 정렬한다 - 수동 diff와 회귀 테스트가 쉬워진다.

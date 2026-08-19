@@ -1,6 +1,10 @@
 /// <summary>
-/// 행동형 단계를 끝내는 조건. 조건 자체는 이벤트 훅이라 본질적으로 코드이고,
-/// 여기서는 "어느 훅을 볼지"만 데이터로 고른다. 실제 구독은 TutorialRunner가 한다.
+/// 게임 이벤트 훅 카탈로그. 조건 자체는 이벤트 훅이라 본질적으로 코드이고,
+/// 여기서는 "어느 훅을 볼지"만 데이터로 고른다.
+///
+/// 이름은 튜토리얼에서 시작했지만 튜토리얼 전용이 아니다 - 실제 구독은 TutorialRunner ·
+/// TutorialObjectiveController · HelpDiscoveryController가 각자 한다.
+/// (이름 정리는 리뷰 면적이 커서 알파 후 별도 리팩터로 미뤄 뒀다.)
 /// </summary>
 public enum TutorialConditionType
 {
@@ -103,6 +107,55 @@ public enum TutorialConditionType
     // ExclusiveModeClosed로는 대체할 수 없다 - 알을 받기 전에 인벤토리를 한 번 열었다 닫기만 해도
     // 통과해 안내가 시작되기도 전에 목표가 완료됐다.
     BabyDragonEggChecked,
+
+    // ResourceManager.ResourceChanged - 지정한 자원을 손에 넣었다(보유량이 1 이상이 된 시점).
+    // 어느 자원인지는 TutorialTriggerSpec.TargetResource로 지정한다.
+    // 복원 경로가 보유량 0인 자원까지 전부 발화하므로, 구독하는 쪽에서 수량 검사를 반드시 한다.
+    ResourceGained,
+
+    // DragonEggInventorySystem.OnEggHatched - 알이 부화해 새끼용이 됐다.
+    // 속성을 가리려면 TutorialTriggerSpec.TargetDragon을 함께 지정한다.
+    DragonEggHatched,
+
+    // ConquestManager.OnConquestCompleted - 점령 원정이 끝나 땅을 얻었다.
+    ConquestCompleted,
+
+    // LandmarkManager.OnLandmarkClaimed - 랜드마크를 확보했다.
+    LandmarkClaimed,
+
+    // CycleManager.OnNightStart - 밤이 시작됐다.
+    NightStarted,
+
+    // WaveCycleProgression.CycleCompleted - 한 주기를 끝냈다(주기 말 보스 웨이브를 넘겼다는 뜻).
+    // 보스 웨이브 전용 이벤트는 없고, 주기 완료가 곧 보스를 넘긴 시점이다.
+    WaveCycleCompleted,
+
+    // PopulationManager.PopulationChanged - 놀고 있는 인구가 하나도 없다(가용 인구 0).
+    // AnyPopulationAssigned가 "한 명이라도 배치했는가"라면 이쪽은 "한 명도 안 놀리는가"다.
+    // 식량 유지비가 배치 인구가 아니라 총인구 기준이라(PopulationUpkeepSystem) 미배치는 순손실이고,
+    // 이것을 아는지가 극초반 빌드업의 갈림길이라 별도 조건으로 둔다.
+    AllPopulationAssigned,
+
+    // DragonTreeManager.NodeUnlocked - 용 스킬을 하나 해금했다.
+    // 어느 노드인지는 묻지 않는다. 연구(ResearchNodeCompleted)와 발신처가 다르므로 별도 값이 필요하다 -
+    // 둘은 ProgressionManagerBase 골격만 공유할 뿐 완전히 별개 시스템이다.
+    DragonSkillUnlocked,
+
+    // SkillTargetingController.SkillUsed - 용 스킬을 실제로 발동했다.
+    // 해금(DragonSkillUnlocked)과 나누는 이유: 트리에서 열어 두고 밤에 한 번도 쓰지 않는 것이
+    // 초보자가 가장 흔히 놓치는 화력이다.
+    SkillUsed,
+
+    // ResourceForecast.ForecastChanged - 지정한 자원의 하루 예상 증감이 0 이상이 됐다.
+    // 자원 종류는 TutorialTriggerSpec.TargetResource로 지정한다(식량 수지를 흑자로 만드는 목표용).
+    //
+    // 계산을 여기서 다시 하지 않고 ResourceForecast에 물어보는 것이 중요하다 - 자원 UI가 보는 값과
+    // 같은 출처를 써야 "UI에는 흑자인데 퀘스트는 미완료"인 상태가 생기지 않는다.
+    ResourceForecastNonNegative,
+
+    // 지형 페널티가 붙은 자리에 건물을 지었다. 전용 이벤트는 없고, BuildingConstructed를 받은
+    // 자리에서 IBuildingTerrainPenaltyQuery.Resolve 결과가 Neutral과 다른지로 판정한다.
+    BuildingPlacedOnPenaltyTerrain,
 
     // 지정한 종류의 건물이 필요한 개수만큼 서 있다(TutorialStepSO의 RequiredCount·RequiresStaffed).
     // "한 기는 손잡고 짓고 나머지는 자율"을 표현하는 조건이라 증가분이 아니라 총량으로 센다.

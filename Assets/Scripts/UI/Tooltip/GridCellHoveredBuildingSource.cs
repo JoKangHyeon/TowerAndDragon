@@ -5,9 +5,11 @@ using UnityEngine;
 /// MouseSelectController.GetHoveredCell()은 마우스 좌표를 셀로 바꾸는 조회일 뿐이고,
 /// 툴팁을 띄울지는 드라이버가 커서가 머문 시간으로 정한다.
 ///
-/// 클릭 선택(BuildingPlacementController)도 같은 조회를 거치므로 커서가 가리키는 건물과
-/// 눌렀을 때 잡히는 건물이 서로 어긋나지 않는다. GridMap.GetBuildingAt은 풋프린트에 속한 모든
-/// 셀에서 같은 점유 건물을 돌려주므로 여러 칸짜리 건물도 어느 칸을 짚든 동작한다.
+/// 호버는 지면 셀만 본다. 클릭 선택(BuildingClickCycle)은 스프라이트 몸통까지 후보로 잡고
+/// 겹치면 재클릭으로 순환하므로 둘의 결과가 항상 같지는 않다 - 순환에는 "지금 몇 번째 후보인가"라는
+/// 상태가 있어서 커서 위치만으로는 결정할 수 없고, 몸통 판정을 호버에 넣으면 성의 투명한 여백 위에서도
+/// 툴팁이 뜨게 된다. GridMap.GetBuildingAt은 풋프린트에 속한 모든 셀에서 같은 점유 건물을
+/// 돌려주므로 여러 칸짜리 건물도 어느 칸을 짚든 동작한다.
 /// </summary>
 public class GridCellHoveredBuildingSource : HoveredBuildingSource
 {

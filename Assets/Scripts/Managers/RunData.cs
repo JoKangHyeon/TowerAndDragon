@@ -27,6 +27,15 @@ public class RunData
     // 하나로 합치면 목록에 띄우기만 한 목표가 완료로 기록된다.
     public List<string> CompletedTutorialObjectiveIds = new();
 
+    // 가이드 퀘스트는 위 자유 목표와 목록을 공유하지 않는다 - 저쪽은 튜토리얼 씬에서만 도는 목표이고
+    // 이쪽은 본게임의 빌드업 체크리스트라, 하나로 합치면 튜토리얼을 건너뛴 플레이어의 세이브에
+    // 튜토리얼 목표 완료 기록이 섞여 들어간다.
+    public List<string> CompletedGuideQuestIds = new();
+
+    // 조언자 카드에 답했는가. 수준 자체는 여기 두지 않는다(플레이어 설정이라 SettingsService 소관) -
+    // 남길 것은 "이 런에서 이미 물어봤다"뿐이다.
+    public bool IsGuideIntroAnswered;
+
     public UnityEvent OnInventoryChanged = new();
 
     public GridMap Map;
@@ -145,6 +154,36 @@ public class RunData
         CompletedTutorialObjectiveIds ??= new List<string>();
         CompletedTutorialObjectiveIds.Add(objectiveId);
         return true;
+    }
+
+    public bool HasCompletedGuideQuest(string questId)
+    {
+        return CompletedGuideQuestIds != null && CompletedGuideQuestIds.Contains(questId);
+    }
+
+    /// <summary>
+    /// 이미 완료한 퀘스트면 false - 보상 중복 지급과 완료 알림 재표시를 막는 유일한 관문이다.
+    /// (RunData.TryCompleteObjective와 같은 계약)
+    /// </summary>
+    public bool TryCompleteGuideQuest(string questId)
+    {
+        if (string.IsNullOrWhiteSpace(questId) || HasCompletedGuideQuest(questId))
+        {
+            return false;
+        }
+
+        CompletedGuideQuestIds ??= new List<string>();
+        CompletedGuideQuestIds.Add(questId);
+        return true;
+    }
+
+    /// <summary>세이브 복원 전용. 가이드 퀘스트 진행도를 저장값으로 갈아 끼운다.</summary>
+    public void RestoreGuideQuests(List<string> completedQuestIds, bool isIntroAnswered)
+    {
+        CompletedGuideQuestIds ??= new List<string>();
+        CompletedGuideQuestIds.Clear();
+        CompletedGuideQuestIds.AddRange(completedQuestIds);
+        IsGuideIntroAnswered = isIntroAnswered;
     }
 }
 
