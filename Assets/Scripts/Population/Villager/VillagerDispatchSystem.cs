@@ -163,9 +163,18 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private readonly HashSet<Villager> _ejectedVillagers = new();
 
     // 비활성화된 타워마다 하나씩 떠 있는 연기. 타워가 다시 가동되면 걷어낸다.
-    private readonly Dictionary<Tower, GameObject> _towerEjectionEffects = new();
+    private readonly Dictionary<Tower, Transform> _towerEjectionEffects = new();
 
     private readonly Dictionary<VillagerAppearance, Villager[]> _prefabsByAppearance = new();
+
+    // 캐릭터와 이펙트는 하루에도 수십 번 생겼다 사라진다 - 매번 Instantiate/Destroy하면 GC와
+    // 프리팹 인스턴스화 비용이 그대로 프레임에 실린다. 풀은 프리팹별로 통을 나누므로
+    // 겉모습 무작위 추첨(TryPickPrefab)에는 아무 영향이 없다.
+    private PrefabPool<Villager> _villagerPool;
+
+    // 이펙트 프리팹은 인스펙터에 GameObject로 배선돼 있다(필드 타입을 바꾸면 기존 배선이 끊긴다).
+    // 그래서 Transform을 키로 삼아 풀에 담고, 필요할 때 gameObject를 꺼내 쓴다.
+    private PrefabPool<Transform> _effectPool;
 
     private readonly List<IPopulationAllocationTarget> _wantedResidents = new();
     private readonly List<IPopulationAllocationTarget> _residentRemovalScratch = new();
@@ -208,6 +217,9 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private void Awake()
     {
         BuildAppearanceLookup();
+
+        _villagerPool = new PrefabPool<Villager>(VillagerRoot);
+        _effectPool = new PrefabPool<Transform>(VillagerRoot);
     }
 
     private void BuildAppearanceLookup()
@@ -681,8 +693,12 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         // 같은 타워가 다시 비활성화되는 경우(부활 후 재파괴) 이전 연기를 먼저 걷는다.
         ClearTowerEjectionEffect(tower);
 
-        _towerEjectionEffects[tower] = Instantiate(
-            _towerEjectionEffectPrefab, worldPosition, Quaternion.identity, VillagerRoot);
+        Transform effect = AcquireEffect(_towerEjectionEffectPrefab, worldPosition);
+
+        if (effect != null)
+        {
+            _towerEjectionEffects[tower] = effect;
+        }
     }
 
     private void HandleTowerReactivated(Tower tower)
@@ -692,27 +708,20 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     private void ClearTowerEjectionEffect(Tower tower)
     {
-        if (tower == null || !_towerEjectionEffects.TryGetValue(tower, out GameObject effect))
+        if (tower == null || !_towerEjectionEffects.TryGetValue(tower, out Transform effect))
         {
             return;
         }
 
-        if (effect != null)
-        {
-            Destroy(effect);
-        }
-
+        ReleaseEffect(effect);
         _towerEjectionEffects.Remove(tower);
     }
 
     private void ClearAllTowerEjectionEffects()
     {
-        foreach (GameObject effect in _towerEjectionEffects.Values)
+        foreach (Transform effect in _towerEjectionEffects.Values)
         {
-            if (effect != null)
-            {
-                Destroy(effect);
-            }
+            ReleaseEffect(effect);
         }
 
         _towerEjectionEffects.Clear();
@@ -720,21 +729,73 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     private void SpawnConquestCompletionEffect(Vector3Int cell)
     {
-        if (_conquestCompletionEffectPrefab == null || _gridMap == null)
+        if (_gridMap == null)
         {
             return;
         }
 
-        GameObject effect = Instantiate(
-            _conquestCompletionEffectPrefab,
-            _gridMap.ConvertGridToWorld(cell),
-            Quaternion.identity,
-            VillagerRoot);
+        Transform effect = AcquireEffect(
+            _conquestCompletionEffectPrefab, _gridMap.ConvertGridToWorld(cell));
 
-        if (_conquestCompletionEffectLifetimeSeconds > 0f)
+        // 수명이 0 이하이면 스스로 걷히지 않는다(예전 Destroy(effect, 0) 시절과 같은 동작).
+        if (effect != null && _conquestCompletionEffectLifetimeSeconds > 0f)
         {
-            Destroy(effect, _conquestCompletionEffectLifetimeSeconds);
+            ReleaseEffectAfterAsync(
+                effect,
+                _conquestCompletionEffectLifetimeSeconds,
+                this.GetCancellationTokenOnDestroy()).Forget();
         }
+    }
+
+    private async UniTaskVoid ReleaseEffectAfterAsync(
+        Transform effect, float delaySeconds, CancellationToken token)
+    {
+        await UniTask.WaitForSeconds(delaySeconds, cancellationToken: token);
+
+        ReleaseEffect(effect);
+    }
+
+    // 이펙트는 파티클이라 재사용할 때 반드시 되감아야 한다. 비활성화만으로는 재생 위치가
+    // 정해지지 않는다(playOnAwake가 꺼져 있으면 멈춘 채로 다시 나타난다).
+    private Transform AcquireEffect(GameObject prefab, Vector3 worldPosition)
+    {
+        if (prefab == null)
+        {
+            return null;
+        }
+
+        Transform effect = _effectPool.Acquire(prefab.transform);
+
+        if (effect == null)
+        {
+            return null;
+        }
+
+        effect.SetPositionAndRotation(worldPosition, Quaternion.identity);
+
+        foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            particles.Clear(true);
+            particles.Play(true);
+        }
+
+        return effect;
+    }
+
+    private void ReleaseEffect(Transform effect)
+    {
+        if (effect == null)
+        {
+            return;
+        }
+
+        // 남아 있던 파티클을 지우지 않으면 다음에 꺼내 쓸 때 이전 자리의 잔상이 한 프레임 비친다.
+        foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
+        _effectPool.Release(effect);
     }
 
     private void ReconcileNight()
@@ -1088,7 +1149,15 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             return null;
         }
 
-        Villager villager = Instantiate(prefab, VillagerRoot);
+        Villager villager = _villagerPool.Acquire(prefab);
+
+        if (villager == null)
+        {
+            return null;
+        }
+
+        // 지난 생애의 알파·애니메이터 적용 기록·이동 상태를 먼저 지운다. Dispatch보다 앞서야 한다.
+        villager.ResetForSpawn();
 
         // Dispatch가 즉시 끝나 Finished를 부르는 경우에도 목록이 어긋나지 않도록 먼저 등록한다.
         _activeVillagers.Add(villager);
@@ -1118,12 +1187,23 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         return prefab != null;
     }
 
+    // 반납은 반드시 추적 목록에서 빼낸 다음에 한다 - 다음 획득이 같은 인스턴스를 돌려주므로,
+    // 순서가 뒤집히면 새 생애의 캐릭터가 이전 생애의 집합(밤 귀가자·튕겨 나온 병사)에 남아 있게 된다.
     private void HandleVillagerFinished(Villager villager)
     {
         _nightReturners.Remove(villager);
         _ejectedVillagers.Remove(villager);
         villager.Finished -= HandleVillagerFinished;
         _activeVillagers.Remove(villager);
+
+        // 씬 언로드 등으로 파괴되면서 알려온 경우다 - 통에 넣으면 죽은 오브젝트가 섞인다.
+        if (villager.WasDestroyed)
+        {
+            _villagerPool.Forget(villager);
+            return;
+        }
+
+        _villagerPool.Release(villager);
     }
 
     private void DespawnAll()

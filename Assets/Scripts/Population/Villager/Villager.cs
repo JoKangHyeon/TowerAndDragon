@@ -198,13 +198,22 @@ public sealed class Villager : MonoBehaviour
         HoldIdleThenSendHome
     }
 
-    /// <summary>소멸 직전에 알린다 - VillagerDispatchSystem이 활성 목록에서 지운다.</summary>
+    /// <summary>소멸 직전에 알린다 - VillagerDispatchSystem이 활성 목록에서 지우고 풀에 반납한다.</summary>
     public event Action<Villager> Finished;
+
+    /// <summary>
+    /// <see cref="Finished"/>가 정상 종료가 아니라 오브젝트 파괴(씬 언로드 등) 때문에 발화했는지.
+    ///
+    /// 파괴 중인 컴포넌트도 <c>OnDestroy</c> 안에서는 <c>!= null</c>이라 널 검사로는 구분되지 않는다.
+    /// 이 구분을 놓치면 파괴된 인스턴스가 풀에 들어가 다음 획득이 죽은 오브젝트를 집는다.
+    /// </summary>
+    public bool WasDestroyed { get; private set; }
 
     [SerializeField] private RuntimeAnimatorController _fallbackAnimatorController;
 
     private VillagerMovement _movement;
     private Animator _animator;
+    private MonsterSpriteFlipper _spriteFlipper;
     private SpriteRenderer[] _renderers;
     private readonly HashSet<int> _animatorParameterHashes = new();
     private RuntimeAnimatorController _cachedAnimatorController;
@@ -244,6 +253,9 @@ public sealed class Villager : MonoBehaviour
         // 사라질 때 같이 흐려져야 하므로 그림자 등 자식 스프라이트까지 전부 잡는다
         // (IsometricDepthSorter가 정렬에 쓰는 것과 같은 집합. 저쪽은 sortingOrder만 건드려 충돌하지 않는다).
         _renderers = GetComponentsInChildren<SpriteRenderer>(true);
+
+        // 재사용할 때 지난 생애의 좌우 반전을 되돌리기 위해서만 잡는다. 없는 프리팹도 있어 널을 허용한다.
+        _spriteFlipper = GetComponent<MonsterSpriteFlipper>();
     }
 
     public void Construct(
@@ -258,6 +270,44 @@ public sealed class Villager : MonoBehaviour
         _attackIntervalSeconds = attackIntervalSeconds;
         _movement.Construct(gridMap);
         _movement.SetSpeed(moveSpeed);
+    }
+
+    /// <summary>
+    /// 풀에서 다시 꺼내 쓸 때 지난 생애의 흔적을 지운다. <see cref="Construct"/>·<see cref="Dispatch"/>
+    /// 앞에서 한 번 부른다.
+    ///
+    /// 애니메이터 파라미터·트리거는 손대지 않는다 - 프리팹 전부가 KeepAnimatorStateOnDisable을 끄고
+    /// 있어 비활성/재활성 과정에서 Unity가 알아서 되감는다.
+    /// </summary>
+    public void ResetForSpawn()
+    {
+        _hasFinished = false;
+        WasDestroyed = false;
+        _command = VillagerCommand.None;
+        _idleBeforeHomeSeconds = 0f;
+
+        // 페이드가 알파를 0까지 내려놓은 채 끝난다 - 되돌리지 않으면 재사용한 캐릭터가 투명한 채로 돌아다닌다.
+        _fadeTween?.Kill();
+        _fadeTween = null;
+        _isFading = false;
+        _fadeAlpha = 1f;
+        SetAlpha(_fadeAlpha);
+
+        // SetLocomotionState는 "원하는 상태가 바뀔 때만" 재적용 플래그를 내린다. 재활성화된 애니메이터는
+        // 기본 상태로 되감겨 있는데 지난 생애와 같은 상태를 원하면(상주 → 상주) 해시가 같아 재적용을
+        // 건너뛰고 Idle에 굳어버린다. 그래서 적용 기록 자체를 비운다.
+        _wantsMove = false;
+        _wantsWork = false;
+        _hasDesiredState = false;
+        _hasAppliedState = false;
+        _appliedStateHash = 0;
+
+        _movement.ResetForSpawn();
+
+        if (_spriteFlipper != null)
+        {
+            _spriteFlipper.ResetFacing();
+        }
     }
 
     /// <summary>튕겨져 나오는 연출의 세기. <see cref="VillagerProfile.Ejected"/>에서만 쓴다.</summary>
@@ -559,6 +609,12 @@ public sealed class Villager : MonoBehaviour
         }
     }
 
+    // 오브젝트를 파괴하지 않고 알리기만 한다 - 인스턴스의 처분(풀 반납)은 만든 쪽인
+    // VillagerDispatchSystem이 결정한다.
+    //
+    // 풀 반납이 일어나는 유일한 지점이 이 함수(정확히는 RunAsync 마지막의 FinishAsync)라는 것이
+    // 재사용 안전성의 근거다. 반납 경로를 하나 더 만들면 아직 돌고 있는 이전 생애의 RunAsync가
+    // 새 생애와 겹쳐 상태를 덮어쓴다.
     private void Finish()
     {
         if (_hasFinished)
@@ -568,7 +624,6 @@ public sealed class Villager : MonoBehaviour
 
         _hasFinished = true;
         Finished?.Invoke(this);
-        Destroy(gameObject);
     }
 
     // 페이드 도중에 밖에서 파괴되면(씬 언로드 등) Finish가 돌지 못해 디스패치의 활성 목록에
@@ -584,6 +639,7 @@ public sealed class Villager : MonoBehaviour
         }
 
         _hasFinished = true;
+        WasDestroyed = true;
         Finished?.Invoke(this);
     }
 
