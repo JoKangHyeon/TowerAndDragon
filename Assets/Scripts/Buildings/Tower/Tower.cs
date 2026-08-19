@@ -64,6 +64,22 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     protected static readonly int HIT_ANIM_KEY = Animator.StringToHash("Hit");
     protected static readonly int BROKEN_ANIM_KEY = Animator.StringToHash("Broken");
 
+    // 쓰러진 자세(Broken)로 보여야 하는 조건. 기본은 "체력 0으로 비활성화"뿐이고,
+    // 새끼용처럼 다른 사유로도 멈추는 타워가 조건을 덧붙인다.
+    // 사유가 여럿이면 한쪽이 풀릴 때 다른 쪽 자세까지 지워지므로, 반드시 이 프로퍼티로 합쳐 판정한다.
+    protected virtual bool IsBrokenPose => _isDisabled;
+
+    // 파라미터를 직접 켜고 끄지 말고 이 메서드로만 갱신한다(위 합산 판정을 거치게 하려는 것).
+    protected void RefreshBrokenAnimation()
+    {
+        if (_animator == null)
+        {
+            return;
+        }
+
+        _animator.SetBool(BROKEN_ANIM_KEY, IsBrokenPose);
+    }
+
 
     protected override void Awake()
     {
@@ -171,10 +187,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         _reviveCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
         ReviveAfterDelayAsync(_reviveCts.Token).Forget();
 
-        if (_animator != null)
-        {
-            _animator.SetBool(BROKEN_ANIM_KEY, true);
-        }
+        RefreshBrokenAnimation();
 
         Disabled.Invoke(this);
     }
@@ -258,10 +271,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
             return;
         }
 
-        if (_animator != null)
-        {
-            _animator.SetBool(BROKEN_ANIM_KEY, false);
-        }
+        RefreshBrokenAnimation();
 
         Debug.Log(
             $"[Tower] {name}이 재활성화되었습니다. 실제 비활성화 시간: {disabledDuration:F2}초",
