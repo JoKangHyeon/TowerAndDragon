@@ -8,15 +8,21 @@ using UnityEngine.Rendering.Universal;
 /// 화면을 그대로 찍지 않고 전용 카메라로 다시 그리는 이유: 메인 카메라는 orthographicSize가 5라
 /// 맵의 극히 일부만 보고 있어, 화면 캡처로는 "지금 어디까지 점령했는가"가 슬롯마다 구분되지 않는다.
 ///
-/// 구도는 점령지(+원정 중인 청크)를 감싸는 정사각형이다. 맵 전체는 가로로 긴 2:1이라
-/// 정사각 프레임(Save_window의 ScreenShotFrame)에 통째로 넣으면 위아래 절반이 여백이 되고
-/// 청크 하나가 십수 픽셀까지 작아진다. 점령지 기준으로 잡으면 초반에는 성 주변이 크게 보이고
-/// 진행할수록 자연히 맵 전체로 넓어져, 썸네일만 보고도 진행도가 구분된다.
+/// 구도는 점령지(+원정 중인 청크)를 감싸는 2:1 직사각형이다. 아이소메트릭 격자(셀 1x0.5)에서는
+/// 타일 영역의 월드 경계가 어떤 모양으로 칠해도 가로:세로 2:1이 되므로, 프레임도 같은 비율이어야
+/// 위아래에 배경색 띠가 남지 않는다. 정사각으로 찍던 동안은 완전 점령 때뿐 아니라 모든 슬롯에서
+/// 세로 절반가량이 늘 비어 있었다 - 점령지 경계도 마름모라 항상 가로가 더 길기 때문이다.
+///
+/// 맵 전체가 아니라 점령지 기준으로 잡는 이유: 초반에는 성 주변이 크게 보이고 진행할수록 자연히
+/// 맵 전체로 넓어져, 썸네일만 보고도 진행도가 구분된다.
 /// </summary>
 public sealed class SaveThumbnailCapturer : MonoBehaviour
 {
-    // 표시는 120x120(Save_window)이지만 해상도 여유를 둔다. 정사각인 것이 중요하다.
-    private const int THUMBNAIL_SIZE = 256;
+    // 표시는 160x80(Slot_SaveSlot의 Left_Slot)이지만 해상도 여유를 둔다. 2:1인 것이 중요하다.
+    private const int THUMBNAIL_WIDTH = 256;
+    private const int THUMBNAIL_HEIGHT = 128;
+
+    private const float THUMBNAIL_ASPECT = (float)THUMBNAIL_WIDTH / THUMBNAIL_HEIGHT;
 
     private const int DEPTH_BUFFER_BITS = 16;
 
@@ -27,7 +33,8 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
     private const float FRAME_MARGIN = 3f;
 
     // 점령지가 한 청크뿐일 때 지나치게 확대되어 무엇을 보는지 알 수 없게 되는 것을 막는다.
-    private const float MIN_HALF_EXTENT = 8f;
+    // 세로 반범위 기준이므로 가로로는 이 값의 THUMBNAIL_ASPECT배까지 보인다.
+    private const float MIN_HALF_HEIGHT = 4f;
 
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private ConquestManager _conquestManager;
@@ -52,7 +59,7 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
             return false;
         }
 
-        if (!TryResolveFrame(out Vector3 center, out float halfExtent))
+        if (!TryResolveFrame(out Vector3 center, out float halfHeight))
         {
             return false;
         }
@@ -64,11 +71,11 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
 
         try
         {
-            Camera camera = CreateCaptureCamera(center, halfExtent, out cameraObject);
+            Camera camera = CreateCaptureCamera(center, halfHeight, out cameraObject);
 
             renderTexture = RenderTexture.GetTemporary(
-                THUMBNAIL_SIZE,
-                THUMBNAIL_SIZE,
+                THUMBNAIL_WIDTH,
+                THUMBNAIL_HEIGHT,
                 DEPTH_BUFFER_BITS,
                 RenderTextureFormat.ARGB32,
                 RenderTextureReadWrite.sRGB);
@@ -86,8 +93,8 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
             RenderPipeline.SubmitRenderRequest(camera, request);
 
             RenderTexture.active = renderTexture;
-            texture = new Texture2D(THUMBNAIL_SIZE, THUMBNAIL_SIZE, TextureFormat.RGB24, false);
-            texture.ReadPixels(new Rect(0f, 0f, THUMBNAIL_SIZE, THUMBNAIL_SIZE), 0, 0);
+            texture = new Texture2D(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, TextureFormat.RGB24, false);
+            texture.ReadPixels(new Rect(0f, 0f, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT), 0, 0);
             texture.Apply();
 
             pngBytes = texture.EncodeToPNG();
@@ -119,7 +126,7 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
         }
     }
 
-    private Camera CreateCaptureCamera(Vector3 center, float halfExtent, out GameObject cameraObject)
+    private Camera CreateCaptureCamera(Vector3 center, float halfHeight, out GameObject cameraObject)
     {
         cameraObject = new GameObject(nameof(SaveThumbnailCapturer))
         {
@@ -133,7 +140,12 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
         // 매 프레임 자동으로 그리지 않게 한다 - 저장 시점에 수동으로 한 번만 렌더한다.
         camera.enabled = false;
         camera.orthographic = true;
-        camera.orthographicSize = halfExtent;
+        camera.orthographicSize = halfHeight;
+
+        // targetTexture를 쓰지 않고 SingleCameraRequest의 destination으로만 그리므로 카메라는
+        // 렌더 타깃의 종횡비를 알지 못한다 - 명시하지 않으면 화면 종횡비로 투영되어 가로가 어긋난다.
+        camera.aspect = THUMBNAIL_ASPECT;
+
         camera.cullingMask = _captureLayers;
         camera.clearFlags = CameraClearFlags.SolidColor;
         camera.backgroundColor = _backgroundColor;
@@ -145,13 +157,14 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
     }
 
     /// <summary>
-    /// 점령지(+원정 중인 청크)를 감싸는 정사각 구도를 계산한다.
+    /// 점령지(+원정 중인 청크)를 감싸는 2:1 구도를 계산한다. 돌려주는 값은 카메라 세로 반범위
+    /// (= orthographicSize)이며, 가로는 카메라가 THUMBNAIL_ASPECT를 곱해 잡는다.
     /// 아직 아무것도 점령하지 않았다면 맵 전체로 폴백한다.
     /// </summary>
-    private bool TryResolveFrame(out Vector3 center, out float halfExtent)
+    private bool TryResolveFrame(out Vector3 center, out float halfHeight)
     {
         center = Vector3.zero;
-        halfExtent = MIN_HALF_EXTENT;
+        halfHeight = MIN_HALF_HEIGHT;
 
         if (!TryResolveMapBounds(out Bounds mapBounds))
         {
@@ -163,15 +176,21 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
             territoryBounds = mapBounds;
         }
 
-        halfExtent = Mathf.Max(
-            MIN_HALF_EXTENT,
-            Mathf.Max(territoryBounds.extents.x, territoryBounds.extents.y) + FRAME_MARGIN);
+        // 두 축이 각자 요구하는 세로 반범위 중 큰 쪽을 쓴다 - 가로 요구치는 종횡비로 나눠 세로 기준으로 환산한다.
+        // 여백은 축마다 따로 더해, 세로로 좁고 가로로 긴 점령지에서도 테두리가 프레임에 붙지 않게 한다.
+        halfHeight = Mathf.Max(
+            MIN_HALF_HEIGHT,
+            Mathf.Max(
+                territoryBounds.extents.y + FRAME_MARGIN,
+                (territoryBounds.extents.x + FRAME_MARGIN) / THUMBNAIL_ASPECT));
 
         // 점령지가 맵 가장자리에 치우쳐 있어도 프레임이 맵 밖으로 흘러 여백만 찍히지 않도록
         // 축마다 맵 경계 안으로 되돌린다(MinimapController.ResolveAxis와 같은 규칙).
+        float halfWidth = halfHeight * THUMBNAIL_ASPECT;
+
         center = new Vector3(
-            ResolveAxis(territoryBounds.center.x, mapBounds.center.x, mapBounds.extents.x, halfExtent),
-            ResolveAxis(territoryBounds.center.y, mapBounds.center.y, mapBounds.extents.y, halfExtent),
+            ResolveAxis(territoryBounds.center.x, mapBounds.center.x, mapBounds.extents.x, halfWidth),
+            ResolveAxis(territoryBounds.center.y, mapBounds.center.y, mapBounds.extents.y, halfHeight),
             0f);
 
         return true;
