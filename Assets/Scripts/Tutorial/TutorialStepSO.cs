@@ -34,6 +34,11 @@ public sealed class TutorialStepSO : ScriptableObject
              "알 목록과 새끼용 목록이 한 패널에 함께 있으므로 어느 쪽인지 단계가 정한다.")]
     [SerializeField] private TutorialDynamicTargetKind _dynamicTarget = TutorialDynamicTargetKind.None;
 
+    [Tooltip("어미용 스킬트리의 이 노드를 가리킨다. 채우면 위 앵커보다 우선한다 - " +
+             "노드는 런타임 생성이라 GuideAnchor를 붙일 수 없어 창에서 직접 찾아온다.")]
+    [WiringOptional]
+    [SerializeField] private DragonSkillNodeData _targetDragonSkillNode;
+
     // 딤과 대상 외 클릭 차단은 데이터로 두지 않는다 - UI_GuideOverlay가 대상·확인 버튼 유무로 스스로 정한다.
     // 단계마다 켜고 끄게 두었더니 빠뜨린 곳이 계속 나왔고, 그때마다 플레이어가 엉뚱한 버튼을 눌러
     // 안내가 가리키던 창이 닫혔다.
@@ -74,6 +79,13 @@ public sealed class TutorialStepSO : ScriptableObject
              "개수만 채운 것으로는 밤을 넘기는 기준이 되지 않는다.")]
     [SerializeField] private bool _requiresStaffed;
 
+    [Tooltip("MotherDragonAttributeChanged 조건에서 '아무 속성으로나'가 아니라 특정 속성으로 바꾸게 한다. " +
+             "끄면 진입 시점과 다르기만 하면 통과한다. DragonType에는 None이 없어 별도 스위치로 켠다.")]
+    [SerializeField] private bool _requiresSpecificDragonType;
+
+    [Tooltip("위 스위치가 켜져 있을 때 바꿔야 하는 속성.")]
+    [SerializeField] private DragonType _requiredDragonType = DragonType.Life;
+
     [Tooltip("이 배타 창이 이미 열려 있으면 이 단계를 건너뛴다. 창으로 가는 통로를 시키는 단계에 쓴다 - " +
              "성을 클릭하게 하는 단계인데 플레이어가 이미 용 창에 들어가 있으면, 성 선택이 풀려 있어 " +
              "조건이 영영 거짓인 채로 딤만 남는다.")]
@@ -93,6 +105,7 @@ public sealed class TutorialStepSO : ScriptableObject
     public GuideAnchorId AnchorId => _anchorId;
     public Building TargetBuildingSlot => _targetBuildingSlot;
     public TutorialDynamicTargetKind DynamicTarget => _dynamicTarget;
+    public DragonSkillNodeData TargetDragonSkillNode => _targetDragonSkillNode;
     public bool BlocksTargetInteraction => _blocksTargetInteraction;
     public bool KeepsInputOpen => _keepsInputOpen;
     public GuideBubbleSlot BubbleSlot => _bubbleSlot;
@@ -104,6 +117,9 @@ public sealed class TutorialStepSO : ScriptableObject
     public int RequiredCount => _requiredCount;
     public bool RequiresStaffed => _requiresStaffed;
     public TutorialExclusiveModeKind SkipIfModeOpen => _skipIfModeOpen;
+
+    /// <summary>이 단계가 요구하는 어미용 속성. 지정하지 않았으면 null - 아무 속성으로 바꿔도 통과한다.</summary>
+    public DragonType? RequiredDragonType => _requiresSpecificDragonType ? _requiredDragonType : null;
     public bool WaitForConfirm => _waitForConfirm;
     public float AutoAdvanceSeconds => _autoAdvanceSeconds;
 
@@ -159,6 +175,12 @@ public sealed class TutorialStepSO : ScriptableObject
         if (needsBuildingKind && _targetBuilding == TutorialBuildingKind.None)
         {
             Debug.LogWarning($"[TutorialStepSO] {name}: 기다릴 건물 종류를 지정하지 않았습니다.", this);
+        }
+
+        if (_requiresSpecificDragonType && _condition != TutorialConditionType.MotherDragonAttributeChanged)
+        {
+            Debug.LogWarning(
+                $"[TutorialStepSO] {name}: 요구 속성을 켰지만 완료 조건이 MotherDragonAttributeChanged가 아니라 쓰이지 않습니다.", this);
         }
 
         // 설명형은 확인 버튼으로 넘어가므로 건너뛸 이유가 없다 - 설정해 두면 의도가 있는 것처럼 보여 헷갈린다.

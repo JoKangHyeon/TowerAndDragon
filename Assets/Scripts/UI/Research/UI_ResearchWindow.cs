@@ -171,8 +171,24 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
+    /// <summary>
+    /// Esc는 <b>안쪽부터</b> 닫는다 - 상세 패널이 떠 있으면 그것만 닫고 창은 남긴다.
+    ///
+    /// 상세 패널에는 닫기 버튼이 없고 트리의 오른쪽을 덮는다. 그래서 한 번 열면 그 아래 노드를
+    /// 고를 수 없었고, <b>맨 오른쪽 노드는 처음 클릭으로 열지 않으면 열 방법이 아예 없었다.</b>
+    /// 그렇다고 창까지 함께 닫으면 노드를 하나 볼 때마다 창을 다시 열어야 한다.
+    ///
+    /// 창 닫기 관문(CanCloseExclusive)은 패널만 닫는 경로에서는 묻지 않는다 - 창은 그대로 남으므로
+    /// 안내가 "이 창에서 무언가 하라"고 시키는 중이어도 그 유도가 깨지지 않는다.
+    /// </summary>
     public void OnCloseActionPerformed(InputAction.CallbackContext context)
     {
+        if (_detailsPanel != null && _detailsPanel.IsShown)
+        {
+            _detailsPanel.Clear();
+            return;
+        }
+
         if (_uiManager != null && !_uiManager.CanCloseExclusive(this))
         {
             return;

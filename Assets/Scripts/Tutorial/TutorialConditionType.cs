@@ -169,4 +169,15 @@ public enum TutorialConditionType
     // 회수는 흔적이 남지 않는 조작이라 인구 증감으로 재면 뺄 인구가 없을 때 영영 통과하지 못하고,
     // 채운 인구를 일부러 다시 빼는 순서를 강요하게 된다.
     WorkerModeRightClicked,
+
+    // 배치한 새끼용의 운용 모드(공격/버프)를 단계 진입 시점과 다른 것으로 바꿨다.
+    // 절대값이 아니라 진입 시점 대비로 보는 이유는 인구 조건과 같다 - 시작 모드는 데이터가 정하므로
+    // (BabyDragonTower.BindRecord) 절대값으로 판정하면 어느 한쪽 모드에서는 진입 즉시 통과한다.
+    //
+    // BabyDragonTower.ModeChanged는 인스턴스 이벤트라 구독할 대상이 런타임에야 생긴다 - 상태로 본다.
+    BabyDragonModeChanged,
+
+    // DragonTreeManager.NodeUnlocked - 어미용 스킬트리 노드를 하나 해금했다.
+    // 어느 노드인지는 묻지 않는다 - 연구(ResearchNodeCompleted)와 같이 고르는 것은 플레이어 몫이다.
+    DragonSkillNodeUnlocked,
 }

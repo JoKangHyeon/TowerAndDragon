@@ -189,6 +189,44 @@ public class UI_DragonSkillWindow : MonoBehaviour
         _detailsPanel?.Clear();
     }
 
+    /// <summary>
+    /// 이 노드가 그려진 자리. 노드는 런타임 생성이라 <see cref="GuideAnchor"/>로 잡을 수 없어
+    /// 안내가 창에 직접 물어본다(<see cref="UI_BuildModeWindow.TryGetSlotRect"/>와 같은 형태).
+    ///
+    /// 트리는 창을 처음 열 때 만들어지므로, 열기 전에 물으면 아직 없다 - 그때는 false다.
+    /// </summary>
+    public bool TryGetNodeRect(DragonSkillNodeData node, out RectTransform nodeRect)
+    {
+        nodeRect = null;
+
+        if (node == null || !_nodeViews.TryGetValue(node, out UI_DragonSkillNode view) || view == null)
+        {
+            return false;
+        }
+
+        nodeRect = view.transform as RectTransform;
+        return nodeRect != null;
+    }
+
+    /// <summary>
+    /// 떠 있는 상세 패널을 닫는다. 닫을 것이 있었으면 참을 돌려준다 -
+    /// 용 창이 Esc를 창 닫기에 쓸지 이쪽에 쓸지 그 값으로 가른다
+    /// (<see cref="UI_DragonWindow.OnCloseActionPerformed"/>).
+    ///
+    /// 상세 패널에는 닫기 버튼이 없고 트리 오른쪽을 덮는다. 연구 창과 같은 갇힘이라 같은 방식으로 푼다.
+    /// </summary>
+    public bool TryCloseDetailsPanel()
+    {
+        if (_detailsPanel == null || !_detailsPanel.IsOpen)
+        {
+            return false;
+        }
+
+        _selectedNode = null;
+        _detailsPanel.Clear();
+        return true;
+    }
+
     private void BuildTreeIfNeeded()
     {
         if (_built || _dragonTreeManager == null || _dragonTreeManager.Tree == null ||
