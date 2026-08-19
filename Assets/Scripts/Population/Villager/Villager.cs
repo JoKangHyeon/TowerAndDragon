@@ -214,6 +214,7 @@ public sealed class Villager : MonoBehaviour
     private VillagerMovement _movement;
     private Animator _animator;
     private MonsterSpriteFlipper _spriteFlipper;
+    private IsometricDepthSorter _depthSorter;
     private SpriteRenderer[] _renderers;
 
     // 프리팹 상태의 렌더러 색. 페이드로 뭉갠 알파를 되돌릴 때 쓴다(그림자의 반투명도까지 그대로 보존).
@@ -269,6 +270,22 @@ public sealed class Villager : MonoBehaviour
 
         // 재사용할 때 지난 생애의 좌우 반전을 되돌리기 위해서만 잡는다. 없는 프리팹도 있어 널을 허용한다.
         _spriteFlipper = GetComponent<MonsterSpriteFlipper>();
+
+        // 건물 안에 서는 캐릭터를 건물 스프라이트보다 앞에 그리기 위해 잡는다. 없는 프리팹도 허용한다.
+        _depthSorter = GetComponent<IsometricDepthSorter>();
+    }
+
+    /// <summary>
+    /// 화면 정렬 순서의 하한. 건물 안에 서는 캐릭터가 그 건물 스프라이트에 묻히지 않게 하려고
+    /// <see cref="VillagerDispatchSystem"/>이 작업 칸의 건물 정렬 순서에서 구해 넘긴다.
+    /// 건물이 없는 칸이면 <see cref="int.MinValue"/>가 들어와 아무 제약이 없다.
+    /// </summary>
+    public void SetDepthSortFloor(int floor)
+    {
+        if (_depthSorter != null)
+        {
+            _depthSorter.SetSortingOrderFloor(floor);
+        }
     }
 
     // 알파를 되돌리는 일은 반드시 "비활성화되기 전"에 끝나야 한다.
