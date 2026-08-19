@@ -18,6 +18,9 @@ public sealed class TutorialDayLoopController : MonoBehaviour
     [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private WaveManager _waveManager;
 
+    [Tooltip("마지막 밤을 넘기면 클리어를 건다. 비우면 4일차 아침이 그대로 시작된다.")]
+    [SerializeField] private GameManager _gameManager;
+
     [Tooltip("마지막 날을 뺀 밤에 실행할 웨이브. 순서대로 1일차, 2일차 밤에 대응한다.")]
     [SerializeField] private List<WaveDefinitionSO> _nightWaves = new();
 
@@ -36,6 +39,13 @@ public sealed class TutorialDayLoopController : MonoBehaviour
 
         _cycleManager.OnNightStart.AddListener(HandleNightStart);
         _cycleManager.OnDayReady.AddListener(HandleDayReady);
+
+        // OnNightEnd에 거는 이유는 순서 때문이다 - CycleManager.EndNight는 이 이벤트를 발행한 직후
+        // IsGameEnded를 보고 다음 낮을 시작할지 정한다. 여기서 클리어를 걸어야 4일차 아침이 오지 않는다.
+        if (_cycleManager.OnNightEnd != null)
+        {
+            _cycleManager.OnNightEnd.AddListener(HandleNightEnd);
+        }
     }
 
     private void OnDisable()
@@ -47,6 +57,34 @@ public sealed class TutorialDayLoopController : MonoBehaviour
 
         _cycleManager.OnNightStart.RemoveListener(HandleNightStart);
         _cycleManager.OnDayReady.RemoveListener(HandleDayReady);
+
+        if (_cycleManager.OnNightEnd != null)
+        {
+            _cycleManager.OnNightEnd.RemoveListener(HandleNightEnd);
+        }
+    }
+
+    /// <summary>
+    /// 마지막 밤을 넘겼다 = 튜토리얼 클리어. 성 보호가 세 밤 내내 걸려 있으므로 여기까지는 반드시 온다.
+    ///
+    /// 클리어를 <see cref="GameManager.Victory"/>로 거는 이유: 엔딩 컷씬이 그 신호를 받고,
+    /// <see cref="CycleManager.EndNight"/>가 <c>IsGameEnded</c>를 보고 다음 낮을 건너뛴다.
+    /// 둘을 따로 만들면 엔딩이 도는 동안 뒤에서 4일차 아침이 시작된다.
+    /// </summary>
+    private void HandleNightEnd(int _)
+    {
+        if (_cycleManager.CurrentDayNumber < TUTORIAL_TOTAL_DAYS)
+        {
+            return;
+        }
+
+        if (!WiringGuard.Require(_gameManager, nameof(_gameManager), this))
+        {
+            return;
+        }
+
+        Debug.Log("[TutorialDayLoopController] 마지막 밤을 넘겨 튜토리얼을 클리어했습니다.", this);
+        _gameManager.Victory();
     }
 
     // 마지막 날 밤에서 엔딩으로 빠지므로 그 다음 날은 정상 흐름에 존재하지 않는다.

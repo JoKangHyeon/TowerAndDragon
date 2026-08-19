@@ -1,9 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// 자유 목표 하나. 강제 단계(TutorialStepSO)와 달리 순서가 없고, 완료하지 않아도 진행을 막지 않는다.
-/// 권장 일차가 지나도 사라지지 않고 다음 날로 이월된다 - 못 한 것을 놓쳤다고 알리는 것이 아니라
-/// 아직 남았다고 보여주는 목록이기 때문이다.
+/// 목표 하나. 강제 단계(TutorialStepSO)와 달리 순서는 없지만, 목록에 뜬 뒤로는 완료해야 그날 밤으로
+/// 넘어갈 수 있다(TutorialObjectiveController.CanEndDay). 그러므로 <b>권장 일차의 낮 안에 달성할 수
+/// 있는 것만</b> 목표로 만든다 - 밤을 넘겨야 완료되는 조건만 그 관문에서 빠진다.
 /// </summary>
 [CreateAssetMenu(menuName = "TowerAndDragon/Tutorial/Objective", fileName = "TO_Objective")]
 public sealed class TutorialObjectiveSO : ScriptableObject

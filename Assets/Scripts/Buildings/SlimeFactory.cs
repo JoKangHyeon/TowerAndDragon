@@ -51,8 +51,6 @@ public class SlimeFactory : Factory
     private readonly List<SlimeShare> _shares = new();
     private readonly List<int> _shareIndicesByRemainder = new();
 
-    private GridMap _gridMap;
-
     public override bool Initialize(ResourceManager resourceManager, CycleManager cycleManager, GridMap gridMap)
     {
         // 실패하면 base가 _population을 채우지 않으므로 여기서 더 진행하면 안 된다.
@@ -61,11 +59,10 @@ public class SlimeFactory : Factory
             return false;
         }
 
-        _gridMap = gridMap;
         _population.OnPopulationChanged.AddListener(HandleOnPopulationChanged);
 
         // 풋프린트가 바뀌면 나오는 슬라임 종류도 바뀐다. 이동은 인구 변경을 일으키지 않으므로 따로 듣는다.
-        _gridMap.OnBuildingMoved.AddListener(HandleOnBuildingMoved);
+        FactoryGridMap.OnBuildingMoved.AddListener(HandleOnBuildingMoved);
 
         // FactoryPopulation.Initialize는 자기 안에서 OnPopulationChanged를 한 번 발화하는데,
         // 두 초기화(FactoryResourceCoordinator / FactoryPopulationCoordinator)는 각자
@@ -77,9 +74,9 @@ public class SlimeFactory : Factory
 
     private void OnDestroy()
     {
-        if (_gridMap != null)
+        if (FactoryGridMap != null)
         {
-            _gridMap.OnBuildingMoved.RemoveListener(HandleOnBuildingMoved);
+            FactoryGridMap.OnBuildingMoved.RemoveListener(HandleOnBuildingMoved);
         }
     }
 

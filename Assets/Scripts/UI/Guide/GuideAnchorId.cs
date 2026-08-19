@@ -93,4 +93,33 @@ public enum GuideAnchorId
     // 용 창 위쪽의 속성별 슬라임 보유량 줄(Panel_elementalResourceAmount).
     // 다섯 속성이 한 줄에 붙어 있으므로 칸 하나가 아니라 줄 전체를 가리킨다.
     DragonWindowSlimeStock,
+
+    // 새끼용 관리 패널의 공격/버프 모드 버튼 묶음(ModeButtons).
+    // 버튼 하나가 아니라 묶음을 가리킨다 - 어느 쪽으로 바꾸든 통과하는 단계라
+    // 한쪽만 뚫으면 나머지 하나가 딤에 막혀 눌리지 않는다.
+    BabyDragonModeButtons,
+
+    // 연구 창의 보유 포인트 표시(Contents/Text_ResearchPoints).
+    ResearchPointLabel,
+
+    // 연구 트리가 보이는 영역(Contents/Scroll View/Viewport). 노드는 런타임 생성이라 앵커로 잡을 수 없어,
+    // 트리를 설명하는 컷은 개별 노드가 아니라 이 영역을 가리킨다.
+    ResearchTreeArea,
+
+    // 연구 창의 조작 영역 전체(Contents). 트리와 상세 패널을 함께 덮는다 -
+    // 노드 해금은 <b>트리에서 노드를 고르고 상세 패널의 연구 버튼을 누르는</b> 두 단계라
+    // 트리만 뚫으면 그 버튼이 딤에 막힌다. 창의 X 버튼은 Contents 밖이라 이 구멍에 들어오지 않는다.
+    ResearchWindowContents,
+
+    // 어미용 탭 왼쪽의 액티브 스킬 칸(Left_Panel_frame/Panel_Skill).
+    // 트리에서 각성 노드를 열면 잠금이 풀리고 여기에 스킬이 뜬다 - 해금의 결과를 보여주는 자리다.
+    MotherDragonSkillSlot,
+
+    // 성 위에 떠 있는 어미용 속성 아이콘(Overlay_MotherDragon_Type).
+    // 월드 스페이스 캔버스라 WorldRectGuideAnchor가 화면 자리를 매 프레임 따라간다.
+    MotherDragonTypeIcon,
+
+    // 밤에만 뜨는 HUD 액티브 스킬 칸(SkillHudBinder가 켜고 끈다).
+    // 낮에는 등록조차 되지 않으므로 이 앵커를 가리키는 안내는 밤에만 그려진다.
+    NightSkillSlot,
 }

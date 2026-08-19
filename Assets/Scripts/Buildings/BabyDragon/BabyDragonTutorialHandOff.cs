@@ -1,13 +1,12 @@
 using UnityEngine;
 
 /// <summary>
-/// 1일차 튜토리얼이 끝난 뒤 새끼용 가이드를 시작시킨다. 시작 신호는 알 지급이다
+/// 1일차 타워 준비가 끝난 뒤 새끼용 가이드를 시작시킨다. 시작 신호는 알 지급이다
 /// (GrantEgg가 모든 획득 경로의 관문이므로 그것만 부르면 토스트·뱃지·안내가 따라온다).
 ///
-/// **지급을 튜토리얼 종료로 미루는 이유는 순서와 경로 단순화 두 가지다.**
-/// 미리 주면 새끼용 안내가 빌드 튜토리얼과 화면을 다투고, 내부 타이머(토스트가 끝난 뒤 안내를 띄우는 대기)가
-/// 먼저 돌아버려 나중에 보여줄 때 알림과 어긋난다. 그리고 종료 시점 하나에 매달면
-/// **완주와 건너뛰기가 같은 경로**가 되어 스킵했을 때만 타이밍이 이상해지는 일이 없다.
+/// 실제 지급 시점은 지정한 타워 준비 단계의 완료 직후다. 그 다음 단계에서 1일차 러너가 표시권을
+/// 새끼용 가이드에 넘기므로, 알 확인을 마친 뒤에야 밤 준비 안내가 이어진다.
+/// 건너뛰기로 해당 단계를 지나지 않은 경우에는 튜토리얼 종료 신호가 안전망으로 한 번 지급한다.
 ///
 /// 씬의 DragonEggInventorySystem._grantStartingEgg는 꺼 두어야 한다 - 켜져 있으면 시작 시 알이 나와
 /// 위 순서가 깨진다. 대신 알을 못 받는 일이 없도록, 튜토리얼이 없거나 꺼져 있으면 평소처럼 바로 지급한다.
@@ -16,6 +15,9 @@ public sealed class BabyDragonTutorialHandOff : MonoBehaviour
 {
     [SerializeField] private TutorialRunner _runner;
     [SerializeField] private DragonEggInventorySystem _eggInventorySystem;
+
+    [Tooltip("이 단계를 완료하면 알을 지급한다. 1일차에서는 타워 3기 완전 배치 단계다.")]
+    [SerializeField] private TutorialStepSO _grantAfterStep;
 
     [Tooltip("지급할 알의 속성.")]
     [SerializeField] private DragonType _grantedEggType = DragonType.Life;
@@ -31,6 +33,7 @@ public sealed class BabyDragonTutorialHandOff : MonoBehaviour
     {
         if (_runner != null)
         {
+            _runner.TutorialStepCompleted.AddListener(HandleTutorialStepCompleted);
             _runner.TutorialEnded.AddListener(GrantOnce);
         }
     }
@@ -39,6 +42,7 @@ public sealed class BabyDragonTutorialHandOff : MonoBehaviour
     {
         if (_runner != null)
         {
+            _runner.TutorialStepCompleted.RemoveListener(HandleTutorialStepCompleted);
             _runner.TutorialEnded.RemoveListener(GrantOnce);
         }
     }
@@ -60,6 +64,14 @@ public sealed class BabyDragonTutorialHandOff : MonoBehaviour
     /// <summary>
     /// 알은 안내가 아니라 게임 진행에 필요한 물건이므로 어떤 경로로든 한 번은 반드시 지급된다.
     /// </summary>
+    private void HandleTutorialStepCompleted(TutorialStepSO completedStep)
+    {
+        if (completedStep == _grantAfterStep)
+        {
+            GrantOnce();
+        }
+    }
+
     private void GrantOnce()
     {
         if (_hasGranted || _eggInventorySystem == null)

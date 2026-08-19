@@ -5,10 +5,9 @@ using UnityEngine;
 /// <summary>
 /// 튜토리얼 챕터를 순서대로 넘긴다. 앞 챕터가 끝나면(TutorialEnded) 다음 챕터를 켜고 앞 챕터는 끈다.
 ///
-/// 러너를 "날짜"가 아니라 "챕터"로 쪼개는 이유는 지급 때문이다 - 알 지급이나 연구용 자원 지급은
-/// 시퀀스 한가운데서 일어나야 하는데, TutorialRunner는 시퀀스 전체가 끝날 때만 신호를 준다.
-/// 챕터 경계로 쪼개면 그 이음매에 지급 컴포넌트를 인스펙터로 물릴 수 있어 코드를 고칠 필요가 없다
-/// (BabyDragonTutorialHandOff가 이미 TutorialEnded를 구독하는 구조다).
+/// 러너를 "날짜"가 아니라 "챕터"로 쪼개는 이유는 지급·외부 가이드 인계 등의 경계를 명확하게
+/// 두기 위해서다. 챕터는 오직 이 컨트롤러만 켜며, 시작 시점에 나머지 러너를 먼저 끔으로써
+/// 저장된 활성 상태나 프리팹 편집 실수가 중복 실행으로 이어지지 않게 한다.
 ///
 /// 챕터마다 시작 일차를 두는 이유: 챕터가 끝나면 곧바로 다음 챕터가 이어지는데, 날짜가 바뀌어야
 /// 성립하는 챕터(밤이 지나야 알이 부화하고 정산이 돈다)가 같은 낮에 시작되면 안 된다.
@@ -17,8 +16,10 @@ using UnityEngine;
 /// 각 챕터는 자기 TutorialRunner 하나만 가진 별도 오브젝트여야 한다 - 낮/밤 루프나 보스 같은
 /// 상시 시스템과 같은 오브젝트에 두면 챕터를 끌 때 그것들까지 멈춘다.
 /// </summary>
+[DefaultExecutionOrder(EARLY_EXECUTION_ORDER)]
 public sealed class TutorialScenarioController : MonoBehaviour
 {
+    private const int EARLY_EXECUTION_ORDER = -1000;
     private const int FIRST_CHAPTER_INDEX = 0;
     private const int FIRST_DAY_NUMBER = 1;
 
@@ -49,6 +50,7 @@ public sealed class TutorialScenarioController : MonoBehaviour
     // 그래서 Start가 아니라 Awake에서 첫 챕터를 연다(CLAUDE.md 이벤트 초기화 규칙).
     private void Awake()
     {
+        PrepareChapterObjects();
         EnterChapter(FIRST_CHAPTER_INDEX);
     }
 
@@ -57,6 +59,14 @@ public sealed class TutorialScenarioController : MonoBehaviour
         if (_cycleManager != null)
         {
             _cycleManager.OnDayStart.AddListener(HandleDayStart);
+        }
+
+        // 루트 오브젝트를 껐다 켜도 현재 챕터의 종료 신호를 다시 받아야 한다. OnDisable에서 구독을
+        // 뗀 뒤 이것을 복구하지 않으면 러너는 끝나는데 다음 챕터로 넘어가지 않는 고아 상태가 된다.
+        if (TryGetRunner(_currentIndex, out TutorialRunner current))
+        {
+            current.TutorialEnded.RemoveListener(HandleChapterEnded);
+            current.TutorialEnded.AddListener(HandleChapterEnded);
         }
     }
 
@@ -95,9 +105,11 @@ public sealed class TutorialScenarioController : MonoBehaviour
         _currentIndex = index;
 
         // 빈 칸에서 멈추면 그 뒤 챕터가 전부 사라지므로 건너뛴다.
-        while (index < _chapters.Count && _chapters[index].Runner == null)
+        while (index < _chapters.Count && !IsUsableChapter(index))
         {
-            Debug.LogWarning($"[TutorialScenarioController] {index}번째 챕터가 비어 있어 건너뜁니다.", this);
+            Debug.LogWarning(
+                $"[TutorialScenarioController] {index}번째 챕터가 비어 있거나 앞 챕터와 같은 러너라 건너뜁니다.",
+                this);
             index++;
             _currentIndex = index;
         }
@@ -128,6 +140,7 @@ public sealed class TutorialScenarioController : MonoBehaviour
         }
 
         // 구독을 먼저 건다 - 켜는 순간 끝나버리는 챕터(빈 시퀀스)의 종료를 놓치지 않기 위해서다.
+        chapter.TutorialEnded.RemoveListener(HandleChapterEnded);
         chapter.TutorialEnded.AddListener(HandleChapterEnded);
         chapter.gameObject.SetActive(true);
 
@@ -144,6 +157,45 @@ public sealed class TutorialScenarioController : MonoBehaviour
     {
         runner = index >= 0 && index < _chapters.Count ? _chapters[index].Runner : null;
         return runner != null;
+    }
+
+    /// <summary>
+    /// 씬 저장 상태와 무관하게 챕터는 컨트롤러 하나만 켠다. 실행 순서를 앞당긴 이유는 잘못 켜진
+    /// 뒤 챕터의 Awake/OnEnable이 먼저 돌아 관문과 표시권을 잡기 전에 여기서 끄기 위해서다.
+    /// </summary>
+    private void PrepareChapterObjects()
+    {
+        var prepared = new HashSet<TutorialRunner>();
+
+        foreach (ChapterEntry entry in _chapters)
+        {
+            TutorialRunner runner = entry.Runner;
+            if (runner == null || !prepared.Add(runner))
+            {
+                continue;
+            }
+
+            runner.TutorialEnded.RemoveListener(HandleChapterEnded);
+            runner.gameObject.SetActive(false);
+        }
+    }
+
+    private bool IsUsableChapter(int index)
+    {
+        if (!TryGetRunner(index, out TutorialRunner runner))
+        {
+            return false;
+        }
+
+        for (int previous = 0; previous < index; previous++)
+        {
+            if (_chapters[previous].Runner == runner)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>[테스트 전용] 지금 돌고 있는 챕터. 대기 중(그 일차가 오지 않음)이면 null.</summary>
@@ -166,4 +218,38 @@ public sealed class TutorialScenarioController : MonoBehaviour
 
     /// <summary>[테스트 전용] 아직 열지 못하고 대기 중인 챕터가 있는지. 밤을 넘겨야 열린다.</summary>
     public bool DebugHasPendingChapter => _pendingIndex >= 0;
+
+    /// <summary>[테스트 전용] 등록된 챕터 수.</summary>
+    public int DebugChapterCount => _chapters.Count;
+
+    /// <summary>[테스트 전용] 지금 몇 번째 챕터인지. 아직 시작 전이면 음수다.</summary>
+    public int DebugCurrentIndex => _currentIndex;
+
+    /// <summary>[테스트 전용] 그 자리의 러너. 비어 있으면 null.</summary>
+    public TutorialRunner DebugGetRunner(int index) =>
+        TryGetRunner(index, out TutorialRunner runner) ? runner : null;
+
+    /// <summary>[테스트 전용] 그 챕터의 시작 일차.</summary>
+    public int DebugGetStartDay(int index) =>
+        index >= 0 && index < _chapters.Count ? _chapters[index].StartDay : 0;
+
+    /// <summary>
+    /// [테스트 전용] 지정한 챕터로 곧바로 옮긴다. 앞 챕터는 꺼지고, 그 일차가 아직 오지 않았으면
+    /// 평소와 같이 대기 상태가 된다(그날 아침에 열린다).
+    ///
+    /// <b>건너뛴 챕터의 부수 효과는 일어나지 않는다</b> - 자원 선지급(<c>_grantStartingResources</c>)과
+    /// 단계 진행도 기록이 그렇다. 뒤 챕터만 확인하려고 앞을 건너뛰면 그 챕터가 기대하는 물건이
+    /// 없을 수 있다(예: 새끼용 챕터를 건너뛰면 초원 슬라임 선지급이 없다).
+    /// </summary>
+    public void DebugJumpToChapter(int index)
+    {
+        if (index < 0 || index >= _chapters.Count)
+        {
+            Debug.LogWarning($"[TutorialScenarioController] 챕터 {index}는 범위 밖입니다.", this);
+            return;
+        }
+
+        _pendingIndex = -1;
+        EnterChapter(index);
+    }
 }

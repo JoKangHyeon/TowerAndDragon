@@ -169,6 +169,9 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         _exitButton == null ? null : (RectTransform)_exitButton.transform;
 
     private DragonTab _currentTab = DragonTab.Mother;
+
+    // 어미용 탭 안의 스킬트리. Esc로 상세 패널만 닫을 때 쓰며, 처음 필요할 때 찾아 캐시한다.
+    private UI_DragonSkillWindow _skillWindow;
     private bool _isOpen;
 
     // 마우스가 올라가 있는 새끼용 슬롯의 개체. Panel_DragonInfo에 띄울 설명을 결정한다.
@@ -350,12 +353,28 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             return;
         }
 
+        // Esc는 안쪽부터 닫는다 - 어미용 스킬트리의 상세 패널이 떠 있으면 그것만 닫고 창은 남긴다.
+        // 그 패널에는 닫기 버튼이 없고 트리 오른쪽을 덮어, 한 번 열면 그 아래 노드를 고를 수 없다
+        // (연구 창에서 같은 갇힘을 먼저 발견해 같은 방식으로 푼다).
+        // 창이 남으므로 CanCloseExclusive는 묻지 않는다 - 안내의 유도가 깨지지 않는다.
+        if (TryCloseSkillDetailsPanel())
+        {
+            return;
+        }
+
         if (_uiManager != null && !_uiManager.CanCloseExclusive(this))
         {
             return;
         }
 
         Close();
+    }
+
+    // 스킬트리는 어미용 탭 안의 자식이라 인스펙터 배선 없이 찾는다 - 배선을 늘리면 빠뜨릴 자리가 하나 는다.
+    private bool TryCloseSkillDetailsPanel()
+    {
+        _skillWindow ??= GetComponentInChildren<UI_DragonSkillWindow>(true);
+        return _skillWindow != null && _skillWindow.TryCloseDetailsPanel();
     }
 
     private void HandleActiveAttributeChanged(DragonType attribute)

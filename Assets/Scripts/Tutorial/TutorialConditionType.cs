@@ -156,4 +156,28 @@ public enum TutorialConditionType
     // 지형 페널티가 붙은 자리에 건물을 지었다. 전용 이벤트는 없고, BuildingConstructed를 받은
     // 자리에서 IBuildingTerrainPenaltyQuery.Resolve 결과가 Neutral과 다른지로 판정한다.
     BuildingPlacedOnPenaltyTerrain,
+
+    // 지정한 종류의 건물이 필요한 개수만큼 서 있다(TutorialStepSO의 RequiredCount·RequiresStaffed).
+    // "한 기는 손잡고 짓고 나머지는 자율"을 표현하는 조건이라 증가분이 아니라 총량으로 센다.
+    //
+    // 정원 옵션이 있는 이유: 타워의 공격 속도가 충원율에 비례하므로(TowerAttack.GetAttackInterval)
+    // 인구가 1명뿐인 타워 3기는 개수만 채웠을 뿐 화력이 1/5이다. 밤을 넘기는 기준으로 쓰려면
+    // "정원을 채운 타워"를 세야 한다.
+    BuildingCountReached,
+
+    // 일꾼 모드에서 우클릭했다. 인구 감소가 아니라 "그 조작을 해봤는가"를 본다 -
+    // 회수는 흔적이 남지 않는 조작이라 인구 증감으로 재면 뺄 인구가 없을 때 영영 통과하지 못하고,
+    // 채운 인구를 일부러 다시 빼는 순서를 강요하게 된다.
+    WorkerModeRightClicked,
+
+    // 배치한 새끼용의 운용 모드(공격/버프)를 단계 진입 시점과 다른 것으로 바꿨다.
+    // 절대값이 아니라 진입 시점 대비로 보는 이유는 인구 조건과 같다 - 시작 모드는 데이터가 정하므로
+    // (BabyDragonTower.BindRecord) 절대값으로 판정하면 어느 한쪽 모드에서는 진입 즉시 통과한다.
+    //
+    // BabyDragonTower.ModeChanged는 인스턴스 이벤트라 구독할 대상이 런타임에야 생긴다 - 상태로 본다.
+    BabyDragonModeChanged,
+
+    // DragonTreeManager.NodeUnlocked - 어미용 스킬트리 노드를 하나 해금했다.
+    // 어느 노드인지는 묻지 않는다 - 연구(ResearchNodeCompleted)와 같이 고르는 것은 플레이어 몫이다.
+    DragonSkillNodeUnlocked,
 }

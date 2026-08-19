@@ -1,6 +1,9 @@
+using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 
@@ -8,10 +11,18 @@ using UnityEngine.UI;
 /// 가이드 연출 전담. "어디에 무슨 말을 띄울지"만 지시받고 새끼용·튜토리얼 도메인은 모른다.
 /// 대상만 밝게 남기는 구멍은 마스크·셰이더 없이 딤 패널 4장(상·하·좌·우)으로 만든다 - 가운데 빈 칸이 곧 구멍이다.
 /// 패널의 raycastTarget을 켜면 "대상만 클릭 가능"이 되고, 끄면 어둡기만 하고 뒤쪽이 다 눌린다.
-/// 단일 인스턴스로 쓰는 것을 전제한다 - 그래야 안내끼리 겹치지 않는다. 여러 가이드가 동시에 뜨려 하면
-/// 우선순위가 높은 쪽이 표시권을 잡고, 진 쪽은 Show가 false를 돌려받아 그리지 않는다(상태는 계속 전진).
+///
+/// <b>안내는 밀어 넣지 않고 끌어온다.</b> 매 프레임 등록된 제공자(<see cref="IGuideRequestProvider"/>)에게
+/// 우선순위 순으로 물어 처음 참을 돌려준 하나를 그린다. 예전에는 각 안내가 Show/Release로 표시권을
+/// 주고받았는데, "누가 지금 그리는가"를 프레임 사이에 들고 있는 한 인계하는 프레임마다 틈이 생겨
+/// 낮은 우선순위 안내가 한 프레임 그려지거나 화면이 통째로 비었다(번쩍임). 상태에서 다시 계산하면
+/// 그 틈은 존재할 수 없다.
+///
+/// 그리는 것은 <see cref="LateUpdate"/>에서만 한다 - 모든 Update가 끝난 뒤라 그 프레임의 단계 전진이
+/// 이미 반영돼 있다. 게이트 질의(<see cref="IsBlockingInput"/> 등)는 남의 Update와 입력 콜백에서
+/// 불리므로 <see cref="EnsureResolved"/>로 그 자리에서 계산한다 - 프레임당 한 번만 돈다.
 /// </summary>
-public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
+public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHandler
 {
     private const int DIM_PANEL_COUNT = 4;
     private const int RECT_CORNER_COUNT = 4;
@@ -59,6 +70,10 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
              "행동을 기다리는 단계에서는 자동으로 숨는다. 없으면 설명이 시간으로만 넘어간다.")]
     [SerializeField] private Button _confirmButton;
 
+    [Tooltip("말풍선 아래에 잠깐 붙는 보조 줄. 막힌 버튼을 눌렀을 때 그 사유를 여기에 낸다. " +
+             "비워두면 사유를 표시하지 않는다(안내 자체는 그대로 돈다).")]
+    [SerializeField] private TMP_Text _hintText;
+
     [Tooltip("안내가 떠 있는 동안 밤으로 넘어가지 못하게 막는 데 쓴다. 비우면 막지 않는다.")]
     [SerializeField] private CycleManager _cycleManager;
 
@@ -71,6 +86,10 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     [SerializeField] private float _pulseDuration = DEFAULT_PULSE_DURATION;
     [SerializeField] private float _pulseScale = DEFAULT_PULSE_SCALE;
 
+    [Tooltip("화면을 쥔 제공자가 바뀐 순간을 프레임 번호와 함께 콘솔에 남긴다. '안내가 한 프레임 스쳤다' 같은 " +
+             "제보는 화면만 봐서는 어느 경로였는지 되짚을 수 없어, 재현할 때만 켜서 순서를 확인하는 용도다.")]
+    [SerializeField] private bool _logsDisplayHandover;
+
     private readonly Vector3[] _cornerBuffer = new Vector3[RECT_CORNER_COUNT];
     private RectTransform[] _dimPanels;
     private Image[] _dimImages;
@@ -80,12 +99,39 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     // 설명만 하는 단계에서 눌러버리면 그날 기회가 사라진다). 보이지는 않고 클릭만 막는다.
     private RectTransform _holeBlocker;
 
+    // 안내를 낼 수 있는 쪽. 우선순위 내림차순으로 정렬해 두고, 같은 우선순위는 먼저 등록한 쪽이 앞이다.
+    // List.Sort를 쓰지 않는 이유는 그것이 불안정 정렬이라서다 - 챕터 둘이 같은 값을 가지면
+    // 프레임마다 순서가 뒤집힐 수 있고, 그러면 어느 쪽이 그릴지가 동전던지기가 된다.
+    //
+    // Resolve가 이 목록을 foreach로 도는 동안에는 목록을 바꾸면 안 된다. TryGetRequest가 읽기만 하는 한
+    // 그럴 일이 없지만(거기서 OnDisable을 유발할 수 없다), 그 규칙이 곧 이 foreach의 안전 근거다.
+    private readonly List<IGuideRequestProvider> _providers = new();
+
+    // 이번 프레임에 화면을 쥔 제공자와 그 요청. 프레임당 한 번 계산하고 LateUpdate가 그리기 직전에
+    // 반드시 다시 계산한다 - 남의 Update에서 먼저 계산된 값을 그대로 그리면 한 프레임 옛 컷이 나간다.
+    private IGuideRequestProvider _currentProvider;
+    private GuideRequestPhase _currentPhase = GuideRequestPhase.Hide;
+
+    // 이번 프레임의 요청. Resolve가 채우고 LateUpdate가 그릴 때 쓴다 - 해석과 그리기를 나눠 두어야
+    // 게이트 질의가 화면을 건드리지 않는다.
+    private GuideRequest _pendingRequest = GuideRequest.Hidden;
+    private int _resolvedFrame = -1;
+    private bool _isResolving;
+    private bool _hasWarnedReentrantResolve;
+
+    // 실제로 화면에 그린 요청과 그 주인. KeepLast는 "이것을 그대로 두라"는 뜻이고,
+    // 확인·차단 클릭도 지금 눈에 보이는 그림의 주인에게 가야 한다.
+    private IGuideRequestProvider _drawnProvider;
+    private GuideRequest _drawnRequest;
+    private bool _hasDrawnRequest;
+
+    // 그린 요청이 애초에 가리킬 대상을 가지고 있었는지. "원래 대상이 없는 안내"와 "가리키던 대상이
+    // 사라진 안내"는 다르게 다뤄야 한다 - 앞은 그대로 두고, 뒤는 연출을 거둔다.
+    // 요청을 그릴 때마다 새로 계산하므로 주인이 바뀐 뒤까지 살아남지 않는다(예전 _expectsTarget의 사고).
+    private bool _drawnExpectsTarget;
+
     private RectTransform _target;
     private Renderer _worldTarget;
-
-    // 이 단계가 애초에 가리킬 대상을 가지고 있었는지. "원래 대상이 없는 안내"와
-    // "가리키던 대상이 사라진 안내"는 다르게 다뤄야 한다 - 앞은 그대로 두고, 뒤는 연출을 거둔다.
-    private bool _expectsTarget;
 
     private bool _blocksInput;
     private bool _blocksTargetInteraction;
@@ -93,29 +139,87 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     private bool _visualsActive;
     private Canvas _canvas;
 
-    // 표시권을 가진 가이드. 이 컴포넌트는 owner가 무엇인지 모르고 우선순위 크기만 비교한다.
-    private object _owner;
-    private int _ownerPriority;
-
     // 씬에서 놓은 자리를 Default로 삼는다 - 슬롯을 안 쓰는 단계는 원래 자리로 돌아와야 한다.
     private Vector2 _bubbleHomePosition;
     private bool _hasBubbleHome;
     private Tween _bubblePulseTween;
     private Tween _highlightPulseTween;
 
-    // 포맷 인자가 들어가는 문구라 LocalizedText를 붙일 수 없으므로(팀 스트링테이블 규칙), 원재료를 들고 있다가
-    // 언어가 바뀌면 직접 다시 포맷한다. UI_IngameWindow가 쓰는 것과 같은 방식이다.
-    private string _currentLocKey;
-    private object[] _currentArgs;
+    // 보조 줄이 몇 번째로 뜬 것인지. 겹쳐 뜬 사유의 옛 타이머가 새 사유를 지우지 않게 한다.
+    private int _hintSequence;
 
     /// <summary>
-    /// 표시권을 놓았을 때 알린다. 구독자는 <b>캐시된 요청을 되살리는 대신 자기 현재 상태로 다시 유도</b>해야 한다 -
-    /// 양보하는 동안 단계가 전진했을 수 있어 옛 요청을 재생하면 이미 지나간 안내가 다시 뜬다.
+    /// 안내를 낼 쪽을 등록한다. 제공자는 자기 <c>OnEnable</c>에서 걸고 <c>OnDisable</c>에서 뗀다 -
+    /// 꺼진 제공자가 목록에 남으면 아무것도 그리지 않으면서 화면을 쥔 것과 같아진다.
     /// </summary>
-    public event System.Action DisplayReleased;
+    public void AddProvider(IGuideRequestProvider provider)
+    {
+        if (provider == null || _providers.Contains(provider))
+        {
+            return;
+        }
 
-    /// <summary>확인 버튼이 눌렸다. 지금 표시권을 가진 쪽에게만 의미가 있다.</summary>
-    public event System.Action ConfirmClicked;
+        // 같은 우선순위는 뒤에 넣어 등록 순서를 유지한다.
+        int index = 0;
+        while (index < _providers.Count && _providers[index].Priority >= provider.Priority)
+        {
+            index++;
+        }
+
+        _providers.Insert(index, provider);
+    }
+
+    public void RemoveProvider(IGuideRequestProvider provider)
+    {
+        _providers.Remove(provider);
+    }
+
+    // 딤 패널은 raycastTarget이라 클릭을 받지만 자기 몫의 처리는 없다. 이벤트는 부모로 거슬러 올라오므로
+    // 루트에 있는 이 컴포넌트가 대신 받는다 - 딤 조각마다 스크립트를 붙이지 않아도 된다.
+    void IPointerClickHandler.OnPointerClick(PointerEventData eventData)
+    {
+        if (!_visualsActive || !_blocksInput || eventData == null)
+        {
+            return;
+        }
+
+        // 말풍선·확인 버튼을 눌러도 이벤트는 여기까지 올라온다. 막힌 클릭만 골라야 한다.
+        if (!IsDimPart(eventData.pointerCurrentRaycast.gameObject))
+        {
+            return;
+        }
+
+        // 지금 눈에 보이는 그림의 주인에게 간다 - 사유를 낼 말풍선이 그 주인의 것이다.
+        _drawnProvider?.OnBlockedClicked();
+    }
+
+    private bool IsDimPart(GameObject candidate)
+    {
+        if (candidate == null)
+        {
+            return false;
+        }
+
+        if (_holeBlocker != null && ReferenceEquals(candidate, _holeBlocker.gameObject))
+        {
+            return true;
+        }
+
+        if (_dimPanels == null)
+        {
+            return false;
+        }
+
+        foreach (RectTransform panel in _dimPanels)
+        {
+            if (panel != null && ReferenceEquals(candidate, panel.gameObject))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     // Overlay 모드에서는 카메라를 넘기면 좌표가 어긋나므로 null이어야 한다.
     private Camera UiCamera =>
@@ -123,37 +227,38 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
 
     private static Camera WorldCamera => Camera.main;
 
-    // 소유자가 Release 없이 파괴된 경우에도 표시권이 영구히 잠기지 않게 유니티 쪽 null 비교를 태운다.
-    private bool HasOwner => _owner is MonoBehaviour behaviour ? behaviour != null : _owner != null;
+    /// <summary>
+    /// 지금 안내가 화면을 쥐고 있는지. <see cref="GuideRequestPhase.KeepLast"/>도 참으로 본다 -
+    /// 인계하는 프레임에 게이트가 한 번 열리는 것보다 한 프레임 더 막는 쪽이 안전하다.
+    /// <see cref="GuideRequestPhase.Hide"/>와 "아무도 요청을 내지 않음"만 거짓이다.
+    /// </summary>
+    public bool IsShowingGuide
+    {
+        get
+        {
+            EnsureResolved();
+            return _currentProvider != null && _currentPhase != GuideRequestPhase.Hide;
+        }
+    }
 
     /// <summary>
-    /// 지금 화면을 차지하고 있는 것이 이것인지. <see cref="ConfirmClicked"/>는 구독자 전원에게 가므로,
-    /// 확인 버튼처럼 공용 UI로 전진하는 쪽은 이것으로 <b>남에게 눌린 클릭</b>을 걸러내야 한다 -
-    /// 같은 우선순위의 안내가 둘 붙으면 진 쪽은 그려지지도 않은 채 클릭 한 번에 함께 전진해
-    /// 로그에는 다 지나간 것으로 남고 화면에는 아무것도 뜨지 않는다.
+    /// 이 제공자의 안내가 화면을 쥐고 있는지. 관문을 거는 쪽은 반드시 이것을 봐야 한다 -
+    /// 화면에 아무 안내도 없는데 버튼과 단축키가 조용히 죽으면 게임 전체가 막힌 것처럼 보인다.
     /// </summary>
-    public bool IsDisplaying(object owner) => HasOwner && ReferenceEquals(_owner, owner);
-
-    /// <summary>
-    /// 지금 안내가 화면에 떠 있는지. 표시권만 보면 안 된다 - <see cref="Suspend"/>는 딤을 걷으면서
-    /// 표시권은 쥐고 있고, 대상이 사라지면 LateUpdate가 연출만 감춘다. 화면에 아무것도 없는 그 동안까지
-    /// 게임을 잠그면 안 되므로 <see cref="_visualsActive"/>를 함께 본다.
-    /// </summary>
-    public bool IsShowingGuide => HasOwner && _visualsActive;
-
-    /// <summary>
-    /// 이 소유자의 안내가 <b>실제로 화면에 떠 있는지</b>. 관문을 거는 쪽은 반드시 이것을 봐야 한다 -
-    /// <see cref="IsDisplaying"/>는 표시권만 보므로, LateUpdate가 대상을 잃고 연출만 감춘 상태
-    /// (표시권은 유지)에서도 참이다. 그 상태에서 관문을 걸면 화면에 아무 안내도 없는데 버튼과 단축키가
-    /// 조용히 죽는다 - 실제로 그렇게 만들어 게임 전체가 막힌 것처럼 보였다.
-    /// </summary>
-    public bool IsShowingFor(object owner) => IsShowingGuide && ReferenceEquals(_owner, owner);
+    public bool IsShowingFor(object owner) => IsShowingGuide && ReferenceEquals(_currentProvider, owner);
 
     /// <summary>
     /// 지금 딤이 대상 밖 클릭을 막고 있는지. 키보드 단축키는 딤을 통과하므로, 마우스와 같은 기준으로
     /// 막으려면 단축키 폴링 지점이 이것을 봐야 한다(<see cref="UIManager.CanUseShortcut"/>이 대신 물어준다).
     /// </summary>
-    public bool IsBlockingInput => IsShowingGuide && _blocksInput;
+    public bool IsBlockingInput
+    {
+        get
+        {
+            EnsureResolved();
+            return _blocksInput;
+        }
+    }
 
     /// <summary>
     /// 안내가 떠 있는 동안에는 밤으로 넘어가지 않는다. 밤은 되돌릴 수 없는 데다 건설·인구 배치가 잠겨
@@ -170,7 +275,14 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     /// 스스로 자리를 계산해 두는 앵커(<see cref="MonsterPathGuideAnchor"/>)가 <b>자기가 쓰일 때만</b>
     /// 계산하도록 판단하는 데 쓴다 - 매 프레임 도는 계산이라 아무도 안 볼 때 돌면 그대로 낭비다.
     /// </summary>
-    public RectTransform CurrentTarget => HasOwner ? _target : null;
+    public RectTransform CurrentTarget
+    {
+        get
+        {
+            EnsureResolved();
+            return _target;
+        }
+    }
 
     private void Awake()
     {
@@ -210,10 +322,28 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
         SetVisualsActive(false);
     }
 
+    // 확인 클릭은 지금 눈에 보이는 그림의 주인에게만 간다. 예전에는 이벤트로 전원에게 뿌리고
+    // 각 구독자가 "내 것인가"를 걸러냈는데, 그 필터를 한 곳이라도 빠뜨리면 화면에 뜬 적 없는
+    // 안내가 클릭 한 번에 통째로 지나가 버렸다.
     private void HandleConfirmClicked()
     {
         SoundManager.Play(SoundId.UiButtonClick);
-        ConfirmClicked?.Invoke();
+        _drawnProvider?.OnConfirmClicked();
+    }
+
+    // 진단 전용. 프레임 번호를 함께 남기는 것이 핵심이다 - 같은 프레임 안에서 오간 것은 화면에
+    // 나가지 않으므로, 번쩍인 안내는 반드시 프레임을 넘긴 구간에 있다.
+    private void LogHandover(string action, object owner)
+    {
+        if (!_logsDisplayHandover)
+        {
+            return;
+        }
+
+        string ownerName = owner is Object unityObject && unityObject != null ? unityObject.name : "?";
+        Debug.Log(
+            $"[UI_GuideOverlay] f{Time.frameCount} {action} owner={ownerName} phase={_currentPhase} " +
+            $"visuals={_visualsActive} key={(_hasDrawnRequest ? _drawnRequest.MessageLocKey : "-")}", this);
     }
 
     // 안내용 그래픽은 클릭 대상이 아니다 - 차단하지 않는 단계에서 뒤쪽 조작을 막으면 안 된다.
@@ -255,15 +385,14 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
 
     private void ApplyText()
     {
-        if (!HasOwner || _bubbleText == null)
+        if (!_hasDrawnRequest || _bubbleText == null)
         {
             return;
         }
 
-        string raw = StringTable.GetString(_currentLocKey);
-        _bubbleText.text = _currentArgs == null || _currentArgs.Length == 0
-            ? raw
-            : string.Format(raw, _currentArgs);
+        string raw = StringTable.GetString(_drawnRequest.MessageLocKey);
+        object[] args = _drawnRequest.Args;
+        _bubbleText.text = args == null || args.Length == 0 ? raw : string.Format(raw, args);
 
         ClampBubbleWidth();
     }
@@ -330,123 +459,264 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     }
 
     /// <summary>
-    /// 말풍선을 띄운다. target을 주면 그 대상만 남기고 화면을 어둡게 덮고, target이 없으면 말풍선만 띄운다.
-    /// 문구는 로컬 키로만 받는다 - 이 컴포넌트는 문자열 리터럴을 갖지 않는다.
-    /// 더 높은 우선순위가 표시권을 쥐고 있으면 아무것도 그리지 않고 false를 돌려준다 - 호출자는 그냥 넘어가면 된다.
-    /// showConfirmButton은 읽고 넘기는 설명에서만 켠다 - 행동을 기다리는 단계에 버튼이 있으면
-    /// 그 행동을 건너뛰고 눌러버릴 수 있다.
-    /// 딤과 입력 차단은 인자로 받지 않는다 - <see cref="ShowInternal"/>이 대상·확인 버튼 유무로 스스로 정한다.
+    /// 이번 프레임에 누가 무엇을 그릴지 상태에서 다시 계산한다. 프레임당 한 번만 돌고,
+    /// <see cref="LateUpdate"/>가 그리기 직전에 캐시를 무효화해 그 프레임의 단계 전진이 반드시 반영되게 한다.
     /// </summary>
-    // 기본값을 두지 않는다 - params 배열 앞의 선택 인자는 호출부가 인자를 빠뜨렸을 때 조용히
-    // 엉뚱한 자리에 묶일 수 있다. 호출부가 매번 밝히게 한다.
-    public bool Show(object owner, int priority, RectTransform target, string locKey,
-        bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot,
-        params object[] args)
+    private void EnsureResolved()
     {
-        return ShowInternal(
-            owner,
-            priority,
-            target,
-            null,
-            locKey,
-            blocksTargetInteraction,
-            showConfirmButton,
-            bubbleSlot,
-            args);
+        if (_resolvedFrame == Time.frameCount)
+        {
+            return;
+        }
+
+        // 제공자의 TryGetRequest가 오버레이를 다시 물으면 여기로 되돌아온다. 조용히 지난 답을 주면
+        // 게이트가 엉뚱한 값을 받는데 원인은 드러나지 않으므로, 한 번은 시끄럽게 알린다.
+        if (_isResolving)
+        {
+            if (!_hasWarnedReentrantResolve)
+            {
+                _hasWarnedReentrantResolve = true;
+                Debug.LogError(
+                    "[UI_GuideOverlay] 제공자의 TryGetRequest가 오버레이를 다시 질의했습니다 - " +
+                    "TryGetRequest는 읽기만 해야 합니다(상태 전이는 제공자 자신의 Update에서).", this);
+            }
+
+            return;
+        }
+
+        _isResolving = true;
+        _resolvedFrame = Time.frameCount;
+        Resolve();
+        _isResolving = false;
+    }
+
+    // 우선순위 순으로 물어 처음 참을 돌려준 하나가 화면을 쥔다. 진 쪽은 그리지 않을 뿐 상태는 계속 전진한다.
+    private void Resolve()
+    {
+        IGuideRequestProvider previousProvider = _currentProvider;
+
+        _currentProvider = null;
+        _currentPhase = GuideRequestPhase.Hide;
+
+        GuideRequest request = GuideRequest.Hidden;
+
+        foreach (IGuideRequestProvider provider in _providers)
+        {
+            if (!IsUsableProvider(provider) || !provider.TryGetRequest(out GuideRequest candidate))
+            {
+                continue;
+            }
+
+            _currentProvider = provider;
+            _currentPhase = candidate.Phase;
+            request = candidate;
+            break;
+        }
+
+        _pendingRequest = request;
+        ApplyResolvedGateState(request);
+
+        if (!ReferenceEquals(previousProvider, _currentProvider))
+        {
+            LogHandover("RESOLVE", _currentProvider);
+        }
+    }
+
+
+    // 소유자가 파괴됐거나 꺼졌으면 건너뛴다 - 아무것도 그리지 않는 제공자가 화면을 쥐면
+    // 그 밑의 안내가 영영 뜨지 못한다.
+    private static bool IsUsableProvider(IGuideRequestProvider provider)
+    {
+        if (provider is MonoBehaviour behaviour)
+        {
+            return behaviour != null && behaviour.isActiveAndEnabled;
+        }
+
+        return provider != null;
     }
 
     /// <summary>
-    /// 월드 오브젝트를 클릭하게 하는 안내. 렌더러의 월드 바운드를 화면 사각형으로 투영해
-    /// UI 대상과 같은 딤 구멍을 만들므로, 해당 오브젝트 밖의 UI와 월드 클릭을 함께 막을 수 있다.
+    /// 게이트가 보는 값(딤 차단·현재 대상)을 이번 프레임의 요청에 맞춘다.
+    /// <see cref="GuideRequestPhase.KeepLast"/>는 화면이 앞 그림 그대로이므로 그 값을 그대로 쓴다 -
+    /// 눈에 보이는 딤과 게이트가 갈라지면 "어둡지 않은데 막힌다"가 된다.
     /// </summary>
-    public bool ShowWorldTarget(object owner, int priority, Renderer target, string locKey,
-        bool blocksTargetInteraction, bool showConfirmButton, GuideBubbleSlot bubbleSlot,
-        params object[] args)
+    private void ApplyResolvedGateState(in GuideRequest request)
     {
-        return ShowInternal(
-            owner,
-            priority,
-            null,
-            target,
-            locKey,
-            blocksTargetInteraction,
-            showConfirmButton,
-            bubbleSlot,
-            args);
+        switch (_currentPhase)
+        {
+            case GuideRequestPhase.Draw when _currentProvider != null:
+                _blocksInput = ComputeBlocksInput(request);
+                _target = request.Target;
+                _worldTarget = request.WorldTarget;
+                break;
+
+            case GuideRequestPhase.KeepLast when _currentProvider != null && _hasDrawnRequest:
+                _blocksInput = ComputeBlocksInput(_drawnRequest);
+                _target = _drawnRequest.Target;
+                _worldTarget = _drawnRequest.WorldTarget;
+                break;
+
+            default:
+                _blocksInput = false;
+                _target = null;
+                _worldTarget = null;
+                break;
+        }
     }
 
-    private bool ShowInternal(object owner, int priority, RectTransform target, Renderer worldTarget,
-        string locKey, bool blocksTargetInteraction, bool showConfirmButton,
-        GuideBubbleSlot bubbleSlot, params object[] args)
+    /// <summary>
+    /// 안내가 떠 있는 동안에는 유도한 곳 말고는 누를 수 없다. 요청에 맡기지 않고 여기서 정한다 -
+    /// 단계마다 판단하게 두었더니 빠뜨린 곳이 계속 나왔고, 그때마다 플레이어가 엉뚱한 버튼을 눌러
+    /// 안내가 가리키던 창을 닫거나 밤으로 넘어가 안내만 남았다.
+    ///
+    /// 빠져나갈 길이 없을 때만 열어 둔다 - 구멍도 확인 버튼도 없는데 막으면 아무것도 누를 수 없다.
+    /// <see cref="GuideRequest.KeepsInputOpen"/>은 그 자동 판단을 요청이 되돌리는 유일한 통로다.
+    /// </summary>
+    private bool ComputeBlocksInput(in GuideRequest request)
     {
-        if (owner == null)
-        {
-            Debug.LogWarning($"[UI_GuideOverlay] owner 없이 Show({locKey})가 호출됐다 - 표시권을 관리할 수 없어 무시한다.");
-            return false;
-        }
-
-        // 같은 우선순위면 먼저 잡은 쪽이 유지한다 - 매 프레임 서로 빼앗으면 안내가 깜빡인다.
-        if (HasOwner && !ReferenceEquals(_owner, owner) && priority <= _ownerPriority)
-        {
-            return false;
-        }
-
-        // 확인 버튼은 딤 위에 있어 막아도 계속 눌린다. 단계가 켜라고 해도 배선이 비어 있으면
+        // 확인 버튼은 딤 위에 있어 막아도 계속 눌린다. 요청이 켜라고 해도 배선이 비어 있으면
         // 실제로는 버튼이 없는 것과 같으므로 둘을 함께 본다.
-        bool hasEscape = showConfirmButton && _confirmButton != null;
-        bool hasTarget = target != null || worldTarget != null;
+        bool hasEscape = request.ShowsConfirmButton && _confirmButton != null;
+        bool hasTarget = request.Target != null || request.WorldTarget != null;
 
+        return !request.KeepsInputOpen && (hasTarget || hasEscape);
+    }
+
+    /// <summary>
+    /// 그리기는 여기서만 한다. 모든 Update가 끝난 뒤라 그 프레임의 단계 전진이 이미 반영돼 있다 -
+    /// Update에서 폴링하면 러너의 Update와 순서 보장이 없어 한 프레임 옛 컷을 그린다.
+    /// </summary>
+    private void LateUpdate()
+    {
+        // 프레임 중간의 게이트 질의가 남긴 계산은 러너의 Update보다 앞설 수 있다. 그리기 직전에 버린다.
+        _resolvedFrame = -1;
+        EnsureResolved();
+
+        switch (_currentPhase)
+        {
+            case GuideRequestPhase.Draw when _currentProvider != null:
+                if (!_hasDrawnRequest ||
+                    !ReferenceEquals(_drawnProvider, _currentProvider) ||
+                    !_pendingRequest.Matches(_drawnRequest))
+                {
+                    ApplyRequest(_currentProvider, _pendingRequest);
+                    break;
+                }
+
+                RefreshDrawn();
+                break;
+
+            // 앞 프레임의 그림을 그대로 둔다. 대상이 움직였을 수 있으므로 구멍만 다시 맞춘다.
+            case GuideRequestPhase.KeepLast when _currentProvider != null:
+                RefreshDrawn();
+                break;
+
+            default:
+                ClearVisuals();
+                break;
+        }
+    }
+
+    private void ApplyRequest(IGuideRequestProvider provider, in GuideRequest request)
+    {
         if (_overlayRoot == null)
         {
-            Debug.LogWarning($"[UI_GuideOverlay] {locKey} 안내를 띄울 수 없다 - _overlayRoot가 비었다.");
-            Release(owner);
-            return false;
+            Debug.LogWarning(
+                $"[UI_GuideOverlay] {request.MessageLocKey} 안내를 띄울 수 없다 - _overlayRoot가 비었다.");
+            return;
         }
 
-        _owner = owner;
-        _ownerPriority = priority;
-        _target = target;
-        _worldTarget = worldTarget;
-        _expectsTarget = hasTarget;
+        _drawnProvider = provider;
+        _drawnRequest = request;
+        _hasDrawnRequest = true;
+        _drawnExpectsTarget = request.Target != null || request.WorldTarget != null;
 
-        // 안내가 떠 있는 동안에는 유도한 곳 말고는 누를 수 없다. 호출부에 맡기지 않고 여기서 정한다 -
-        // 단계마다 판단하게 두었더니 빠뜨린 곳이 계속 나왔고, 그때마다 플레이어가 엉뚱한 버튼을 눌러
-        // 안내가 가리키던 창을 닫거나 밤으로 넘어가 안내만 남았다.
-        //
-        // 빠져나갈 길이 없을 때만 열어 둔다 - 구멍도 확인 버튼도 없는데 막으면 아무것도 누를 수 없다.
-        // 그리드를 클릭해 새끼용을 배치하는 단계가 그 경우로, 대상을 지정하지 않아 화면 전체가 통로다.
-        //
-        // 딤도 같은 값을 쓴다(ApplyDim). 막는 곳은 어둡게 해야 한다 - 보이지 않는 벽에 막히면 멈춘 줄 안다.
-        _blocksInput = hasTarget || hasEscape;
+        _blocksTargetInteraction = request.BlocksTargetInteraction;
+        _showConfirmButton = request.ShowsConfirmButton;
 
-        _blocksTargetInteraction = blocksTargetInteraction;
-        _showConfirmButton = showConfirmButton;
-        _currentLocKey = locKey;
-        _currentArgs = args;
+        // 앞 컷에서 낸 사유는 여기서 지운다 - 새 안내와 함께 남아 있으면 방금 막힌 것처럼 읽힌다.
+        HideHint();
+
         ApplyText();
         ApplyDim();
-        ApplyBubbleSlot(bubbleSlot);
+        ApplyBubbleSlot(request.BubbleSlot);
 
+        // 문구와 확인 버튼이 바뀌었으므로 말풍선 크기와 연출을 이 자리에서 다시 확정한다.
         SetVisualsActive(true);
+        LogHandover("DRAW", provider);
 
-        if (_target != null)
+        RefreshDrawn();
+    }
+
+    /// <summary>
+    /// 구멍은 레이아웃이 한 프레임 뒤에 확정되거나 대상이 움직일 수 있으므로 표시 중에 매 프레임 다시 맞춘다.
+    /// 말풍선은 씬에 고정이라 여기서 손대지 않는다.
+    ///
+    /// 가리키던 대상이 지금 화면에 없으면 연출만 감춘다 - 계속 기다릴지 걷을지는 제공자가
+    /// 자기 Update에서 정하므로(대상 실종·미도착 판정) 여기서 표시권을 건드리지 않는다.
+    /// </summary>
+    private void RefreshDrawn()
+    {
+        if (!_hasDrawnRequest)
+        {
+            return;
+        }
+
+        bool isUiTargetVisible = _target != null && _target.gameObject.activeInHierarchy;
+        bool isWorldTargetVisible = _worldTarget != null &&
+                                    _worldTarget.enabled &&
+                                    _worldTarget.gameObject.activeInHierarchy;
+
+        bool canShow = !_drawnExpectsTarget || isUiTargetVisible || isWorldTargetVisible;
+
+        if (canShow != _visualsActive)
+        {
+            SetVisualsActive(canShow);
+        }
+
+        if (!canShow)
+        {
+            return;
+        }
+
+        if (isUiTargetVisible)
         {
             Layout();
-        }
-        else if (_worldTarget != null)
-        {
-            LayoutWorldTarget();
-        }
-        else if (_blocksInput)
-        {
-            LayoutFullCover();
-        }
-        else
-        {
-            SetSpotlightActive(false);
+            return;
         }
 
-        return true;
+        if (isWorldTargetVisible)
+        {
+            LayoutWorldTarget();
+            return;
+        }
+
+        if (_blocksInput)
+        {
+            LayoutFullCover();
+            return;
+        }
+
+        SetSpotlightActive(false);
+    }
+
+    // 화면을 걷는다. 그린 요청도 함께 버려 다음 KeepLast가 지워진 그림을 되살리지 않게 한다.
+    private void ClearVisuals()
+    {
+        if (!_hasDrawnRequest && !_visualsActive)
+        {
+            return;
+        }
+
+        LogHandover("CLEAR", _drawnProvider);
+
+        _drawnProvider = null;
+        _drawnRequest = GuideRequest.Hidden;
+        _hasDrawnRequest = false;
+        _drawnExpectsTarget = false;
+
+        HideHint();
+        SetVisualsActive(false);
     }
 
     /// <summary>
@@ -483,43 +753,54 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
     }
 
     /// <summary>
-    /// 표시권은 쥔 채로 화면에서만 걷는다. 안내가 끝났지만 아직 다음 안내에 넘길 때가 아닐 때 쓴다 -
-    /// 그냥 Release하면 대기 중이던 낮은 우선순위가 곧바로 그려져 다른 알림과 겹친다.
+    /// 말풍선 아래에 보조 줄을 잠깐 띄운다. 막았다는 사실을 그 자리에서 알리는 데 쓴다 -
+    /// 무반응으로 두면 플레이어가 버그로 읽는다.
+    ///
+    /// <b>화면을 쥔 쪽만 낼 수 있다.</b> 안내는 둘 이상 동시에 살아 있을 수 있고(챕터 + 새끼용 가이드)
+    /// 진 쪽도 관문 질의에는 거절을 돌려주므로, 그대로 두면 화면에 뜬 적 없는 안내가 말을 건다.
     /// </summary>
-    public void Suspend(object owner)
+    public void ShowHint(object owner, string locKey, float durationSeconds)
     {
-        if (!HasOwner || !ReferenceEquals(_owner, owner))
+        if (_hintText == null || !_visualsActive || !IsShowingFor(owner))
         {
             return;
         }
 
-        _target = null;
-        _worldTarget = null;
+        _hintText.text = StringTable.GetString(locKey);
+        _hintText.gameObject.SetActive(true);
 
-        // 대상을 기다리는 상태까지 풀어야 한다 - 남겨두면 LateUpdate가 "대상이 사라졌다"로 보고
-        // 확인 버튼이 있는 단계를 딤째로 다시 띄운다(표시권은 계속 쥐고 있으므로 early return도 안 걸린다).
-        _expectsTarget = false;
+        // 힌트가 붙으면 말풍선이 그만큼 자란다. 이 자리에서 확정하지 않으면 한 프레임 늦게 반영돼
+        // 문구는 그대로인데 말풍선만 뒤늦게 늘어난다(SetVisualsActive가 같은 이유로 쓰는 호출이다).
+        if (_bubbleRoot != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_bubbleRoot);
+        }
 
-        SetVisualsActive(false);
+        _hintSequence++;
+        HideHintLaterAsync(_hintSequence, durationSeconds).Forget();
     }
 
-    /// <summary>
-    /// 표시권을 놓는다. 소유자가 아닌 쪽이 불러도 아무 일도 없다 - 남의 안내를 지우지 못하게 한다.
-    /// </summary>
-    public void Release(object owner)
+    // 사유는 잠깐 붙었다 사라진다. 남겨두면 안내 문구처럼 읽혀 "지금 할 일"과 섞인다.
+    // 그 사이 새 사유가 뜨면 옛 타이머는 자기 차례가 아니므로 아무것도 하지 않는다.
+    private async UniTaskVoid HideHintLaterAsync(int sequence, float durationSeconds)
     {
-        if (!HasOwner || !ReferenceEquals(_owner, owner))
+        await UniTask.WaitForSeconds(
+            durationSeconds,
+            ignoreTimeScale: true,
+            cancellationToken: this.GetCancellationTokenOnDestroy());
+
+        if (sequence == _hintSequence)
         {
-            return;
+            HideHint();
         }
+    }
 
-        _owner = null;
-        _target = null;
-        _worldTarget = null;
-        SetVisualsActive(false);
-
-        // 기다리던 가이드가 자기 현재 단계로 다시 유도할 기회를 준다.
-        DisplayReleased?.Invoke();
+    private void HideHint()
+    {
+        if (_hintText != null)
+        {
+            _hintText.gameObject.SetActive(false);
+        }
     }
 
     // 표식이 비어 있으면 기본 자리에 그대로 둔다 - 배선을 빼먹었을 때 말풍선이 화면 밖으로 날아가지 않게.
@@ -583,70 +864,6 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
         }
     }
 
-    // 구멍은 레이아웃이 한 프레임 뒤에 확정되거나 대상이 움직일 수 있으므로 표시 중에 매 프레임 다시 맞춘다.
-    // 말풍선은 씬에 고정이라 여기서 손대지 않는다.
-    private void LateUpdate()
-    {
-        // 원래 가리킬 대상이 없는 안내(타일을 클릭하라는 등)는 Show가 그려 둔 그대로 둔다 -
-        // 여기서 손대면 대상이 사라진 것으로 오해해 말풍선을 지워버린다.
-        if (!HasOwner || !_expectsTarget)
-        {
-            return;
-        }
-
-        bool isUiTargetVisible = _target != null && _target.gameObject.activeInHierarchy;
-        bool isWorldTargetVisible = _worldTarget != null &&
-                                    _worldTarget.enabled &&
-                                    _worldTarget.gameObject.activeInHierarchy;
-
-        if (isUiTargetVisible || isWorldTargetVisible)
-        {
-            if (!_visualsActive)
-            {
-                SetVisualsActive(true);
-            }
-
-            if (isUiTargetVisible)
-            {
-                Layout();
-            }
-            else
-            {
-                LayoutWorldTarget();
-            }
-            return;
-        }
-
-        // 대상이 사라졌다(가리키던 창을 닫았거나 슬롯이 없어졌다).
-        // 확인 버튼으로 넘기는 설명이라면 말풍선은 그대로 두어야 한다 - 같이 감추면
-        // 넘길 방법이 사라져 아무것도 누를 수 없는 상태가 된다.
-        if (_showConfirmButton)
-        {
-            if (!_visualsActive)
-            {
-                SetVisualsActive(true);
-            }
-
-            if (_blocksInput)
-            {
-                LayoutFullCover();
-            }
-            else
-            {
-                SetSpotlightActive(false);
-            }
-
-            return;
-        }
-
-        // 행동을 기다리는 단계는 연출만 감춘다 - 표시권을 놓아버리면 대상이 돌아와도
-        // 아무도 다시 Show하지 않아 안내가 영구히 사라진다. 그 행동 자체가 대상을 되살린다.
-        if (_visualsActive)
-        {
-            SetVisualsActive(false);
-        }
-    }
-
     private void BuildDimPanels()
     {
         if (_overlayRoot == null)
@@ -699,6 +916,10 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery
 
     // 어둡게 칠하는 것과 클릭을 막는 것은 같은 값을 쓴다 - 막지 않는 단계를 어둡게 하면 멈춘 줄 알고,
     // 어둡지 않은데 막으면 보이지 않는 벽이 된다. 막지 않을 때도 패널 자체는 투명하게 남겨 둔다.
+    //
+    // 요청이 그대로면(RefreshDrawn 경로) 다시 칠하지 않는데, 그래도 어긋나지 않는 이유는
+    // _blocksInput이 그린 요청만으로 정해지기 때문이다(ComputeBlocksInput은 요청과 확인 버튼 배선만 본다).
+    // 요청이 바뀌면 반드시 ApplyRequest를 지나므로 딤도 함께 다시 칠해진다.
     private void ApplyDim()
     {
         if (_dimImages == null)
