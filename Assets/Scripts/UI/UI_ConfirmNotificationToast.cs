@@ -70,6 +70,11 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
     [WiringOptional]
     [SerializeField] private List<RectTransform> _extraFollowerRects = new();
 
+    [Tooltip("카드 스택 <b>위</b>에 고정할 창들. 이 창들은 카드가 떠도 움직이지 않고, " +
+             "대신 카드 스택이 이 창들의 높이만큼 아래에서 시작한다.")]
+    [WiringOptional]
+    [SerializeField] private List<RectTransform> _headerRects = new();
+
     [Tooltip("오른쪽 화면 밖에 숨길 때 더할 위치 오프셋.")]
     [SerializeField] private Vector2 _hiddenOffset = new(DEFAULT_HIDDEN_OFFSET_X, 0f);
 
@@ -471,7 +476,7 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
         float topOffset = Mathf.Max(0f, -_stackOrigin.y);
         float availableHeight = _canvasRect.rect.height - topOffset - _bottomMargin;
 
-        return stackHeight + TotalFollowerHeight() <= availableHeight;
+        return TotalHeaderHeight() + stackHeight + TotalFollowerHeight() <= availableHeight;
     }
 
     private void CreateCard(Message message)
@@ -788,7 +793,7 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
     // 각 창은 자기 위에 있는 것들(카드 스택 + 앞선 창들)의 높이 합만큼 내려간다.
     private void RepositionFollowers(bool animated)
     {
-        float offset = TotalStackHeight();
+        float offset = TotalHeaderHeight() + TotalStackHeight();
 
         for (int i = 0; i < _followerRects.Count; i++)
         {
@@ -822,7 +827,25 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
 
     private Vector2 GetCardPosition(int index)
     {
-        return _stackOrigin + Vector2.down * GetStackOffset(index);
+        return _stackOrigin + Vector2.down * (TotalHeaderHeight() + GetStackOffset(index));
+    }
+
+    /// <summary>
+    /// 카드 스택 위에 고정된 창들이 차지하는 높이. 카드는 이만큼 아래에서 시작한다.
+    ///
+    /// 고정 창(오늘 할 일 목록)은 카드가 떠도 자리를 지켜야 한다 - 매번 밀려 내려가면
+    /// 볼 때마다 다른 자리에 있어 눈으로 찾는 비용이 든다. 대신 움직이는 쪽을 카드로 정했다.
+    /// </summary>
+    private float TotalHeaderHeight()
+    {
+        float total = 0f;
+
+        foreach (RectTransform header in _headerRects)
+        {
+            total += GetFollowerHeight(header);
+        }
+
+        return total;
     }
 
     // 앞선 카드들의 실제 높이를 더한다. 카드마다 높이가 달라 곱셈으로는 구할 수 없다.

@@ -21,7 +21,6 @@ public sealed class UI_GuideQuestWindow : MonoBehaviour
     private const int SORT_OVERDUE = 0;
     private const int SORT_TODAY = 1;
     private const int SORT_PENDING = 2;
-    private const int SORT_COMPLETED = 3;
 
     [SerializeField] private GuideQuestController _controller;
 
@@ -120,7 +119,6 @@ public sealed class UI_GuideQuestWindow : MonoBehaviour
             UI_GuideQuestSlot slot = _slotPool.Get(i);
             slot.Setup(
                 quest.TitleLocKey,
-                _controller.IsCompleted(quest),
                 _controller.IsOverdue(quest),
                 () => QuestClicked.Invoke(quest));
         }
@@ -141,13 +139,24 @@ public sealed class UI_GuideQuestWindow : MonoBehaviour
     }
 
     /// <summary>
-    /// 지각(핵심) → 오늘 → 지난 미완료 → 완료 순으로 줄을 세운다.
-    /// 같은 묶음 안에서는 카탈로그 순서를 지킨다 - 매 갱신마다 줄이 뒤바뀌면 읽는 사람이 자리를 잃는다.
+    /// 지각(핵심) → 오늘 → 지난 미완료 순으로 줄을 세운다.
+    /// 같은 묶음 안에서는 이른 일차부터, 그다음 카탈로그 순서를 지킨다 -
+    /// 매 갱신마다 줄이 뒤바뀌면 읽는 사람이 자리를 잃는다.
+    ///
+    /// <b>해낸 것은 목록에서 아예 뺀다.</b> 흐리게 남겨 두면 할 일이 쌓일수록 세로가 길어져,
+    /// 정작 남은 일이 화면 밖으로 밀린다. 이 목록은 기록이 아니라 <b>남은 일</b>을 보는 곳이다.
     /// </summary>
     private void BuildSortedQuests()
     {
         _sortedQuests.Clear();
-        _sortedQuests.AddRange(_controller.VisibleQuests);
+
+        foreach (GuideQuestSO quest in _controller.VisibleQuests)
+        {
+            if (!_controller.IsCompleted(quest))
+            {
+                _sortedQuests.Add(quest);
+            }
+        }
 
         // 카탈로그 순서를 보조 키로 써서 안정 정렬을 만든다(List.Sort는 안정 정렬이 아니다).
         var originalOrder = new Dictionary<GuideQuestSO, int>();
@@ -173,13 +182,9 @@ public sealed class UI_GuideQuestWindow : MonoBehaviour
         });
     }
 
+    // 완료한 것은 이미 걸러졌으므로 여기서는 볼 필요가 없다.
     private int ResolveSortGroup(GuideQuestSO quest)
     {
-        if (_controller.IsCompleted(quest))
-        {
-            return SORT_COMPLETED;
-        }
-
         if (_controller.IsOverdue(quest))
         {
             return SORT_OVERDUE;

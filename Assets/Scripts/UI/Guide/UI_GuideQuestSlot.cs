@@ -19,33 +19,31 @@ public sealed class UI_GuideQuestSlot : MonoBehaviour
     [Tooltip("퀘스트 문구.")]
     [SerializeField] private TMP_Text _titleText;
 
-    [Tooltip("완료 표시(체크). 오브젝트가 아니라 그래픽만 끈다 - 오브젝트를 끄면 레이아웃에서 자리까지 " +
-             "빠져 미완료 줄과 완료 줄의 들여쓰기가 어긋난다.")]
+    [Tooltip("완료 체크 표시. 해낸 항목은 목록에서 아예 빠지므로 지금은 늘 꺼 둔다 - " +
+             "프리팹에서 지우지 않는 것은 다시 \"흐리게 남기기\"로 되돌릴 여지를 두기 위해서다.")]
+    [WiringOptional]
     [SerializeField] private Graphic _completedMark;
 
     [Tooltip("줄 전체를 덮는 버튼. 누르면 그 퀘스트의 설명 카드를 연다.")]
     [SerializeField] private Button _button;
 
-    [Tooltip("미완료 문구 색.")]
+    [Tooltip("아직 남은 항목의 문구 색.")]
     [SerializeField] private Color _pendingColor = Color.white;
-
-    [Tooltip("완료 문구 색. 지우지 않고 흐리게 두어 해낸 것이 남아 보이게 한다.")]
-    [SerializeField] private Color _completedColor = Color.gray;
 
     [Tooltip("그날 안에 끝냈어야 하는데 못 한 항목의 색. 목록에서 눈에 띄어야 한다.")]
     [SerializeField] private Color _overdueColor = new Color(1f, 0.45f, 0.35f);
 
-    public void Setup(string titleLocKey, bool isCompleted, bool isOverdue, Action onClicked)
+    public void Setup(string titleLocKey, bool isOverdue, Action onClicked)
     {
         if (_titleText != null)
         {
             _titleText.text = StringTable.GetString(titleLocKey);
-            _titleText.color = ResolveColor(isCompleted, isOverdue);
+            _titleText.color = isOverdue ? _overdueColor : _pendingColor;
         }
 
         if (_completedMark != null)
         {
-            _completedMark.enabled = isCompleted;
+            _completedMark.enabled = false;
         }
 
         if (_button == null)
@@ -60,16 +58,5 @@ public sealed class UI_GuideQuestSlot : MonoBehaviour
         {
             _button.onClick.AddListener(() => onClicked());
         }
-    }
-
-    // 완료가 지각을 이긴다 - 늦게라도 해냈으면 경고를 거둔다.
-    private Color ResolveColor(bool isCompleted, bool isOverdue)
-    {
-        if (isCompleted)
-        {
-            return _completedColor;
-        }
-
-        return isOverdue ? _overdueColor : _pendingColor;
     }
 }

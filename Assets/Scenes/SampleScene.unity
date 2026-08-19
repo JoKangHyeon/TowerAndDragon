@@ -4531,8 +4531,16 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3053174815135295538, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-      propertyPath: _extraFollowerRects.Array.size
+      propertyPath: _headerRects.Array.size
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3053174815135295538, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_headerRects.Array.data[0]'
+      value: 
+      objectReference: {fileID: 464593758}
+    - target: {fileID: 3053174815135295538, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _extraFollowerRects.Array.size
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3053174815135295538, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_extraFollowerRects.Array.data[0]'
@@ -7911,6 +7919,7 @@ MonoBehaviour:
   _iceUnlockableTerrain: 2
   _moveHoldDuration: 2
   _dragThreshold: 10
+  _reclickCycleRadius: 10
   _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
   BuildingSelected:
     m_PersistentCalls:
