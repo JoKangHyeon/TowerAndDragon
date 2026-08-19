@@ -141,6 +141,13 @@ public class CycleManager : MonoBehaviour
         _dayEndBlockers.Remove(blocker);
     }
 
+    /// <summary>
+    /// 지금 밤으로 넘어가는 것이 관문에 막혀 있는지. 확인창처럼 EndDay 앞에 끼어드는 UI가
+    /// "제 문구보다 막힌 이유를 먼저 보여줘야 하는 상황"을 구분하는 데 쓴다 -
+    /// 막혀 있는데 확인창부터 띄우면, 확인을 눌러도 아무 일이 없는 것처럼 보인다.
+    /// </summary>
+    public bool IsDayEndBlocked => !CanEndDay();
+
     private bool CanEndDay()
     {
         foreach (IDayEndBlockQuery blocker in _dayEndBlockers)

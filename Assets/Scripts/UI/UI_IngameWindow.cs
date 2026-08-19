@@ -25,6 +25,10 @@ public class UI_IngameWindow : MonoBehaviour
     private const string DAY_LOC_KEY = "main_day";
     private static string DayFormat => StringTable.GetString(DAY_LOC_KEY);
 
+    // 밤 진입 확인 문구. {0} = 모자란 식량, {1} = 굶어 죽을 시민 수.
+    // 서식은 확인창(UI_ConfirmPopup)이 채우므로 여기서는 key만 지목한다.
+    private const string STARVATION_CONFIRM_LOC_KEY = "night_confirm_starvation_message";
+
     // 자원 표기(보유량 + 순증감)의 서식과 색 판정은 ResourceAmountFormatter가 갖는다 -
     // 용 창의 슬라임 칸(ResourceAmountView)과 같은 규칙으로 보이게 하기 위함.
     private static readonly Color PRODUCTION_COLOR_DEFAULT = ResourceAmountFormatter.GAIN_COLOR_DEFAULT;
@@ -61,6 +65,10 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private GameObject _buttonNextNight;
     [Tooltip("밤에 켜질 속도 조절 UI.")]
     [SerializeField] private GameObject _speedSetting;
+    [Tooltip("굶주림처럼 되돌릴 수 없는 결과가 예상될 때 띄우는 확인창. " +
+        "비우면 확인 없이 곧장 밤으로 넘어간다(기존 동작).")]
+    [WiringOptional]
+    [SerializeField] private UI_ConfirmPopup _confirmPopup;
 
     [Header("자원 표시 (Panel_TopLeft)")]
     [SerializeField] private ResourceManager _resourceManager;
@@ -274,14 +282,45 @@ public class UI_IngameWindow : MonoBehaviour
         _workerModeController.ToggleWorkerMode();
     }
 
+    /// <summary>
+    /// 밤 진입. 다음 아침 정산에서 굶어 죽을 시민이 있으면 곧장 넘기지 않고 한 번 확인받는다 -
+    /// 밤은 되돌릴 수 없는데, 인구 표기 옆의 (-N)만으로는 놓치기 쉽다.
+    ///
+    /// 기아 자체는 밤이 아니라 <b>다음 낮 시작</b>(OnDayStartUpkeep)에 일어나므로, 여기서 보는 값은
+    /// 예측이다. HUD 인구 표기와 같은 GetPopulationUpkeepPreview를 쓰므로 화면과 어긋나지 않는다.
+    /// </summary>
     private void GoToNight()
     {
         SoundManager.Play(SoundId.UiButtonClick);
 
-        if (_cycleManager != null)
+        if (_cycleManager == null)
+        {
+            return;
+        }
+
+        // 관문(튜토리얼 안내·새끼용 가이드)이 이미 막고 있으면 경고보다 막힌 이유를 먼저 알려야 한다.
+        // 그대로 넘기면 CycleManager가 DayEndBlocked로 사유를 띄운다.
+        if (_cycleManager.IsDayEndBlocked)
         {
             _cycleManager.EndDay();
+            return;
         }
+
+        PopulationUpkeepPreview preview = _populationManager != null
+            ? GetPopulationUpkeepPreview(_populationManager.CurrentState)
+            : default;
+
+        if (preview.PopulationLost > 0 && _confirmPopup != null)
+        {
+            _confirmPopup.Open(
+                STARVATION_CONFIRM_LOC_KEY,
+                _cycleManager.EndDay,
+                preview.FoodShortage,
+                preview.PopulationLost);
+            return;
+        }
+
+        _cycleManager.EndDay();
     }
 
     private void OnDisable()
