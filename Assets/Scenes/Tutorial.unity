@@ -645,7 +645,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6752561197399855705, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
   m_PrefabInstance: {fileID: 3978445959314823611}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1995640544}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
@@ -1073,6 +1073,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dab5c7d4c32e743048dfca98e2d5914f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Splines::UnityEngine.Splines.SplineContainer
+--- !u!1 &405323471 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2475227970002986173, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+  m_PrefabInstance: {fileID: 3978445959314823611}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &429642830
 GameObject:
   m_ObjectHideFlags: 0
@@ -1371,12 +1376,35 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 6602268307912829321, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
   m_PrefabInstance: {fileID: 3978445959314823611}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 405323471}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d921d65d3a7d3cf40a2beb2ead3573df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialRunner
+--- !u!114 &635446203
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 405323471}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb34967d38f9e134a8c9adf23d9a0344, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialConquestAffordanceGrant
+  _resourceManager: {fileID: 1632594327}
+  _populationManager: {fileID: 1632594324}
+  _requiredIdlePopulation: 5
+  _requiredResources:
+  - Type: 1
+    Amount: 15
+  - Type: 2
+    Amount: 35
+  - Type: 4
+    Amount: 25
+  _toast: {fileID: 479604230}
 --- !u!114 &646874781 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1349509382364187125, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -3264,7 +3292,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74aeb087e57fa490091fd1d51a19620c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PopulationManager
-  _maxPopulation: 100
+  _maxPopulation: 50
   PopulationChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -3327,11 +3355,11 @@ MonoBehaviour:
   _catalog: {fileID: 11400000, guid: 3c68623cfd9e6d74b8c4e6e8fa62c090, type: 2}
   _initialResources:
   - Type: 1
-    Amount: 500
+    Amount: 350
   - Type: 2
-    Amount: 500
+    Amount: 350
   - Type: 4
-    Amount: 500
+    Amount: 350
   ResourceChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -5640,7 +5668,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4429832511105182359, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.0005493164
+      value: 0.00015258789
       objectReference: {fileID: 0}
     - target: {fileID: 4439690152447319859, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -6764,7 +6792,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6864070389072513261, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -50.001587
+      value: -50.001343
       objectReference: {fileID: 0}
     - target: {fileID: 6874002290473965843, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
@@ -9691,6 +9719,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 733e90b5a4161d749b2b914533982d3d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI_SpeedSettingWindow
+--- !u!1 &1995640544 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4848644540273424120, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+  m_PrefabInstance: {fileID: 3978445959314823611}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1995640546
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1995640544}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb34967d38f9e134a8c9adf23d9a0344, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialAffordanceGrant
+  _resourceManager: {fileID: 1632594327}
+  _populationManager: {fileID: 1632594324}
+  _requiredIdlePopulation: 0
+  _requiredResources:
+  - Type: 1
+    Amount: 15
+  - Type: 2
+    Amount: 55
+  - Type: 4
+    Amount: 35
+  _toast: {fileID: 479604230}
 --- !u!1 &2063666045
 GameObject:
   m_ObjectHideFlags: 0
@@ -11680,9 +11736,23 @@ PrefabInstance:
       value: Tutorial System
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 6366939459905273307, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+    - {fileID: 9100741682882582339, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+    - {fileID: 5999122477008686711, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+    - {fileID: 1385504162217293391, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+    - {fileID: 3961087116957745258, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+    - {fileID: 700000000000000001, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+    - {fileID: 4498071666398138567, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+    - {fileID: 3346912270888427917, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2475227970002986173, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 635446203}
+    - targetCorrespondingSourceObject: {fileID: 4848644540273424120, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1995640546}
   m_SourcePrefab: {fileID: 100100000, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
 --- !u!114 &3978445959314823612 stripped
 MonoBehaviour:

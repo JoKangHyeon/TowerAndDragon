@@ -199,6 +199,39 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// <paramref name="matches"/>가 고른 배타 모드를 여닫는 단축키의 표기(예: "B").
+    /// 그 모드에 단축키가 배선되지 않았으면 false다.
+    ///
+    /// 안내 문구가 키 이름을 직접 들고 있으면 리바인딩한 순간 거짓말이 된다 - 실제 바인딩에서 읽어
+    /// <c>{0}</c>에 채우도록 여기서 돌려준다(BabyDragonGuideController.ResolveToggleKeyLabel과 같은 방식).
+    ///
+    /// 대상을 판정식으로 받는 이유: 무엇이 "그 모드"인지는 부르는 쪽의 사정이고
+    /// (튜토리얼은 자기 enum으로 가린다), 그 규칙을 이쪽으로 가져오면 UI 매니저가 남의 도메인을 알게 된다.
+    /// </summary>
+    public bool TryGetShortcutLabel(Predicate<MonoBehaviour> matches, out string label)
+    {
+        label = null;
+
+        if (matches == null || _cachedShortcuts == null)
+        {
+            return false;
+        }
+
+        foreach ((InputActionReference action, IExclusiveMode mode) in _cachedShortcuts)
+        {
+            if (mode is not MonoBehaviour behaviour || !matches(behaviour))
+            {
+                continue;
+            }
+
+            label = action.action.GetBindingDisplayString();
+            return !string.IsNullOrWhiteSpace(label);
+        }
+
+        return false;
+    }
+
     private IExclusiveMode[] _exclusiveModes;
     private (InputActionReference action, IExclusiveMode mode)[] _cachedShortcuts;
 

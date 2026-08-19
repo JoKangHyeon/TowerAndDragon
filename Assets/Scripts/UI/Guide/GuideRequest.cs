@@ -43,6 +43,15 @@ public readonly struct GuideRequest
     public readonly bool ShowsConfirmButton;
     public readonly GuideBubbleSlot BubbleSlot;
 
+    /// <summary>
+    /// 이 컷이 떠 있는 동안 밤으로 넘어가도 되는지. 기본은 false다 - 안내가 떠 있는데 밤이 시작되면
+    /// 건설·인구 배치가 잠겨 시키던 일을 할 수 없게 되고 말풍선만 남는다(UI_GuideOverlay.CanEndDay).
+    ///
+    /// 켜는 것은 <b>밤 버튼을 누르라고 시키는 컷 하나뿐</b>이다. 그 컷에서까지 막으면 시킨 대로 눌러도
+    /// 아무 일이 없다. 딤은 그대로라 밤 버튼 밖은 여전히 눌리지 않으므로 오조작으로 밤이 오지는 않는다.
+    /// </summary>
+    public readonly bool AllowsNightStart;
+
     private GuideRequest(GuideRequestPhase phase)
     {
         Phase = phase;
@@ -54,6 +63,7 @@ public readonly struct GuideRequest
         KeepsInputOpen = false;
         ShowsConfirmButton = false;
         BubbleSlot = GuideBubbleSlot.Default;
+        AllowsNightStart = false;
     }
 
     private GuideRequest(
@@ -64,7 +74,8 @@ public readonly struct GuideRequest
         bool keepsInputOpen,
         bool showsConfirmButton,
         GuideBubbleSlot bubbleSlot,
-        object[] args)
+        object[] args,
+        bool allowsNightStart)
     {
         Phase = GuideRequestPhase.Draw;
         Target = target;
@@ -75,6 +86,7 @@ public readonly struct GuideRequest
         KeepsInputOpen = keepsInputOpen;
         ShowsConfirmButton = showsConfirmButton;
         BubbleSlot = bubbleSlot;
+        AllowsNightStart = allowsNightStart;
     }
 
     /// <summary>앞 프레임의 그림을 그대로 두게 한다. <see cref="GuideRequestPhase.KeepLast"/> 참고.</summary>
@@ -93,11 +105,12 @@ public readonly struct GuideRequest
         bool keepsInputOpen,
         bool showsConfirmButton,
         GuideBubbleSlot bubbleSlot,
-        object[] args)
+        object[] args,
+        bool allowsNightStart = false)
     {
         return new GuideRequest(
             target, null, messageLocKey, blocksTargetInteraction, keepsInputOpen,
-            showsConfirmButton, bubbleSlot, args);
+            showsConfirmButton, bubbleSlot, args, allowsNightStart);
     }
 
     /// <summary>맵 위 오브젝트를 가리키는 컷. 렌더러의 월드 바운드를 오버레이가 화면 사각형으로 투영한다.</summary>
@@ -108,11 +121,12 @@ public readonly struct GuideRequest
         bool keepsInputOpen,
         bool showsConfirmButton,
         GuideBubbleSlot bubbleSlot,
-        object[] args)
+        object[] args,
+        bool allowsNightStart = false)
     {
         return new GuideRequest(
             null, worldTarget, messageLocKey, blocksTargetInteraction, keepsInputOpen,
-            showsConfirmButton, bubbleSlot, args);
+            showsConfirmButton, bubbleSlot, args, allowsNightStart);
     }
 
     /// <summary>
@@ -129,7 +143,8 @@ public readonly struct GuideRequest
             BlocksTargetInteraction != other.BlocksTargetInteraction ||
             KeepsInputOpen != other.KeepsInputOpen ||
             ShowsConfirmButton != other.ShowsConfirmButton ||
-            BubbleSlot != other.BubbleSlot)
+            BubbleSlot != other.BubbleSlot ||
+            AllowsNightStart != other.AllowsNightStart)
         {
             return false;
         }
