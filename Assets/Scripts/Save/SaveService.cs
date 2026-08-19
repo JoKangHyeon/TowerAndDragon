@@ -6,7 +6,8 @@ using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 세이브 슬롯의 단일 소유자. 낮이 시작될 때마다 자동저장하고, UI에 슬롯 목록·저장·로드·삭제를 제공한다.
+/// 세이브 슬롯의 단일 소유자. 2일차부터 낮이 시작될 때마다 자동저장하고, UI에 슬롯 목록·저장·로드·삭제를
+/// 제공한다.
 /// (싱글톤 아님 - SettingsService와 같이 [SerializeField] 주입, 항상 활성인 오브젝트에 둔다.)
 ///
 /// 계약 1: 자동저장 실패는 절대 게임 진행을 막지 않는다. 모든 예외는 결과값으로 변환된다.
@@ -14,6 +15,8 @@ using UnityEngine.SceneManagement;
 ///         (CycleManager.OnDaySettled)에서, 수동 저장은 낮 아무 때나(CanSave)다. 복원은 정산을
 ///         재생하지 않고 CycleManager.ResumeDay()로 그 낮을 이어서 시작하므로, 낮에 저장→로드를
 ///         반복해도 생산·유지비·알 성장·성 회복·이동권이 다시 적용되지 않는다.
+/// 계약 2-1: 1일차 시작은 자동저장하지 않는다. 게임오버 후 Restart는 씬 재로드로 새 런의 1일차를
+///           시작하므로, 여기서 저장하면 직전 런의 이어하기가 통째로 날아간다(HandleDaySettled).
 /// 계약 3: 로드는 항상 씬 재로드를 거친다. 살아 있는 몬스터·투사체·건물 GameObject를 정리할 방법이
 ///         없어 인게임 in-place 로드는 지원하지 않는다.
 ///
@@ -54,7 +57,7 @@ public sealed class SaveService : MonoBehaviour
     [Tooltip("슬롯 목록에 띄울 점령 현황 썸네일을 찍는다. 비워 두면 썸네일 없이 저장한다.")]
     [SerializeField] private SaveThumbnailCapturer _thumbnailCapturer;
 
-    [Tooltip("낮이 시작될 때마다 자동으로 저장할지 여부.")]
+    [Tooltip("2일차부터 낮이 시작될 때마다 자동으로 저장할지 여부. 1일차는 항상 저장하지 않는다.")]
     [SerializeField] private bool _isAutoSaveEnabled = true;
 
 #if UNITY_EDITOR
@@ -353,6 +356,14 @@ public sealed class SaveService : MonoBehaviour
     private void HandleDaySettled(int dayNumber)
     {
         if (!_isAutoSaveEnabled || _isRestoring)
+        {
+            return;
+        }
+
+        // 1일차 시작은 저장하지 않는다. 게임오버 후 Restart(UI_GameOverWindow)는 씬을 다시 로드해
+        // 새 런의 1일차를 시작하는데, 여기서 저장하면 직전 런의 이어하기(slot_00)가 아직 아무것도
+        // 진행하지 않은 상태로 덮어써진다. 새 런은 2일차가 시작될 때 처음 기록된다.
+        if (dayNumber <= SaveValidation.FIRST_DAY_NUMBER)
         {
             return;
         }

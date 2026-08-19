@@ -46,6 +46,8 @@ public class CycleManager : MonoBehaviour
     // 구독자 순서는 등록순(각 오브젝트의 OnEnable 순서)이라 보장되지 않아, 씬 오브젝트 순서를
     // 바꾸면 저장되는 내용이 조용히 달라진다. "정산이 끝난 경계"라는 시점을 여기서 명시적으로 만든다.
     // ResumeDay에서는 발화하지 않는다 - 이어하기 직후 같은 상태를 다시 저장할 이유가 없다.
+    // 1일차에도 발화하지만 자동저장은 그 발화를 무시한다 - 게임오버 후 Restart가 씬을 다시 로드해
+    // 1일차를 시작하므로, 저장하면 직전 런의 이어하기가 덮어써진다(SaveService.HandleDaySettled).
     // 씬 YAML에 이 필드 항목이 없으므로 인라인 초기화가 필수다(OnDayStartUpkeep과 같은 이유).
     public UnityEvent<int> OnDaySettled = new();
 

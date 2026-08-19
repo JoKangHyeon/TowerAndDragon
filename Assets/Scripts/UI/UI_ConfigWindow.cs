@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 /// <summary>
-/// 설정 창(Config_window) 컨트롤러. 좌측 패널(Left)의 그래픽·사운드·언어 항목을
+/// 설정 창(Config_window) 컨트롤러. 좌측 패널(Left)의 그래픽·사운드·언어·튜토리얼 항목을
 /// SettingsService에 연결한다. 값의 저장·적용은 전부 서비스가 하고, 이 창은 표시와 입력만 맡는다.
 /// 창 루트(전면 Image)에 부착해 바깥 클릭 닫기와 IExclusiveMode(UIManager.OpenExclusive) 조정을
 /// 겸한다 — UI_ResearchWindow와 같은 구조.
@@ -20,6 +20,9 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
     // stringtable — 언어 드롭다운에 보여줄 언어 이름.
     private const string LANGUAGE_NAME_EN_US_LOC_KEY = "config_language_en_us";
     private const string LANGUAGE_NAME_KO_KR_LOC_KEY = "config_language_ko_kr";
+    // stringtable — 튜토리얼 안내 드롭다운에 보여줄 수준 이름.
+    private const string GUIDE_LEVEL_FULL_LOC_KEY = "config_guide_full";
+    private const string GUIDE_LEVEL_OFF_LOC_KEY = "config_guide_off";
 
     private const string LANGUAGE_CODE_KO_KR = "ko_kr";
 
@@ -59,6 +62,14 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("드롭다운을 열지 않고 다음 언어로 넘기는 화살표.")]
     [SerializeField] private Button _languageNextButton;
 
+    [Header("튜토리얼")]
+    [Tooltip("가이드 안내를 보여줄지 정하는 드롭다운. 조언자 카드와 같은 값(SettingsService.Guide)을 다룬다.")]
+    [SerializeField] private TMP_Dropdown _guideDropdown;
+    [Tooltip("드롭다운을 열지 않고 이전 수준으로 넘기는 화살표.")]
+    [SerializeField] private Button _guidePrevButton;
+    [Tooltip("드롭다운을 열지 않고 다음 수준으로 넘기는 화살표.")]
+    [SerializeField] private Button _guideNextButton;
+
     [Header("키")]
     [Tooltip("우측 키 섹션. 줄은 이 컴포넌트가 액션 목록을 훑어 스스로 만든다.")]
     [SerializeField] private UI_KeyBindingSection _keySection;
@@ -73,7 +84,7 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("두 버튼을 담은 줄(SaveLoad_Button). 버튼이 전부 빠질 때 줄째로 접기 위해 받는다.")]
     [SerializeField] private GameObject _slotButtonRow;
 
-    private readonly List<string> _languageOptionBuffer = new();
+    private readonly List<string> _dropdownOptionBuffer = new();
 
     // 사운드 줄은 자식에서 모아 쓴다 - 줄이 늘어도 창 쪽 배선을 고칠 필요가 없다.
     private UI_VolumeRow[] _volumeRows;
@@ -120,6 +131,21 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         if (_languageNextButton != null)
         {
             _languageNextButton.onClick.AddListener(() => StepLanguage(STEP_NEXT));
+        }
+
+        if (_guideDropdown != null)
+        {
+            _guideDropdown.onValueChanged.AddListener(HandleGuideLevelChanged);
+        }
+
+        if (_guidePrevButton != null)
+        {
+            _guidePrevButton.onClick.AddListener(() => StepGuideLevel(STEP_PREVIOUS));
+        }
+
+        if (_guideNextButton != null)
+        {
+            _guideNextButton.onClick.AddListener(() => StepGuideLevel(STEP_NEXT));
         }
 
         if (_saveButton != null)
@@ -297,12 +323,36 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
+    // 언어와 달리 값이 바뀌어도 이 창을 다시 그리게 하는 전역 이벤트가 없으므로 직접 다시 그린다
+    // (해상도 화살표와 같은 처리).
+    private void StepGuideLevel(int direction)
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+
+        if (_settings == null)
+        {
+            return;
+        }
+
+        _settings.SetGuideLevelIndex(_settings.GuideLevelIndex + direction);
+        RenderGuideLevel();
+    }
+
+    private void HandleGuideLevelChanged(int index)
+    {
+        if (_settings != null)
+        {
+            _settings.SetGuideLevelIndex(index);
+        }
+    }
+
     private void Render()
     {
         RenderVolumes();
         RenderResolution();
         RenderFullScreen();
         RenderLanguage();
+        RenderGuideLevel();
         RenderKeyBindings();
         RenderSaveAvailability();
     }
@@ -376,16 +426,50 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
             return;
         }
 
-        _languageOptionBuffer.Clear();
+        _dropdownOptionBuffer.Clear();
         foreach (string languageCode in languages)
         {
-            _languageOptionBuffer.Add(LanguageDisplayName(languageCode));
+            _dropdownOptionBuffer.Add(LanguageDisplayName(languageCode));
         }
 
         _languageDropdown.ClearOptions();
-        _languageDropdown.AddOptions(_languageOptionBuffer);
+        _languageDropdown.AddOptions(_dropdownOptionBuffer);
         _languageDropdown.SetValueWithoutNotify(_settings.LanguageIndex);
         _languageDropdown.RefreshShownValue();
+    }
+
+    // 안내 수준은 조언자 카드에서도 바뀐다. 그쪽 변경은 이 창이 닫혀 있을 때만 일어나므로
+    // OnGuideLevelChanged를 구독하지 않고, 창을 열 때마다 도는 Render로 현재 값을 반영한다.
+    private void RenderGuideLevel()
+    {
+        if (_guideDropdown == null || _settings == null)
+        {
+            return;
+        }
+
+        IReadOnlyList<GuideLevel> levels = _settings.GuideLevels;
+
+        _dropdownOptionBuffer.Clear();
+        foreach (GuideLevel level in levels)
+        {
+            _dropdownOptionBuffer.Add(StringTable.GetString(GuideLevelNameLocKey(level)));
+        }
+
+        _guideDropdown.ClearOptions();
+        _guideDropdown.AddOptions(_dropdownOptionBuffer);
+        _guideDropdown.SetValueWithoutNotify(_settings.GuideLevelIndex);
+        _guideDropdown.RefreshShownValue();
+    }
+
+    // 언어 이름과 같은 이유로 문자열 조합을 쓰지 않고 아는 값만 명시적으로 매핑한다.
+    // GuideLevel에 수준이 늘면 여기도 늘려야 한다 - 빠뜨리면 "전체"로 보인다.
+    private static string GuideLevelNameLocKey(GuideLevel level)
+    {
+        return level switch
+        {
+            GuideLevel.Off => GUIDE_LEVEL_OFF_LOC_KEY,
+            _ => GUIDE_LEVEL_FULL_LOC_KEY,
+        };
     }
 
     private static string LanguageDisplayName(string languageCode)

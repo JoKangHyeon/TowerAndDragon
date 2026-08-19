@@ -48,6 +48,10 @@ public class SettingsService : MonoBehaviour
     // 살리기 위한 여유. 1% — 16:10(1.6)이나 4:3(1.333)은 확실히 걸러진다.
     private const float ASPECT_RATIO_TOLERANCE = 0.01f;
 
+    // GuideLevel은 1번이 비어 있어(예전 "Tip만") enum 값과 목록 인덱스가 어긋난다.
+    // 고를 수 있는 수준과 그 순서를 여기 한 곳에서 정하고, UI는 인덱스만 주고받는다 - 언어와 같은 모양이다.
+    private static readonly GuideLevel[] GUIDE_LEVELS = { GuideLevel.Full, GuideLevel.Off };
+
     // 모니터가 16:9 모드를 하나도 보고하지 않을 때(에디터·특이 디스플레이) 설정 항목이
     // 비지 않도록 쓰는 기본 목록. 전부 16:9라 필터를 그대로 통과한다.
     private static readonly Vector2Int[] FALLBACK_RESOLUTIONS =
@@ -74,6 +78,19 @@ public class SettingsService : MonoBehaviour
     /// 새 게임을 시작해도 이전에 고른 수준이 그대로 이어지고, 세이브에는 "조언자에게 답했는가"만 남는다.
     /// </summary>
     public GuideLevel Guide { get; private set; } = GuideLevel.Full;
+
+    /// <summary>고를 수 있는 가이드 수준. 순서가 곧 설정 창 드롭다운에 보이는 순서다.</summary>
+    public IReadOnlyList<GuideLevel> GuideLevels => GUIDE_LEVELS;
+
+    /// <summary>현재 수준의 <see cref="GuideLevels"/> 내 인덱스. 목록에 없으면 0.</summary>
+    public int GuideLevelIndex
+    {
+        get
+        {
+            int index = Array.IndexOf(GUIDE_LEVELS, Guide);
+            return index == NOT_FOUND_INDEX ? 0 : index;
+        }
+    }
 
     private readonly Dictionary<AudioChannel, float> _volumes = new();
     private readonly List<Vector2Int> _resolutions = new();
@@ -222,6 +239,15 @@ public class SettingsService : MonoBehaviour
         Guide = level;
         PlayerPrefs.SetInt(GUIDE_LEVEL_PREF_KEY, (int)level);
         OnGuideLevelChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// 가이드 수준을 인덱스로 지정한다. 범위를 벗어나면 양끝에서 순환한다(Prev/Next 버튼용) -
+    /// 언어와 같은 모양이라 설정 창이 두 항목을 같은 코드로 다룬다.
+    /// </summary>
+    public void SetGuideLevelIndex(int index)
+    {
+        SetGuideLevel(GUIDE_LEVELS[WrapIndex(index, GUIDE_LEVELS.Length)]);
     }
 
     // 다른 설정과 달리 적용할 시스템이 없어 Start를 기다리지 않는다 - 값을 읽어 두기만 하면 되고,
