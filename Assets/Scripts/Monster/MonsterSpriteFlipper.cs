@@ -17,6 +17,7 @@ public class MonsterSpriteFlipper : MonoBehaviour
     private MonsterAttack _attack;
     private bool _isFacingRight;
     private bool _hasFacing;
+    private bool _initialFlipX;
 
     private void Awake()
     {
@@ -25,6 +26,25 @@ public class MonsterSpriteFlipper : MonoBehaviour
         _renderer = GetComponentInChildren<SpriteRenderer>();
         _movement = GetComponent<MonsterMovement>();
         _attack = GetComponent<MonsterAttack>();
+
+        if (_renderer != null)
+        {
+            _initialFlipX = _renderer.flipX;
+        }
+    }
+
+    /// <summary>
+    /// 프리팹의 원래 방향으로 되돌린다. 풀에서 재사용하는 오브젝트가 지난 생애의 반전을 물고 나오는
+    /// 것을 막는다 - 제자리에 등장하는 경우(진행 방향이 없음)에는 스스로 바로잡을 기회가 없다.
+    /// </summary>
+    public void ResetFacing()
+    {
+        _hasFacing = false;
+
+        if (_renderer != null)
+        {
+            _renderer.flipX = _initialFlipX;
+        }
     }
 
     private void Update()

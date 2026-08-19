@@ -42,11 +42,18 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private const float DEFAULT_EJECT_LINGER_SECONDS = 1f;
     private const float DEFAULT_SPREAD_RADIUS = 0.45f;
     private const int DEFAULT_MAX_ACTIVE_VILLAGERS = 60;
+
+    // 겉모습 프리팹이 계열마다 5종이고(병사와 원정은 같은 묶음을 공유하는 배선이라 고유 10종),
+    // 한 번에 몰리는 인원은 일괄 배치 최대 10명 · 원정 크루 5~7명(CREW_SIZE_MIN/RANGE) · 타워 정원
+    // 4~7명이다. 몰림은 계열 안 5종에만 흩어지므로 프리팹당 2개는 있어야 그 한 번을 새로 만들지 않고
+    // 받아낸다. 효과는 초반 한 번뿐이다 - 풀은 반납분 재사용으로 최대 동시 인원까지 저절로 자란다.
+    private const int DEFAULT_PREWARM_COUNT = 20;
     private const float CASTLE_SPAWN_WORLD_X = 0f;
     private const float CASTLE_SPAWN_WORLD_Y = 1f;
 
     private static readonly Vector3 CASTLE_SPAWN_WORLD_POSITION =
         new Vector3(CASTLE_SPAWN_WORLD_X, CASTLE_SPAWN_WORLD_Y, 0f);
+
 
     // 같은 거리라면 x+y가 작은 셀을 고른다. IsometricMath.ComputeDepthSortOrder와 같은 기준이라
     // 캐릭터가 건물 스프라이트 앞쪽에 서는 쪽으로 안정적으로 기운다.
@@ -61,7 +68,6 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private const uint HASH_BYTE_MASK = 0xFFu;
 
     private const float FULL_TURN_RADIANS = Mathf.PI * 2f;
-    private const uint SPREAD_ANGLE_STEPS = 16u;
 
     [Header("참조")]
     [SerializeField] private GridMap _gridMap;
@@ -117,11 +123,18 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     [Tooltip("떨어진 뒤 쓰러진 채로 남아 있는 시간(초). 이후 페이드아웃으로 사라진다.")]
     [SerializeField] private float _ejectLingerSeconds = DEFAULT_EJECT_LINGER_SECONDS;
 
-    [Tooltip("같은 자리에 여럿이 설 때 흩어지는 반경. 아이소메트릭 종횡비로 눌러 화면상 원형이 된다.")]
+    [Tooltip("같은 자리에 여럿이 설 때 흩어지는 반경. 아이소메트릭 종횡비로 눌러 화면상 원형이 된다. " +
+             "점령 크루에만 쓴다 - 건물에 서는 캐릭터는 칸을 벗어나지 않도록 흩지 않는다.")]
     [SerializeField] private float _spreadRadius = DEFAULT_SPREAD_RADIUS;
 
     [Tooltip("동시에 존재할 수 있는 캐릭터 수 상한. 초과분은 조용히 생성하지 않는다.")]
     [SerializeField] private int _maxActiveVillagers = DEFAULT_MAX_ACTIVE_VILLAGERS;
+
+    [Tooltip("로딩 중에 미리 만들어 둘 캐릭터 총 개수. 겉모습 프리팹들에 고르게 나눠 만든다. " +
+             "플레이 중 Instantiate로 생기는 프레임 끊김을 로딩 구간으로 옮긴다. " +
+             "0이면 미리 만들지 않고 필요할 때 만든다.")]
+    [Min(0)]
+    [SerializeField] private int _prewarmCount = DEFAULT_PREWARM_COUNT;
 
     // 건물·랜드마크 상주. 컴포넌트 인스턴스 자체가 키다 - 좌표를 키로 쓰면 건물 이동에서 깨지고,
     // 랜드마크는 Building이 아니라 좌표 체계가 아예 다르다.
@@ -163,9 +176,18 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private readonly HashSet<Villager> _ejectedVillagers = new();
 
     // 비활성화된 타워마다 하나씩 떠 있는 연기. 타워가 다시 가동되면 걷어낸다.
-    private readonly Dictionary<Tower, GameObject> _towerEjectionEffects = new();
+    private readonly Dictionary<Tower, Transform> _towerEjectionEffects = new();
 
     private readonly Dictionary<VillagerAppearance, Villager[]> _prefabsByAppearance = new();
+
+    // 캐릭터와 이펙트는 하루에도 수십 번 생겼다 사라진다 - 매번 Instantiate/Destroy하면 GC와
+    // 프리팹 인스턴스화 비용이 그대로 프레임에 실린다. 풀은 프리팹별로 통을 나누므로
+    // 겉모습 무작위 추첨(TryPickPrefab)에는 아무 영향이 없다.
+    private PrefabPool<Villager> _villagerPool;
+
+    // 이펙트 프리팹은 인스펙터에 GameObject로 배선돼 있다(필드 타입을 바꾸면 기존 배선이 끊긴다).
+    // 그래서 Transform을 키로 삼아 풀에 담고, 필요할 때 gameObject를 꺼내 쓴다.
+    private PrefabPool<Transform> _effectPool;
 
     private readonly List<IPopulationAllocationTarget> _wantedResidents = new();
     private readonly List<IPopulationAllocationTarget> _residentRemovalScratch = new();
@@ -208,6 +230,9 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private void Awake()
     {
         BuildAppearanceLookup();
+
+        _villagerPool = new PrefabPool<Villager>(VillagerRoot);
+        _effectPool = new PrefabPool<Transform>(VillagerRoot);
     }
 
     private void BuildAppearanceLookup()
@@ -342,7 +367,54 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             }
         }
 
+        PrewarmVillagerPool();
         RequestReconcile();
+    }
+
+    // 캐릭터를 미리 만들어 풀에 채운다.
+    //
+    // Start에서 부르는 것이 곧 "로딩 화면이 덮여 있는 동안"이다 - SceneLoadOverlay는 씬 로드가 끝난 뒤에도
+    // 두 프레임(FRAMES_AFTER_LOAD)과 최소 표시 시간까지 화면을 불투명하게 유지한 다음 페이드 아웃한다.
+    // 그래서 여기서 동기로 만들어도 그 비용이 플레이 중이 아니라 로딩 구간에 묻힌다.
+    //
+    // 이펙트 풀은 대상이 아니다 - 프리팹이 인스펙터에 하나씩뿐이고 등장 빈도도 낮아 미리 만들 이득이 없다.
+    private void PrewarmVillagerPool()
+    {
+        if (_prewarmCount <= 0)
+        {
+            return;
+        }
+
+        // 겉모습 계열이 프리팹을 공유한다(병사와 원정이 같은 묶음을 쓰는 배선이 흔하다) -
+        // 중복으로 두 배 만들지 않도록 걸러낸다.
+        var distinctPrefabs = new List<Villager>();
+        var seen = new HashSet<Villager>();
+
+        foreach (Villager[] prefabs in _prefabsByAppearance.Values)
+        {
+            foreach (Villager prefab in prefabs)
+            {
+                if (prefab != null && seen.Add(prefab))
+                {
+                    distinctPrefabs.Add(prefab);
+                }
+            }
+        }
+
+        if (distinctPrefabs.Count == 0)
+        {
+            return;
+        }
+
+        // 총량을 프리팹 수로 나눠 고르게 배분한다. 어느 겉모습이 뽑혀도(TryPickPrefab은 무작위다)
+        // 미리 만든 것이 있어야 하므로 한 프리팹에 몰아주지 않는다. 나머지는 앞쪽이 하나씩 더 가져간다.
+        int countPerPrefab = _prewarmCount / distinctPrefabs.Count;
+        int remainder = _prewarmCount % distinctPrefabs.Count;
+
+        for (int i = 0; i < distinctPrefabs.Count; i++)
+        {
+            _villagerPool.Prewarm(distinctPrefabs[i], countPerPrefab + (i < remainder ? 1 : 0));
+        }
     }
 
     /// <summary>
@@ -536,10 +608,9 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
                 {
                     entry.Villager.SendHome();
 
-                    if (IsProductionFacilityTarget(target))
-                    {
-                        _residentReturnHandledByWorker.Add(target);
-                    }
+                    // 이 캐릭터가 귀환 1명분을 이미 담당했다. 여기 담기는 대상은 _residents에 있던
+                    // 것뿐이라 애초에 타워가 아니므로 타입을 다시 걸러낼 필요가 없다.
+                    _residentReturnHandledByWorker.Add(target);
                 }
                 else
                 {
@@ -586,9 +657,9 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             {
                 _residents.Add(target, new ResidentEntry(villager, workCell));
 
-                if (shouldWalkFromCastle &&
-                    _pendingNotify.ContainsKey(target) &&
-                    IsProductionFacilityTarget(target))
+                // 이 상주가 "성에서 걸어오는" 1명분을 이미 담당했다. _wantedResidents에는 타워가
+                // 들어오지 않으므로(IsResidentTarget) 타입을 다시 걸러낼 필요가 없다.
+                if (shouldWalkFromCastle && _pendingNotify.ContainsKey(target))
                 {
                     _residentArrivalHandledByWorker.Add(target);
                 }
@@ -681,8 +752,12 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         // 같은 타워가 다시 비활성화되는 경우(부활 후 재파괴) 이전 연기를 먼저 걷는다.
         ClearTowerEjectionEffect(tower);
 
-        _towerEjectionEffects[tower] = Instantiate(
-            _towerEjectionEffectPrefab, worldPosition, Quaternion.identity, VillagerRoot);
+        Transform effect = AcquireEffect(_towerEjectionEffectPrefab, worldPosition);
+
+        if (effect != null)
+        {
+            _towerEjectionEffects[tower] = effect;
+        }
     }
 
     private void HandleTowerReactivated(Tower tower)
@@ -692,27 +767,20 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     private void ClearTowerEjectionEffect(Tower tower)
     {
-        if (tower == null || !_towerEjectionEffects.TryGetValue(tower, out GameObject effect))
+        if (tower == null || !_towerEjectionEffects.TryGetValue(tower, out Transform effect))
         {
             return;
         }
 
-        if (effect != null)
-        {
-            Destroy(effect);
-        }
-
+        ReleaseEffect(effect);
         _towerEjectionEffects.Remove(tower);
     }
 
     private void ClearAllTowerEjectionEffects()
     {
-        foreach (GameObject effect in _towerEjectionEffects.Values)
+        foreach (Transform effect in _towerEjectionEffects.Values)
         {
-            if (effect != null)
-            {
-                Destroy(effect);
-            }
+            ReleaseEffect(effect);
         }
 
         _towerEjectionEffects.Clear();
@@ -720,21 +788,73 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     private void SpawnConquestCompletionEffect(Vector3Int cell)
     {
-        if (_conquestCompletionEffectPrefab == null || _gridMap == null)
+        if (_gridMap == null)
         {
             return;
         }
 
-        GameObject effect = Instantiate(
-            _conquestCompletionEffectPrefab,
-            _gridMap.ConvertGridToWorld(cell),
-            Quaternion.identity,
-            VillagerRoot);
+        Transform effect = AcquireEffect(
+            _conquestCompletionEffectPrefab, _gridMap.ConvertGridToWorld(cell));
 
-        if (_conquestCompletionEffectLifetimeSeconds > 0f)
+        // 수명이 0 이하이면 스스로 걷히지 않는다(예전 Destroy(effect, 0) 시절과 같은 동작).
+        if (effect != null && _conquestCompletionEffectLifetimeSeconds > 0f)
         {
-            Destroy(effect, _conquestCompletionEffectLifetimeSeconds);
+            ReleaseEffectAfterAsync(
+                effect,
+                _conquestCompletionEffectLifetimeSeconds,
+                this.GetCancellationTokenOnDestroy()).Forget();
         }
+    }
+
+    private async UniTaskVoid ReleaseEffectAfterAsync(
+        Transform effect, float delaySeconds, CancellationToken token)
+    {
+        await UniTask.WaitForSeconds(delaySeconds, cancellationToken: token);
+
+        ReleaseEffect(effect);
+    }
+
+    // 이펙트는 파티클이라 재사용할 때 반드시 되감아야 한다. 비활성화만으로는 재생 위치가
+    // 정해지지 않는다(playOnAwake가 꺼져 있으면 멈춘 채로 다시 나타난다).
+    private Transform AcquireEffect(GameObject prefab, Vector3 worldPosition)
+    {
+        if (prefab == null)
+        {
+            return null;
+        }
+
+        Transform effect = _effectPool.Acquire(prefab.transform);
+
+        if (effect == null)
+        {
+            return null;
+        }
+
+        effect.SetPositionAndRotation(worldPosition, Quaternion.identity);
+
+        foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            particles.Clear(true);
+            particles.Play(true);
+        }
+
+        return effect;
+    }
+
+    private void ReleaseEffect(Transform effect)
+    {
+        if (effect == null)
+        {
+            return;
+        }
+
+        // 남아 있던 파티클을 지우지 않으면 다음에 꺼내 쓸 때 이전 자리의 잔상이 한 프레임 비친다.
+        foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
+        _effectPool.Release(effect);
     }
 
     private void ReconcileNight()
@@ -845,8 +965,13 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         target.IsInitialized &&
         target.AssignedPopulation > 0;
 
-    private static bool IsProductionFacilityTarget(IPopulationAllocationTarget target) =>
-        target is FactoryPopulation;
+    // 상주 캐릭터가 자리를 지키는 대상인가. 타워만 예외다(도착 모션 후 사라지는 transient로 표현).
+    //
+    // 이 구분이 필요한 이유: 상주는 대상당 한 명뿐이라 0 → 1 전환에서만 새로 생긴다. 그때는 그 상주가
+    // "성에서 걸어오는" 연출 1명분을 이미 담당하므로, 증감분에서 한 명을 빼야 인원이 겹치지 않는다.
+    // IsResidentTarget과 달리 현재 배치 인원을 보지 않는다 - 이쪽은 순수한 타입 분류다.
+    private static bool HasStandingResident(IPopulationAllocationTarget target) =>
+        target is not TowerPopulation;
 
     // 상주가 "일을 마치고 물러나는" 경우인지. 이때만 성으로 걸어 돌아가는 연출을 붙인다.
     // 건물이 철거됐거나(대상이 사라짐) 자리를 옮긴 경우(건물 이동)에는 걸어갈 맥락이 없으므로
@@ -997,13 +1122,11 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
                 continue;
             }
 
+            // 네 종류(타워·생산시설·연구소·랜드마크) 모두 이동 연출을 낸다. 예전에는 타워와 생산시설만
+            // 통과시켰는데, 그러면 연구소·랜드마크는 상주가 생기는 첫 한 명만 보이고 두 번째 이후로는
+            // 아무 캐릭터도 나오지 않았다(상주는 대상당 한 명뿐이라 다시 만들지 않는다).
             bool isTower = target is TowerPopulation;
-            bool isProductionFacility = IsProductionFacilityTarget(target);
-
-            if (!isTower && !isProductionFacility)
-            {
-                continue;
-            }
+            bool hasStandingResident = HasStandingResident(target);
 
             int delta = target.AssignedPopulation - pair.Value;
 
@@ -1011,7 +1134,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             {
                 int count = ResolveTransientCount(
                     -delta,
-                    isProductionFacility && _residentReturnHandledByWorker.Contains(target));
+                    hasStandingResident && _residentReturnHandledByWorker.Contains(target));
 
                 if (count <= 0)
                 {
@@ -1021,27 +1144,26 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
                 // 회수 - 빠져나온 인원만큼 일터에서 성으로 돌아간다.
                 SpawnGroup(
                     VillagerProfile.Recall, workCell, castleCell, castleCell,
-                    count, workCell, ResolveAppearance(target));
+                    count, ResolveAppearance(target));
             }
             else if (delta > 0)
             {
                 int count = ResolveTransientCount(
                     delta,
-                    isProductionFacility && _residentArrivalHandledByWorker.Contains(target));
+                    hasStandingResident && _residentArrivalHandledByWorker.Contains(target));
 
                 if (count <= 0)
                 {
                     continue;
                 }
 
-                // 배치 - 타워는 도착 모션, 생산시설의 추가 인원은 이동만 보여주고 사라진다.
+                // 배치 - 타워는 도착 모션, 나머지의 추가 인원은 이동만 보여주고 사라진다.
                 SpawnGroup(
                     isTower ? VillagerProfile.TowerVisit : VillagerProfile.Transit,
                     castleCell,
                     workCell,
                     castleCell,
                     count,
-                    workCell,
                     ResolveAppearance(target));
             }
         }
@@ -1053,13 +1175,18 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private static VillagerAppearance ResolveAppearance(IPopulationAllocationTarget target) =>
         target is TowerPopulation ? VillagerAppearance.Soldier : VillagerAppearance.Worker;
 
+    // 건물을 오가는 캐릭터는 산개시키지 않고 작업 칸 정중앙에 세운다.
+    //
+    // 예전에는 ResolveSpreadOffset으로 반경 _spreadRadius(0.45)만큼 흩었는데, 셀은 폭 1.0 · 높이 0.5의
+    // 다이아몬드라(IsometricMath.RADIUS_Y_RATIO / ROW_WORLD_HEIGHT) 그 반경이면 대각 방향에서 칸을
+    // 벗어난다. 특히 아래로 밀린 경우 캐릭터가 건물 칸 밑에 서 있는 것처럼 보였다.
+    // 산개는 청크 전체에 퍼지는 점령 크루(ResolveRingOffset)에만 남긴다 - 그쪽은 칸 하나에 갇히지 않는다.
     private void SpawnGroup(
         VillagerProfile profile,
         Vector3Int originCell,
         Vector3Int destinationCell,
         Vector3Int castleCell,
         int count,
-        Vector3Int hashSeedCell,
         VillagerAppearance appearance)
     {
         for (int i = 0; i < count; i++)
@@ -1070,7 +1197,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
                     originCell,
                     destinationCell,
                     castleCell,
-                    ResolveSpreadOffset(StableHash(hashSeedCell.x, hashSeedCell.y, i)),
+                    Vector3.zero,
                     hasOutboundLeg: true,
                     hasFixedOriginWorldPosition: originCell == castleCell,
                     originWorldPosition: CASTLE_SPAWN_WORLD_POSITION,
@@ -1088,7 +1215,18 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             return null;
         }
 
-        Villager villager = Instantiate(prefab, VillagerRoot);
+        Villager villager = _villagerPool.Acquire(prefab);
+
+        if (villager == null)
+        {
+            return null;
+        }
+
+        // 지난 생애의 알파·애니메이터 적용 기록·이동 상태를 먼저 지운다. Dispatch보다 앞서야 한다.
+        villager.ResetForSpawn();
+
+        // 도착해서 서는 칸을 기준으로 정한다 - 건물 안에 서는 캐릭터만 앞으로 당겨진다.
+        villager.SetDepthSortFloor(ResolveDepthSortFloor(order.WorkCell));
 
         // Dispatch가 즉시 끝나 Finished를 부르는 경우에도 목록이 어긋나지 않도록 먼저 등록한다.
         _activeVillagers.Add(villager);
@@ -1118,12 +1256,23 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         return prefab != null;
     }
 
+    // 반납은 반드시 추적 목록에서 빼낸 다음에 한다 - 다음 획득이 같은 인스턴스를 돌려주므로,
+    // 순서가 뒤집히면 새 생애의 캐릭터가 이전 생애의 집합(밤 귀가자·튕겨 나온 병사)에 남아 있게 된다.
     private void HandleVillagerFinished(Villager villager)
     {
         _nightReturners.Remove(villager);
         _ejectedVillagers.Remove(villager);
         villager.Finished -= HandleVillagerFinished;
         _activeVillagers.Remove(villager);
+
+        // 씬 언로드 등으로 파괴되면서 알려온 경우다 - 통에 넣으면 죽은 오브젝트가 섞인다.
+        if (villager.WasDestroyed)
+        {
+            _villagerPool.Forget(villager);
+            return;
+        }
+
+        _villagerPool.Release(villager);
     }
 
     private void DespawnAll()
@@ -1175,23 +1324,106 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         return false;
     }
 
-    // 건물마다 footprint와 회전, 시각 오프셋이 다르므로 앵커 고정 오프셋을 쓰지 않는다.
-    // 실제 footprint 주변의 빈 육지 칸 중 스프라이트 중심에 가장 가까운 자리를 고른다.
+    // 상주 캐릭터는 건물이 점유한 footprint "안"에 세운다.
+    //
+    // 예전에는 footprint 주변의 빈 칸 중 스프라이트 중심에 가까운 자리를 골랐는데, 그 자리가
+    // 이웃 칸의 점유 상태에 종속되는 것이 문제였다. 옆 칸에 무엇이든(타워·새끼용·다른 건물) 지어
+    // 그 칸이 채워지면 작업 위치가 다시 계산되고(IsResidentStale), 상주가 걷어내진 뒤 다른 칸에
+    // 곧바로 다시 생성돼 순간이동처럼 보였다. 게다가 캐릭터는 그리드를 점유하지 않으므로
+    // 배치 판정에는 그 칸이 "빈 칸"이라, 플레이어가 캐릭터가 서 있는 자리에 건물을 올릴 수 있었다.
+    //
+    // footprint 안쪽은 건물이 이동할 때만 바뀌고, 이미 건물이 점유한 칸이라 위에 지을 수도 없다.
     private Vector3Int ResolveBuildingWorkCell(Building building)
     {
-        if (TryPickBuildingPerimeterCell(building, building.transform.position, out Vector3Int workCell))
+        // 정가운데 칸. Castle.RegisterFootprint가 center - CenterOffset으로 앵커를 되짚는 것과 같은 규칙이다.
+        Vector3Int centerCell = building.PlacementAnchor + building.FootprintShape.CenterOffset;
+
+        // 모양에 구멍이 있으면 가운데가 실제 점유 칸이 아닐 수 있다 - 그 칸의 점유자가 이 건물인지로 확인한다.
+        if (_gridMap.GetBuildingAt(centerCell) == building &&
+            IsUsableLandCell(centerCell, requireEmpty: false))
         {
-            return workCell;
+            return centerCell;
         }
 
-        // 주변에 빈 육지가 없으면 건물 footprint 안쪽 중 중심에 가까운 칸으로 물 위 스폰만 피한다.
-        IReadOnlyList<Vector3Int> footprint = _gridMap.GetFootprintCoords(building);
-        if (TryPickClosestCell(footprint, building.transform.position, requireEmpty: false, out workCell))
+        if (TryPickFootprintFrontCell(building, out Vector3Int workCell))
         {
             return workCell;
         }
 
         return building.PlacementAnchor;
+    }
+
+    // 작업 칸에 건물이 있으면 그 건물보다 최소 한 단계 앞에 그리도록 정렬 하한을 구한다.
+    // Building.DepthSortOrder를 읽는 이유: 앵커로 다시 계산하면 실제 적용된 렌더 순서와 갈라질 수 있다
+    // (그 프로퍼티 주석이 밝히는 것과 같은 이유).
+    private int ResolveDepthSortFloor(Vector3Int cell)
+    {
+        Building building = _gridMap.GetBuildingAt(cell);
+
+        return building == null ? int.MinValue : building.DepthSortOrder + 1;
+    }
+
+    // footprint 중 화면 기준 가장 앞쪽 칸. 건물은 앵커(좌하단) 한 점으로 정렬 순서가 정해지므로
+    // (GridMap ← IsometricMath.ComputeDepthSortOrder) 뒤쪽 행에 세우면 캐릭터가 건물 스프라이트에
+    // 가려진다. x+y가 작을수록 앞쪽이다.
+    private bool TryPickFootprintFrontCell(Building building, out Vector3Int cell)
+    {
+        cell = default;
+
+        IReadOnlyList<Vector3Int> footprint = _gridMap.GetFootprintCoords(building);
+        Vector3 targetWorld = building.transform.position;
+        bool hasBest = false;
+        float bestDistanceSqr = 0f;
+
+        foreach (Vector3Int candidate in footprint)
+        {
+            // 육지인지만 본다 - 점유는 보지 않는다. 이 건물 자신이 점유한 칸이기 때문이다.
+            if (!IsUsableLandCell(candidate, requireEmpty: false))
+            {
+                continue;
+            }
+
+            float distanceSqr = (_gridMap.ConvertGridToWorld(candidate) - targetWorld).sqrMagnitude;
+
+            if (!hasBest || IsFurtherFrontCell(candidate, distanceSqr, cell, bestDistanceSqr))
+            {
+                cell = candidate;
+                bestDistanceSqr = distanceSqr;
+                hasBest = true;
+            }
+        }
+
+        return hasBest;
+    }
+
+    // 앞쪽(x+y 최소)을 1순위로, 동률이면 스프라이트 중심에 가까운 쪽을 고른다.
+    // IsBetterInteractionCell과 우선순위가 뒤집혀 있다 - 저쪽은 "건물에 가까이 붙는 것"이 목적이고,
+    // 여기는 "건물에 가려지지 않는 것"이 거리보다 중요하다.
+    private static bool IsFurtherFrontCell(
+        Vector3Int candidate,
+        float candidateDistanceSqr,
+        Vector3Int best,
+        float bestDistanceSqr)
+    {
+        int candidateFrontScore = ResolveFrontCellScore(candidate);
+        int bestFrontScore = ResolveFrontCellScore(best);
+
+        if (candidateFrontScore != bestFrontScore)
+        {
+            return candidateFrontScore < bestFrontScore;
+        }
+
+        if (!Mathf.Approximately(candidateDistanceSqr, bestDistanceSqr))
+        {
+            return candidateDistanceSqr < bestDistanceSqr;
+        }
+
+        if (candidate.x != best.x)
+        {
+            return candidate.x < best.x;
+        }
+
+        return candidate.y < best.y;
     }
 
     // 성의 위치는 그리드 등록(Castle.Start)에서만 확정된다. Start끼리는 순서가 보장되지 않으므로
@@ -1410,17 +1642,6 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     private static int ResolveCrewSize(Vector2Int chunkCoord) =>
         CREW_SIZE_MIN + (int)(StableHash(chunkCoord.x, chunkCoord.y, CREW_SIZE_HASH_SALT) % CREW_SIZE_RANGE);
-
-    private Vector3 ResolveSpreadOffset(uint hash)
-    {
-        float angle = hash % SPREAD_ANGLE_STEPS * (FULL_TURN_RADIANS / SPREAD_ANGLE_STEPS);
-
-        // 아이소메트릭 종횡비로 Y를 눌러 화면상 원형으로 흩어지게 한다(사거리 판정이 타원인 것과 같은 이유).
-        return new Vector3(
-            Mathf.Cos(angle) * _spreadRadius,
-            Mathf.Sin(angle) * _spreadRadius * IsometricMath.RADIUS_Y_RATIO,
-            0f);
-    }
 
     private static uint StableHash(int first, int second, int third)
     {

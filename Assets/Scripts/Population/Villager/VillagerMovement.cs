@@ -83,6 +83,24 @@ public sealed class VillagerMovement : MonsterMovement
         _gridMap = gridMap;
     }
 
+    /// <summary>
+    /// 풀에서 다시 꺼내 쓸 때 지난 구간의 이동 상태를 지운다. 위치는 곧바로 이어지는
+    /// <see cref="Warp"/>/<see cref="WarpWorld"/>가 잡으므로 여기서 건드리지 않는다.
+    /// </summary>
+    public void ResetForSpawn()
+    {
+        // 바운스 트윈 정리와 스케일 원복이 Stop 안에 들어 있다.
+        Stop();
+
+        HasArrived = false;
+        _hasDestination = false;
+
+        // 다음 등장의 첫 프레임을 지형 높이에 곧바로 맞추기 위해 보간 상태를 비운다
+        // (남겨두면 이전 자리의 높이에서 새 자리 높이로 스르륵 올라간다).
+        _hasHeightOffset = false;
+        _currentHeightOffset = 0f;
+    }
+
     /// <summary>보간 없이 즉시 그 자리에 놓는다. 스폰 지점 지정과, 세이브 복원 시의
     /// "걸어오지 않고 제자리에서 일하는 상태로 등장"에 쓴다.</summary>
     public void Warp(Vector3Int cell, Vector3 spreadOffset)

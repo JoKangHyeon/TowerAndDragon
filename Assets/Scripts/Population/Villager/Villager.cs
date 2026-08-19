@@ -198,14 +198,27 @@ public sealed class Villager : MonoBehaviour
         HoldIdleThenSendHome
     }
 
-    /// <summary>소멸 직전에 알린다 - VillagerDispatchSystem이 활성 목록에서 지운다.</summary>
+    /// <summary>소멸 직전에 알린다 - VillagerDispatchSystem이 활성 목록에서 지우고 풀에 반납한다.</summary>
     public event Action<Villager> Finished;
+
+    /// <summary>
+    /// <see cref="Finished"/>가 정상 종료가 아니라 오브젝트 파괴(씬 언로드 등) 때문에 발화했는지.
+    ///
+    /// 파괴 중인 컴포넌트도 <c>OnDestroy</c> 안에서는 <c>!= null</c>이라 널 검사로는 구분되지 않는다.
+    /// 이 구분을 놓치면 파괴된 인스턴스가 풀에 들어가 다음 획득이 죽은 오브젝트를 집는다.
+    /// </summary>
+    public bool WasDestroyed { get; private set; }
 
     [SerializeField] private RuntimeAnimatorController _fallbackAnimatorController;
 
     private VillagerMovement _movement;
     private Animator _animator;
+    private MonsterSpriteFlipper _spriteFlipper;
+    private IsometricDepthSorter _depthSorter;
     private SpriteRenderer[] _renderers;
+
+    // 프리팹 상태의 렌더러 색. 페이드로 뭉갠 알파를 되돌릴 때 쓴다(그림자의 반투명도까지 그대로 보존).
+    private Color[] _originalColors;
     private readonly HashSet<int> _animatorParameterHashes = new();
     private RuntimeAnimatorController _cachedAnimatorController;
     private Tween _fadeTween;
@@ -244,6 +257,66 @@ public sealed class Villager : MonoBehaviour
         // 사라질 때 같이 흐려져야 하므로 그림자 등 자식 스프라이트까지 전부 잡는다
         // (IsometricDepthSorter가 정렬에 쓰는 것과 같은 집합. 저쪽은 sortingOrder만 건드려 충돌하지 않는다).
         _renderers = GetComponentsInChildren<SpriteRenderer>(true);
+
+        // 페이드는 모든 렌더러를 같은 알파로 덮어쓴다. 그런데 그림자처럼 원래부터 반투명한 렌더러가
+        // 섞여 있어(Shadow의 알파는 0.3 남짓), 되돌릴 때 일괄 1로 올리면 그림자가 짙어진다.
+        // 프리팹 상태의 색을 그대로 잡아뒀다가 그 값으로 복원한다.
+        _originalColors = new Color[_renderers.Length];
+
+        for (int i = 0; i < _renderers.Length; i++)
+        {
+            _originalColors[i] = _renderers[i] != null ? _renderers[i].color : Color.white;
+        }
+
+        // 재사용할 때 지난 생애의 좌우 반전을 되돌리기 위해서만 잡는다. 없는 프리팹도 있어 널을 허용한다.
+        _spriteFlipper = GetComponent<MonsterSpriteFlipper>();
+
+        // 건물 안에 서는 캐릭터를 건물 스프라이트보다 앞에 그리기 위해 잡는다. 없는 프리팹도 허용한다.
+        _depthSorter = GetComponent<IsometricDepthSorter>();
+    }
+
+    /// <summary>
+    /// 화면 정렬 순서의 하한. 건물 안에 서는 캐릭터가 그 건물 스프라이트에 묻히지 않게 하려고
+    /// <see cref="VillagerDispatchSystem"/>이 작업 칸의 건물 정렬 순서에서 구해 넘긴다.
+    /// 건물이 없는 칸이면 <see cref="int.MinValue"/>가 들어와 아무 제약이 없다.
+    /// </summary>
+    public void SetDepthSortFloor(int floor)
+    {
+        if (_depthSorter != null)
+        {
+            _depthSorter.SetSortingOrderFloor(floor);
+        }
+    }
+
+    // 알파를 되돌리는 일은 반드시 "비활성화되기 전"에 끝나야 한다.
+    //
+    // 프리팹이 KeepAnimatorStateOnDisable을 끄고 있어 Animator는 SetActive(true)마다 리바인딩하면서
+    // 그 시점의 프로퍼티 값을 기본값으로 다시 스냅샷한다. 페이드로 알파가 0이 된 채 반납하면 그 0이
+    // 새 기본값이 되고, 이후 Animator가 매 프레임 0으로 되돌려 버린다. 풀에서 꺼낸 뒤에 고치는 것으로는
+    // 늦는 이유가 이것이다(PrefabPool.Acquire가 SetActive를 먼저 한다).
+    private void OnDisable()
+    {
+        _fadeTween?.Kill();
+        _fadeTween = null;
+        _isFading = false;
+        _fadeAlpha = 1f;
+        RestoreOriginalColors();
+    }
+
+    private void RestoreOriginalColors()
+    {
+        if (_originalColors == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _renderers.Length; i++)
+        {
+            if (_renderers[i] != null)
+            {
+                _renderers[i].color = _originalColors[i];
+            }
+        }
     }
 
     public void Construct(
@@ -258,6 +331,45 @@ public sealed class Villager : MonoBehaviour
         _attackIntervalSeconds = attackIntervalSeconds;
         _movement.Construct(gridMap);
         _movement.SetSpeed(moveSpeed);
+    }
+
+    /// <summary>
+    /// 풀에서 다시 꺼내 쓸 때 지난 생애의 흔적을 지운다. <see cref="Construct"/>·<see cref="Dispatch"/>
+    /// 앞에서 한 번 부른다.
+    ///
+    /// 애니메이터 파라미터·트리거는 손대지 않는다 - 프리팹 전부가 KeepAnimatorStateOnDisable을 끄고
+    /// 있어 비활성/재활성 과정에서 Unity가 알아서 되감는다.
+    /// </summary>
+    public void ResetForSpawn()
+    {
+        _hasFinished = false;
+        WasDestroyed = false;
+        _command = VillagerCommand.None;
+        _idleBeforeHomeSeconds = 0f;
+
+        // 페이드가 알파를 0까지 내려놓은 채 끝난다 - 되돌리지 않으면 재사용한 캐릭터가 투명한 채로 돌아다닌다.
+        // 실제 복원은 OnDisable(반납 직전)이 담당하고, 여기서는 그 경로를 타지 않은 경우를 위한 보강이다.
+        _fadeTween?.Kill();
+        _fadeTween = null;
+        _isFading = false;
+        _fadeAlpha = 1f;
+        RestoreOriginalColors();
+
+        // SetLocomotionState는 "원하는 상태가 바뀔 때만" 재적용 플래그를 내린다. 재활성화된 애니메이터는
+        // 기본 상태로 되감겨 있는데 지난 생애와 같은 상태를 원하면(상주 → 상주) 해시가 같아 재적용을
+        // 건너뛰고 Idle에 굳어버린다. 그래서 적용 기록 자체를 비운다.
+        _wantsMove = false;
+        _wantsWork = false;
+        _hasDesiredState = false;
+        _hasAppliedState = false;
+        _appliedStateHash = 0;
+
+        _movement.ResetForSpawn();
+
+        if (_spriteFlipper != null)
+        {
+            _spriteFlipper.ResetFacing();
+        }
     }
 
     /// <summary>튕겨져 나오는 연출의 세기. <see cref="VillagerProfile.Ejected"/>에서만 쓴다.</summary>
@@ -559,6 +671,12 @@ public sealed class Villager : MonoBehaviour
         }
     }
 
+    // 오브젝트를 파괴하지 않고 알리기만 한다 - 인스턴스의 처분(풀 반납)은 만든 쪽인
+    // VillagerDispatchSystem이 결정한다.
+    //
+    // 풀 반납이 일어나는 유일한 지점이 이 함수(정확히는 RunAsync 마지막의 FinishAsync)라는 것이
+    // 재사용 안전성의 근거다. 반납 경로를 하나 더 만들면 아직 돌고 있는 이전 생애의 RunAsync가
+    // 새 생애와 겹쳐 상태를 덮어쓴다.
     private void Finish()
     {
         if (_hasFinished)
@@ -568,7 +686,6 @@ public sealed class Villager : MonoBehaviour
 
         _hasFinished = true;
         Finished?.Invoke(this);
-        Destroy(gameObject);
     }
 
     // 페이드 도중에 밖에서 파괴되면(씬 언로드 등) Finish가 돌지 못해 디스패치의 활성 목록에
@@ -584,6 +701,7 @@ public sealed class Villager : MonoBehaviour
         }
 
         _hasFinished = true;
+        WasDestroyed = true;
         Finished?.Invoke(this);
     }
 
