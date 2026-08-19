@@ -42,6 +42,11 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private const float DEFAULT_EJECT_LINGER_SECONDS = 1f;
     private const float DEFAULT_SPREAD_RADIUS = 0.45f;
     private const int DEFAULT_MAX_ACTIVE_VILLAGERS = 60;
+
+    // 한 번에 몰리는 인원은 원정 크루 5~7명(CREW_SIZE_MIN/RANGE)과 타워 정원 4~7명이 최대인데,
+    // 그 인원이 계열 안의 프리팹 여러 종에 무작위로 흩어진다(TryPickPrefab). 그래서 프리팹당 이 정도면
+    // 대개의 몰림을 새로 만들지 않고 받아낸다.
+    private const int DEFAULT_PREWARM_COUNT_PER_PREFAB = 4;
     private const float CASTLE_SPAWN_WORLD_X = 0f;
     private const float CASTLE_SPAWN_WORLD_Y = 1f;
 
@@ -123,6 +128,11 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     [Tooltip("동시에 존재할 수 있는 캐릭터 수 상한. 초과분은 조용히 생성하지 않는다.")]
     [SerializeField] private int _maxActiveVillagers = DEFAULT_MAX_ACTIVE_VILLAGERS;
+
+    [Tooltip("겉모습 프리팹 하나당 로딩 중에 미리 만들어 둘 캐릭터 수. 플레이 중 Instantiate로 생기는 " +
+             "프레임 끊김을 로딩 구간으로 옮긴다. 0이면 미리 만들지 않고 필요할 때 만든다.")]
+    [Min(0)]
+    [SerializeField] private int _prewarmCountPerPrefab = DEFAULT_PREWARM_COUNT_PER_PREFAB;
 
     // 건물·랜드마크 상주. 컴포넌트 인스턴스 자체가 키다 - 좌표를 키로 쓰면 건물 이동에서 깨지고,
     // 랜드마크는 Building이 아니라 좌표 체계가 아예 다르다.
@@ -355,7 +365,38 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             }
         }
 
+        PrewarmVillagerPool();
         RequestReconcile();
+    }
+
+    // 캐릭터를 미리 만들어 풀에 채운다.
+    //
+    // Start에서 부르는 것이 곧 "로딩 화면이 덮여 있는 동안"이다 - SceneLoadOverlay는 씬 로드가 끝난 뒤에도
+    // 두 프레임(FRAMES_AFTER_LOAD)과 최소 표시 시간까지 화면을 불투명하게 유지한 다음 페이드 아웃한다.
+    // 그래서 여기서 동기로 만들어도 그 비용이 플레이 중이 아니라 로딩 구간에 묻힌다.
+    //
+    // 이펙트 풀은 대상이 아니다 - 프리팹이 인스펙터에 하나씩뿐이고 등장 빈도도 낮아 미리 만들 이득이 없다.
+    private void PrewarmVillagerPool()
+    {
+        if (_prewarmCountPerPrefab <= 0)
+        {
+            return;
+        }
+
+        // 겉모습 계열이 프리팹을 공유한다(병사와 원정이 같은 묶음을 쓰는 배선이 흔하다) -
+        // 중복으로 두 배 만들지 않도록 걸러낸다.
+        var prewarmed = new HashSet<Villager>();
+
+        foreach (Villager[] prefabs in _prefabsByAppearance.Values)
+        {
+            foreach (Villager prefab in prefabs)
+            {
+                if (prefab != null && prewarmed.Add(prefab))
+                {
+                    _villagerPool.Prewarm(prefab, _prewarmCountPerPrefab);
+                }
+            }
+        }
     }
 
     /// <summary>

@@ -54,6 +54,32 @@ public sealed class PrefabPool<T> where T : Component
         return instance;
     }
 
+    /// <summary>
+    /// 유휴 인스턴스를 미리 만들어 통에 채운다. 로딩 화면이 덮여 있는 동안 불러 Instantiate 비용을
+    /// 플레이 중이 아닌 그 구간으로 옮기는 용도다.
+    ///
+    /// 이미 통에 있는 만큼은 빼고 부족한 개수만 만든다 - 두 번 불려도 두 배로 늘지 않는다.
+    /// </summary>
+    public void Prewarm(T prefab, int count)
+    {
+        if (prefab == null)
+        {
+            return;
+        }
+
+        Stack<T> idle = GetIdleStack(prefab);
+
+        while (idle.Count < count)
+        {
+            T instance = Object.Instantiate(prefab, _parent);
+
+            // 만든 즉시 끈다 - 같은 프레임 안이라 Update가 한 번도 돌지 않는다.
+            // (Instantiate 시점에 Awake는 이미 돌았고, 그 비용을 앞당기는 것이 이 함수의 목적이다.)
+            instance.gameObject.SetActive(false);
+            idle.Push(instance);
+        }
+    }
+
     /// <summary>다 쓴 인스턴스를 비활성화해 통에 돌려놓는다. 파괴된 인스턴스에는 부르면 안 된다(<see cref="Forget"/> 참고).</summary>
     public void Release(T instance)
     {
