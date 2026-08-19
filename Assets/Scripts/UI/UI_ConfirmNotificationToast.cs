@@ -186,6 +186,9 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
     private string _confirmButtonPath;
     private float _choiceButtonHeight;
 
+    // 마지막으로 반영한 고정 창 높이. 목록이 늘거나 줄면 카드가 그만큼 따라 내려가야 한다.
+    private float _lastHeaderHeight = -1f;
+
     // 프리팹 버튼이 카드 모서리에서 떨어져 있던 거리. 선택지 카드의 여백을 여기서 그대로 물려받는다 -
     // 여백 값을 새로 만들면 프리팹을 손볼 때마다 코드의 숫자와 어긋난다.
     private Vector2 _choiceButtonBasePosition;
@@ -228,6 +231,28 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
     private void Start()
     {
         OpenInitialSlideGateAsync().Forget();
+    }
+
+    /// <summary>
+    /// 고정 창(오늘 할 일 목록)의 높이는 카드와 무관하게 바뀐다 - 목록이 처음 열릴 때,
+    /// 퀘스트가 완료돼 줄이 빠질 때. 그때 이미 떠 있는 카드를 다시 놓지 않으면 목록 밑에 깔린다
+    /// (실제로 조언자 카드에 답한 직후 알 알림이 목록에 가려졌다).
+    ///
+    /// 이벤트로 받지 않고 높이를 지켜보는 이유는, 이 컴포넌트가 고정 창이 무엇인지 몰라도 되게
+    /// 하기 위해서다 - 나중에 다른 창을 헤더로 넣어도 배선이 필요 없다.
+    /// </summary>
+    private void LateUpdate()
+    {
+        float headerHeight = TotalHeaderHeight();
+
+        if (Mathf.Approximately(headerHeight, _lastHeaderHeight))
+        {
+            return;
+        }
+
+        _lastHeaderHeight = headerHeight;
+        RepositionVisibleCards();
+        RepositionFollowers(true);
     }
 
     private void OnEnable()
