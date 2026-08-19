@@ -3,6 +3,8 @@ using UnityEngine.EventSystems;
 
 /// <summary>
 /// 미니맵 UI(RawImage) 위에서 클릭·드래그하면 해당 지점으로 메인 카메라를 이동시킨다.
+/// 좌표 기준은 이 컴포넌트가 붙은 오브젝트가 아니라 실제로 텍스처를 표시하는 _viewRect다
+/// (루트는 프레임까지 포함해 더 크므로, 자기 rect를 쓰면 테두리 두께만큼 클릭 위치가 어긋난다).
 ///   - 클릭: 클릭한 월드 위치로 카메라 이동 (뷰포트 사각형이 그 지점으로 이동)
 ///   - 드래그: 포인터를 따라 카메라가 연속 이동
 /// 실제 이동은 CameraController.MoveTo가 담당하므로 맵 경계 클램프·스무딩이 그대로 적용된다.
@@ -14,12 +16,8 @@ public class MinimapNavigator : MonoBehaviour, IPointerDownHandler, IDragHandler
     [SerializeField] private Camera _minimapCamera;
     [SerializeField] private CameraController _cameraController;
 
-    private RectTransform _rectTransform;
-
-    private void Awake()
-    {
-        _rectTransform = (RectTransform)transform;
-    }
+    [Tooltip("실제로 미니맵 텍스처를 표시하는 RawImage의 RectTransform — 클릭 좌표 기준")]
+    [SerializeField] private RectTransform _viewRect;
 
     public void OnPointerDown(PointerEventData eventData) => MoveCameraToPointer(eventData);
 
@@ -31,11 +29,14 @@ public class MinimapNavigator : MonoBehaviour, IPointerDownHandler, IDragHandler
         if (_minimapCamera == null || _cameraController == null)
             return;
 
-        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                _rectTransform, eventData.position, eventData.pressEventCamera, out Vector2 localPoint))
+        if (!WiringGuard.Require(_viewRect, nameof(_viewRect), this))
             return;
 
-        Rect rect = _rectTransform.rect;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _viewRect, eventData.position, eventData.pressEventCamera, out Vector2 localPoint))
+            return;
+
+        Rect rect = _viewRect.rect;
         // 드래그 중 포인터가 미니맵 밖으로 나가도 미니맵 범위 안으로 한정
         Vector2 viewport = new Vector2(
             Mathf.Clamp01((localPoint.x - rect.xMin) / rect.width),

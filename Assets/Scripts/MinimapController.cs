@@ -5,9 +5,9 @@ using UnityEngine.UI;
 /// <summary>
 /// 미니맵 카메라의 줌/추적을 담당한다.
 ///   - 줌 버튼으로 orthographicSize 조절
-///   - 축소 상태에 따라 메인 카메라 위치를 따라가거나(확대) 맵 전체를 보여준다(충분히 축소)
-///   - 각 축(x/y)마다 카메라 절반 범위가 맵 절반 크기보다 작으면 경계 안으로 클램프하고,
-///     더 축소되어 그 축의 카메라 범위가 맵보다 커지면 해당 축은 맵 중앙으로 고정한다.
+///   - 축소는 뷰가 맵 경계를 넘어 여백(레터박스)이 생기기 직전까지만 허용한다 (FillOrthoSize)
+///   - 각 축(x/y)마다 카메라 절반 범위가 맵 절반 크기 안으로 들어오도록 경계 안으로 클램프한다.
+///     창보다 넓은 축은 한 번에 전체가 보이지 않으므로 드래그로 훑는다.
 /// </summary>
 public class MinimapController : MonoBehaviour
 {
@@ -35,6 +35,7 @@ public class MinimapController : MonoBehaviour
 
     [Header("줌")]
     [SerializeField] private float _minOrthoSize = 4f;
+    [Tooltip("설계상의 축소 상한 — 실제로는 맵 경계에 여백이 생기지 않는 크기까지로 더 제한된다")]
     [SerializeField] private float _maxOrthoSize = 32.2f;
     [SerializeField] private float _zoomStep = 5f;
 
@@ -83,6 +84,9 @@ public class MinimapController : MonoBehaviour
         if (_minimapCamera == null)
             return;
 
+        // 여백이 생기는 구간까지 축소되지 않게 매 프레임 상한을 다시 적용한다 -
+        // 맵 경계(_mapHalfSize)나 RT 종횡비가 런타임에 바뀌어도 따라간다.
+        _currentOrthoSize = Mathf.Min(_currentOrthoSize, FillOrthoSize);
         _minimapCamera.orthographicSize = _currentOrthoSize;
 
         Vector2 desiredPos = _followTarget != null
@@ -100,8 +104,21 @@ public class MinimapController : MonoBehaviour
         _minimapCamera.transform.position = camPos;
     }
 
+    /// 뷰가 맵 경계를 넘어 여백(레터박스)이 생기기 직전의 orthographicSize.
+    /// 세로 반경은 orthographicSize, 가로 반경은 그 aspect 배이므로 두 축 제한 중 작은 쪽이 상한이다.
+    private float FillOrthoSize
+    {
+        get
+        {
+            float aspect = _minimapCamera.aspect;
+            float widthLimit = aspect > 0f ? _mapHalfSize.x / aspect : _mapHalfSize.y;
+            return Mathf.Min(_mapHalfSize.y, widthLimit);
+        }
+    }
+
     // 카메라 절반 범위(halfView)가 맵 절반 크기 안에 들어오면 목표 위치를 경계 안으로 클램프.
-    // 절반 범위가 맵보다 커지면(많이 축소됨) 이 축은 클램프가 불가능하므로 맵 중앙으로 고정한다.
+    // FillOrthoSize 상한 덕에 아래 음수 분기는 평소 도달하지 않지만,
+    // 종횡비나 맵 경계가 예상 밖으로 바뀔 때를 대비한 안전망으로 남겨 둔다.
     private float ResolveAxis(float desiredPos, float mapCenterAxis, float mapHalfAxis, float halfView)
     {
         float availableHalfRange = mapHalfAxis - halfView;
