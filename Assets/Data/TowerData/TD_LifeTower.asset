@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01fd6ce321b9b9f4a875d6886dd3a0dd, type: 3}
+  m_Name: TD_LifeTower
+  m_EditorClassIdentifier: Assembly-CSharp::TowerData
+  _nameLocKey: tower_name_lifeTower
+  _requiresResearchUnlock: 0
+  _populationCapacity: 5
+  _buildCost:
+  - Type: 2
+    Amount: 60
+  - Type: 64
+    Amount: 60
+  - Type: 32
+    Amount: 40
+  _maxHealth: 100
+  _reviveDelay: 20
+  _attack: {fileID: 11400000, guid: 89ac6358badfc864e85aae38f72ef338, type: 2}
+  _targetMovementFilter: 0
+  _projectilePrefab: {fileID: 2874056009116883397, guid: c13a7b1d583d7cf46bbf1358248fe5e1, type: 3}
+  _projectileSpeed: 10
