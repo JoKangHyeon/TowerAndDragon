@@ -73,8 +73,8 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         }
     }
 
-    // 인구로 가동하지 않는 타워(새끼용 등)는 false로 override한다.
-    public virtual bool RequiresPopulation => true;
+    // 인구로 가동하지 않는 타워(새끼용, 영혼타워 등)는 false를 반환한다.
+    public virtual bool RequiresPopulation => GetComponent<TowerPopulation>() != null;
 
     // 공격 가능 여부에 추가 조건을 거는 서브클래스 훅(새끼용 버프모드 등). 기본은 항상 허용.
     protected virtual bool CanAttackInCurrentMode => true;
