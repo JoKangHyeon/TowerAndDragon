@@ -32,11 +32,8 @@ public static class DragonSkillNodeStyleTable
     /// <summary>알 아이콘 지름 / 노드 지름. 비율로 잡아 노드 크기를 바꿔도 여백이 유지된다.</summary>
     public const float ICON_DIAMETER_RATIO = 0.62f;
 
-    /// <summary>노드 테두리와 라벨 사이 간격.</summary>
-    public const float LABEL_GAP = 4f;
-
-    /// <summary>라벨과 뱃지 사이 간격.</summary>
-    public const float BADGE_GAP = 2f;
+    /// <summary>자물쇠 지름 / 노드 지름. 아이콘과 따로 두어 둘을 독립적으로 조절한다.</summary>
+    public const float LOCK_DIAMETER_RATIO = 0.62f;
 
     // 어미용 노드는 루트(액티브 해금) > 궁극 > 나머지 갈래 순으로 크다 - 트리를 볼 때
     // 어디가 시작이고 어디가 끝인지 크기만으로 읽히게 한다.

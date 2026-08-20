@@ -386,8 +386,8 @@ public class UI_DragonSkillWindow : MonoBehaviour
         UI_DragonSkillNode view = Instantiate(_nodePrefab, _content);
         view.GetComponent<RectTransform>().anchoredPosition = position;
 
-        // 트리 중심이 (0,0)이라 좌표 자체가 "바깥쪽" 방향이다 - 노드가 라벨을 그 방향으로 밀어낸다.
-        view.ApplyLayout(node.Kind, position);
+        // 종류별 크기 규격만 입힌다 - 라벨·뱃지 위치는 노드 프리팹에 잡아 둔 자리를 그대로 쓴다.
+        view.ApplyLayout(node.Kind);
 
         _nodeViews[node] = view;
         _nodePositions[node] = position;
