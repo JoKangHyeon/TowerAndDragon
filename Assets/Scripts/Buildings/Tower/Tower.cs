@@ -42,7 +42,35 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     public TowerData Data => _towerData;
     public override IReadOnlyList<ResourceAmount> BuildCost => _towerData != null ? _towerData.BuildCost : base.BuildCost;
     public override int PopulationCapacity => _towerData != null ? _towerData.PopulationCapacity : base.PopulationCapacity;
-    public virtual MonsterTargetType TargetType => MonsterTargetType.Tower;
+    
+    public virtual MonsterTargetType BaseTargetType => MonsterTargetType.Tower;
+
+    private int _lastAuraCheckFrame = -1;
+    private MonsterTargetType _cachedTargetType;
+
+    public MonsterTargetType TargetType
+    {
+        get
+        {
+            if (Time.frameCount != _lastAuraCheckFrame)
+            {
+                _lastAuraCheckFrame = Time.frameCount;
+                bool isStealth = false;
+                
+                if (TowerAuraSystem.TryGetActiveAura(this, out var myAura, out _) && myAura.IsStealth)
+                {
+                    isStealth = true;
+                }
+                else if (_auraSystem != null)
+                {
+                    isStealth = _auraSystem.ResolveModifiers(this).IsStealth;
+                }
+                
+                _cachedTargetType = isStealth ? MonsterTargetType.None : BaseTargetType;
+            }
+            return _cachedTargetType;
+        }
+    }
 
     // 인구로 가동하지 않는 타워(새끼용 등)는 false로 override한다.
     public virtual bool RequiresPopulation => true;

@@ -11,6 +11,7 @@ public class StoneBarricade : Building, IMonsterTarget
 
     // [IMonsterTarget 구현] 몬스터가 멈춰서 공격하게 만듭니다.
     public MonsterTargetType TargetType => MonsterTargetType.Tower;
+    public MonsterTargetType BaseTargetType => MonsterTargetType.Tower;
     
     // [IAttackTarget 구현] 정확한 인터페이스 스펙을 준수합니다.
     public Transform TargetTransform => transform;

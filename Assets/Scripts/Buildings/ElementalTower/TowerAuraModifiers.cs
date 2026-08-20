@@ -9,16 +9,18 @@ public readonly struct TowerAuraModifiers
     public float ReviveSpeedMultiplier { get; }
     public float MaxHealthMultiplier { get; }
     public float ShieldAmount { get; }
+    public bool IsStealth { get; }
 
     public static TowerAuraModifiers Neutral =>
-        new TowerAuraModifiers (1f,1f,1f,1f,0f);
+        new TowerAuraModifiers (1f,1f,1f,1f,0f, false);
     
     public TowerAuraModifiers(
         float damageMultiplier,
         float attackSpeedMultiplier,
         float reviveSpeedMultiplier,
         float maxHealthMultiplier,
-        float shieldAmount
+        float shieldAmount,
+        bool isStealth
     )
     {
         DamageMultiplier = damageMultiplier;
@@ -26,6 +28,7 @@ public readonly struct TowerAuraModifiers
         ReviveSpeedMultiplier = reviveSpeedMultiplier;
         MaxHealthMultiplier = maxHealthMultiplier;
         ShieldAmount = shieldAmount;
+        IsStealth = isStealth;
     }
 
     public TowerAuraModifiers CombineStrongest(
@@ -51,6 +54,7 @@ public readonly struct TowerAuraModifiers
                 MaxHealthMultiplier,
                 aura.MaxHealthMultiplier),
 
-            Mathf.Max (ShieldAmount, aura.ShieldAmount));
+            Mathf.Max (ShieldAmount, aura.ShieldAmount),
+            IsStealth || aura.IsStealth);
     }
 }

@@ -5,4 +5,5 @@ public interface IMonsterTarget : IAttackTarget
 {
     //Tower에서 구현되는 내용
     MonsterTargetType TargetType { get; }
+    MonsterTargetType BaseTargetType { get; }
 }
