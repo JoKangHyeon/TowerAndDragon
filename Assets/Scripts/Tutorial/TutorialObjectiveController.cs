@@ -83,6 +83,10 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     private DragonType? _lastSeenAttribute;
     // 보스 준비 안내는 한 번만 낸다 - 목록이 다시 그려질 때마다 같은 말을 반복하게 된다.
     private bool _hasAnnouncedBossPreparation;
+    // 챕터 진행 상황은 시나리오 컨트롤러가 안다. 같은 오브젝트에 함께 두는 것이 이 둘의 배치
+    // 규약이라(Tutorial System 프리팹) 인스펙터 배선을 늘리지 않고 Awake에서 한 번 찾는다.
+    // 관문 판정은 노드 상태를 그릴 때마다 불리므로 매번 GetComponent를 돌릴 자리가 아니다.
+    private TutorialScenarioController _scenarioController;
 
     private RunData CurrentRun => _gameManager == null ? null : _gameManager.CurrentRun;
 
@@ -291,11 +295,6 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
             _toast.Show(Defines.DRAGON_TUTORIAL_LOCKED_LOC_KEY);
         }
     }
-
-    // 챕터 진행 상황은 시나리오 컨트롤러가 안다. 같은 오브젝트에 함께 두는 것이 이 둘의 배치
-    // 규약이라(Tutorial System 프리팹) 인스펙터 배선을 늘리지 않고 Awake에서 한 번 찾는다.
-    // 관문 판정은 노드 상태를 그릴 때마다 불리므로 매번 GetComponent를 돌릴 자리가 아니다.
-    private TutorialScenarioController _scenarioController;
 
     private TutorialRunner CurrentChapter =>
         _scenarioController == null ? null : _scenarioController.CurrentRunner;
