@@ -65,7 +65,6 @@ public static class DragonLocKeys
     }
 
     // 새끼용 탭 우측(Panel_DragonInfo)에 띄우는 속성별 설명.
-    // Life만 키 접미사가 어미용(life)과 다른 grass다 - 스트링테이블이 그렇게 등록돼 있다("초원 속성").
     public static string BabyInfoLocKey(DragonType attribute)
     {
         return attribute switch
@@ -74,7 +73,7 @@ public static class DragonLocKeys
             DragonType.Fire => "dragon_babyDragon_info_fire",
             DragonType.Time => "dragon_babyDragon_info_time",
             DragonType.Stone => "dragon_babyDragon_info_stone",
-            DragonType.Life => "dragon_babyDragon_info_grass",
+            DragonType.Life => "dragon_babyDragon_info_life",
             _ => STATE_INVALID,
         };
     }
