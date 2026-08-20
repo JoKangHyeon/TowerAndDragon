@@ -75,6 +75,12 @@ public sealed class TutorialStepSO : ScriptableObject
     [Min(MIN_REQUIRED_COUNT)]
     [SerializeField] private int _requiredCount = MIN_REQUIRED_COUNT;
 
+    [Tooltip("BuildingCountReached 조건에서 더 지을 수 있는 상한. 0이면 무제한이다. " +
+             "자유 건설 단계는 완료 조건을 채우기 전까지 계속 지을 수 있어, 상한이 없으면 뒷날 건물을 " +
+             "놓을 땅이 남지 않는다 - 그러면 되돌릴 방법이 없다.")]
+    [Min(0)]
+    [SerializeField] private int _maxCount;
+
     [Tooltip("BuildingCountReached 조건에서 정원을 채운 것만 셀지. 타워는 충원율이 곧 화력이라 " +
              "개수만 채운 것으로는 밤을 넘기는 기준이 되지 않는다.")]
     [SerializeField] private bool _requiresStaffed;
@@ -115,6 +121,9 @@ public sealed class TutorialStepSO : ScriptableObject
     public ResourceProductionData TargetFactoryData => _targetFactoryData;
     public int RequiredPopulation => _requiredPopulation;
     public int RequiredCount => _requiredCount;
+
+    /// <summary>0이면 상한 없음.</summary>
+    public int MaxCount => _maxCount;
     public bool RequiresStaffed => _requiresStaffed;
     public TutorialExclusiveModeKind SkipIfModeOpen => _skipIfModeOpen;
 

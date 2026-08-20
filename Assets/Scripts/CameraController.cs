@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -18,6 +19,12 @@ using UnityEngine.Tilemaps;
 [RequireComponent(typeof(Camera))]
 public class CameraController : MonoBehaviour
 {
+    // 휠 줌의 UI 판정용. 호출마다 새로 만들면 스크롤하는 내내 GC가 돈다.
+    // static이 아닌 이유: PointerEventData가 EventSystem을 붙들고 있어, 씬을 갈아타면
+    // 파괴된 EventSystem을 가리킨 채 남는다(튜토리얼 -> 본게임 경로가 실제로 그렇다).
+    private readonly List<RaycastResult> _pointerRaycastBuffer = new();
+    private PointerEventData _pointerEventData;
+
     private const float SCROLL_DEADZONE     = 0.01f;
     private const float SCROLL_TO_ZOOM_SCALE = 0.01f;
     private const int   BOOKMARK_COUNT      = 5;
@@ -286,13 +293,50 @@ public class CameraController : MonoBehaviour
     private void HandleZoom()
     {
         if (_cameraZoomAction == null) return;
-        if (IsPointerOverUI()) return;
 
         float scroll = _cameraZoomAction.action.ReadValue<Vector2>().y;
         if (Mathf.Abs(scroll) < SCROLL_DEADZONE) return;
 
+        // UI 확인은 휠이 실제로 굴러간 프레임에만 한다 - 레이캐스트라 매 프레임 돌릴 이유가 없다.
+        if (IsPointerOverZoomBlockingUI()) return;
+
         _targetZoom -= scroll * _zoomSpeed * SCROLL_TO_ZOOM_SCALE;
         _targetZoom  = Mathf.Clamp(_targetZoom, _minZoom, _maxZoom);
+    }
+
+    /// <summary>
+    /// 지금 포인터 아래에 <b>휠을 가져가야 할 UI</b>가 있는지.
+    ///
+    /// <see cref="IsPointerOverUI"/>와 달리 <see cref="ICameraInputTransparent"/> 아래의 UI는 없는 것으로 친다.
+    /// 안내 딤처럼 화면을 덮기만 하는 막까지 UI로 세면, 그 막이 깔린 동안 휠 줌이 통째로 죽는다
+    /// (WASD는 InputAction을 직접 읽어 이 판정을 지나지 않으므로 이동만 되고 줌만 안 되는 상태가 됐다).
+    /// </summary>
+    private bool IsPointerOverZoomBlockingUI()
+    {
+        if (EventSystem.current == null || Mouse.current == null)
+        {
+            return false;
+        }
+
+        _pointerEventData ??= new PointerEventData(EventSystem.current);
+        _pointerEventData.position = Mouse.current.position.ReadValue();
+
+        _pointerRaycastBuffer.Clear();
+        EventSystem.current.RaycastAll(_pointerEventData, _pointerRaycastBuffer);
+
+        foreach (RaycastResult hit in _pointerRaycastBuffer)
+        {
+            // 투명하다고 표시한 것은 그 아래 UI를 가리지 않는다 - 딤을 뚫고 스크롤 패널이 잡혀야 한다.
+            if (hit.gameObject == null ||
+                hit.gameObject.GetComponentInParent<ICameraInputTransparent>() != null)
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
 

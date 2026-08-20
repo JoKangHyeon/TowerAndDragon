@@ -125,6 +125,15 @@ public class UI_DragonChangePopup : MonoBehaviour
             return;
         }
 
+        // 안내가 막고 있으면 팝업이 열리지도 않지만(UI_DragonWindow.ToggleChangePopup), 열려 있는
+        // 동안 단계가 지나갔거나 다른 경로로 들어온 호출까지 여기서 잡는다 - IsDay와 같은 최종 가드다.
+        if (_dragonTreeManager != null && !_dragonTreeManager.CanChangeAttributeNow)
+        {
+            _dragonTreeManager.NotifyProgressionBlocked();
+            Close();
+            return;
+        }
+
         bool changed = dragon.TryChangeType(attribute);
 
         // DragonTreeManager는 이 알림 없이는 속성 변경을 감지할 수 없다(Dragon.OnDragonTypeChanged가

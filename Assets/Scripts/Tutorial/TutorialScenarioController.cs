@@ -46,6 +46,17 @@ public sealed class TutorialScenarioController : MonoBehaviour
     // 차례는 됐지만 아직 그 일차가 오지 않아 열지 못한 챕터. -1이면 대기 중인 것이 없다.
     private int _pendingIndex = -1;
 
+    // 마지막 챕터까지 끝났는지. 이 순간부터가 자유 조작 구간이라, 안내가 잠가 두었던 조작을
+    // 플레이어에게 돌려주는 기준이 된다.
+    private bool _isFinished;
+
+    /// <summary>강제 안내가 모두 끝났는지. 아직 남았으면 플레이어가 앞질러 가서는 안 되는 구간이다.</summary>
+    public bool IsFinished => _isFinished;
+
+    /// <summary>지금 돌고 있는 챕터. 대기 중(그 일차가 오지 않음)이거나 다 끝났으면 null.</summary>
+    public TutorialRunner CurrentRunner =>
+        TryGetRunner(_currentIndex, out TutorialRunner runner) ? runner : null;
+
     // 챕터의 OnEnable이 거는 것(창 열기 제한·밤 시작 잠금)은 다른 오브젝트의 Start보다 앞서야 한다.
     // 그래서 Start가 아니라 Awake에서 첫 챕터를 연다(CLAUDE.md 이벤트 초기화 규칙).
     private void Awake()
@@ -116,6 +127,7 @@ public sealed class TutorialScenarioController : MonoBehaviour
 
         if (index >= _chapters.Count)
         {
+            _isFinished = true;
             return;
         }
 
@@ -199,8 +211,7 @@ public sealed class TutorialScenarioController : MonoBehaviour
     }
 
     /// <summary>[테스트 전용] 지금 돌고 있는 챕터. 대기 중(그 일차가 오지 않음)이면 null.</summary>
-    public TutorialRunner DebugCurrentRunner =>
-        TryGetRunner(_currentIndex, out TutorialRunner runner) ? runner : null;
+    public TutorialRunner DebugCurrentRunner => CurrentRunner;
 
     /// <summary>[테스트 전용] 지금 챕터의 시작 일차. 챕터가 없으면 0.</summary>
     public int DebugCurrentChapterStartDay =>
@@ -250,6 +261,11 @@ public sealed class TutorialScenarioController : MonoBehaviour
         }
 
         _pendingIndex = -1;
+
+        // 끝난 뒤에 앞 챕터로 되돌리는 경우가 있다. 래치를 풀지 않으면 강제 안내가 다시 도는데도
+        // 자유 조작 구간으로 보여 잠가 두어야 할 조작이 열린다.
+        _isFinished = false;
+
         EnterChapter(index);
     }
 }

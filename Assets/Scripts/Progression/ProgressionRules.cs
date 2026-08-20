@@ -79,6 +79,7 @@ public static class ProgressionRules
             ProgressionNodeState.GateLocked => ProgressionFailureReason.GateLocked,
             ProgressionNodeState.InsufficientExtraCost => ProgressionFailureReason.InsufficientExtraCost,
             ProgressionNodeState.InsufficientResources => ProgressionFailureReason.InsufficientResources,
+            ProgressionNodeState.TutorialLocked => ProgressionFailureReason.TutorialLocked,
             _ => ProgressionFailureReason.None,
         };
     }

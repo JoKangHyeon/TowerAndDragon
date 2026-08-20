@@ -1,0 +1,707 @@
+{
+  "_기준": {
+    "원본": "Assets/StreamingAssets/Localization/{ko_kr,en_us}.csv",
+    "tutorial_ 키": "122개 (실사용 108 / 미사용 14)",
+    "시트에 이미 있는 키": "70개",
+    "도달 판정": "Tutorial System.prefab의 _chapters는 5개지만 Tutorial.unity가 _chapters.Array.size=9로 덮어쓴다. 시퀀스 9개 전부 살아 있다",
+    "되살릴 데이터": "없음. da8cbb78에서 지운 스텝 에셋 14개 대 살아있는 시퀀스 9개+엔딩컷신 대조 결과 끊긴 참조 0개",
+    "제외": "guide_* (조언자·가이드 퀘스트)는 별개 시스템"
+  },
+  "미사용": {
+    "tutorial_day1_assign_farm_population": {
+      "en": "Press +1 ASSIGN to staff the farm.",
+      "ko": "ASSIGN 버튼을 눌러 농장에 인구를 배치하세요.",
+      "memo": "시트에 행 있음 - 삭제"
+    },
+    "tutorial_day1_assign_lab_population": {
+      "en": "Press +1 ASSIGN to staff the lab.",
+      "ko": "ASSIGN 버튼을 눌러 연구소에 인구를 배치하세요.",
+      "memo": "시트에 행 있음 - 삭제"
+    },
+    "tutorial_day1_click_farm": {
+      "en": "Click the farm you just built.",
+      "ko": "세운 농장을 클릭하세요.",
+      "memo": "시트에 행 있음 - 삭제"
+    },
+    "tutorial_day1_close_farm_panel": {
+      "en": "Press CLOSE to close the staffing panel.",
+      "ko": "CLOSE 버튼을 눌러 인구 창을 닫으세요.",
+      "memo": "시트에 행 있음 - 삭제"
+    },
+    "tutorial_day1_egg_granted": {
+      "en": "The dragon's blessing has granted you a Life dragon egg.",
+      "ko": "용의 가호로 생명 용의 알을 획득했습니다.",
+      "memo": "시트에 행 있음 - 삭제"
+    },
+    "tutorial_day1_next_hint": {
+      "en": "When an explanation ends, press [Next] to continue.",
+      "ko": "설명을 읽었으면 [다음] 버튼을 눌러 넘어가세요.",
+      "memo": "시트에 행 있음 - 삭제"
+    },
+    "tutorial_day1_research_button_info": {
+      "en": "Spend research points at the RESEARCH button. You have none today - come back tomorrow.",
+      "ko": "모인 연구 포인트로 연구 버튼을 눌러 연구를 진행할 수 있습니다.",
+      "memo": "시트에 행 있음 - 삭제"
+    },
+    "tutorial_day1_territory_colors": {
+      "en": "Yellow is your land, green is claimable, red is out of reach. Claims spread from yours.",
+      "ko": "노란 선 안이 현재 영역, 초록색은 점령 가능한 땅입니다. 붉은색은 점령할 수 없습니다.",
+      "memo": "시트에 행 있음 - 삭제"
+    },
+    "tutorial_day1_worker_assign_full": {
+      "en": "Shift-click a new building to fill it to capacity.",
+      "ko": "Shift + 클릭으로 새 건물의 정원을 한 번에 채우세요.",
+      "memo": "시트에 행 없음 - 할 일 없음"
+    },
+    "tutorial_day1_worker_bulk_info": {
+      "en": "Left-click assigns, right-click recalls. Shift-click fills, Ctrl-click moves five.",
+      "ko": "왼쪽 클릭은 인구 배치, 오른쪽 클릭은 회수입니다. Shift + 클릭은 정원까지, Ctrl + 클릭은 다섯 명씩 움직입니다.",
+      "memo": "시트에 행 있음 - 삭제"
+    },
+    "tutorial_day1_worker_unassign": {
+      "en": "Right-click a building to recall the workers you assigned.",
+      "ko": "오른쪽 클릭으로 배치한 인구를 다시 회수할 수 있습니다.",
+      "memo": "시트에 행 없음 - 할 일 없음"
+    },
+    "tutorial_day2_assign_slime_farm_population": {
+      "en": "Assign workers. The more you put in, the more slimes it yields.",
+      "ko": "인구를 배치하세요. 인구에 비례해 슬라임이 생산됩니다.",
+      "memo": "시트에 행 있음 - 삭제"
+    },
+    "tutorial_day2_slime_is_dragon_food": {
+      "en": "Slimes feed baby dragons. Once yours hatches, it eats slimes of its attribute daily.",
+      "ko": "슬라임은 새끼용의 먹이입니다. 새끼용이 깨어나면 하루마다 자기 속성의 슬라임을 먹어 치웁니다.",
+      "memo": "시트에 행 있음 - 삭제"
+    },
+    "tutorial_worker_mode_nudge": {
+      "en": "You have many buildings now. Worker Mode lets you move population at a glance.",
+      "ko": "건물이 많아졌습니다. 일꾼모드로 인구를 한눈에 옮길 수 있습니다.",
+      "memo": "시트에 행 있음 - 삭제"
+    }
+  },
+  "실사용": {
+    "tutorial_blocked_hint": {
+      "en": "Please follow the guide first.",
+      "ko": "지금은 안내를 먼저 따라와 주세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_camera_hint": {
+      "en": "Move the view with WASD, zoom with the mouse wheel.",
+      "ko": "WASD로 화면을 움직이고 마우스 휠로 확대·축소할 수 있습니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_conquest_unreachable": {
+      "en": "You cannot go there. Pick a green tile.",
+      "ko": "갈 수 없는 땅입니다. 초록색 땅을 고르세요."
+    },
+    "tutorial_day1_assign_all": {
+      "en": "Use ASSIGN ALL to fill this tower to capacity.",
+      "ko": "모두 배치 버튼으로 이 타워의 정원을 채우세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day1_assign_population": {
+      "en": "Press +1 ASSIGN to staff this tower with one worker.",
+      "ko": "ASSIGN 버튼을 눌러 이 타워에 인구를 한 명 배치하세요"
+    },
+    "tutorial_day1_build_tab": {
+      "en": "Open the tower tab to find your defenses.",
+      "ko": "타워 탭을 눌러 방어 건물을 고르세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day1_chunk_overlay_info": {
+      "en": "The figures show added population and resources.",
+      "ko": "땅 위 패널은 점령 시 늘어나는 인구와 획득할 수 있는 자원을 표시합니다."
+    },
+    "tutorial_day1_claiming_info": {
+      "en": "Land being claimed is outlined in grey. Survive the night and it is yours, or lose it.",
+      "ko": "점령 중인 땅은 회색 선으로 표시됩니다. 도착한 날 밤을 넘기면 내 땅이 됩니다. 성이 무너지면 무산됩니다."
+    },
+    "tutorial_day1_click_research_lab": {
+      "en": "Click the lab you just built.",
+      "ko": "세운 연구소를 클릭하세요."
+    },
+    "tutorial_day1_click_tower": {
+      "en": "Click the tower you just built.",
+      "ko": "방금 세운 타워를 클릭하세요."
+    },
+    "tutorial_day1_close_build_panel": {
+      "en": "Press ESC, or the BUILD MODE button again, to close the build panel.",
+      "ko": "ESC를 누르거나 건설 모드 버튼을 다시 눌러 건설 창을 닫으세요."
+    },
+    "tutorial_day1_close_population_panel": {
+      "en": "Press CLOSE to close the staffing panel.",
+      "ko": "CLOSE 버튼을 눌러 인구 창을 닫으세요."
+    },
+    "tutorial_day1_conquest_cost": {
+      "en": "COST TO CONQUER is the price. Scroll it sideways.",
+      "ko": "점령에 드는 자원입니다. 옆으로 밀어 보세요."
+    },
+    "tutorial_day1_conquest_duration": {
+      "en": "DURATION is how many days the expedition needs.",
+      "ko": "점령까지 소요되는 시간입니다."
+    },
+    "tutorial_day1_conquest_monster": {
+      "en": "Land marked MONSTER strengthens the monsters you face. Weigh the gain against the risk.",
+      "ko": "MONSTER 표시가 있는 땅은 얻으면 몬스터가 강해집니다."
+    },
+    "tutorial_day1_cost_info": {
+      "en": "Building it cost resources. Your stock is shown here.",
+      "ko": "건설에 자원이 들었습니다. 남은 양은 여기서 확인합니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day1_exit_conquest": {
+      "en": "Press ESC, or the CLAIM button again, to leave claim mode.",
+      "ko": "ESC를 누르거나 점령 버튼을 다시 눌러 점령 모드를 닫으세요."
+    },
+    "tutorial_day1_food_info": {
+      "en": "Run out of food and your people leave, idling your buildings. Food comes from farms.",
+      "ko": "식량이 모자라면 인구가 줄어 타워와 시설이 멈춥니다. 식량은 농장에서 나옵니다."
+    },
+    "tutorial_day1_intro": {
+      "en": "At night monsters pour from the portals to the castle. If it falls, it is over.",
+      "ko": "밤이 되면 포탈에서 몬스터가 성으로 몰려옵니다. 무사히 성을 지켜내세요. [다음] 버튼을 눌러 진행할 수 있습니다."
+    },
+    "tutorial_day1_monster_path": {
+      "en": "The red line is the path monsters will take tonight. Build your towers along it.",
+      "ko": "빨간 선이 오늘 밤 몬스터가 지나갈 길입니다. 그 길목에 타워를 세워야 막을 수 있습니다."
+    },
+    "tutorial_day1_objective_intro": {
+      "en": "See the quest list on the right. They are optional - the night can start without them.",
+      "ko": "오른쪽 일일 퀘스트 목록을 확인하세요. 다 하지 못 해도 밤으로 넘어갈 수 있습니다."
+    },
+    "tutorial_day1_open_build_mode": {
+      "en": "Press {0} or the BUILD MODE button to open the building list.",
+      "ko": "{0} 키나 건설 모드 버튼을 눌러 건물 목록을 여세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day1_open_worker_mode": {
+      "en": "More buildings now. Press {0} or WORKER MODE to staff them all at once.",
+      "ko": "건물이 늘었습니다. {0} 키나 일꾼 모드 버튼을 한 번에 배치하세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day1_operation_rate": {
+      "en": "More workers means higher operation rate and faster fire. An unstaffed tower never fires.",
+      "ko": "인구가 정원에 가까울수록 가동률이 올라 공격 속도가 빨라집니다. 인구가 없으면 싸우지 않습니다."
+    },
+    "tutorial_day1_place_tower": {
+      "en": "Click a tile on the monster path to build the tower.",
+      "ko": "몬스터가 지나갈 길목을 클릭해 타워를 세우세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day1_ready_for_night": {
+      "en": "Press the night button.",
+      "ko": "밤 버튼을 눌러 밤을 맞이하세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day1_research_point_info": {
+      "en": "Lab workers bring research points at the end of each night. An unstaffed lab earns nothing at all.",
+      "ko": "인구를 배치하면 밤이 끝날 때 연구 포인트를 모아 옵니다. 인구가 없으면 쌓이지 않습니다."
+    },
+    "tutorial_day1_select_chunk": {
+      "en": "Choose a tile to claim and click it.",
+      "ko": "점령 부대를 보낼 땅을 하나 클릭하세요."
+    },
+    "tutorial_day1_select_tower": {
+      "en": "Pick the arrow tower from the list.",
+      "ko": "목록에서 화살 타워를 고르세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day1_send_expedition": {
+      "en": "Press CLAIM to send the expedition.",
+      "ko": "점령하기 버튼을 눌러 점령대를 보내세요."
+    },
+    "tutorial_day1_staffing_info": {
+      "en": "Production scales with the workers you assign. How you split them decides each day's output.",
+      "ko": "생산 시설은 배치한 인구에 비례해 자원을 냅니다. 어디에 배치하는지가 그날의 생산량을 정합니다."
+    },
+    "tutorial_day1_tower_count": {
+      "en": "Build {1} towers and fill them. ({0}/{1})",
+      "ko": "원하는 타워 {1}기를 세우고 정원을 채우세요. ({0}/{1})",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day1_worker_overlay_info": {
+      "en": "Each building now shows its workers and capacity.",
+      "ko": "건물마다 배치된 인구와 정원이 함께 표시됩니다."
+    },
+    "tutorial_day2_attribute_info": {
+      "en": " The mother dragon's attribute decides her night skills and the effect she lends.",
+      "ko": "현재 속성이 밤에 쓰는 스킬과 새끼용에게 주는 효과를 정합니다."
+    },
+    "tutorial_day2_baby_change_mode": {
+      "en": "Attack mode strikes monsters; buff mode raises production in range. Switch modes.",
+      "ko": "공격 모드는 몬스터를 공격하고, 버프 모드는 범위 안 건물의 생산량을 올립니다. 바꿔보세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_baby_feed_amount": {
+      "en": "The number here is its daily upkeep.",
+      "ko": "새끼용의 하루 슬라임 소모량입니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_baby_range_info": {
+      "en": "The green circle is the buff range, the yellow one attack range. Hover the dragon to see the current effect.",
+      "ko": "초록 원이 버프, 노란 원이 공격 사거리입니다. 새끼용에 마우스를 올리면 툴팁으로 효과를 볼 수 있습니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_baby_select": {
+      "en": "Click the placed baby dragon to open its management panel.",
+      "ko": "배치한 새끼용을 클릭해 관리창을 여세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_build_farm": {
+      "en": "Click a tile to raise the farm.",
+      "ko": "농장을 지을 자리를 클릭하세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_build_research_lab": {
+      "en": "Click a tile to raise the research lab.",
+      "ko": "연구소를 지을 자리를 클릭하세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_build_slime_farm": {
+      "en": "Click a tile to raise the slime farm. Slimes are baby dragon food.",
+      "ko": "슬라임 농장을 지을 자리를 클릭하세요. 슬라임은 새끼용의 먹이입니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_building_tab": {
+      "en": "Press the BUILDING tab to find the research lab.",
+      "ko": "건물 탭을 눌러 연구소를 찾으세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_change_attribute_info": {
+      "en": "Pick another attribute and press CHANGE.",
+      "ko": "다른 속성을 고르고 변경 버튼으로 바꿀 수 있습니다."
+    },
+    "tutorial_day2_click_castle": {
+      "en": "Click the main castle at the centre.",
+      "ko": "가운데 있는 메인 성을 클릭하세요."
+    },
+    "tutorial_day2_click_slime_farm": {
+      "en": "Click the slime farm you just built.",
+      "ko": "방금 건설한 슬라임 농장을 클릭하세요."
+    },
+    "tutorial_day2_close_dragon_window": {
+      "en": "Close the dragon window when you are done.",
+      "ko": "확인했으면 드래곤 창을 닫으세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_close_lab_panel": {
+      "en": "Press CLOSE to close the staffing panel.",
+      "ko": "CLOSE 버튼을 눌러 인구 창을 닫으세요."
+    },
+    "tutorial_day2_close_research_window": {
+      "en": "Close the research tree when you are done.",
+      "ko": "확인했으면 연구 트리를 닫으세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_close_slime_farm_panel": {
+      "en": "Press CLOSE to close the staffing panel.",
+      "ko": "CLOSE 버튼을 눌러 인구 창을 닫으세요."
+    },
+    "tutorial_day2_close_worker_mode": {
+      "en": "Close worker mode when you are done assigning. Now let's look at each building.",
+      "ko": "배치를 마쳤으면 일꾼 모드를 닫으세요. 이제 건물을 하나씩 살펴봅니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_factory_tab": {
+      "en": "Press the PRODUCTION tab to list production buildings.",
+      "ko": "생산 탭을 눌러 생산시설 목록을 여세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_fill_lab_capacity": {
+      "en": "Fill it to capacity and you'll have 10 points by tomorrow - enough for one research.",
+      "ko": "정원까지 채우면 하룻밤에 10 포인트가 모여 내일 연구 하나를 열 수 있습니다."
+    },
+    "tutorial_day2_food_upkeep": {
+      "en": "Your people have eaten their food.",
+      "ko": "인구가 소모한 식량이 빠져나갔습니다."
+    },
+    "tutorial_day2_morning_settlement": {
+      "en": "Morning has come. Every night ends with the day being settled.",
+      "ko": "아침이 밝았습니다. 밤이 끝나면 하루치 정산이 이루어집니다."
+    },
+    "tutorial_day2_open_conquest": {
+      "en": "Press {0} or the conquest button to look over the land you can take.",
+      "ko": "{0} 키나 점령 버튼을 눌러 점령 부대를 보낼 땅을 살펴보세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_open_dragon_for_slime": {
+      "en": "Open the dragon window to check your slime stock.",
+      "ko": "드래곤 버튼을 눌러서 슬라임 보유 현황을 확인하세요."
+    },
+    "tutorial_day2_open_research_window": {
+      "en": "Press the research button to open the research tree.",
+      "ko": "연구 버튼을 눌러 연구 트리를 여세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_research_branches": {
+      "en": "Research has three branches: towers, production and convenience. Locked nodes open once the research before them is done.",
+      "ko": "연구는 타워·생산시설·편의 세 갈래입니다. 잠긴 노드는 앞선 연구를 끝내야 열립니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_research_point_gift": {
+      "en": "We gave you 10 research points to start.",
+      "ko": "처음이라 연구 포인트 10을 미리 드렸습니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_research_tier_info": {
+      "en": "The cycle on a locked tier is what opens it. Each cycle-end boss opens a new tier.",
+      "ko": "주기 끝의 보스를 넘길 때마다 새로운 연구 티어가 열립니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_resource_bar_info": {
+      "en": "Output is added to the resource bar above with a +. Click a building for details.",
+      "ko": "생산량은 위 자원 패널에 바로 계산되어 표시됩니다. 건물을 클릭하면 자세히 볼 수 있습니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_select_farm": {
+      "en": "Pick the farm from the list.",
+      "ko": "목록에서 농장을 고르세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_select_research_lab": {
+      "en": "Pick the research lab from the list.",
+      "ko": "목록에서 연구소를 고르세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_select_slime_farm": {
+      "en": "Now pick the slime farm.",
+      "ko": "이번에는 슬라임 농장을 고르세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_slime_farm_terrain_info": {
+      "en": "The terrain you build on decides the slime. Need an attribute? Claim that land first.",
+      "ko": "슬라임은 배치된 땅의 속성에 따라 달라집니다. 필요한 속성은 점령을 통해 획득하세요."
+    },
+    "tutorial_day2_slime_stock_info": {
+      "en": "It shows what you hold now and what settles tomorrow morning.",
+      "ko": "지금 가진 슬라임과 내일 아침 정산될 양이 함께 표시됩니다."
+    },
+    "tutorial_day2_tower_disabled": {
+      "en": "Towers don't break, they stop, and dawn revives them all.",
+      "ko": "타워는 파괴되지 않고 멈췄다가 아침에 모두 되살아납니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_unlock_research_node": {
+      "en": "Pick a node, then press the research button on the right. Enough for one first-tier node.",
+      "ko": "노드를 고르고 오른쪽 연구 버튼을 누르세요. 첫 단계 하나를 열 수 있습니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day2_worker_free_assign": {
+      "en": "Shift-click fills to capacity, Ctrl-click moves five, right-click recalls. Staff as you like, then press next.",
+      "ko": "Shift + 클릭은 정원까지, Ctrl + 클릭은 다섯 명씩, 오른쪽 클릭은 회수입니다. 배치를 마치면 다음을 누르세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day3_boss_warning": {
+      "en": "Tonight they come from three sides, led by a boss. Meet them with what you have built.",
+      "ko": "오늘 밤 세 방향에서 몰려오고, 보스가 옵니다. 지금까지 키운 것으로 맞서세요."
+    },
+    "tutorial_day3_castle_attribute_icon": {
+      "en": "This icon above the castle is the mother dragon's current attribute.",
+      "ko": "성 위에 떠 있는 아이콘이 현재 어미용의 속성입니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day3_change_attribute": {
+      "en": "Press the change button and switch to the life attribute. Life has a skill that heals the castle.",
+      "ko": "변경 버튼을 눌러 생명 속성으로 바꾸세요. 생명은 성을 회복시키는 스킬을 가집니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day3_close_dragon_window": {
+      "en": "Close the dragon window when you are done.",
+      "ko": "확인했으면 드래곤 창을 닫으세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day3_omen": {
+      "en": "The portals are shaking hard. What comes tonight is not what came before.",
+      "ko": "포탈이 크게 흔들립니다. 오늘 밤에 오는 것은 지금까지와 다릅니다."
+    },
+    "tutorial_day3_open_skill_tree": {
+      "en": "The right side of the mother dragon tab is this attribute's skill tree.",
+      "ko": "어미용 탭 오른쪽이 스킬트리입니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day3_ready_for_boss": {
+      "en": "Build more towers to hold off the boss. Press the night button when you are ready.",
+      "ko": "이제 타워를 더 설치해서 보스를 막아보세요. 준비가 되면 밤으로 변경 버튼을 누르세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day3_skill_slot_info": {
+      "en": "Your unlocked skill appears here. Use it at night to defend the castle and your towers.",
+      "ko": "해금한 스킬이 여기 뜹니다. 밤에 이 스킬로 성과 타워를 지킬 수 있습니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day3_skill_tree_info": {
+      "en": "Each attribute has its own skill tree, and unlocking costs slimes of that attribute.",
+      "ko": "속성마다 스킬트리가 있고, 해금 해당 속성의 슬라임이 필요합니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day3_slime_gift": {
+      "en": "We gave you grass slimes for the awakening.",
+      "ko": "스킬 해금에 쓸 초원 슬라임을 선물로 드렸습니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day3_unlock_skill_node": {
+      "en": "Open this awakening node to gain the active skill [Wall Regeneration].",
+      "ko": "이 각성 노드를 열면 액티브 스킬 [성벽 재생]을 얻습니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_day3_use_skill": {
+      "en": "The castle is taking damage. Use your skill to heal it.",
+      "ko": "성이 깎이고 있습니다. 스킬로 성을 회복하세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_ending_beat_1": {
+      "en": "The last monster falls. You held all three nights.",
+      "ko": "마지막 몬스터가 쓰러졌습니다. 세 밤을 모두 지켜냈습니다."
+    },
+    "tutorial_ending_beat_2": {
+      "en": "The guardian dragon is imbued with the power of time, its green scales turning gold.",
+      "ko": "수호룡에게 시간의 힘이 깃듭니다. 초록빛 비늘이 황금빛으로 물들어 갑니다."
+    },
+    "tutorial_ending_beat_3": {
+      "en": "\"\"You held three nights. The real ones start now.\"\"",
+      "ko": "「세 밤을 버텼구나. 이제부터가 진짜 밤이다.」"
+    },
+    "tutorial_ending_beat_4": {
+      "en": "\"\"Go back. Put what you learned here to the test.\"\"",
+      "ko": "「돌아가라. 여기서 익힌 것을 그곳에서 시험하라.」"
+    },
+    "tutorial_ending_beat_goal": {
+      "en": "\"\"Seal all four portals, or fell the boss of the final cycle. If the castle falls, it ends there.\"\"",
+      "ko": "「포탈 넷을 모두 봉인하거나, 마지막 주기의 보스를 쓰러뜨려라. 성이 무너지면 그것으로 끝이다.」"
+    },
+    "tutorial_ending_next": {
+      "en": "Next",
+      "ko": "다음"
+    },
+    "tutorial_free_build_cap": {
+      "en": "That is enough towers. Assign population to fill them.",
+      "ko": "타워는 충분합니다. 인구를 배치해 정원을 채우세요.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_grant_population": {
+      "en": "Raised your population so you can continue.",
+      "ko": "안내를 이어갈 수 있도록 인구를 늘렸습니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_grant_resources": {
+      "en": "Topped up the resources you were short on.",
+      "ko": "안내를 이어갈 수 있도록 부족한 자원을 채웠습니다.",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_night_blocked": {
+      "en": "You can start the night once this guide finishes.",
+      "ko": "안내가 끝나면 밤으로 넘어갈 수 있습니다."
+    },
+    "tutorial_objective_day1_egg_granted": {
+      "en": "Receive a dragon egg and check it",
+      "ko": "용의 알을 받아 확인한다"
+    },
+    "tutorial_objective_day1_night_survived": {
+      "en": "Survive the first night",
+      "ko": "첫 밤을 버틴다"
+    },
+    "tutorial_objective_day1_population_assigned": {
+      "en": "Assign population to the tower",
+      "ko": "타워에 인구를 배치한다"
+    },
+    "tutorial_objective_day1_tower_built": {
+      "en": "Build a tower",
+      "ko": "타워를 세운다"
+    },
+    "tutorial_objective_dragon_skill_unlocked": {
+      "en": "Unlock one mother dragon skill",
+      "ko": "어미용 스킬을 하나 해금한다",
+      "memo": "시트에 없음 - 추가"
+    },
+    "tutorial_objective_expedition_sent": {
+      "en": "Send out a conquest expedition",
+      "ko": "점령 버튼을 눌러 부대를 파병한다"
+    },
+    "tutorial_objective_farm_built": {
+      "en": "Build a farm to secure food",
+      "ko": "농장을 지어 식량을 마련한다"
+    },
+    "tutorial_objective_mother_dragon_checked": {
+      "en": "Change the mother dragon's attribute at the main castle",
+      "ko": "메인 성에서 어미용의 속성을 바꿔본다"
+    },
+    "tutorial_objective_panel_header": {
+      "en": "Daily Quests",
+      "ko": "일일 퀘스트"
+    },
+    "tutorial_objective_remaining": {
+      "en": "{0} things left to try.",
+      "ko": "아직 해보지 않은 것이 {0}가지 남았습니다."
+    },
+    "tutorial_objective_research_completed": {
+      "en": "Complete one research",
+      "ko": "연구를 하나 완료한다"
+    },
+    "tutorial_objective_research_lab_built": {
+      "en": "Build a research lab",
+      "ko": "연구소를 짓는다"
+    },
+    "tutorial_objective_slime_farm_built": {
+      "en": "Build a slime farm",
+      "ko": "슬라임 농장을 짓는다"
+    },
+    "tutorial_quit_button": {
+      "en": "Quit tutorial",
+      "ko": "튜토리얼 그만두기"
+    },
+    "tutorial_quit_confirm_message": {
+      "en": "Quit the tutorial and start the main game? Your progress here will not be saved.",
+      "ko": "튜토리얼을 그만두고 본게임을 시작할까요? 지금까지의 진행은 저장되지 않습니다."
+    },
+    "tutorial_quit_confirm_no": {
+      "en": "Keep playing",
+      "ko": "계속하기"
+    },
+    "tutorial_quit_confirm_yes": {
+      "en": "Quit",
+      "ko": "그만두기"
+    }
+  },
+  "실사용_한영_미스매치": {
+    "tutorial_day1_assign_all": {
+      "en": "Use Assign All to fill this tower to capacity.",
+      "ko": "모두 배치 버튼으로 이 타워의 정원을 채우세요.",
+      "memo": "EN 라벨 대소문자만 실제 UI(population_allocation_assign_all = Assign All)와 달랐다"
+    },
+    "tutorial_day1_assign_population": {
+      "en": "Press +1 Assign to staff this tower with one worker.",
+      "ko": "+1 배치 버튼을 눌러 이 타워에 인구를 한 명 배치하세요.",
+      "memo": "EN은 +1 ASSIGN, KO는 ASSIGN. 실제 라벨은 building_window_assign_one = +1 Assign / +1 배치. KO 마침표도 없었다"
+    },
+    "tutorial_day1_chunk_overlay_info": {
+      "en": "The panel over the tile shows the population and resources the claim would add.",
+      "ko": "땅 위 패널은 점령 시 늘어나는 인구와 획득할 수 있는 자원을 표시합니다.",
+      "memo": "EN이 무엇의 수치인지 밝히지 않았다. KO 기준으로 EN을 보강"
+    },
+    "tutorial_day1_claiming_info": {
+      "en": "Land being claimed is outlined in grey. Survive the night your expedition arrives and it is yours; if the castle falls, the claim is lost.",
+      "ko": "점령 중인 땅은 회색 선으로 표시됩니다. 도착한 날 밤을 넘기면 내 땅이 됩니다. 성이 무너지면 무산됩니다.",
+      "memo": "EN의 or lose it이 조건을 뭉갰다. KO 기준으로 EN을 보강"
+    },
+    "tutorial_day1_conquest_cost": {
+      "en": "Cost To Claim is the price. Scroll it sideways.",
+      "ko": "필요한 자원이 점령에 드는 자원입니다. 옆으로 밀어 보세요.",
+      "memo": "EN은 COST TO CONQUER, KO는 라벨 없음. 실제 라벨은 claim_panel_cost = Cost To claim / 필요한 자원"
+    },
+    "tutorial_day1_conquest_duration": {
+      "en": "DURATION is how many days the expedition needs.",
+      "ko": "걸리는 시간은 점령대가 도착하기까지의 날수입니다.",
+      "memo": "EN은 UI 라벨 DURATION을 부르는데 KO는 라벨(claim_panel_duration=걸리는 시간)을 안 부르고 단위도 「시간」이었다"
+    },
+    "tutorial_day1_conquest_monster": {
+      "en": "Land marked MONSTER strengthens the monsters you face. Weigh the gain against the risk.",
+      "ko": "MONSTER 표시가 있는 땅은 얻으면 몬스터가 강해집니다. 득실을 재고 고르세요.",
+      "memo": "EN의 Weigh the gain against the risk가 KO에 없었다"
+    },
+    "tutorial_day1_intro": {
+      "en": "At night monsters pour from the portals to the castle. If it falls, it is over. Press [Next] to continue.",
+      "ko": "밤이 되면 포탈에서 몬스터가 성으로 몰려옵니다. 성이 무너지면 그것으로 끝입니다. [다음] 버튼을 눌러 넘어가세요.",
+      "memo": "EN은 패배 조건, KO는 [다음] 버튼 안내로 서로 다른 문장이었다. 양쪽에 둘 다 넣었다"
+    },
+    "tutorial_day1_objective_intro": {
+      "en": "See the quest list on the right. Finish today's list to move on to the night.",
+      "ko": "오른쪽 일일 퀘스트 목록을 확인하세요. 오늘 목록을 모두 끝내야 밤으로 넘어갈 수 있습니다.",
+      "memo": "EN·KO가 서로는 맞지만 둘 다 게임과 반대다. TutorialObjectiveController.cs:112가 목표 전부 완료를 요구한다"
+    },
+    "tutorial_day1_open_worker_mode": {
+      "en": "More buildings now. Press {0} or WORKER MODE to staff them all at once.",
+      "ko": "건물이 늘었습니다. {0} 키나 인구 모드 버튼으로 한 번에 배치하세요.",
+      "memo": "KO 조사 오류(「버튼을 … 배치하세요」). 「일꾼 모드」는 UI에 없는 이름 - ingame_button_workerMode = Worker Mode / 인구 모드"
+    },
+    "tutorial_day1_ready_for_night": {
+      "en": "Press NEXT NIGHT.",
+      "ko": "밤으로 변경 버튼을 눌러 밤을 맞이하세요.",
+      "memo": "양쪽 다 UI 라벨을 안 불렀다. ingame_button_nextNight = NEXT NIGHT / 밤으로 변경"
+    },
+    "tutorial_day1_research_point_info": {
+      "en": "Lab workers bring research points at the end of each night. An unstaffed lab earns nothing at all.",
+      "ko": "연구소에 인구를 배치하면 밤이 끝날 때 연구 포인트를 모아 옵니다. 인구가 없으면 하나도 쌓이지 않습니다.",
+      "memo": "EN의 Lab workers / unstaffed lab에 해당하는 주어가 KO에 없어 어느 건물인지 안 드러났다"
+    },
+    "tutorial_day2_attribute_info": {
+      "en": "The mother dragon's attribute decides her night skills and the effect she lends.",
+      "ko": "어미용의 현재 속성이 밤에 쓰는 스킬과 새끼용에게 주는 효과를 정합니다.",
+      "memo": "EN 맨 앞에 공백 1칸이 있었다. KO에는 주어(어미용)가 없었다"
+    },
+    "tutorial_day2_baby_change_mode": {
+      "en": "Attack mode strikes monsters; buff mode raises production in range. Switch modes.",
+      "ko": "공격 모드는 몬스터를 공격하고, 버프 모드는 범위 안 생산시설의 생산량을 올립니다. 바꿔보세요.",
+      "memo": "EN은 production(생산), KO는 「건물」이라 버프 대상이 넓게 읽혔다"
+    },
+    "tutorial_day2_close_dragon_window": {
+      "en": "Close the dragon window when you are done.",
+      "ko": "확인했으면 용 창을 닫으세요.",
+      "memo": "창 이름은 dragon_window_header = Dragons / 용. KO만 「드래곤 창」이라 불렀다"
+    },
+    "tutorial_day2_close_worker_mode": {
+      "en": "Close worker mode when you are done assigning. Now let's look at each building.",
+      "ko": "배치를 마쳤으면 인구 모드를 닫으세요. 이제 건물을 하나씩 살펴봅니다.",
+      "memo": "「일꾼 모드」는 UI에 없는 이름 - ingame_button_workerMode = Worker Mode / 인구 모드"
+    },
+    "tutorial_day2_open_dragon_for_slime": {
+      "en": "Press DRAGON to check your slime stock.",
+      "ko": "드래곤 버튼을 눌러서 슬라임 보유 현황을 확인하세요.",
+      "memo": "EN은 창을 열라 하고 KO는 버튼을 누르라 했다. KO가 UI(ingame_button_dragon = DRAGON / 드래곤)와 맞다"
+    },
+    "tutorial_day2_research_tier_info": {
+      "en": "The cycle on a locked tier is what opens it. Each cycle-end boss opens a new tier.",
+      "ko": "잠긴 티어에 적힌 주기가 해금 조건입니다. 주기 끝의 보스를 넘길 때마다 새 티어가 열립니다.",
+      "memo": "EN 첫 문장(잠긴 티어의 주기가 조건)이 KO에 없었다"
+    },
+    "tutorial_day2_resource_bar_info": {
+      "en": "Output is added to the resource bar above with a +. Click a building for details.",
+      "ko": "생산량은 위 자원 패널에 + 로 바로 더해져 표시됩니다. 건물을 클릭하면 자세히 볼 수 있습니다.",
+      "memo": "EN의 with a +(증가분이 +로 붙는다)가 KO에 없었다"
+    },
+    "tutorial_day3_close_dragon_window": {
+      "en": "Close the dragon window when you are done.",
+      "ko": "확인했으면 용 창을 닫으세요.",
+      "memo": "위와 같은 문구. 같은 값이므로 함께 고쳐야 한다"
+    },
+    "tutorial_day3_open_skill_tree": {
+      "en": "The right side of the mother dragon tab is this attribute's skill tree.",
+      "ko": "어미용 탭 오른쪽이 이 속성의 스킬트리입니다.",
+      "memo": "EN의 this attribute's(속성마다 다르다)가 KO에 없었다"
+    },
+    "tutorial_day3_ready_for_boss": {
+      "en": "Build more towers to hold off the boss. Press NEXT NIGHT when you are ready.",
+      "ko": "이제 타워를 더 설치해서 보스를 막아보세요. 준비가 되면 밤으로 변경 버튼을 누르세요.",
+      "memo": "EN만 UI 라벨을 안 불렀다. KO가 맞다 - ingame_button_nextNight = NEXT NIGHT / 밤으로 변경"
+    },
+    "tutorial_day3_skill_tree_info": {
+      "en": "Each attribute has its own skill tree, and unlocking costs slimes of that attribute.",
+      "ko": "속성마다 스킬트리가 따로 있고, 해금에는 그 속성의 슬라임이 필요합니다.",
+      "memo": "KO 어절 누락으로 문장이 성립하지 않았다(「해금 해당 속성의」)"
+    },
+    "tutorial_ending_beat_3": {
+      "en": "\"You held three nights. The real ones start now.\"",
+      "ko": "「세 밤을 버텼구나. 이제부터가 진짜 밤이다.」",
+      "memo": "EN 큰따옴표가 두 겹으로 화면에 떴다 / 아래 en의 \\\" 는 JSON 이스케이프다. 시트에 넣을 실제 값은 큰따옴표 한 겹"
+    },
+    "tutorial_ending_beat_4": {
+      "en": "\"Go back. Put what you learned here to the test.\"",
+      "ko": "「돌아가라. 여기서 익힌 것을 그곳에서 시험하라.」",
+      "memo": "EN 큰따옴표가 두 겹으로 화면에 떴다 / 아래 en의 \\\" 는 JSON 이스케이프다. 시트에 넣을 실제 값은 큰따옴표 한 겹"
+    },
+    "tutorial_ending_beat_goal": {
+      "en": "\"Seal all four portals, or fell the boss of the final cycle. If the castle falls, it ends there.\"",
+      "ko": "「포탈 넷을 모두 봉인하거나, 마지막 주기의 보스를 쓰러뜨려라. 성이 무너지면 그것으로 끝이다.」",
+      "memo": "EN 큰따옴표가 두 겹으로 화면에 떴다 / 아래 en의 \\\" 는 JSON 이스케이프다. 시트에 넣을 실제 값은 큰따옴표 한 겹"
+    },
+    "tutorial_grant_resources": {
+      "en": "Topped up the resources you were short on so you can continue.",
+      "ko": "안내를 이어갈 수 있도록 부족한 자원을 채웠습니다.",
+      "memo": "KO의 「안내를 이어갈 수 있도록」에 해당하는 말이 EN에 없었다"
+    },
+    "tutorial_objective_expedition_sent": {
+      "en": "Send out a conquest expedition",
+      "ko": "점령 부대를 파병한다",
+      "memo": "EN은 목표 서술인데 KO만 조작 설명이었다. 다른 목표 문구와도 형식이 달랐다"
+    }
+  }
+}

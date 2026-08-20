@@ -10,4 +10,8 @@ public enum ProgressionNodeState
     InsufficientExtraCost,
     InsufficientResources,
     Available,
+
+    // 안내가 아직 가르치지 않아 지금은 열 수 없다. 새 값은 뒤에 붙인다 - 중간에 끼우면
+    // 이 값으로 판정을 저장한 곳이 다른 것으로 바뀐다.
+    TutorialLocked,
 }

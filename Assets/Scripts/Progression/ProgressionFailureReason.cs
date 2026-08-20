@@ -9,4 +9,5 @@ public enum ProgressionFailureReason
     GateLocked,
     InsufficientExtraCost,
     InsufficientResources,
+    TutorialLocked,
 }

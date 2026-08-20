@@ -186,12 +186,12 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     {
         if (_exitButton != null)
         {
-            _exitButton.onClick.AddListener(Close);
+            _exitButton.onClick.AddListener(CloseFromInput);
         }
 
         if (_blockerButton != null)
         {
-            _blockerButton.onClick.AddListener(Close);
+            _blockerButton.onClick.AddListener(CloseFromInput);
         }
 
         if (_motherTabButton != null)
@@ -362,6 +362,23 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             return;
         }
 
+        CloseFromInput();
+    }
+
+    /// <summary>
+    /// 플레이어가 스스로 닫는 경로. X 버튼·바깥 클릭·ESC가 모두 여기를 지난다.
+    ///
+    /// 버튼만 <see cref="Close"/>를 직접 부르던 탓에 안내의 닫기 관문을 비껴갔다 - 딤이 입력을
+    /// 열어 두는 컷(GuideRequest.KeepsInputOpen)에서는 ESC·토글 키는 막히는데 X 버튼만 통해,
+    /// 스킬을 해금하기 전에 창을 닫아 안내가 가리킬 곳을 잃었다. 같은 조작이 경로에 따라 갈리면
+    /// 플레이어는 어느 한쪽을 고장으로 읽는다.
+    ///
+    /// 안내가 없을 때는 관문에 묻는 쪽이 없어 그대로 닫힌다. 내부에서 닫는 경로
+    /// (CloseAllExcept·밤 전환)는 <see cref="Close"/>를 그대로 쓴다 - 그쪽은 이미 판정을 지난
+    /// 뒤이거나 화면을 정리하려는 쪽이라 여기서 다시 막으면 안 된다.
+    /// </summary>
+    public void CloseFromInput()
+    {
         if (_uiManager != null && !_uiManager.CanCloseExclusive(this))
         {
             return;
@@ -446,7 +463,9 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     {
         if (_isOpen)
         {
-            Close();
+            // 닫기는 플레이어가 스스로 하는 조작이므로 관문을 지난다(UI_BuildModeWindow와 같은 판정).
+            // 여기만 열어 두면 X·바깥클릭·ESC를 막아 놓고 HUD 버튼으로는 닫히는 구멍이 남는다.
+            CloseFromInput();
         }
         else if (_uiManager != null)
         {
@@ -642,6 +661,14 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 
         if (!IsDay)
         {
+            return;
+        }
+
+        // 안내가 아직 속성 변경을 가르치지 않았다. 팝업을 열지 않고 사유만 알린다 - 열어 놓고
+        // 카드마다 거절하면 다섯 번 막히는 것으로 읽힌다.
+        if (_dragonTreeManager != null && !_dragonTreeManager.CanChangeAttributeNow)
+        {
+            _dragonTreeManager.NotifyProgressionBlocked();
             return;
         }
 

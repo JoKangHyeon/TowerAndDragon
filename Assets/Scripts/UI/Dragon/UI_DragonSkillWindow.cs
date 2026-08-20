@@ -194,12 +194,19 @@ public class UI_DragonSkillWindow : MonoBehaviour
     /// 안내가 창에 직접 물어본다(<see cref="UI_BuildModeWindow.TryGetSlotRect"/>와 같은 형태).
     ///
     /// 트리는 창을 처음 열 때 만들어지므로, 열기 전에 물으면 아직 없다 - 그때는 false다.
+    ///
+    /// <b>창을 닫은 뒤에도 false여야 한다.</b> 노드 뷰는 창이 닫혀도 _nodeViews에 그대로 남으므로,
+    /// 있는지만 보면 화면에 없는 자리를 가리키게 된다. 그러면 안내는 대상이 살아 있다고 믿어
+    /// 딤과 입력 차단을 유지하는데 오버레이는 보이지 않는 대상이라 연출을 감춘다 -
+    /// 화면에 아무것도 없는 채로 단축키만 죽고, 빠져나갈 확인 버튼도 함께 숨는다.
+    /// 활성 여부까지 보면 러너의 "대상이 사라졌으면 화면을 걷는다" 경로가 정상적으로 돈다.
     /// </summary>
     public bool TryGetNodeRect(DragonSkillNodeData node, out RectTransform nodeRect)
     {
         nodeRect = null;
 
-        if (node == null || !_nodeViews.TryGetValue(node, out UI_DragonSkillNode view) || view == null)
+        if (node == null || !_nodeViews.TryGetValue(node, out UI_DragonSkillNode view) ||
+            view == null || !view.gameObject.activeInHierarchy)
         {
             return false;
         }

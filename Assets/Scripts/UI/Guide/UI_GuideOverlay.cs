@@ -22,7 +22,7 @@ using UnityEngine.UI;
 /// 이미 반영돼 있다. 게이트 질의(<see cref="IsBlockingInput"/> 등)는 남의 Update와 입력 콜백에서
 /// 불리므로 <see cref="EnsureResolved"/>로 그 자리에서 계산한다 - 프레임당 한 번만 돈다.
 /// </summary>
-public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHandler
+public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHandler, ICameraInputTransparent
 {
     private const int DIM_PANEL_COUNT = 4;
     private const int RECT_CORNER_COUNT = 4;
@@ -135,6 +135,10 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
 
     private bool _blocksInput;
     private bool _blocksTargetInteraction;
+
+    // 지금 그리는 컷이 밤 시작을 허용하는지. _blocksInput과 같은 자리에서 갱신한다 -
+    // 눈에 보이는 딤과 게이트가 갈라지면 "어둡지 않은데 막힌다"가 된다.
+    private bool _allowsNightStart;
     private bool _showConfirmButton;
     private bool _visualsActive;
     private Canvas _canvas;
@@ -267,8 +271,21 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
     /// 막는 주체를 안내별로 두지 않고 여기 하나로 모은 이유는 딤과 같다 - 러너마다 걸게 하면
     /// 빠뜨리는 곳이 계속 생긴다(팁 체인과 새끼용 가이드가 실제로 빠져 있었다).
     /// 화면에서 걷히면 곧바로 풀리므로, 부화를 기다리려고 창을 닫은 뒤에는 정상적으로 밤이 온다.
+    ///
+    /// 예외는 <b>밤 버튼을 누르라고 시키는 컷</b>뿐이다(<see cref="GuideRequest.AllowsNightStart"/>).
+    /// 그 컷에서까지 막으면 시킨 대로 눌러도 아무 일이 없다.
     /// </summary>
-    bool IDayEndBlockQuery.CanEndDay() => !IsShowingGuide;
+    bool IDayEndBlockQuery.CanEndDay() => !IsShowingGuide || AllowsNightStart;
+
+    /// <summary>지금 그리는 컷이 밤 시작을 허용하는지. 게이트에서만 본다.</summary>
+    private bool AllowsNightStart
+    {
+        get
+        {
+            EnsureResolved();
+            return _allowsNightStart;
+        }
+    }
 
     /// <summary>
     /// 지금 안내가 가리키고 있는 UI 대상. 아무것도 안 가리키면 null이다.
@@ -546,18 +563,21 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
         {
             case GuideRequestPhase.Draw when _currentProvider != null:
                 _blocksInput = ComputeBlocksInput(request);
+                _allowsNightStart = request.AllowsNightStart;
                 _target = request.Target;
                 _worldTarget = request.WorldTarget;
                 break;
 
             case GuideRequestPhase.KeepLast when _currentProvider != null && _hasDrawnRequest:
                 _blocksInput = ComputeBlocksInput(_drawnRequest);
+                _allowsNightStart = _drawnRequest.AllowsNightStart;
                 _target = _drawnRequest.Target;
                 _worldTarget = _drawnRequest.WorldTarget;
                 break;
 
             default:
                 _blocksInput = false;
+                _allowsNightStart = false;
                 _target = null;
                 _worldTarget = null;
                 break;
@@ -654,6 +674,7 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
     ///
     /// 가리키던 대상이 지금 화면에 없으면 연출만 감춘다 - 계속 기다릴지 걷을지는 제공자가
     /// 자기 Update에서 정하므로(대상 실종·미도착 판정) 여기서 표시권을 건드리지 않는다.
+    /// <see cref="GuideRequestPhase.KeepLast"/>만은 예외다(아래 참고).
     /// </summary>
     private void RefreshDrawn()
     {
@@ -667,7 +688,13 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
                                     _worldTarget.enabled &&
                                     _worldTarget.gameObject.activeInHierarchy;
 
-        bool canShow = !_drawnExpectsTarget || isUiTargetVisible || isWorldTargetVisible;
+        // KeepLast는 "앞 그림을 그대로 붙들어라"는 뜻이다. 그 그림의 대상은 인계를 부른 행동으로
+        // 이미 사라져 있을 수 있는데(패널을 닫아야 끝나는 컷이 그렇다), 대상 실종으로 연출을 거두면
+        // 새 컷이 도착하기까지 한 프레임 딤이 걷혀 화면이 번쩍인다 - 붙들라는 요청과 정반대다.
+        // 구멍만 포기하고 덮개는 유지한다(아래 _blocksInput 분기의 LayoutFullCover).
+        bool holdsLastPicture = _currentPhase == GuideRequestPhase.KeepLast;
+
+        bool canShow = holdsLastPicture || !_drawnExpectsTarget || isUiTargetVisible || isWorldTargetVisible;
 
         if (canShow != _visualsActive)
         {

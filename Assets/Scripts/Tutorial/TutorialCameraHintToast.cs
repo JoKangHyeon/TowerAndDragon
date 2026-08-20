@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// 튜토리얼이 시작되면 카메라를 움직일 수 있다는 것을 토스트로 한 번 알린다.
@@ -20,6 +21,9 @@ public sealed class TutorialCameraHintToast : MonoBehaviour
 
     [Tooltip("문구를 띄울 토스트. 비우면 아무것도 하지 않는다.")]
     [SerializeField] private UI_NotificationToast _toast;
+
+    [Tooltip("화면을 움직이는 액션(Player/CameraMove). 여기서 읽은 키 표기가 문구의 {0}에 들어간다.")]
+    [SerializeField] private InputActionReference _cameraMoveAction;
 
     [Tooltip("씬이 시작되고 이만큼 뒤에 띄운다. 0이면 첫 안내 말풍선이 뜨는 순간과 겹쳐 둘 다 읽히지 않는다.")]
     [Min(0f)]
@@ -48,6 +52,19 @@ public sealed class TutorialCameraHintToast : MonoBehaviour
             ignoreTimeScale: true,
             cancellationToken: this.GetCancellationTokenOnDestroy());
 
-        _toast.ShowFor(_showSeconds, CAMERA_HINT_LOC_KEY);
+        _toast.ShowFor(_showSeconds, CAMERA_HINT_LOC_KEY, ResolveMoveKeys());
+    }
+
+    // 문구에 키 이름을 직접 적어 두면 리바인딩한 순간 거짓말이 되므로 실제 바인딩에서 읽는다.
+    // GetBindingDisplayString이 아니라 InputBindingLabel을 쓰는 이유는 그쪽 주석에 적어 두었다
+    // (요약: 그 함수는 OS 입력기 레이아웃의 글자를 돌려줘 한글 입력기에서 WASD가 ㅈㅁㄴㅇ로 나온다).
+    private string ResolveMoveKeys()
+    {
+        if (!WiringGuard.Require(_cameraMoveAction, nameof(_cameraMoveAction), this))
+        {
+            return string.Empty;
+        }
+
+        return InputBindingLabel.ResolveDirectionKeys(_cameraMoveAction.action);
     }
 }
