@@ -12,17 +12,27 @@ public class TowerPopulation : MonoBehaviour, IPopulationAllocationTarget, ITowe
     private PopulationAllocation _allocation;
     private bool _isInitialized;
 
-    public int AssignedPopulation =>
-        _allocation?.AssignedPopulation ?? 0;
+
 
     public int Capacity =>
         _allocation?.Capacity ?? 0;
 
+    public int SoulPopulation =>
+        _tower != null && _tower.AuraSystem != null
+        ? _tower.AuraSystem.ResolveModifiers(_tower).SoulPopulation
+        : 0;
+
+    public int RealAssignedPopulation =>
+        _allocation?.AssignedPopulation ?? 0;
+
+    public int AssignedPopulation =>
+        Mathf.Min(Capacity, RealAssignedPopulation + SoulPopulation);
+
     public int AvailableCapacity =>
-        _allocation?.AvailableCapacity ?? 0;
+        Mathf.Max(0, Capacity - AssignedPopulation);
 
     public float StaffingRatio =>
-        _allocation?.StaffingRatio ?? 0f;
+        Capacity == 0 ? 0f : Mathf.Clamp01((float)AssignedPopulation / Capacity);
 
     public bool HasAssignedPopulation => AssignedPopulation > 0f;
 

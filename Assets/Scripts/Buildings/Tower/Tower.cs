@@ -40,6 +40,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     public bool IsDead => _health == null || _health.IsDead;
     public TowerAttack Attack => _attack;
     public TowerData Data => _towerData;
+    public TowerAuraSystem AuraSystem => _auraSystem;
     public override IReadOnlyList<ResourceAmount> BuildCost => _towerData != null ? _towerData.BuildCost : base.BuildCost;
     public override int PopulationCapacity => _towerData != null ? _towerData.PopulationCapacity : base.PopulationCapacity;
     
