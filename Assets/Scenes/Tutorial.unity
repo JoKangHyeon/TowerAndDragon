@@ -1112,7 +1112,7 @@ MonoBehaviour:
   _babyDragonBuffSystem: {fileID: 1790075015}
   _terrainPenaltySystem: {fileID: 0}
   _terrainUpkeepSystem: {fileID: 0}
-  _towerUpkeepSystem: {fileID: 0}
+  _towerUpkeepSystem: {fileID: 1263317185}
   _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
   ForecastChanged:
     m_PersistentCalls:
@@ -1454,9 +1454,9 @@ MonoBehaviour:
   _cycleManager: {fileID: 1632594319}
   _rangeIndicator: {fileID: 725960323}
   _buffRangeIndicator: {fileID: 1824245504}
-  _babyDragonBuffSystem: {fileID: 0}
+  _babyDragonBuffSystem: {fileID: 1790075015}
   _penaltyMitigationTerrains: 
-  _warningWindow: {fileID: 0}
+  _warningWindow: {fileID: 1309775794}
   _iceUnlockableTerrain: 2
   _moveHoldDuration: 2
   _dragThreshold: 10
@@ -1791,6 +1791,10 @@ PrefabInstance:
       propertyPath: _conquestManager
       value: 
       objectReference: {fileID: 168384013}
+    - target: {fileID: 2176355967231933069, guid: a5f46e54304c76041916faa81b1dabdc, type: 3}
+      propertyPath: _landmarkManager
+      value: 
+      objectReference: {fileID: 1089675785}
     - target: {fileID: 2176355967231933069, guid: a5f46e54304c76041916faa81b1dabdc, type: 3}
       propertyPath: _resourceManager
       value: 
@@ -3532,8 +3536,8 @@ MonoBehaviour:
   _waveManager: {fileID: 1185758915}
   _gridMap: {fileID: 168384008}
   _castle: {fileID: 168384012}
-  _uiManager: {fileID: 0}
-  _buildingPlacementController: {fileID: 0}
+  _uiManager: {fileID: 1677085709}
+  _buildingPlacementController: {fileID: 668391600}
   SkillUsed:
     m_PersistentCalls:
       m_Calls: []
@@ -5884,7 +5888,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4429832511105182359, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.00045776367
+      value: 0.000030517578
       objectReference: {fileID: 0}
     - target: {fileID: 4439690152447319859, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -9415,6 +9419,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TutorialChapterDebugGUI
   _scenarioController: {fileID: 2129059603}
   _cycleManager: {fileID: 1632594319}
+  _objectiveController: {fileID: 2129059597}
   _isVisible: 0
 --- !u!1001 &1967201577
 PrefabInstance:

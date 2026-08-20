@@ -463,7 +463,9 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     {
         if (_isOpen)
         {
-            Close();
+            // 닫기는 플레이어가 스스로 하는 조작이므로 관문을 지난다(UI_BuildModeWindow와 같은 판정).
+            // 여기만 열어 두면 X·바깥클릭·ESC를 막아 놓고 HUD 버튼으로는 닫히는 구멍이 남는다.
+            CloseFromInput();
         }
         else if (_uiManager != null)
         {
