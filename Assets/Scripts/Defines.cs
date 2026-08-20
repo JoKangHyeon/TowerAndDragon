@@ -10,4 +10,9 @@ public static class Defines
     // 안내가 지금 막고 있다는 사유 문구. 튜토리얼 러너와 새끼용 가이드가 같은 문구를 쓴다 -
     // 플레이어에게는 어느 안내가 막았는지가 아니라 "안내를 따라오면 된다"만 전해지면 된다.
     public const string TUTORIAL_BLOCKED_HINT_LOC_KEY = "tutorial_blocked_hint";
+
+    // 안내가 아직 가르치지 않은 어미용 조작(스킬 해금·속성 변경)을 막았다는 사유 문구.
+    // 스킬트리 상세 패널의 상태 줄과 튜토리얼 토스트가 같은 문구를 쓴다 - 어느 경로로 막혔든
+    // 플레이어가 읽는 이유는 하나여야 한다.
+    public const string DRAGON_TUTORIAL_LOCKED_LOC_KEY = "dragon_state_tutorial_locked";
 }

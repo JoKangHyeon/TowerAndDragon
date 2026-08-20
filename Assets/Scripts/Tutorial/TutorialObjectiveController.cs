@@ -15,7 +15,7 @@ using UnityEngine.Events;
 /// GridMap에 등록되며 같은 이벤트 경로를 지나므로 스냅샷을 넣으면 목표가 시작 즉시 완료돼 버린다.
 /// 대신 이 컴포넌트가 1일차부터 살아 있는 것으로 누락을 막는다.
 /// </summary>
-public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQuery
+public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQuery, IDragonProgressionGateQuery
 {
     // 완료 알림은 쓰지 않는다 - 목록의 체크 표시가 같은 말을 이미 하고 있다.
     // 밤 진입이 막혔을 때만 말을 건다. 막는 주체는 여럿이지만 문구는 여기서 낸다 -
@@ -140,6 +140,8 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     // "구독 Start vs 발화 Start"가 뒤집힐 수 있다.
     private void Awake()
     {
+        _scenarioController = GetComponent<TutorialScenarioController>();
+
         if (_gridMap != null)
         {
             _gridMap.OnBuildingAdded.AddListener(HandleBuildingAdded);
@@ -185,6 +187,10 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         {
             _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleAttributeChanged);
             _dragonTreeManager.NodeUnlocked.AddListener(HandleDragonNodeUnlocked);
+
+            // 상시 막는 쪽은 챕터가 아니라 이쪽이다 - 챕터는 자기 차례에만 살아 있어서
+            // 1·2일차에 미리 해금·변경하는 것을 막을 수 있는 것이 없었다.
+            _dragonTreeManager.AddGateQuery(this);
 
             // 구독 직후 현재 값을 한 번 반영해 둔다 - 이 값이 없으면 구독 후 첫 발화가
             // 새날 갱신인지 실제 변경인지 가릴 수 없다.
@@ -247,6 +253,7 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         {
             _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleAttributeChanged);
             _dragonTreeManager.NodeUnlocked.RemoveListener(HandleDragonNodeUnlocked);
+            _dragonTreeManager.RemoveGateQuery(this);
         }
 
         if (_cycleManager != null)
@@ -257,6 +264,41 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
             _cycleManager.RemoveDayEndBlocker(this);
         }
     }
+
+    /// <summary>
+    /// 어미용 스킬 해금·속성 변경은 안내가 그 단계에 도달하기 전에는 막는다.
+    ///
+    /// <b>막는 쪽이 챕터가 아니라 이 컴포넌트인 이유:</b> 챕터 러너는 자기 차례에만 살아 있어서
+    /// 1·2일차에 용 창을 열어 미리 해버리는 것을 막을 주체가 없었다. 이 컴포넌트는 1일차부터 끝까지
+    /// 켜져 있는 것이 규약이라(클래스 주석) 상시 관문을 걸 수 있다.
+    ///
+    /// 강제 안내가 다 끝나면 더 막지 않는다 - 그 뒤는 자유 조작 구간이고, 여기서 계속 막으면
+    /// 플레이어가 배운 것을 쓸 수 없게 된다.
+    /// </summary>
+    bool IDragonProgressionGateQuery.BlocksDragonProgression() =>
+        _scenarioController != null && !_scenarioController.IsFinished;
+
+    bool IDragonProgressionGateQuery.AllowsDragonSkillUnlock() =>
+        CurrentChapter != null && CurrentChapter.IsRequestingDragonSkillUnlock;
+
+    bool IDragonProgressionGateQuery.AllowsDragonAttributeChange() =>
+        CurrentChapter != null && CurrentChapter.IsRequestingDragonAttributeChange;
+
+    void IDragonProgressionGateQuery.NotifyDragonProgressionBlocked()
+    {
+        if (_toast != null)
+        {
+            _toast.Show(Defines.DRAGON_TUTORIAL_LOCKED_LOC_KEY);
+        }
+    }
+
+    // 챕터 진행 상황은 시나리오 컨트롤러가 안다. 같은 오브젝트에 함께 두는 것이 이 둘의 배치
+    // 규약이라(Tutorial System 프리팹) 인스펙터 배선을 늘리지 않고 Awake에서 한 번 찾는다.
+    // 관문 판정은 노드 상태를 그릴 때마다 불리므로 매번 GetComponent를 돌릴 자리가 아니다.
+    private TutorialScenarioController _scenarioController;
+
+    private TutorialRunner CurrentChapter =>
+        _scenarioController == null ? null : _scenarioController.CurrentRunner;
 
     // 막힌 이유를 말해 주지 않으면 버튼이 고장 난 것으로 보인다.
     //
@@ -415,6 +457,10 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     {
         TryCompleteMatching(TutorialConditionType.ExclusiveModeClosed,
             objective => TutorialTargetMatcher.MatchesMode(mode, objective.CompletionTrigger.TargetMode));
+
+        // 창 안에서 채운 목표 때문에 미뤄 둔 안내가 있으면 지금이 그것을 낼 자리다.
+        // 어느 창인지 가리지 않는다 - 판정이 창이 열려 있는지만 보므로 여기서 한 번 더 좁힐 이유가 없다.
+        TryAnnounceBossPreparation();
     }
 
     // 용 창은 새끼용·어미용이 한 창의 두 탭이라 창이 열렸는지로는 구분되지 않는다 - 탭까지 봐야 한다.
@@ -498,6 +544,10 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     /// 버튼을 눌러도 막히기만 했으므로, 플레이어는 아직 잠겨 있다고 여기고 다시 누르지 않는다.
     /// 챕터 컷이 아니라 알림인 이유는 이 시점이 자유 조작 구간이기 때문이다. 딤을 치면
     /// 정작 하라고 한 일(타워 더 짓기)을 못 한다.
+    ///
+    /// <b>용 창을 닫을 때까지 미룬다.</b> 마지막 목표(스킬 해금)는 그 창 안에서 채워지므로,
+    /// 그 자리에서 띄우면 창에 가려 읽히지 않는다. 창을 닫는 것이 곧 그 안에서 할 일이 끝났다는
+    /// 뜻이니 그때 말을 건다 - <see cref="HandleExclusiveModeClosed"/>가 이것을 다시 부른다.
     /// </summary>
     private void TryAnnounceBossPreparation()
     {
@@ -505,6 +555,11 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
             CurrentDayNumber != _bossPreparationDayNumber ||
             CurrentRun == null ||
             RemainingObjectiveCount > 0)
+        {
+            return;
+        }
+
+        if (_dragonWindow != null && _dragonWindow.IsOpen)
         {
             return;
         }
@@ -520,6 +575,29 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
         if (_toast != null)
         {
             _toast.ShowFor(_bossPreparationShowSeconds, BOSS_PREPARATION_LOC_KEY);
+        }
+    }
+
+    /// <summary>
+    /// [테스트 전용] 아직 끝내지 않은 오늘의 목표 수. 챕터를 건너뛰며 시험할 때 밤 관문과
+    /// 보스 준비 안내가 왜 안 열리는지 눈으로 확인하는 데 쓴다.
+    /// </summary>
+    public int DebugRemainingObjectiveCount => RemainingObjectiveCount;
+
+    /// <summary>
+    /// [테스트 전용] 지금 목록에 보이는 목표를 모두 완료 처리한다.
+    /// 챕터를 건너뛰면 앞 챕터가 가르치는 목표가 채워지지 않아, 목표를 다 채워야 열리는 것
+    /// (밤 진입·보스 준비 안내)을 시험할 수 없다.
+    /// </summary>
+    public void DebugCompleteVisibleObjectives()
+    {
+        // CompleteObjective가 목록을 다시 만들므로 복사본을 돈다.
+        foreach (TutorialObjectiveSO objective in new List<TutorialObjectiveSO>(_visibleObjectives))
+        {
+            if (objective != null)
+            {
+                CompleteObjective(objective);
+            }
         }
     }
 }

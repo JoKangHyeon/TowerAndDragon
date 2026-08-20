@@ -24,6 +24,10 @@ public sealed class TutorialChapterDebugGUI : MonoBehaviour
     [WiringOptional]
     [SerializeField] private CycleManager _cycleManager;
 
+    [Tooltip("남은 목표를 보고 한 번에 채우는 데 쓴다. 비우면 씬에서 찾는다.")]
+    [WiringOptional]
+    [SerializeField] private TutorialObjectiveController _objectiveController;
+
     [Tooltip("켜 두면 씬을 시작할 때부터 패널이 떠 있다. 평소에는 꺼 두고 F9로 연다.")]
     [SerializeField] private bool _isVisible;
 
@@ -34,6 +38,8 @@ public sealed class TutorialChapterDebugGUI : MonoBehaviour
         // 인스펙터를 비워 둬도 쓸 수 있게 한다 - 디버그 도구를 여러 씬에 붙일 때 배선이 번거롭다.
         _scenarioController ??= FindFirstObjectByType<TutorialScenarioController>(FindObjectsInactive.Include);
         _cycleManager ??= FindFirstObjectByType<CycleManager>(FindObjectsInactive.Include);
+        _objectiveController ??=
+            FindFirstObjectByType<TutorialObjectiveController>(FindObjectsInactive.Include);
     }
 
     private void Update()
@@ -81,6 +87,13 @@ public sealed class TutorialChapterDebugGUI : MonoBehaviour
         GUILayout.Label($"Day {day} | index {_scenarioController.DebugCurrentIndex}/{_scenarioController.DebugChapterCount - 1}");
         GUILayout.Label($"Current: {currentName} ({running})");
 
+        if (_objectiveController != null)
+        {
+            // 챕터를 건너뛰면 앞 챕터의 목표가 비어 있어 밤 진입과 보스 준비 안내가 열리지 않는다 -
+            // "안 뜬다"는 제보의 흔한 원인이라 남은 수를 항상 보여준다.
+            GUILayout.Label($"Objectives left today: {_objectiveController.DebugRemainingObjectiveCount}");
+        }
+
         if (_scenarioController.DebugHasPendingChapter)
         {
             // 대기 중이면 아무 챕터도 돌지 않는다 - 안내가 안 뜬다는 제보의 흔한 원인이라 눈에 띄게 적는다.
@@ -99,6 +112,15 @@ public sealed class TutorialChapterDebugGUI : MonoBehaviour
         {
             Debug.Log($"[TutorialChapterDebugGUI] 챕터 건너뛰기: {current.name}", current);
             current.Skip();
+        }
+
+        GUI.enabled = true;
+
+        GUI.enabled = _objectiveController != null;
+        if (GUILayout.Button("Complete today's objectives"))
+        {
+            Debug.Log("[TutorialChapterDebugGUI] 오늘 목록의 목표를 모두 완료 처리합니다.", this);
+            _objectiveController.DebugCompleteVisibleObjectives();
         }
 
         GUI.enabled = true;

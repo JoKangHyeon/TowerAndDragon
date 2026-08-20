@@ -17,6 +17,11 @@ public static class DragonLocKeys
     public const string STATE_INSUFFICIENT_RESOURCES = "dragon_state_insufficient_resources";
     public const string STATE_AVAILABLE = "dragon_state_available";
 
+    // 안내가 아직 그 단계를 가르치지 않았다. 미리 해금해 버리면 그 단계의 완료 조건이 영영 오지 않아
+    // 거기서 진행이 막히므로(실제로 그렇게 갇혔다), 열 수 없다는 것을 이 문구로 알린다.
+    // 토스트도 같은 문구를 쓰므로 키 자체는 Defines에 둔다(CLAUDE.md 커밋규칙 §3.2).
+    public const string STATE_TUTORIAL_LOCKED = Defines.DRAGON_TUTORIAL_LOCKED_LOC_KEY;
+
     public static string ResolveStateLocKey(ProgressionNodeState state)
     {
         return state switch
@@ -27,6 +32,7 @@ public static class DragonLocKeys
             ProgressionNodeState.GateLocked => STATE_GATE_LOCKED,
             ProgressionNodeState.InsufficientResources => STATE_INSUFFICIENT_RESOURCES,
             ProgressionNodeState.Available => STATE_AVAILABLE,
+            ProgressionNodeState.TutorialLocked => STATE_TUTORIAL_LOCKED,
             _ => STATE_INVALID,
         };
     }

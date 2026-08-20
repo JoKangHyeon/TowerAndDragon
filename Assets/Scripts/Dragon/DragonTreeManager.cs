@@ -32,7 +32,94 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
     [SerializeField] private DragonSkillTreeData _tree;
     [SerializeField] private UnityEvent<DragonType> _activeAttributeChanged = new();
 
+    // 안내가 어미용 진행을 막는 동안 등록된다. 비어 있는 것이 평소 상태라 본게임은 이 관문을
+    // 지나지 않는다 - 튜토리얼 씬에만 있는 컴포넌트가 등록하기 때문이다.
+    private readonly List<IDragonProgressionGateQuery> _gateQueries = new();
+
     protected override ProgressionTreeData TreeData => _tree;
+
+    /// <summary>어미용 진행 관문을 건다. 같은 대상을 두 번 넣어도 한 번만 등록된다.</summary>
+    public void AddGateQuery(IDragonProgressionGateQuery query)
+    {
+        if (query != null && !_gateQueries.Contains(query))
+        {
+            _gateQueries.Add(query);
+        }
+    }
+
+    /// <summary>등록을 뗀다. 자기가 넣은 것만 빼므로 남의 관문은 건드리지 않는다.</summary>
+    public void RemoveGateQuery(IDragonProgressionGateQuery query)
+    {
+        _gateQueries.Remove(query);
+    }
+
+    /// <summary>지금 스킬 노드를 새로 열 수 있는지. 표시(회색 처리)와 실제 해금이 같은 판정을 쓴다.</summary>
+    public bool CanUnlockSkillNow => !IsGateClosed(isSkillUnlock: true);
+
+    /// <summary>지금 어미용 속성을 바꿀 수 있는지. 속성 변경은 이 매니저를 지나지 않으므로 호출부가 직접 묻는다.</summary>
+    public bool CanChangeAttributeNow => !IsGateClosed(isSkillUnlock: false);
+
+    /// <summary>
+    /// 막힌 시도가 실제로 거절된 순간, 막은 쪽에 사유를 알리게 한다.
+    /// 판정(<see cref="CanUnlockSkillNow"/> 등)은 UI가 매 프레임 물어보므로 그 자리에서 알리면
+    /// 같은 문구가 프레임마다 다시 뜬다 - 알림은 시도 경로에서만 부른다.
+    /// </summary>
+    public void NotifyProgressionBlocked()
+    {
+        foreach (IDragonProgressionGateQuery query in _gateQueries)
+        {
+            query?.NotifyDragonProgressionBlocked();
+        }
+    }
+
+    /// <summary>
+    /// 안내가 막고 있으면 노드를 열 수 없는 상태로 만든다. 게이트와 자원 사이에서 판정하므로
+    /// 밤·선행 조건 같은 더 근본적인 사유가 먼저 표시되고, 자원 부족보다는 먼저 걸린다.
+    ///
+    /// 여기에 두는 이유는 <see cref="ProgressionManagerBase.GetNodeState"/>가 TryUnlock의 유일한
+    /// 판정 경로여서다 - UI가 어느 버튼으로 부르든, 디버그 도구로 부르든 같이 막힌다.
+    /// </summary>
+    protected override ProgressionNodeState CheckExtraCost(ProgressionNodeData node) =>
+        CanUnlockSkillNow ? ProgressionNodeState.Available : ProgressionNodeState.TutorialLocked;
+
+    // 막는 쪽이 하나라도 있으면 막되, 예외를 말하는 쪽이 하나라도 있으면 통과시킨다
+    // (UIManager.CanUseShortcut과 같은 형태).
+    private bool IsGateClosed(bool isSkillUnlock)
+    {
+        bool isBlocked = false;
+        foreach (IDragonProgressionGateQuery query in _gateQueries)
+        {
+            if (query != null && query.BlocksDragonProgression())
+            {
+                isBlocked = true;
+                break;
+            }
+        }
+
+        if (!isBlocked)
+        {
+            return false;
+        }
+
+        foreach (IDragonProgressionGateQuery query in _gateQueries)
+        {
+            if (query == null)
+            {
+                continue;
+            }
+
+            bool allows = isSkillUnlock
+                ? query.AllowsDragonSkillUnlock()
+                : query.AllowsDragonAttributeChange();
+
+            if (allows)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     public DragonSkillTreeData Tree => _tree;
     public UnityEvent<DragonType> ActiveAttributeChanged => _activeAttributeChanged;

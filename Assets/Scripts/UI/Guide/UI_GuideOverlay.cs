@@ -674,6 +674,7 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
     ///
     /// 가리키던 대상이 지금 화면에 없으면 연출만 감춘다 - 계속 기다릴지 걷을지는 제공자가
     /// 자기 Update에서 정하므로(대상 실종·미도착 판정) 여기서 표시권을 건드리지 않는다.
+    /// <see cref="GuideRequestPhase.KeepLast"/>만은 예외다(아래 참고).
     /// </summary>
     private void RefreshDrawn()
     {
@@ -687,7 +688,13 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
                                     _worldTarget.enabled &&
                                     _worldTarget.gameObject.activeInHierarchy;
 
-        bool canShow = !_drawnExpectsTarget || isUiTargetVisible || isWorldTargetVisible;
+        // KeepLast는 "앞 그림을 그대로 붙들어라"는 뜻이다. 그 그림의 대상은 인계를 부른 행동으로
+        // 이미 사라져 있을 수 있는데(패널을 닫아야 끝나는 컷이 그렇다), 대상 실종으로 연출을 거두면
+        // 새 컷이 도착하기까지 한 프레임 딤이 걷혀 화면이 번쩍인다 - 붙들라는 요청과 정반대다.
+        // 구멍만 포기하고 덮개는 유지한다(아래 _blocksInput 분기의 LayoutFullCover).
+        bool holdsLastPicture = _currentPhase == GuideRequestPhase.KeepLast;
+
+        bool canShow = holdsLastPicture || !_drawnExpectsTarget || isUiTargetVisible || isWorldTargetVisible;
 
         if (canShow != _visualsActive)
         {

@@ -1112,7 +1112,7 @@ MonoBehaviour:
   _babyDragonBuffSystem: {fileID: 1790075015}
   _terrainPenaltySystem: {fileID: 0}
   _terrainUpkeepSystem: {fileID: 0}
-  _towerUpkeepSystem: {fileID: 1891719887}
+  _towerUpkeepSystem: {fileID: 0}
   _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
   ForecastChanged:
     m_PersistentCalls:
@@ -3069,6 +3069,222 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 8033435920111390207, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
   m_PrefabInstance: {fileID: 1677085708}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1263317183
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1263317192}
+  - component: {fileID: 1263317191}
+  - component: {fileID: 1263317190}
+  - component: {fileID: 1263317189}
+  - component: {fileID: 1263317188}
+  - component: {fileID: 1263317187}
+  - component: {fileID: 1263317186}
+  - component: {fileID: 1263317185}
+  - component: {fileID: 1263317184}
+  m_Layer: 0
+  m_Name: PopulationSystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1263317184
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1263317183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f6c466e4ce2e604aaad063812200a6a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VillagerDispatchSystem
+  _gridMap: {fileID: 168384008}
+  _populationManager: {fileID: 1632594324}
+  _conquestManager: {fileID: 168384013}
+  _cycleManager: {fileID: 1632594319}
+  _landmarkManager: {fileID: 1089675785}
+  _appearancePools:
+  - Appearance: 1
+    Prefabs:
+    - {fileID: 8530332446029054838, guid: 5b129bd1788f3d443901e6071dabd726, type: 3}
+    - {fileID: 8417502329417195272, guid: eaeeca9d59739c44badb9d33f7e41ac8, type: 3}
+    - {fileID: 1151122358958166380, guid: 3bf62a8f267d04e4b9449937ab13794a, type: 3}
+    - {fileID: 2623045603609409182, guid: df9c4cc4822477c498f2239a7c2f5798, type: 3}
+    - {fileID: 8842397632679128471, guid: b79f49eb40dec4a4fa2be291af7d23cd, type: 3}
+  - Appearance: 0
+    Prefabs:
+    - {fileID: 7598504497918407867, guid: 4d62f20c89780d344bed3f81e8ce2c80, type: 3}
+    - {fileID: 2416865664836822023, guid: 7b132273a865b9341ac166c78f4ff7ee, type: 3}
+    - {fileID: 6494992667666638688, guid: 1d4ba34b8f375fb418b362e4f25fbbab, type: 3}
+    - {fileID: 6461166466151819320, guid: 4b0773d855cc50c44bc1f16de74424cf, type: 3}
+    - {fileID: 5522655604432876151, guid: ccc494bbf8fc3744a89e4c9056a56ffa, type: 3}
+  - Appearance: 2
+    Prefabs:
+    - {fileID: 7598504497918407867, guid: 4d62f20c89780d344bed3f81e8ce2c80, type: 3}
+    - {fileID: 2416865664836822023, guid: 7b132273a865b9341ac166c78f4ff7ee, type: 3}
+    - {fileID: 6494992667666638688, guid: 1d4ba34b8f375fb418b362e4f25fbbab, type: 3}
+    - {fileID: 6461166466151819320, guid: 4b0773d855cc50c44bc1f16de74424cf, type: 3}
+    - {fileID: 5522655604432876151, guid: ccc494bbf8fc3744a89e4c9056a56ffa, type: 3}
+  _villagerRoot: {fileID: 0}
+  _moveSpeed: 2.5
+  _cheerSeconds: 0.1
+  _fadeOutSeconds: 0.2
+  _attackIntervalSeconds: 1
+  _conquestCompletionEffectPrefab: {fileID: 753293567017306486, guid: 1937130aef1e12a43bbad61ab4da7177, type: 3}
+  _conquestCompletionIdleSeconds: 1
+  _conquestCompletionEffectLifetimeSeconds: 3
+  _towerEjectionEffectPrefab: {fileID: 2395260373604045706, guid: 008c56ead7cc31b4ea3c0d480179f4a6, type: 3}
+  _ejectDistance: 1
+  _ejectHeight: 0.9
+  _ejectSeconds: 0.6
+  _ejectLingerSeconds: 1
+  _spreadRadius: 0.45
+  _maxActiveVillagers: 60
+--- !u!114 &1263317185
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1263317183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e7ada73fd9d5434a9d626e66be12533, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerUpkeepSystem
+  _gridMap: {fileID: 168384008}
+  _resourceManager: {fileID: 1632594327}
+  _towerUpkeepData: {fileID: 11400000, guid: ce2ee1c1994dd0748b094b4582885829, type: 2}
+--- !u!114 &1263317186
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1263317183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e39fb8e37294aea4a94d8fc226178f4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TerrainUpkeepSystem
+  _gridMap: {fileID: 168384008}
+  _resourceManager: {fileID: 1632594327}
+  _terrainPenaltySystem: {fileID: 0}
+--- !u!114 &1263317187
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1263317183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6be23e9eda0fae419e51a48e6705989, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DailySettlementManager
+  _cycleManager: {fileID: 1632594319}
+  _populationUpkeepSystem: {fileID: 1263317188}
+  _terrainUpkeepSystem: {fileID: 1263317186}
+  _towerUpkeepSystem: {fileID: 1263317185}
+  SettlementCompleted:
+    m_PersistentCalls:
+      m_Calls: []
+  TerrainSettlementCompleted:
+    m_PersistentCalls:
+      m_Calls: []
+  TowerSettlementCompleted:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &1263317188
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1263317183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a1bd16229944dbaaac27589ba9fe73b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PopulationUpkeepSystem
+  _resourceManager: {fileID: 1632594327}
+  _populationManager: {fileID: 1632594324}
+  _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
+--- !u!114 &1263317189
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1263317183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 998adda9adc8025448d58cea699a6b84, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ConquestPopulationCoordinator
+  _conquestManager: {fileID: 168384013}
+  _populationManager: {fileID: 1632594324}
+--- !u!114 &1263317190
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1263317183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0c52bfe7d2a9b048b5ca74e131e0dfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FactoryPopulationCoordinator
+  _gridMap: {fileID: 168384008}
+  _populationManager: {fileID: 1632594324}
+--- !u!114 &1263317191
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1263317183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 893007499777b408d98148c21346ce01, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerPopulationCoordinator
+  _gridMap: {fileID: 168384008}
+  _populationManager: {fileID: 1632594324}
+--- !u!4 &1263317192
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1263317183}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1309775794 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8378660529608903312, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+  m_PrefabInstance: {fileID: 1677085708}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7b8234ec3124a14a9a0f2e0d0003b0a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_WarningWindow
 --- !u!224 &1482470677 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5234547375697427557, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -5668,7 +5884,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4429832511105182359, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.0007324219
+      value: 0.00045776367
       objectReference: {fileID: 0}
     - target: {fileID: 4439690152447319859, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -6219,9 +6435,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 168384013}
     - target: {fileID: 5354572978010979659, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _landmarkManager
+      value: 
+      objectReference: {fileID: 1089675785}
+    - target: {fileID: 5354572978010979659, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _resourceManager
       value: 
       objectReference: {fileID: 1632594327}
+    - target: {fileID: 5354572978010979659, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _villagerDispatch
+      value: 
+      objectReference: {fileID: 1263317184}
     - target: {fileID: 5354572978010979659, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _populationManager
       value: 
@@ -7138,6 +7362,10 @@ PrefabInstance:
       propertyPath: _resourceManager
       value: 
       objectReference: {fileID: 1632594327}
+    - target: {fileID: 7546850575924265391, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _villagerDispatch
+      value: 
+      objectReference: {fileID: 1263317184}
     - target: {fileID: 7546850575924265391, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _populationManager
       value: 
@@ -9109,140 +9337,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 6998406902110701725, guid: 8ebe7f3a5c36d1e4a935c509fa86d6b1, type: 3}
   m_PrefabInstance: {fileID: 1870191531}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1891719880
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1891719884}
-  - component: {fileID: 1891719883}
-  - component: {fileID: 1891719882}
-  - component: {fileID: 1891719881}
-  - component: {fileID: 1891719886}
-  - component: {fileID: 1891719885}
-  - component: {fileID: 1891719887}
-  m_Layer: 0
-  m_Name: PopulationSystem
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1891719881
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1891719880}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 998adda9adc8025448d58cea699a6b84, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ConquestPopulationCoordinator
-  _conquestManager: {fileID: 168384013}
-  _populationManager: {fileID: 1632594324}
---- !u!114 &1891719882
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1891719880}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d0c52bfe7d2a9b048b5ca74e131e0dfa, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FactoryPopulationCoordinator
-  _gridMap: {fileID: 168384008}
-  _populationManager: {fileID: 1632594324}
---- !u!114 &1891719883
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1891719880}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 893007499777b408d98148c21346ce01, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TowerPopulationCoordinator
-  _gridMap: {fileID: 168384008}
-  _populationManager: {fileID: 1632594324}
---- !u!4 &1891719884
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1891719880}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1891719885
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1891719880}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b6be23e9eda0fae419e51a48e6705989, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DailySettlementManager
-  _cycleManager: {fileID: 1632594319}
-  _populationUpkeepSystem: {fileID: 1891719886}
-  _terrainUpkeepSystem: {fileID: 0}
-  _towerUpkeepSystem: {fileID: 1891719887}
-  SettlementCompleted:
-    m_PersistentCalls:
-      m_Calls: []
-  TerrainSettlementCompleted:
-    m_PersistentCalls:
-      m_Calls: []
-  TowerSettlementCompleted:
-    m_PersistentCalls:
-      m_Calls: []
---- !u!114 &1891719886
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1891719880}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6a1bd16229944dbaaac27589ba9fe73b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PopulationUpkeepSystem
-  _resourceManager: {fileID: 1632594327}
-  _populationManager: {fileID: 1632594324}
-  _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
---- !u!114 &1891719887
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1891719880}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3e7ada73fd9d5434a9d626e66be12533, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TowerUpkeepSystem
-  _gridMap: {fileID: 168384008}
-  _resourceManager: {fileID: 1632594327}
-  _towerUpkeepData: {fileID: 11400000, guid: ce2ee1c1994dd0748b094b4582885829, type: 2}
 --- !u!1 &1921787126
 GameObject:
   m_ObjectHideFlags: 0
@@ -9813,9 +9907,9 @@ MonoBehaviour:
   _cycleManager: {fileID: 1632594319}
   _uiManager: {fileID: 1677085709}
   _countOverlay: {fileID: 2063666047}
-  _landmarkManager: {fileID: 0}
-  _warningWindow: {fileID: 0}
-  _villagerDispatch: {fileID: 0}
+  _landmarkManager: {fileID: 1089675785}
+  _warningWindow: {fileID: 1309775794}
+  _villagerDispatch: {fileID: 1263317184}
   _assignAction: {fileID: 1120369429361536294, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _bulkModifierAction: {fileID: 6607914833914992100, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
@@ -10131,6 +10225,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1677085713}
     m_Modifications:
+    - target: {fileID: 181548545155947808, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -160
+      objectReference: {fileID: 0}
     - target: {fileID: 578824439335777630, guid: faf8df7c3f34f44779c61da9c580b81f, type: 3}
       propertyPath: _controller
       value: 
@@ -11787,7 +11885,7 @@ SceneRoots:
   - {fileID: 950528242}
   - {fileID: 583589065}
   - {fileID: 1792560713}
-  - {fileID: 1891719884}
+  - {fileID: 1263317192}
   - {fileID: 2107440439}
   - {fileID: 1847910294}
   - {fileID: 1632594330}

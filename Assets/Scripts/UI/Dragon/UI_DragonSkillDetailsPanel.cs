@@ -246,9 +246,13 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
 
     // 업그레이드 가능(Available)일 때만 버튼을 켜고, 아니면(자원 부족 등) 이미지·텍스트를 회색으로 바꾼다.
     // 자원 부족은 GetNodeState가 InsufficientResources를 돌려주므로 Available이 아니게 되어 여기서 걸러진다.
+    //
+    // 안내가 막은 경우(TutorialLocked)만은 버튼을 살려 둔다 - 회색으로 죽여 두면 눌러도 아무 일이
+    // 없어 고장으로 읽힌다. 눌렀을 때 사유를 말해 주는 쪽이 낫다(HandleUpgradeClicked).
     private void UpdateUpgradeButtonState(ProgressionNodeState state)
     {
-        bool canUpgrade = state == ProgressionNodeState.Available;
+        bool canUpgrade = state == ProgressionNodeState.Available ||
+                          state == ProgressionNodeState.TutorialLocked;
 
         if (_upgradeButton != null)
         {
@@ -310,7 +314,14 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
             return;
         }
 
-        _dragonTreeManager.TryUnlock(_selectedNode, out ProgressionFailureReason _);
+        // 안내가 막은 것만 사유를 알린다 - 나머지 실패(자원 부족 등)는 상태 줄과 비용 색이 이미 말하고 있고,
+        // 그 상태에서는 버튼이 회색이라 여기까지 오지도 않는다.
+        if (!_dragonTreeManager.TryUnlock(_selectedNode, out ProgressionFailureReason reason) &&
+            reason == ProgressionFailureReason.TutorialLocked)
+        {
+            _dragonTreeManager.NotifyProgressionBlocked();
+        }
+
         Refresh();
         _onChanged?.Invoke();
     }

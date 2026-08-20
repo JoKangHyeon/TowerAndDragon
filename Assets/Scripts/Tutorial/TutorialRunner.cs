@@ -380,6 +380,13 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             return true;
         }
 
+        // 팁 체인은 말풍선이 실제로 떠 있는 동안만 막는다(CanOpen과 같은 판정). 화면에서 걷힌 뒤까지
+        // 닫기를 막으면, CanOpen이 열어 준 창을 열어 놓고 X·ESC·토글 어느 것으로도 닫을 수 없게 된다.
+        if (!_holdsGates && _overlay != null && !_overlay.IsShowingFor(this))
+        {
+            return true;
+        }
+
         // 스스로 더 지어야 하는 단계에서는 열기를 허용한 창의 닫기도 함께 허용한다 -
         // 앞 단계가 "건설 모드 버튼을 다시 눌러 닫으세요"라고 가르쳐 놓고 여기서 그 버튼을 거절하면
         // 같은 버튼이 상황에 따라 다르게 동작하는 것으로 읽힌다.
@@ -572,6 +579,17 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
     private bool IsWaitingForAction =>
         _isRunning && _activeStep != null && _activeStep.Kind == TutorialStepKind.WaitForAction;
+
+    /// <summary>지금 단계가 어미용 스킬 해금을 시키고 있는지. 그 단계만 관문의 예외가 된다.</summary>
+    public bool IsRequestingDragonSkillUnlock =>
+        IsWaitingForCondition(TutorialConditionType.DragonSkillNodeUnlocked);
+
+    /// <summary>지금 단계가 어미용 속성 변경을 시키고 있는지. 그 단계만 관문의 예외가 된다.</summary>
+    public bool IsRequestingDragonAttributeChange =>
+        IsWaitingForCondition(TutorialConditionType.MotherDragonAttributeChanged);
+
+    private bool IsWaitingForCondition(TutorialConditionType condition) =>
+        _isRunning && _activeStep != null && _activeStep.Condition == condition;
 
     private void OnDisable()
     {

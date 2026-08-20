@@ -277,6 +277,14 @@ public class UI_MainCastleWindow : MonoBehaviour
             return;
         }
 
+        // 안내가 아직 속성 변경을 가르치지 않았다. 용 창의 변경 버튼과 같은 판정을 써야
+        // 같은 조작이 경로에 따라 갈리지 않는다.
+        if (_dragonTreeManager != null && !_dragonTreeManager.CanChangeAttributeNow)
+        {
+            _dragonTreeManager.NotifyProgressionBlocked();
+            return;
+        }
+
         bool changed = dragon.TryChangeType(_currentSelectedType);
 
         // DragonTreeManager는 이 알림 없이는 속성 변경을 감지할 수 없다(Dragon.OnDragonTypeChanged가
