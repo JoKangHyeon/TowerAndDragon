@@ -1,4 +1,5 @@
 using System;
+using Coffee.UIExtensions;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -46,6 +47,11 @@ public class UI_DragonSkillNode : MonoBehaviour
     // 링이 흰색에서 속성 색으로 돌아오며 한 번 번쩍인다.
     private const float RING_FLASH_DURATION = 0.35f;
 
+    // 파티클을 다 뿌리고 오브젝트를 되돌리기까지의 시간. 프리팹의 파티클 세 개 중 가장 긴 것이
+    // 길이 0.5초 + 수명 0.45초라 1초면 덮는다. 파티클을 손보면 이 값도 같이 늘려야 한다 -
+    // 짧으면 재생 중에 꺼져 파티클이 뚝 끊긴다.
+    private const float UNLOCK_PARTICLE_LIFETIME = 1f;
+
     [Header("Visual Parts")]
     [FormerlySerializedAs("_background")]
     [Tooltip("바깥 테두리. 어떤 상태에서도 속성 색을 유지한다.")]
@@ -60,6 +66,10 @@ public class UI_DragonSkillNode : MonoBehaviour
     [Tooltip("아직 해금하지 않은 노드에 켜지는 자물쇠. 해금(Completed)하면 연출과 함께 꺼진다. " +
         "크기는 노드 지름에 비례해 런타임에 정하므로 프리팹 값은 쓰이지 않는다.")]
     [SerializeField] private Image _lock;
+
+    [Tooltip("해금 순간에 뿌리는 파티클(UIParticle). 자식 파티클까지 함께 재생하므로 루트만 꽂으면 된다. " +
+        "평소에는 오브젝트를 꺼 둔다 - 켜 두면 노드 70개가 전부 UIParticle 갱신에 참여한다.")]
+    [SerializeField] private UIParticle _unlockParticle;
 
     [SerializeField] private TextMeshProUGUI _label;
     [SerializeField] private TextMeshProUGUI _badge;
@@ -207,7 +217,7 @@ public class UI_DragonSkillNode : MonoBehaviour
 
         if (_lock != null)
         {
-            ResetEffectState(lockVisible: true);
+            ResetLockVisual(lockVisible: true);
 
             sequence.Insert(0f, _lock.rectTransform.DOPunchRotation(
                 LOCK_SHAKE_PUNCH, LOCK_SHAKE_DURATION, LOCK_SHAKE_VIBRATO, LOCK_SHAKE_ELASTICITY));
@@ -220,9 +230,9 @@ public class UI_DragonSkillNode : MonoBehaviour
             sequence.Insert(openTime, _lock.DOFade(0f, LOCK_BURST_DURATION).SetEase(Ease.InQuad));
 
             // 스케일·알파·회전을 되돌려 두지 않으면 세이브를 다시 불러 같은 뷰를 재사용할 때
-            // 자물쇠가 투명하고 기울어진 채로 켜진다.
+            // 자물쇠가 투명하고 기울어진 채로 켜진다. 파티클은 아직 뿌리는 중이라 건드리지 않는다.
             sequence.InsertCallback(openTime + LOCK_BURST_DURATION,
-                () => ResetEffectState(lockVisible: false));
+                () => ResetLockVisual(lockVisible: false));
         }
 
         nodeTransform.localScale = Vector3.one;
@@ -247,11 +257,44 @@ public class UI_DragonSkillNode : MonoBehaviour
                 .SetEase(Ease.OutQuad));
         }
 
+        if (_unlockParticle != null)
+        {
+            sequence.InsertCallback(openTime, PlayUnlockParticle);
+            sequence.InsertCallback(openTime + UNLOCK_PARTICLE_LIFETIME, StopUnlockParticle);
+        }
+
         _unlockTween = sequence;
     }
 
-    // 연출이 건드리는 모든 값(노드 스케일, 자물쇠 스케일·회전·알파·표시)을 기본값으로 되돌린다.
+    // UIParticle은 오브젝트가 켜져 있어야 렌더링하므로, 재생 직전에 켜고 끝나면 다시 끈다.
+    private void PlayUnlockParticle()
+    {
+        _unlockParticle.gameObject.SetActive(true);
+        _unlockParticle.Play();
+    }
+
+    private void StopUnlockParticle()
+    {
+        _unlockParticle.Stop();
+        _unlockParticle.gameObject.SetActive(false);
+    }
+
+    // 연출이 건드리는 모든 값을 기본값으로 되돌린다. 시퀀스 중간이 아니라 "연출이 돌고 있지
+    // 않을 때"만 부르는 쪽이다 - 파티클까지 정리하므로 재생 중에 부르면 파티클이 잘린다.
     private void ResetEffectState(bool lockVisible)
+    {
+        ResetLockVisual(lockVisible);
+
+        // 연출이 중간에 끊겨 파티클이 켜진 채 남는 것을 막는다.
+        if (_unlockParticle != null && _unlockParticle.gameObject.activeSelf)
+        {
+            StopUnlockParticle();
+        }
+    }
+
+    // 노드 스케일과 자물쇠(스케일·회전·알파·표시)만 되돌린다. 자물쇠가 터진 직후에도 부르므로
+    // 파티클은 건드리지 않는다 - 파티클은 아직 뿌리는 중이다.
+    private void ResetLockVisual(bool lockVisible)
     {
         transform.localScale = Vector3.one;
 
