@@ -142,6 +142,14 @@ public class Castle : Building, IAttackTarget
         _health.TakeDamage(damage.Amount);
     }
 
+    public void Heal(float amount)
+    {
+        if (_health != null)
+        {
+            _health.Heal(amount);
+        }
+    }
+
     /// <summary>세이브 복원 전용. Start의 Initialize가 만피로 세팅한 체력을 저장값으로 되돌린다.</summary>
     public void RestoreHealth(float currentHealth)
     {

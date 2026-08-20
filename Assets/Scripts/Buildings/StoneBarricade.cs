@@ -57,6 +57,14 @@ public class StoneBarricade : Building, IMonsterTarget
         }
     }
 
+    public void Heal(float amount)
+    {
+        if (_health != null)
+        {
+            _health.Heal(amount);
+        }
+    }
+
     private void HandleDie()
     {
         GridMap gridMap = Object.FindFirstObjectByType<GridMap>();

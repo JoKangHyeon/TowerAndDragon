@@ -58,6 +58,13 @@ public sealed class TowerStatMultiplierCoordinator : MonoBehaviour
             tower.Attack.SetHitStatusQuery(null);
             tower.Attack.SetAuraSystem(null);
         }
+
+        var healer = tower.GetComponent<TowerAllyHealer>();
+        if (healer != null)
+        {
+            healer.SetStatMultiplierQuery(null);
+            healer.SetAuraSystem(null);
+        }
     }
 
     private void InjectQueries(Building building)
@@ -77,5 +84,12 @@ public sealed class TowerStatMultiplierCoordinator : MonoBehaviour
         tower.Attack.SetStatMultiplierQuery(_statComposite);
         tower.Attack.SetHitStatusQuery(_dragonTreeManager);
         tower.Attack.SetAuraSystem(_towerAuraSystem);
+
+        var healer = tower.GetComponent<TowerAllyHealer>();
+        if (healer != null)
+        {
+            healer.SetStatMultiplierQuery(_statComposite);
+            healer.SetAuraSystem(_towerAuraSystem);
+        }
     }
 }
