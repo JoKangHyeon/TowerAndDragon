@@ -170,6 +170,29 @@ public class CycleManager : MonoBehaviour
     /// </summary>
     public bool IsDayEndConfirmBlocked => !CanShowDayEndConfirm();
 
+    // 접는 동안 _dayEndBlockers가 바뀐다 - 끝난 챕터가 빠지고 다음 챕터가 그 자리에서 들어온다.
+    // 그대로 foreach를 돌면 컬렉션이 수정돼 터지므로 스냅샷을 두고 돈다(버퍼는 재사용한다).
+    private readonly List<IDayEndBlockQuery> _relaxBuffer = new();
+
+    private bool TryRelaxDayEndBlockers()
+    {
+        _relaxBuffer.Clear();
+        _relaxBuffer.AddRange(_dayEndBlockers);
+
+        bool hasRelaxed = false;
+
+        foreach (IDayEndBlockQuery blocker in _relaxBuffer)
+        {
+            if (blocker is IDayEndBlockRelaxQuery relaxable && relaxable.TryRelaxDayEndBlock())
+            {
+                hasRelaxed = true;
+            }
+        }
+
+        _relaxBuffer.Clear();
+        return hasRelaxed;
+    }
+
     private bool CanShowDayEndConfirm()
     {
         foreach (IDayEndBlockQuery blocker in _dayEndBlockers)
@@ -202,9 +225,14 @@ public class CycleManager : MonoBehaviour
         // 밤 시작은 되돌릴 수 없으므로 버튼이 아니라 이 관문에서 막는다 - 다른 진입 경로가 생겨도 함께 막힌다.
         if (!ignoresBlockers && !CanEndDay())
         {
-            // 왜 안 눌리는지 알려주지 않으면 버튼이 고장 난 것으로 보인다.
-            DayEndBlocked.Invoke();
-            return;
+            // 접을 수 있는 관문은 사유를 띄우기 전에 접어 본다(IDayEndBlockRelaxQuery 참고).
+            // 접은 자리에 다른 관문이 곧바로 들어설 수 있으므로 반드시 다시 확인한다.
+            if (!TryRelaxDayEndBlockers() || !CanEndDay())
+            {
+                // 왜 안 눌리는지 알려주지 않으면 버튼이 고장 난 것으로 보인다.
+                DayEndBlocked.Invoke();
+                return;
+            }
         }
 
         SafeInvoke(OnDayEnd, _gameManager.CurrentRun.CurrentCycle);

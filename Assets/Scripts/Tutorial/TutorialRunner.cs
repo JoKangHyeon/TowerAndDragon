@@ -17,7 +17,8 @@ using UnityEngine.InputSystem;
 /// 다른 안내에 화면을 넘기는 컷은 "이번 프레임에 낼 요청이 없다"로 자연스럽게 표현된다.
 /// </summary>
 public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDayEndBlockQuery,
-    IHudControlBlockQuery, IBuildModeInteractionQuery, IShortcutBlockQuery, IGuideRequestProvider
+    IDayEndBlockRelaxQuery, IHudControlBlockQuery, IBuildModeInteractionQuery, IShortcutBlockQuery,
+    IGuideRequestProvider
 {
     private const float DEFAULT_HAND_OVER_DELAY = 1.5f;
 
@@ -173,6 +174,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     // 화면이 영영 앞 그림에 멈추므로 래치로 끊는다.
     private bool _hasResolvedBegin;
 
+    // 읽을 틈을 접으라는 신호. 기다리는 쪽(HandOverAsync)이 매 프레임 보고 빠져나간다.
+    private bool _skipsHandOverDelay;
+
     // 안내가 지나간 창만 열 수 있다. 지금 단계의 것만 허용하면 플레이어가 그 창을 닫았을 때 다시 열 수 없어 갇힌다.
     private readonly HashSet<TutorialExclusiveModeKind> _unlockedModes = new();
 
@@ -295,9 +299,31 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     /// 열리지 않았으므로 챕터와 챕터 사이마다 밤으로 새어 나가는 구멍이 생긴다 -
     /// 실제로 2일차 점령 안내를 건너뛰고 밤이 시작돼 튜토리얼이 꼬였다.
     /// </summary>
+    /// <remarks>
+    /// <b>시작 여부를 정하기 전(<see cref="_hasResolvedBegin"/>)에도 막는다.</b> 챕터를 켜면
+    /// OnEnable이 관문을 걸지만 _isRunning은 BeginAsync가 한 프레임 뒤에야 세운다. 그 한 프레임 동안
+    /// 이 판정이 "돌지 않는 중"으로 읽혀 관문이 걸린 채로 열려 있었다.
+    /// </remarks>
     bool IDayEndBlockQuery.CanEndDay()
     {
-        return (!_isRunning && !_isHandingOver) || IsWaitingForNightStart;
+        return (!_isRunning && !_isHandingOver && _hasResolvedBegin) || IsWaitingForNightStart;
+    }
+
+    /// <summary>
+    /// 읽을 틈을 접고 곧바로 다음 챕터에 넘긴다. 밤 버튼을 눌렀다는 것은 마지막 안내를 다 읽었다는
+    /// 답이므로, 그 틈 하나 때문에 막힌 것이라면 사유를 띄우는 대신 여기서 푼다.
+    /// 넘긴 자리에서 다음 챕터가 곧바로 관문을 다시 걸 수도 있고, 그때는 막히는 것이 맞다.
+    /// </summary>
+    bool IDayEndBlockRelaxQuery.TryRelaxDayEndBlock()
+    {
+        if (!_isHandingOver)
+        {
+            return false;
+        }
+
+        _skipsHandOverDelay = true;
+        CompleteHandOver();
+        return true;
     }
 
     /// <summary>
@@ -829,10 +855,25 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     private async UniTaskVoid HandOverAsync()
     {
         CancellationToken token = this.GetCancellationTokenOnDestroy();
+        _skipsHandOverDelay = false;
 
         if (_handOverDelaySeconds > 0f && !_isConfirmedByClick)
         {
-            await UniTask.WaitForSeconds(_handOverDelaySeconds, ignoreTimeScale: true, cancellationToken: token);
+            // WaitForSeconds 대신 직접 세는 이유: 기다리는 도중 플레이어가 밤 버튼을 누르면 남은 틈을
+            // 접어야 하는데(TryRelaxDayEndBlock), 그러려면 매 프레임 확인할 자리가 있어야 한다.
+            float remainingSeconds = _handOverDelaySeconds;
+
+            while (remainingSeconds > 0f && !_skipsHandOverDelay)
+            {
+                await UniTask.Yield(token);
+                remainingSeconds -= Time.unscaledDeltaTime;
+            }
+
+            // 기다리는 동안 밤 버튼을 눌러 이미 인계를 끝냈다. 여기서 또 알리면 두 번 넘어간다.
+            if (_skipsHandOverDelay)
+            {
+                return;
+            }
 
             // 기다리는 동안 컴포넌트가 꺼졌다. 목록에서는 이미 빠졌으므로 화면은 알아서 정리된다.
             if (!isActiveAndEnabled)
@@ -843,8 +884,13 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
             }
         }
 
-        // 알리기 전에 붙잡은 것을 놓는다 - 이 신호로 열리는 다음 챕터가 KeepLast로 화면을 이어받으므로
-        // 그 사이에 빈 프레임도, 낮은 우선순위 안내가 끼어들 틈도 없다.
+        CompleteHandOver();
+    }
+
+    // 알리기 전에 붙잡은 것을 놓는다 - 이 신호로 열리는 다음 챕터가 KeepLast로 화면을 이어받으므로
+    // 그 사이에 빈 프레임도, 낮은 우선순위 안내가 끼어들 틈도 없다.
+    private void CompleteHandOver()
+    {
         ReleaseDayEndBlocker();
         _isHandingOver = false;
         TutorialEnded.Invoke();
