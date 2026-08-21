@@ -144,11 +144,25 @@ public class CycleManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 지금 밤으로 넘어가는 것이 관문에 막혀 있는지. 확인창처럼 EndDay 앞에 끼어드는 UI가
-    /// "제 문구보다 막힌 이유를 먼저 보여줘야 하는 상황"을 구분하는 데 쓴다 -
-    /// 막혀 있는데 확인창부터 띄우면, 확인을 눌러도 아무 일이 없는 것처럼 보인다.
+    /// 밤으로 넘어갈 수 있도록 관문을 연다. 접을 수 있는 관문은 여기서 접고
+    /// (<see cref="IDayEndBlockRelaxQuery"/>), 그러고도 남은 관문이 있으면 거짓이다.
+    ///
+    /// 확인창처럼 <see cref="EndDay()"/> 앞에 끼어드는 UI가 "지금 누르면 밤이 오는가"를
+    /// 미리 알아야 할 때 쓴다. 단순한 관문 조회를 두지 않는 이유는 그것이 함정이기 때문이다 -
+    /// 접을 수 있는 관문 때문에 막힌 것까지 "막혔다"로 읽고 확인창을 건너뛰는데, 정작
+    /// 그 뒤에 부른 EndDay는 관문을 접고 성공한다. 확인 없이 밤이 시작되는 경로가 그렇게 생긴다.
+    ///
+    /// 같은 프레임 안에서 이것이 참이면 곧이어 부르는 EndDay도 반드시 성공한다(관문은 스스로 닫히지 않는다).
     /// </summary>
-    public bool IsDayEndBlocked => !CanEndDay();
+    public bool TryOpenDayEndGate()
+    {
+        if (CanEndDay())
+        {
+            return true;
+        }
+
+        return TryRelaxDayEndBlockers() && CanEndDay();
+    }
 
     private bool CanEndDay()
     {
@@ -171,19 +185,46 @@ public class CycleManager : MonoBehaviour
     public bool IsDayEndConfirmBlocked => !CanShowDayEndConfirm();
 
     // 접는 동안 _dayEndBlockers가 바뀐다 - 끝난 챕터가 빠지고 다음 챕터가 그 자리에서 들어온다.
-    // 그대로 foreach를 돌면 컬렉션이 수정돼 터지므로 스냅샷을 두고 돈다(버퍼는 재사용한다).
-    private readonly List<IDayEndBlockQuery> _relaxBuffer = new();
+    // 그대로 foreach를 돌면 컬렉션이 수정돼 터지므로 접을 대상을 먼저 모아 두고 돈다(버퍼는 재사용한다).
+    private readonly List<IDayEndBlockRelaxQuery> _relaxBuffer = new();
 
+    /// <summary>
+    /// 접을 수 있는 관문을 접는다. <b>접어서 밤이 올 수 있을 때만 접는다</b> -
+    /// 접을 수 없는 관문이 하나라도 막고 있으면 아무것도 건드리지 않고 물러난다.
+    ///
+    /// 이 조건이 필요한 이유: 접는 것은 조회가 아니라 상태 변경이다(안내가 읽을 틈을 잃고
+    /// 다음 챕터가 앞당겨 열린다). 어차피 거절될 조작이 진행 상태를 바꾸면 안 된다 -
+    /// 목표가 남아 밤이 막힌 상태에서 버튼을 눌렀더니 안내만 건너뛰어졌다.
+    /// </summary>
     private bool TryRelaxDayEndBlockers()
     {
         _relaxBuffer.Clear();
-        _relaxBuffer.AddRange(_dayEndBlockers);
+
+        foreach (IDayEndBlockQuery blocker in _dayEndBlockers)
+        {
+            if (blocker == null)
+            {
+                continue;
+            }
+
+            if (blocker is IDayEndBlockRelaxQuery relaxable)
+            {
+                _relaxBuffer.Add(relaxable);
+                continue;
+            }
+
+            if (!blocker.CanEndDay())
+            {
+                _relaxBuffer.Clear();
+                return false;
+            }
+        }
 
         bool hasRelaxed = false;
 
-        foreach (IDayEndBlockQuery blocker in _relaxBuffer)
+        foreach (IDayEndBlockRelaxQuery relaxable in _relaxBuffer)
         {
-            if (blocker is IDayEndBlockRelaxQuery relaxable && relaxable.TryRelaxDayEndBlock())
+            if (relaxable.TryRelaxDayEndBlock())
             {
                 hasRelaxed = true;
             }
@@ -223,16 +264,11 @@ public class CycleManager : MonoBehaviour
     private void EndDay(bool ignoresBlockers)
     {
         // 밤 시작은 되돌릴 수 없으므로 버튼이 아니라 이 관문에서 막는다 - 다른 진입 경로가 생겨도 함께 막힌다.
-        if (!ignoresBlockers && !CanEndDay())
+        if (!ignoresBlockers && !TryOpenDayEndGate())
         {
-            // 접을 수 있는 관문은 사유를 띄우기 전에 접어 본다(IDayEndBlockRelaxQuery 참고).
-            // 접은 자리에 다른 관문이 곧바로 들어설 수 있으므로 반드시 다시 확인한다.
-            if (!TryRelaxDayEndBlockers() || !CanEndDay())
-            {
-                // 왜 안 눌리는지 알려주지 않으면 버튼이 고장 난 것으로 보인다.
-                DayEndBlocked.Invoke();
-                return;
-            }
+            // 왜 안 눌리는지 알려주지 않으면 버튼이 고장 난 것으로 보인다.
+            DayEndBlocked.Invoke();
+            return;
         }
 
         SafeInvoke(OnDayEnd, _gameManager.CurrentRun.CurrentCycle);

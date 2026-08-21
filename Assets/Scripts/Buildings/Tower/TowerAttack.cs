@@ -377,7 +377,7 @@ public class TowerAttack : MonoBehaviour
             ? _firePoint.position
             : transform.position;
 
-        // 프리팹 검증(Projectile 유무)과 널일 때의 로그는 풀이 한다 - 발사마다 GetComponent를 타지 않는다.
+        // 프리팹 검증(Projectile 유무)과 널일 때의 로그는 풀이 한다 - 여기서 되풀이하지 않는다.
         Projectile projectile = ProjectilePool.Spawn(_towerData.ProjectilePrefab, spawnPosition);
 
         if (projectile == null)

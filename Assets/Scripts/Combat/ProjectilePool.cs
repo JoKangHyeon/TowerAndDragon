@@ -57,7 +57,10 @@ public sealed class ProjectilePool : MonoBehaviour
 
     /// <summary>
     /// 명중 이펙트처럼 스스로 걷혀야 하는 연출을 꺼내 놓는다. <paramref name="seconds"/>가 지나면 반납한다.
-    /// 0 이하이면 걷히지 않고 그대로 남는다.
+    ///
+    /// 0 이하를 넘겨도 <b>반드시 반납된다</b>(다음 프레임에 걷힌다). 예전에는 그 경우 반납을 걸지 않아
+    /// 인스턴스가 풀 밖으로 새어 나갔고, 발사할 때마다 활성 오브젝트가 끝없이 쌓였다 -
+    /// "안 걷히는 연출"이 필요하면 이 함수가 아니라 직접 띄워야 한다.
     /// </summary>
     public static void PlayForSeconds(
         GameObject prefab, Vector3 position, Quaternion rotation, float seconds)
@@ -164,16 +167,24 @@ public sealed class ProjectilePool : MonoBehaviour
         effect.SetPositionAndRotation(position, rotation);
         ParticleRewind.PlayFromStart(effect);
 
-        if (seconds > 0f)
-        {
-            ReleaseEffectAfterAsync(effect, seconds, this.GetCancellationTokenOnDestroy()).Forget();
-        }
+        // 반납은 조건 없이 건다. 시간이 0 이하라 걸지 않았더니 그 인스턴스가 풀 장부에서 빠진 채
+        // 활성으로 남아, 발사할 때마다 새로 만들어지고 영영 회수되지 않았다.
+        ReleaseEffectAfterAsync(effect, seconds, this.GetCancellationTokenOnDestroy()).Forget();
     }
 
     private async UniTaskVoid ReleaseEffectAfterAsync(
         Transform effect, float delaySeconds, CancellationToken token)
     {
-        await UniTask.WaitForSeconds(delaySeconds, cancellationToken: token);
+        // WaitForSeconds에 0 이하를 넘기면 프레임을 하나도 쉬지 않아, 방금 켠 이펙트를 같은 프레임에
+        // 도로 끄게 된다(한 장도 그려지지 않는다). 그래서 최소 한 프레임은 보장한다.
+        if (delaySeconds > 0f)
+        {
+            await UniTask.WaitForSeconds(delaySeconds, cancellationToken: token);
+        }
+        else
+        {
+            await UniTask.Yield(token);
+        }
 
         if (effect == null)
         {

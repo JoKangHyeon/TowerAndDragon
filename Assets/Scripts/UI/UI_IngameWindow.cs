@@ -314,9 +314,14 @@ public class UI_IngameWindow : MonoBehaviour
             return;
         }
 
-        // 관문(튜토리얼 안내·새끼용 가이드)이 이미 막고 있으면 경고보다 막힌 이유를 먼저 알려야 한다.
+        // 관문(튜토리얼 안내·새끼용 가이드)이 막고 있으면 경고보다 막힌 이유를 먼저 알려야 한다.
         // 그대로 넘기면 CycleManager가 DayEndBlocked로 사유를 띄운다.
-        if (_cycleManager.IsDayEndBlocked)
+        //
+        // 단순 조회가 아니라 TryOpenDayEndGate로 묻는 이유: 접을 수 있는 관문은 물어보는 이 자리에서
+        // 접혀야 한다. 조회만 하고 넘어가면 "막혔다"고 읽어 확인창을 건너뛰는데, 정작 여기서 부른
+        // EndDay가 관문을 접고 성공해 굶주림·유휴 인구를 묻지 않은 채 밤이 시작된다.
+        // 거짓이면 같은 프레임의 EndDay도 반드시 실패하므로, 아래 확인창 경로를 건너뛰어도 안전하다.
+        if (!_cycleManager.TryOpenDayEndGate())
         {
             _cycleManager.EndDay();
             return;

@@ -17,7 +17,7 @@ public static class GenerateAllProjectilePrefabs
         "Assets/Imported/Hovl Studio/AAA Projectiles Vol 1/Prefabs/Flash and hits";
     private const string VOL2_SOURCE =
         "Assets/Imported/Hovl Studio/AAA Projectiles Vol 2/Prefabs";
-    private const string OUTPUT_ROOT = "Assets/Prefabs/Projectile";
+    private const string OUTPUT_ROOT = "Assets/Imported/Prefabs/Projectile";
     private const string VOL1_OUTPUT = OUTPUT_ROOT + "/AAA_Vol1";
     private const string VOL2_OUTPUT = OUTPUT_ROOT + "/AAA_Vol2";
     private const string PROJECTILE_SORTING_LAYER = "Projectile";
