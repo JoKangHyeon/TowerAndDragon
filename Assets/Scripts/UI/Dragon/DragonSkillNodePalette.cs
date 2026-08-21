@@ -36,11 +36,17 @@ public static class DragonSkillNodePalette
     private const float KIN_FILL_RATIO_SHORT = 0.07f;
     private const float KIN_FILL_RATIO_LOCKED = 0.03f;
 
-    // 알 아이콘 밝기(아이콘 자체가 이미 속성별로 색이 다르므로 밝기만 조절한다).
+    // 아이콘 밝기(아이콘 자체가 색을 갖고 있으므로 밝기만 조절한다).
+    // 완료가 아닌 상태는 링·채움과 같은 정도로 확실히 내려야 한다 - 아이콘만 밝게 남으면
+    // 노드 전체가 어두워져도 "꺼진 슬롯"으로 읽히지 않는다.
     private const float ICON_BRIGHTNESS_COMPLETED = 1f;
-    private const float ICON_BRIGHTNESS_AVAILABLE = 0.9f;
-    private const float ICON_BRIGHTNESS_SHORT = 0.75f;
-    private const float ICON_BRIGHTNESS_LOCKED = 0.5f;
+    private const float ICON_BRIGHTNESS_AVAILABLE = 0.6f;
+    private const float ICON_BRIGHTNESS_SHORT = 0.45f;
+    private const float ICON_BRIGHTNESS_LOCKED = 0.28f;
+
+    // 밝기만 낮추면 어두운 채움 위에서도 윤곽이 또렷하게 남는다 - 알파까지 낮춰 바탕에 묻히게 한다.
+    private const float ICON_ALPHA_COMPLETED = 1f;
+    private const float ICON_ALPHA_INACTIVE = 0.65f;
 
     // 자원 부족(InsufficientResources/ExtraCost)은 "선행·게이트는 충족했고 자원만 모자란" 상태라
     // 불투명하게 두고, 그 외 잠금 사유(선행·게이트·낮밤·무효)는 더 멀리 잠겨 있음을 나타내도록
@@ -79,10 +85,10 @@ public static class DragonSkillNodePalette
     {
         return EmphasisOf(state) switch
         {
-            Emphasis.Completed => Scaled(Color.white, ICON_BRIGHTNESS_COMPLETED, 1f),
-            Emphasis.Available => Scaled(Color.white, ICON_BRIGHTNESS_AVAILABLE, 1f),
-            Emphasis.Short => Scaled(Color.white, ICON_BRIGHTNESS_SHORT, 1f),
-            _ => Scaled(Color.white, ICON_BRIGHTNESS_LOCKED, DEEP_LOCKED_ALPHA),
+            Emphasis.Completed => Scaled(Color.white, ICON_BRIGHTNESS_COMPLETED, ICON_ALPHA_COMPLETED),
+            Emphasis.Available => Scaled(Color.white, ICON_BRIGHTNESS_AVAILABLE, ICON_ALPHA_INACTIVE),
+            Emphasis.Short => Scaled(Color.white, ICON_BRIGHTNESS_SHORT, ICON_ALPHA_INACTIVE),
+            _ => Scaled(Color.white, ICON_BRIGHTNESS_LOCKED, ICON_ALPHA_INACTIVE),
         };
     }
 
