@@ -46,6 +46,9 @@ public class MouseSelectController : MonoBehaviour
     [SerializeField]
     private RangeIndicator _buffRangeIndicator;
 
+    [Tooltip("새끼용 배치 미리보기의 버프 반경에 해금 보너스를 반영하는 계산기. 비어 있으면 씬에서 자동으로 찾고, " +
+        "그것도 없으면 새끼용 데이터의 기본 반경을 그대로 쓴다.")]
+    [WiringOptional]
     [SerializeField]
     private BabyDragonBuffSystem _babyDragonBuffSystem;
 

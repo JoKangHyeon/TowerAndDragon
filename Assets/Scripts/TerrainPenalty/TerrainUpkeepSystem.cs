@@ -14,6 +14,9 @@ public class TerrainUpkeepSystem : MonoBehaviour
 {
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private ResourceManager _resourceManager;
+    [Tooltip("건물별 지형 페널티의 출처. 미연결이면 지역 자재 유지비 정산을 통째로 건너뛴다 - " +
+        "지형 페널티를 일부러 쓰지 않는 씬(튜토리얼)이 그렇다.")]
+    [WiringOptional]
     [SerializeField] private TerrainPenaltySystem _terrainPenaltySystem;
 
     // 정산 1회 안에서만 쓰는 재사용 버퍼 - 인덱스가 서로 대응한다.

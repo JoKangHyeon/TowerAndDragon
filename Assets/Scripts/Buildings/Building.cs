@@ -13,7 +13,10 @@ public class Building : MonoBehaviour
     [SerializeField]
     private FootprintShape _footprintShape;
 
-    [Tooltip("회전 스텝(0~3, 90도 단위)별로 교체할 스프라이트. 회전해도 모양이 같은 건물은 전부 같은 스프라이트를 넣어도 된다.")]
+    [Tooltip("회전 스텝(0~3, 90도 단위)별로 교체할 스프라이트. 회전해도 모양이 같은 건물은 전부 같은 스프라이트를 넣어도 된다. " +
+        "비워 두면 회전해도 프리팹에 배치된 스프라이트를 그대로 쓴다(SetRotation이 null을 건너뛴다) - " +
+        "유저가 회전시킬 수 없는 성, 배치 시점에 속성별 스프라이트로 갈아끼우는 새끼용 타워가 그렇다.")]
+    [WiringOptional]
     [SerializeField]
     private Sprite[] _rotationSprites = new Sprite[ROTATION_STEP_COUNT];
 

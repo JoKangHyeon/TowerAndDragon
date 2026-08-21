@@ -83,6 +83,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     [SerializeField] private VillagerAppearancePool[] _appearancePools;
 
     [Tooltip("생성한 캐릭터를 담을 부모. 비워두면 이 오브젝트 아래에 만든다.")]
+    [WiringOptional]
     [SerializeField] private Transform _villagerRoot;
 
     [SerializeField] private float _moveSpeed = DEFAULT_MOVE_SPEED;

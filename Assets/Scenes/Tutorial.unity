@@ -2642,7 +2642,7 @@ MonoBehaviour:
   _gridMap: {fileID: 168384008}
   _statComposite: {fileID: 1006164844}
   _dragonTreeManager: {fileID: 1632594322}
-  _towerAuraSystem: {fileID: 0}
+  _towerAuraSystem: {fileID: 1773052342}
 --- !u!114 &1006164853
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3202,6 +3202,7 @@ MonoBehaviour:
   _ejectLingerSeconds: 1
   _spreadRadius: 0.45
   _maxActiveVillagers: 60
+  _prewarmCount: 20
 --- !u!114 &1263317185
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5517,6 +5518,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3489070071034399505, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_SizeDelta.y
       value: 0
@@ -5939,7 +5944,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4429832511105182359, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.000030517578
+      value: 0.00015258789
       objectReference: {fileID: 0}
     - target: {fileID: 4439690152447319859, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -11593,6 +11598,10 @@ PrefabInstance:
       propertyPath: _placementController
       value: 
       objectReference: {fileID: 668391600}
+    - target: {fileID: 7627249709894495564, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _babyDragonGuideController
+      value: 
+      objectReference: {fileID: 1790075028}
     - target: {fileID: 7651892599846822379, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
       propertyPath: _cycleManager
       value: 
@@ -11821,6 +11830,14 @@ PrefabInstance:
       propertyPath: _placementController
       value: 
       objectReference: {fileID: 668391600}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: _babyDragonGuideController
+      value: 
+      objectReference: {fileID: 1790075028}
+    - target: {fileID: 8344495355195958704, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
+      propertyPath: TutorialEnded.m_PersistentCalls.m_Calls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8695219988822821896, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
       propertyPath: _gridMap
       value: 
