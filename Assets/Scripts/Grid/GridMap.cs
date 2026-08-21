@@ -93,6 +93,9 @@ public class GridMap : MonoBehaviour
 
     private readonly Dictionary<Vector2Int, int> _chunkYieldBuffer = new();
 
+    // 좌표 목록으로 들어온 풋프린트를 셀로 되짚을 때 쓰는 재사용 버퍼(배치 미리보기는 커서를 옮길 때마다 조회한다).
+    private readonly List<GridCell> _footprintCellBuffer = new();
+
     // 그리드 셀의 상태 변경 이벤트 - 건물 배치, 건물 파괴, 적 진입
     public UnityEvent<GridCell> OnCellChanged;
 
@@ -1323,13 +1326,37 @@ public class GridMap : MonoBehaviour
         return coords;
     }
 
-    // 생산시설의 실제 생산량 - 청크별 셀 생산량 소계에 연구 배율을 적용한 뒤 합산한다.
-    // 청크별로 반올림하므로 여러 청크에 걸친 footprint도 각 지역 연구 효과를 정확히 반영한다.
+    // 생산시설의 실제 생산량 - 이미 배치된 건물용. 좌표를 뽑아 아래 오버로드에 넘기는 얇은 래퍼다.
     public int GetFootprintYield(Building building, ResourceType resourceType)
     {
         if (!_buildingFootprintCells.TryGetValue(building, out List<GridCell> footprint) || footprint.Count == 0)
             return 0;
 
+        return AccumulateFootprintYield(footprint, resourceType);
+    }
+
+    // 아직 배치되지 않은 풋프린트의 생산량 - 배치 미리보기 전용 진입점이다.
+    // 좌표 목록만 받으므로 고스트처럼 Building 인스턴스가 없는 대상도 실제 정산과 같은 값을 얻는다.
+    public int GetFootprintYield(IReadOnlyList<Vector3Int> footprint, ResourceType resourceType)
+    {
+        if (footprint == null || footprint.Count == 0)
+            return 0;
+
+        _footprintCellBuffer.Clear();
+
+        foreach (Vector3Int coord in footprint)
+        {
+            if (_cells.TryGetValue(coord, out GridCell cell))
+                _footprintCellBuffer.Add(cell);
+        }
+
+        return AccumulateFootprintYield(_footprintCellBuffer, resourceType);
+    }
+
+    // 청크별 셀 생산량 소계에 연구 배율을 적용한 뒤 합산한다.
+    // 청크별로 반올림하므로 여러 청크에 걸친 footprint도 각 지역 연구 효과를 정확히 반영한다.
+    private int AccumulateFootprintYield(IReadOnlyList<GridCell> footprint, ResourceType resourceType)
+    {
         int total = 0;
         _chunkYieldBuffer.Clear();
 

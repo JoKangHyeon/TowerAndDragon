@@ -81,6 +81,10 @@ public class MouseSelectController : MonoBehaviour
     // 현재 회전이 반영된 풋프린트 모양 - 확정 시에도 미리보기와 동일한 모양을 쓰기 위해 공개.
     public FootprintShape CurrentFootprintShape => _footprintShape;
 
+    // 미리보기 중인 건물이 실제로 놓일 월드 좌표. GridMap.CreatePlacedInstance가 배치 시 쓰는 식과
+    // 반드시 같아야 위치로 판정하는 것들(지형 페널티 완화 반경 등)이 미리보기와 실제 사이에서 어긋나지 않는다.
+    public Vector3 PreviewWorldPosition => GetPreviewWorldPosition(CurrentAnchor);
+
     // 참조가 비어 있어도(=null) 안전하게 0을 반환 - Y 오프셋을 쓰는 다른 오버레이 스크립트들이 공용으로 사용.
     public static float GetYOffsetOrZero(MouseSelectController mouseSelectController) =>
         mouseSelectController != null ? mouseSelectController.YOffset : 0f;
@@ -449,7 +453,7 @@ public class MouseSelectController : MonoBehaviour
         if (_ghostRenderer == null || !_ghostRenderer.gameObject.activeSelf)
             return;
 
-        _ghostRenderer.transform.position = _gridMap.GetFootprintCenterWorld(anchor, _footprintShape) + _ghostLocalOffset;
+        _ghostRenderer.transform.position = GetPreviewWorldPosition(anchor);
         _ghostRenderer.sortingOrder = IsometricMath.ComputeDepthSortOrder(anchor);
 
         Color color = canConstruct ? Color.white : _ghostBlockedTint;
@@ -459,11 +463,16 @@ public class MouseSelectController : MonoBehaviour
 
     private void DrawRangeIndicator(Vector3Int anchor)
     {
-        Vector3 center = _gridMap.GetFootprintCenterWorld(anchor, _footprintShape) + _ghostLocalOffset;
+        Vector3 center = GetPreviewWorldPosition(anchor);
 
         DrawAttackRangeIndicator(center);
         DrawBuffRangeIndicator(center);
     }
+
+    private Vector3 GetPreviewWorldPosition(Vector3Int anchor) =>
+        _gridMap != null
+            ? _gridMap.GetFootprintCenterWorld(anchor, _footprintShape) + _ghostLocalOffset
+            : Vector3.zero;
 
     // 배치/이동 대상이 공격 가능한 타워일 때만, 실제 판정(TowerAttack.IsWithinAttackRange)과 같은
     // 타원으로 사거리를 표시한다 - 그 외 건물이거나 인디케이터가 연결 안 됐으면 숨긴다.

@@ -6,10 +6,7 @@ public class Factory : Building
 {
     // 새끼용 버프가 없을 때의 생산량 배율(BabyDragonBuffSystem이 배치/철거/이동 즉시,
     // 그리고 매일 밤 종료 시 갱신).
-    public const float NEUTRAL_YIELD_MULTIPLIER = 1f;
-
-    // 정원을 100% 채웠을 때의 충원율 - 최대 생산량(GetMaxYield) 계산에 쓴다.
-    private const float FULL_STAFFING_RATIO = 1f;
+    public const float NEUTRAL_YIELD_MULTIPLIER = FactoryYieldRules.NEUTRAL_MULTIPLIER;
 
     [SerializeField] private ResourceProductionData _data;
     [SerializeField] private ResourceManager _resourceManager;
@@ -79,7 +76,8 @@ private float GetAreaYieldMultiplier(ResourceType resourceType) =>
         return GridMap.EnumerateResourceFlags(_data.ProducedResourceType);
     }
 
-    // 정산 시점과 UI 미리보기가 반드시 같은 값을 내야 하므로 계산식은 여기 하나만 둔다.
+    // 정산 시점과 UI 미리보기가 반드시 같은 값을 내야 하므로 계산식은 FactoryYieldRules 한 곳에만 둔다.
+    // 배치 미리보기(PlacementYieldEstimator)도 같은 함수를 부르므로 표시값과 실제 지급액이 갈라질 수 없다.
     protected int CalculateYield(ResourceType resourceType, float staffingRatio)
     {
         if (_data == null || _gridMap == null)
@@ -87,9 +85,12 @@ private float GetAreaYieldMultiplier(ResourceType resourceType) =>
 
         // 생산량은 이 생산시설의 footprint에 속한 셀들이 보유한 자원별 생산량의 합이다(GridMap.GetFootprintYield 참고).
         int footprintYield = _gridMap.GetFootprintYield(this, resourceType);
-        int produced = _data.CalculateYield(footprintYield, staffingRatio);
-        return Mathf.RoundToInt(
-            produced * GetAreaYieldMultiplier(resourceType) * TerrainYieldMultiplier);
+
+        return FactoryYieldRules.Compute(
+            footprintYield,
+            staffingRatio,
+            GetAreaYieldMultiplier(resourceType),
+            TerrainYieldMultiplier);
     }
 
     // 현재 배치 인구 기준 생산량 - 다음 정산에서 실제로 들어올 양이다.
@@ -102,7 +103,7 @@ private float GetAreaYieldMultiplier(ResourceType resourceType) =>
     // 정원을 다 채웠을 때의 생산량 - 현재 생산량의 상한 표시용이다.
     public int GetMaxYield(ResourceType resourceType)
     {
-        return CalculateYield(resourceType, FULL_STAFFING_RATIO);
+        return CalculateYield(resourceType, FactoryYieldRules.FULL_STAFFING_RATIO);
     }
 
     // 프리팹은 씬 오브젝트(ResourceManager/CycleManager/GridMap)를 들고 있을 수 없으므로,

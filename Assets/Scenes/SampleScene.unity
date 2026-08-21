@@ -8530,6 +8530,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1692054029}
   - component: {fileID: 1692054028}
+  - component: {fileID: 1692054030}
   m_Layer: 0
   m_Name: BuildingPlacementManager
   m_TagString: Untagged
@@ -8590,6 +8591,28 @@ Transform:
   m_Children: []
   m_Father: {fileID: 698775030}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1692054030
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1692054027}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92964b46f1c5c844e98ff1f2c917a61b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_PlacementYieldTooltipDriver
+  _presenter: {fileID: 944163940}
+  _placementController: {fileID: 1692054028}
+  _mouseSelectController: {fileID: 250167905}
+  _gridMap: {fileID: 313449541}
+  _resourceCatalog: {fileID: 11400000, guid: 3c68623cfd9e6d74b8c4e6e8fa62c090, type: 2}
+  _effectIconData: {fileID: 11400000, guid: d51b8e6a3f0c4a748b6d29c17e0a4f36, type: 2}
+  _terrainPenaltySystem: {fileID: 1652351659}
+  _gainColor: {r: 0.45, g: 0.85, b: 0.45, a: 1}
+  _lossColor: {r: 0.9, g: 0.45, b: 0.45, a: 1}
+  _noteColor: {r: 0.65, g: 0.65, b: 0.65, a: 1}
 --- !u!1 &1698710668
 GameObject:
   m_ObjectHideFlags: 0

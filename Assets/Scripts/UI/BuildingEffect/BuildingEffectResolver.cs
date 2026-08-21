@@ -25,6 +25,18 @@ public static class BuildingEffectResolver
         Building building,
         in TerrainPenaltyModifiers modifiers,
         IPopulationAllocationTarget population,
+        List<BuildingEffectDescriptor> into) =>
+        Collect(building, modifiers, population?.AssignedPopulation, into);
+
+    /// <summary>
+    /// 배치 인구를 수치로 직접 받는 판. 아직 배치되지 않은 건물의 미리보기
+    /// (PlacementYieldEstimator - "정원을 다 채웠다면")가 쓴다.
+    /// assignedPopulation이 null이면 인구를 배치할 수 없는 건물이라 유지비 표식을 붙이지 않는다.
+    /// </summary>
+    public static void Collect(
+        Building building,
+        in TerrainPenaltyModifiers modifiers,
+        int? assignedPopulation,
         List<BuildingEffectDescriptor> into)
     {
         if (into == null)
@@ -62,7 +74,7 @@ public static class BuildingEffectResolver
                 NEUTRAL_MULTIPLIER - modifiers.AttackSpeedMultiplier));
         }
 
-        if (population == null)
+        if (!assignedPopulation.HasValue)
         {
             return;
         }
@@ -70,7 +82,7 @@ public static class BuildingEffectResolver
         // 유지비는 반대로 건물 종류를 가리지 않는다 - TerrainUpkeepSystem이 인구가 배치된 시설이면
         // 생산시설이든 타워든 똑같이 걷어간다.
         TerrainUpkeepRules.FacilityUpkeep upkeep =
-            TerrainUpkeepRules.ResolveFacilityUpkeep(population.AssignedPopulation, modifiers);
+            TerrainUpkeepRules.ResolveFacilityUpkeep(assignedPopulation.Value, modifiers);
 
         // 인구가 0이면 소모량도 0이지만 표식은 계속 띄운다 - "이 땅은 나무를 먹는다"는 사실을
         // 인구를 넣기 전에 알아야 하기 때문이다. 라벨에 뜨는 0은 다음 정산의 실제 차감액과 같다.

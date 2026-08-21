@@ -28,9 +28,6 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
     [WiringOptional]
     [SerializeField] private TerrainPenaltySystem _terrainPenaltySystem;
 
-    // 이번 재계산에서 지역 페널티가 완전 무효화된 (건물, 지형) 쌍 - ITerrainPenaltyScaleQuery 구현에 쓴다.
-    private readonly HashSet<(Building, TerrainType)> _penaltyMitigatedPairs = new();
-
 
     // 새끼용/생산시설 배치가 바뀌어 배율이 다시 확정될 때마다 발화 - ResourceForecast 등
     // 파생 UI가 OnBuildingAdded/OnBuildingRemoving과 같은 프레임에서 순서에 의존하지 않고
@@ -180,7 +177,10 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         }
 
         RecomputeConstructionUnlocks();
-        RecomputePenaltyMitigation();
+
+        // 완화 자체는 조회 시점에 계산하지만(GetPenaltyScale), TerrainPenaltySystem은 건물별로 캐싱하므로
+        // 새끼용이 움직이거나 모드가 바뀌면 그 캐시를 버리라고 알려야 한다.
+        _terrainPenaltySystem?.NotifyScaleChanged();
 
         BuffsRecomputed?.Invoke();
     }
@@ -259,53 +259,49 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         }
     }
 
-    // 완화 소스(이 새끼용의 버프 상태·위치)가 바뀔 때마다 TerrainPenaltySystem의 캐시를 버려야
-    // 한다 - 그 시스템은 건물 배치/철거/이동만 구독하고, 완화 배율 자체의 변화는 스스로 감지하지
-    // 못하기 때문이다(TerrainPenaltySystem.NotifyScaleChanged 주석 참고).
-    private void RecomputePenaltyMitigation()
+    // 이 새끼용이 그 위치의 지형 페널티를 무효화하는가. 판정 기준은 생산 버프·건설 해제와 같은
+    // 타원 반경이다(GetEffectiveBuffRadius 주석 참고).
+    private bool IsPenaltyMitigatedBy(
+        BabyDragonTower babyDragon,
+        Vector3 worldPosition,
+        TerrainType terrain)
     {
-        _penaltyMitigatedPairs.Clear();
-
-        foreach (BabyDragonTower babyDragon in _babyDragons)
+        if (!babyDragon.CanOperate ||
+            babyDragon.DragonData == null ||
+            babyDragon.Mode != BabyDragonMode.Buff)
         {
-            if (!babyDragon.CanOperate ||
-                babyDragon.DragonData == null ||
-                babyDragon.Mode != BabyDragonMode.Buff)
-            {
-                continue;
-            }
-
-            CollectPenaltyMitigation(babyDragon);
+            return false;
         }
 
-        _terrainPenaltySystem?.NotifyScaleChanged();
-    }
-
-    private void CollectPenaltyMitigation(BabyDragonTower babyDragon)
-    {
         float radius = GetEffectiveBuffRadius(babyDragon);
         IReadOnlyList<TerrainType> mitigationTerrains = babyDragon.DragonData.PenaltyMitigationTerrains;
 
         if (radius <= 0f || mitigationTerrains == null || mitigationTerrains.Count == 0)
         {
-            return;
+            return false;
         }
 
-        float radiusY = radius * IsometricMath.RADIUS_Y_RATIO;
-        Vector3 center = babyDragon.transform.position;
+        bool isTargetTerrain = false;
 
-        foreach (Building building in _gridMap.Buildings)
+        for (int i = 0; i < mitigationTerrains.Count; i++)
         {
-            if (!IsometricMath.IsWithinEllipse(building.transform.position, center, radius, radiusY))
+            if (mitigationTerrains[i] == terrain)
             {
-                continue;
-            }
-
-            for (int i = 0; i < mitigationTerrains.Count; i++)
-            {
-                _penaltyMitigatedPairs.Add((building, mitigationTerrains[i]));
+                isTargetTerrain = true;
+                break;
             }
         }
+
+        if (!isTargetTerrain)
+        {
+            return false;
+        }
+
+        return IsometricMath.IsWithinEllipse(
+            worldPosition,
+            babyDragon.transform.position,
+            radius,
+            radius * IsometricMath.RADIUS_Y_RATIO);
     }
 
     // 화산 지대에 지어진 건물 중 지금 해제 범위를 벗어난 것을 전부 정지시키고 인구를 회수한다.
@@ -473,8 +469,22 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         return _unlockedConstructionCells.Contains(coord);
     }
 
-    // kind는 구분하지 않는다 - (건물,지형) 쌍이 완화 대상이면 4종 페널티를 전부 0으로 만든다.
+    // kind는 구분하지 않는다 - (위치,지형)이 완화 대상이면 4종 페널티를 전부 0으로 만든다.
     // 사막은 어차피 Yield·TowerAttackSpeed만 값이 있어(WoodUpkeep·StoneUpkeep은 원래 0) 결과는 같다.
-    public float GetPenaltyScale(Building building, TerrainType terrain, TerrainPenaltyKind kind) =>
-        _penaltyMitigatedPairs.Contains((building, terrain)) ? 0f : 1f;
+    //
+    // 집합을 미리 구워두지 않고 조회 시점에 판정한다 - 배치 미리보기의 고스트처럼 아직 Building이
+    // 없는 대상도 배치된 건물과 정확히 같은 경로로 물어보게 하기 위함이다. 호출자
+    // (TerrainPenaltySystem)가 건물별로 캐싱하므로 새끼용 수만큼의 이 순회는 문제되지 않는다.
+    public float GetPenaltyScale(Vector3 worldPosition, TerrainType terrain, TerrainPenaltyKind kind)
+    {
+        foreach (BabyDragonTower babyDragon in _babyDragons)
+        {
+            if (IsPenaltyMitigatedBy(babyDragon, worldPosition, terrain))
+            {
+                return 0f;
+            }
+        }
+
+        return 1f;
+    }
 }

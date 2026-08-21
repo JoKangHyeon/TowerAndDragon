@@ -26,12 +26,5 @@ public class ResourceProductionData : ScriptableObject
     public int PopulationCapacity => _populationCapacity;
     public IReadOnlyList<ResourceAmount> BuildCost => _buildCost ?? System.Array.Empty<ResourceAmount>();
 
-    // 충원율(배치 인구 / 정원)에 비례해 생산량이 오른다 - 최소 인구 문턱 없음(1명만 있어도 그만큼 생산),
-    // 상한은 충원율 자체가 1(정원 100%)을 못 넘는 것으로 자연스럽게 걸린다.
-    // footprintYield에는 이미 셀별 자원 배율과 연구 강화가 반영되어 있다 - GridMap.GetFootprintYield 참고.
-    public int CalculateYield(int footprintYield, float staffingRatio)
-    {
-        float ratio = Mathf.Clamp01(staffingRatio);
-        return Mathf.RoundToInt(footprintYield * ratio);
-    }
+    // 산출 계산식은 여기 없다 - FactoryYieldRules에 모아 두었다(정산·상한 표시·배치 미리보기가 공유).
 }

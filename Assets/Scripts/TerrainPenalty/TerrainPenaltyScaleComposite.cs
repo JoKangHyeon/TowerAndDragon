@@ -18,14 +18,14 @@ public sealed class TerrainPenaltyScaleComposite : MonoBehaviour, ITerrainPenalt
         _sources.Unregister(source);
     }
 
-    public float GetPenaltyScale(Building building, TerrainType terrain, TerrainPenaltyKind kind)
+    public float GetPenaltyScale(Vector3 worldPosition, TerrainType terrain, TerrainPenaltyKind kind)
     {
         float scale = 1f;
         IReadOnlyList<ITerrainPenaltyScaleQuery> sources = _sources.Sources;
 
         for (int i = 0; i < sources.Count; i++)
         {
-            scale *= sources[i].GetPenaltyScale(building, terrain, kind);
+            scale *= sources[i].GetPenaltyScale(worldPosition, terrain, kind);
         }
 
         return scale;
