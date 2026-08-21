@@ -17,7 +17,7 @@ using UnityEngine;
 public static class BuildStatusVfx
 {
     private const string SOURCE_FOLDER =
-        "Assets/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP";
+        "Assets/Imported/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP";
 
     private const string OUTPUT_FOLDER = "Assets/Imported/Prefabs/Effects/Status";
     private const string SORTING_LAYER = "Projectile";

@@ -5,7 +5,7 @@ using UnityEngine;
 public static class DumpCrackBlue02Meshes
 {
     private const string PATH =
-        "Assets/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_Crack_Bluerock.prefab";
+        "Assets/Imported/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_Crack_Bluerock.prefab";
 
     public static string Execute()
     {
