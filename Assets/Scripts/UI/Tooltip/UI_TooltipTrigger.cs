@@ -17,6 +17,7 @@ public class UI_TooltipTrigger : MonoBehaviour,
     IPointerMoveHandler
 {
     [Tooltip("툴팁을 그릴 표시기. 비워두면 소유 스크립트가 SetPresenter로 주입해야 한다.")]
+    [WiringOptional]
     [SerializeField] private UI_TooltipPresenter _presenter;
 
     [Tooltip("고정 제목의 스트링테이블 키. 동적 내용을 쓰면 비워둔다.")]

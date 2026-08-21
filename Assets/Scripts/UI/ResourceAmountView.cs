@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 자원 보유량 표시 로직 - 슬롯 배열을 받아 구독·렌더·아이콘·레이아웃 보정을 담당한다.
+// 자원 보유량 표시 로직 - 슬롯 배열을 받아 구독·렌더·아이콘·툴팁·레이아웃 보정을 담당한다.
 // MonoBehaviour가 아니라 일반 클래스다: 슬롯 배열을 직렬화해 들고 있는 주체는 각 창/패널이고
 // (UI_IngameWindow는 HUD 상단 7칸, UI_ResourceAmountPanel은 용 창 슬라임 5칸),
 // 이 클래스는 그 배열을 넘겨받아 표시 방식만 통일한다.
@@ -23,19 +24,28 @@ public class ResourceAmountView
 
     private readonly ResourceManager _resourceManager;
     private readonly ResourceForecast _resourceForecast;
+    private readonly UI_TooltipPresenter _tooltipPresenter;
     private readonly Color _productionColor;
     private readonly Color _lossColor;
     private readonly IReadOnlyList<ResourceAmountSlot> _slots;
 
+    // _slots와 인덱스가 대응하는 툴팁 트리거 캐시(Subscribe에서 1회 해석).
+    private UI_TooltipTrigger[] _tooltipTriggers;
+
+    // 툴팁 내역을 받아오는 재사용 버퍼(ResourceForecast.CollectBreakdown이 매번 덮어쓴다).
+    private readonly List<ResourceForecastEntry> _forecastBreakdownBuffer = new();
+
     public ResourceAmountView(
         ResourceManager resourceManager,
         ResourceForecast resourceForecast,
+        UI_TooltipPresenter tooltipPresenter,
         Color productionColor,
         Color lossColor,
         IReadOnlyList<ResourceAmountSlot> slots)
     {
         _resourceManager = resourceManager;
         _resourceForecast = resourceForecast;
+        _tooltipPresenter = tooltipPresenter;
         _productionColor = productionColor;
         _lossColor = lossColor;
         _slots = slots;
@@ -59,6 +69,7 @@ public class ResourceAmountView
         }
 
         ApplyIcons();
+        ResolveTooltipTriggers();
         RenderAll();
     }
 
@@ -135,6 +146,39 @@ public class ResourceAmountView
         }
     }
 
+    // 자원 행의 툴팁 트리거를 찾아 표시기를 주입한다. 트리거는 수량 텍스트의 부모 행(투명 Image가
+    // 레이캐스트를 받는 행 오브젝트)에 붙어 있다 - ResourceAmountSlot에 필드를 더하지 않고 부모에서
+    // 찾는다(UI_IngameWindow.ResolveResourceTooltipTriggers와 같은 방식).
+    private void ResolveTooltipTriggers()
+    {
+        if (_tooltipTriggers != null && _tooltipTriggers.Length == _slots.Count)
+        {
+            return;
+        }
+
+        _tooltipTriggers = new UI_TooltipTrigger[_slots.Count];
+
+        for (int i = 0; i < _slots.Count; i += 1)
+        {
+            TMP_Text amountText = _slots[i].AmountText;
+
+            if (amountText == null)
+            {
+                continue;
+            }
+
+            UI_TooltipTrigger trigger = amountText.GetComponentInParent<UI_TooltipTrigger>(true);
+
+            if (trigger == null)
+            {
+                continue;
+            }
+
+            trigger.SetPresenter(_tooltipPresenter);
+            _tooltipTriggers[i] = trigger;
+        }
+    }
+
     // 전 슬롯의 보유량을 현재 값으로 다시 그린다.
     private void RenderAll()
     {
@@ -146,13 +190,47 @@ public class ResourceAmountView
 
     private void RenderOne(ResourceType type, int amount)
     {
-        foreach (ResourceAmountSlot slot in _slots)
+        for (int i = 0; i < _slots.Count; i += 1)
         {
-            if (slot.Type == type && slot.AmountText != null)
+            ResourceAmountSlot slot = _slots[i];
+
+            if (slot.Type != type)
+            {
+                continue;
+            }
+
+            if (slot.AmountText != null)
             {
                 slot.AmountText.text = Format(type, amount);
             }
+
+            RenderTooltip(i, type, amount);
         }
+    }
+
+    // 툴팁 내용은 값이 바뀔 때마다 다시 밀어 넣는다(띄운 채로 바뀌면 트리거가 즉시 반영한다).
+    private void RenderTooltip(int slotIndex, ResourceType type, int amount)
+    {
+        if (_tooltipTriggers == null || _tooltipTriggers[slotIndex] == null)
+        {
+            return;
+        }
+
+        if (_resourceForecast == null)
+        {
+            _tooltipTriggers[slotIndex].ClearContent();
+            return;
+        }
+
+        _tooltipTriggers[slotIndex].SetContent(
+            ResourceForecastTooltipBuilder.Build(
+                type,
+                amount,
+                _resourceForecast,
+                _resourceManager.Catalog,
+                _forecastBreakdownBuffer,
+                _productionColor,
+                _lossColor));
     }
 
     // "보유량", "보유량(+증가)", "보유량(-감소)" 중 하나로 만든다. 생산량이 아니라 순증감을 쓰므로

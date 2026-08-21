@@ -20,6 +20,10 @@ public class UI_ResourceAmountPanel : MonoBehaviour
     [FormerlySerializedAs("_productionForecast")]
     [SerializeField] private ResourceForecast _resourceForecast;
 
+    [Tooltip("행 툴팁을 그릴 표시기. 비워두면 소유 창이 Construct로 주입해야 하고, 그것도 없으면 툴팁 없이 보유량만 나온다.")]
+    [WiringOptional]
+    [SerializeField] private UI_TooltipPresenter _tooltipPresenter;
+
     [Tooltip("하루 순증가 글씨 색(연두색).")]
     [SerializeField] private Color _productionColor = ResourceAmountView.PRODUCTION_COLOR_DEFAULT;
 
@@ -32,16 +36,20 @@ public class UI_ResourceAmountPanel : MonoBehaviour
     private ResourceAmountView _view;
 
     /// <summary>
-    /// 자원 출처를 밖에서 주입한다. 씬 오브젝트를 참조해야 하는 두 필드를, 이미 배선을 갖고 있는
+    /// 자원 출처와 툴팁 표시기를 밖에서 주입한다. 씬 오브젝트를 참조해야 하는 세 필드를, 이미 배선을 갖고 있는
     /// 소유 창이 대신 넣어주는 경로다(UI_TooltipTrigger.SetPresenter와 같은 관례) - 프리팹 안쪽
     /// 패널까지 씬마다 손으로 이어주지 않기 위함이다. 인스펙터로 직접 배선한 패널은 호출하지 않으면 된다.
     ///
     /// 이미 만들어진 뷰는 헌 참조로 구독을 걸어둔 상태이므로 버리고 새로 만든다.
     /// </summary>
-    public void Construct(ResourceManager resourceManager, ResourceForecast resourceForecast)
+    public void Construct(
+        ResourceManager resourceManager,
+        ResourceForecast resourceForecast,
+        UI_TooltipPresenter tooltipPresenter)
     {
         _resourceManager = resourceManager;
         _resourceForecast = resourceForecast;
+        _tooltipPresenter = tooltipPresenter;
 
         _view?.Unsubscribe();
         _view = null;
@@ -66,7 +74,7 @@ public class UI_ResourceAmountPanel : MonoBehaviour
     private void BuildAndSubscribe()
     {
         _view ??= new ResourceAmountView(
-            _resourceManager, _resourceForecast, _productionColor, _lossColor, _slots);
+            _resourceManager, _resourceForecast, _tooltipPresenter, _productionColor, _lossColor, _slots);
         _view.Subscribe();
         _view.RefreshLayoutNextFrame(this.GetCancellationTokenOnDestroy()).Forget();
     }

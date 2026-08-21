@@ -91,7 +91,7 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private EconomyBalanceData _economyBalance;
     [Tooltip("하루 순증가 글씨 색(연두색).")]
     [SerializeField] private Color _productionColor = PRODUCTION_COLOR_DEFAULT;
-    [Tooltip("자원 칸 툴팁을 그릴 표시기. 각 자원 행의 UI_TooltipTrigger에 주입한다.")]
+    [Tooltip("자원 칸 툴팁을 그릴 표시기. 각 자원 행의 UI_TooltipTrigger와 슬라임 상세 패널 행에 주입한다.")]
     [SerializeField] private UI_TooltipPresenter _tooltipPresenter;
     [Tooltip("특화자원 행 오른쪽 끝의 슬라임 요약 칸. 슬라임 5종은 _resourceSlots에 넣지 않고 " +
         "이 칸이 기호 하나로 요약하고, 자세한 값은 호버 패널에서 보여준다.")]
@@ -244,10 +244,10 @@ public class UI_IngameWindow : MonoBehaviour
 
         ResolveResourceTooltipTriggers();
 
-        // 슬라임 요약 칸은 자원 출처를 스스로 배선하지 않는다(프리팹 안쪽이라 씬 참조를 넣을 수 없다).
+        // 슬라임 요약 칸은 자원 출처와 툴팁 표시기를 스스로 배선하지 않는다(프리팹 안쪽이라 씬 참조를 넣을 수 없다).
         if (_slimeSummary != null)
         {
-            _slimeSummary.Construct(_resourceManager, _resourceForecast);
+            _slimeSummary.Construct(_resourceManager, _resourceForecast, _tooltipPresenter);
         }
 
         // 예측이 바뀌면(건물/인구/버프/지형 변경) 보유량 옆 증감 표기와 툴팁을 다시 그린다.

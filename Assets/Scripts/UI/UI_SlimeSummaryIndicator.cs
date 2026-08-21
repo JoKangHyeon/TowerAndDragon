@@ -8,9 +8,10 @@ using UnityEngine.EventSystems;
 /// 5종을 모두 늘어놓으면 행이 너무 길어지므로, 자세한 값은 마우스를 올렸을 때 뜨는 세로 패널에서 본다.
 ///
 /// 판정은 SlimeBalanceRules가, 상세 패널의 표기는 UI_ResourceAmountPanel(=ResourceAmountView)이 갖는다.
+/// 상세 패널 각 행의 예측 내역 툴팁도 ResourceAmountView가 붙인다(HUD 자원 7칸과 같은 문구).
 /// 이 컴포넌트는 값을 모아 넘기고 기호·색을 칠하는 일만 한다.
 ///
-/// 자원 출처(ResourceManager·ResourceForecast)는 씬 오브젝트라 프리팹에 박을 수 없어
+/// 자원 출처(ResourceManager·ResourceForecast)와 툴팁 표시기는 씬 오브젝트라 프리팹에 박을 수 없어
 /// UI_IngameWindow가 Construct로 주입한다.
 /// </summary>
 public class UI_SlimeSummaryIndicator : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
@@ -51,15 +52,18 @@ public class UI_SlimeSummaryIndicator : MonoBehaviour, IPointerEnterHandler, IPo
     // 판정에 넘길 재사용 버퍼. 슬라임 5종뿐이라 매번 새로 담아도 할당이 생기지 않는다.
     private readonly List<SlimeBalanceEntry> _entryBuffer = new();
 
-    /// <summary>자원 출처를 주입한다. 상세 패널에도 같은 출처를 넘긴다.</summary>
-    public void Construct(ResourceManager resourceManager, ResourceForecast resourceForecast)
+    /// <summary>자원 출처와 툴팁 표시기를 주입한다. 상세 패널에도 같은 것을 넘긴다.</summary>
+    public void Construct(
+        ResourceManager resourceManager,
+        ResourceForecast resourceForecast,
+        UI_TooltipPresenter tooltipPresenter)
     {
         _resourceManager = resourceManager;
         _resourceForecast = resourceForecast;
 
         if (_detailAmounts != null)
         {
-            _detailAmounts.Construct(resourceManager, resourceForecast);
+            _detailAmounts.Construct(resourceManager, resourceForecast, tooltipPresenter);
         }
 
         Refresh();
