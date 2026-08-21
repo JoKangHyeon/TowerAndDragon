@@ -21,7 +21,9 @@ public class UI_CastleHealth : MonoBehaviour
     [SerializeField] private Image _trailFill;
     [Tooltip("트레일이 새 체력까지 따라 내려가는 시간(초).")]
     [SerializeField] private float _trailDuration = 0.4f;
-    [Tooltip("현재 체력/최대 체력을 표시하는 텍스트.")]
+    [Tooltip("현재 체력/최대 체력을 표시하는 텍스트. 비워두면 숫자 없이 바만 보여준다 - " +
+        "성 위에 떠 있는 월드 체력바처럼 텍스트 자식이 없는 바가 그렇다.")]
+    [WiringOptional]
     [SerializeField] private TMP_Text _amountText;
 
     [Header("피격 흔들림 연출")]

@@ -18,7 +18,11 @@ public class UIManager : MonoBehaviour
     private const float GAME_OVER_SHOW_DELAY = 0.5f;
 
     [SerializeField] private GameManager _gameManager;
+    [Tooltip("메인 성이 파괴됐을 때 띄울 창. 비워두면 아무것도 띄우지 않는다 - 승패로 끝내지 않는 튜토리얼 씬이 그렇다.")]
+    [WiringOptional]
     [SerializeField] private GameObject _gameOverWindow;
+    [Tooltip("승리 조건을 만족했을 때 띄울 창. 비워두면 아무것도 띄우지 않는다 - 승패로 끝내지 않는 튜토리얼 씬이 그렇다.")]
+    [WiringOptional]
     [SerializeField] private GameObject _victoryWindow;
 
     [Tooltip("한 번에 하나만 열려야 하는 UI 모드 목록(IExclusiveMode 구현체). 예: UI_BuildModeWindow, ConquestModeController.")]

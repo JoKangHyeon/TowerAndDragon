@@ -32,7 +32,13 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
 
     [Header("Dependencies")]
     [SerializeField] private SettingsService _settings;
+    [Tooltip("이 창을 소유한 인게임 UIManager. 비어 있다는 것이 곧 타이틀 화면 인스턴스라는 표시다" +
+        "(IsTitleScreenInstance) - 게임 속도 제어와 배타 열기, 튜토리얼 안내 줄이 함께 꺼진다.")]
+    [WiringOptional]
     [SerializeField] private UIManager _uiManager;
+    [Tooltip("저장 가능 위상 판정과 슬롯 창 주입에 쓴다. 타이틀 화면 인스턴스에는 저장할 게임 상태가 없어 비워 둔다 - " +
+        "비우면 저장 버튼이 줄에서 사라진다(불러오기는 남는다).")]
+    [WiringOptional]
     [SerializeField] private SaveService _saveService;
 
     [Header("창 닫기")]
@@ -83,7 +89,9 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private Button _saveButton;
     [Tooltip("슬롯 창을 불러오기 모드로 여는 버튼.")]
     [SerializeField] private Button _loadButton;
-    [Tooltip("두 버튼이 공유하는 세이브 슬롯 목록 창.")]
+    [Tooltip("두 버튼이 공유하는 세이브 슬롯 목록 창. 타이틀 화면 인스턴스에는 없다 - " +
+        "비우면 저장/불러오기 줄이 통째로 접힌다.")]
+    [WiringOptional]
     [SerializeField] private UI_LoadGameWindow _slotWindow;
     [Tooltip("두 버튼을 담은 줄(SaveLoad_Button). 버튼이 전부 빠질 때 줄째로 접기 위해 받는다.")]
     [SerializeField] private GameObject _slotButtonRow;

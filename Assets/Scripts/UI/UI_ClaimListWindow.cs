@@ -12,6 +12,8 @@ public class UI_ClaimListWindow : MonoBehaviour
 
     public event Action LayoutChanged;
 
+    [Tooltip("진행 중인 점령 목록의 출처. 비워두면 씬에서 자동으로 찾는다(EnsureConquestManager).")]
+    [WiringOptional]
     [SerializeField]
     private ConquestManager _conquestManager;
 

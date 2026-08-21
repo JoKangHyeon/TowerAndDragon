@@ -19,7 +19,13 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
 
     // 새끼용 지역형(B 슬롯) 노드 해금 시 추가되는 보너스 - 미해금이면 0을 반환해 기존 동작과 같다.
     [SerializeField] private DragonTreeManager _dragonTreeManager;
+    [Tooltip("새끼용의 지역 페널티 완화를 등록할 합성 지점. 미연결이면 완화가 반영되지 않는다 - " +
+        "지형 페널티를 일부러 쓰지 않는 씬(튜토리얼)이 그렇다.")]
+    [WiringOptional]
     [SerializeField] private TerrainPenaltyScaleComposite _terrainPenaltyScaleComposite;
+    [Tooltip("완화 결과가 바뀌었음을 알릴 대상. 미연결이면 알리지 않는다 - " +
+        "지형 페널티를 일부러 쓰지 않는 씬(튜토리얼)이 그렇다.")]
+    [WiringOptional]
     [SerializeField] private TerrainPenaltySystem _terrainPenaltySystem;
 
     // 이번 재계산에서 지역 페널티가 완전 무효화된 (건물, 지형) 쌍 - ITerrainPenaltyScaleQuery 구현에 쓴다.
