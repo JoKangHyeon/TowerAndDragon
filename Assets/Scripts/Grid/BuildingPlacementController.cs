@@ -47,6 +47,11 @@ public class BuildingPlacementController : MonoBehaviour
     [SerializeField]
     private UI_WarningWindow _warningWindow;
 
+    [Tooltip("설치로 빠져나간 자원을 그 자리에 띄울 오버레이. 비어 있으면 연출만 생략된다.")]
+    [WiringOptional]
+    [SerializeField]
+    private UI_ConsumeOverlay _consumeOverlay;
+
     [Tooltip("이 지형 때문에 막히면 '얼음 새끼용의 범위가 필요하다'고 안내한다. BD_Ice의 _constructionUnlockTerrains와 같게 유지할 것 - 절벽·물처럼 어떤 새끼용으로도 풀 수 없는 지형을 여기 넣으면 안내가 거짓말이 된다.")]
     [SerializeField]
     private TerrainType _iceUnlockableTerrain = TerrainType.Volcano;
@@ -722,7 +727,13 @@ public class BuildingPlacementController : MonoBehaviour
             constructed.SetConstructedCycle(_cycleManager.CurrentCycleNumber);
 
         if (_resourceManager != null)
+        {
             _resourceManager.Spend(cost);
+
+            // 차감 직후에 띄운다 - 실제로 빠져나간 비용만 보이게 하려면 Spend와 같은 조건이어야 한다.
+            if (_consumeOverlay != null)
+                _consumeOverlay.Show(cost, constructed.transform.position);
+        }
 
         SoundManager.Play(SoundId.BuildPlace);
 
