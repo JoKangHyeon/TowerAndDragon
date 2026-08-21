@@ -71,9 +71,15 @@ public class UI_IngameWindow : MonoBehaviour
     [Tooltip("밤에 켜질 속도 조절 UI.")]
     [SerializeField] private GameObject _speedSetting;
     [Tooltip("굶주림·유휴 인구처럼 밤을 넘기기 전에 짚어야 할 상황이 있을 때 띄우는 확인창. " +
-        "비우면 확인 없이 곧장 밤으로 넘어간다(기존 동작).")]
+        "비우면 확인 없이 곧장 밤으로 넘어간다(기존 동작). " +
+        "씬 하나에서만 끄고 싶으면 이 확인창 컴포넌트의 인스펙터 체크를 해제한다 - 튜토리얼 씬이 그렇게 쓴다.")]
     [WiringOptional]
     [SerializeField] private UI_ConfirmPopup _confirmPopup;
+
+    // 확인창을 씬별로 끄는 스위치. Open()은 평범한 메서드라 컴포넌트 체크만 꺼서는 창이 그대로 열린다
+    // (게다가 체크가 꺼져 있으면 OnEnable이 돌지 않아 문구까지 빈 창이 뜬다).
+    // 부르는 쪽인 여기서 봐야 인스펙터 체크가 실제 off 스위치가 된다.
+    private bool HasNightConfirm => _confirmPopup != null && _confirmPopup.enabled;
 
     // 밤 진입 확인창에 넘길 문구 줄의 재사용 버퍼. 확인창이 내용을 자기 쪽으로 복사하므로 재사용해도 안전하다.
     private readonly List<ConfirmMessageLine> _nightConfirmLines = new();
@@ -316,9 +322,19 @@ public class UI_IngameWindow : MonoBehaviour
             return;
         }
 
+        // 확인창을 쓰지 않는 씬이거나, 안내의 딤이 화면을 막고 있으면 묻지 않고 그대로 보낸다.
+        // 딤이 떠 있을 때 확인창은 딤 아래에 깔려 조작할 수 없는 데다, 확인창의 전체 화면 가림막이
+        // 딤에 뚫린 구멍(밤 버튼)까지 덮어 낮이 영영 끝나지 않는다.
+        // 시키는 대로 누른 것이므로 되물을 이유도 없다.
+        if (!HasNightConfirm || _cycleManager.IsDayEndConfirmBlocked)
+        {
+            _cycleManager.EndDay();
+            return;
+        }
+
         CollectNightConfirmWarnings();
 
-        if (_nightConfirmLines.Count == 0 || _confirmPopup == null)
+        if (_nightConfirmLines.Count == 0)
         {
             _cycleManager.EndDay();
             return;

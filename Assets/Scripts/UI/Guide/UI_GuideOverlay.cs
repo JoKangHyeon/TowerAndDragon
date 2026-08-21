@@ -22,7 +22,8 @@ using UnityEngine.UI;
 /// 이미 반영돼 있다. 게이트 질의(<see cref="IsBlockingInput"/> 등)는 남의 Update와 입력 콜백에서
 /// 불리므로 <see cref="EnsureResolved"/>로 그 자리에서 계산한다 - 프레임당 한 번만 돈다.
 /// </summary>
-public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHandler, ICameraInputTransparent
+public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IDayEndConfirmBlockQuery,
+    IPointerClickHandler, ICameraInputTransparent
 {
     private const int DIM_PANEL_COUNT = 4;
     private const int RECT_CORNER_COUNT = 4;
@@ -276,6 +277,13 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IPointerClickHa
     /// 그 컷에서까지 막으면 시킨 대로 눌러도 아무 일이 없다.
     /// </summary>
     bool IDayEndBlockQuery.CanEndDay() => !IsShowingGuide || AllowsNightStart;
+
+    /// <summary>
+    /// 딤이 떠 있는 동안에는 확인창을 띄우지 못하게 한다. 밤 버튼을 누르라고 시키는 컷은
+    /// 밤 진입 자체는 허용하므로(<see cref="AllowsNightStart"/>) 여기까지 오는데,
+    /// 그 컷에서 확인창이 뜨면 딤 아래에 깔려 누를 수 없고 밤 버튼까지 함께 죽는다.
+    /// </summary>
+    bool IDayEndConfirmBlockQuery.CanShowDayEndConfirm() => !IsBlockingInput;
 
     /// <summary>지금 그리는 컷이 밤 시작을 허용하는지. 게이트에서만 본다.</summary>
     private bool AllowsNightStart

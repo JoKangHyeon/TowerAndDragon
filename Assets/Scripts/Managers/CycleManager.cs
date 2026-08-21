@@ -164,6 +164,26 @@ public class CycleManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 지금 밤 진입 확인창을 띄우면 플레이어가 그것을 조작할 수 있는지.
+    /// 거짓이면 확인창을 건너뛰고 곧장 밤으로 보내야 한다 - 자세한 사유는
+    /// <see cref="IDayEndConfirmBlockQuery"/>에 적어 두었다.
+    /// </summary>
+    public bool IsDayEndConfirmBlocked => !CanShowDayEndConfirm();
+
+    private bool CanShowDayEndConfirm()
+    {
+        foreach (IDayEndBlockQuery blocker in _dayEndBlockers)
+        {
+            if (blocker is IDayEndConfirmBlockQuery confirmQuery && !confirmQuery.CanShowDayEndConfirm())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// [디버그 전용] 관문을 무시하고 밤으로 넘긴다. 목표 관문은 낮 내내 등록돼 있어
     /// 평범한 EndDay로는 목표를 다 채우기 전까지 넘어갈 수 없다 - 건너뛰기 도구는 그것을 지나야 한다.
     /// </summary>
