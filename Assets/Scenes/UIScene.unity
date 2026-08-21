@@ -1060,6 +1060,7 @@ GameObject:
   - component: {fileID: 519420029}
   - component: {fileID: 519420030}
   - component: {fileID: 519420033}
+  - component: {fileID: 519420034}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1166,7 +1167,7 @@ Camera:
   m_HDR: 1
   m_AllowMSAA: 0
   m_AllowDynamicResolution: 0
-  m_ForceIntoRT: 0
+  m_ForceIntoRT: 1
   m_OcclusionCulling: 0
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
@@ -1218,6 +1219,31 @@ MonoBehaviour:
   _boundsMarginMax: {x: 0, y: 0}
   _mapMin: {x: -60, y: -60}
   _mapMax: {x: 60, y: 60}
+--- !u!114 &519420034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7bb42831ee5422f409e7f24f9e7488ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: EPO::EPOOutline.Outliner
+  stage: 1
+  renderingStrategy: 0
+  renderingMode: 0
+  outlineLayerMask: -1
+  primaryBufferSizeMode: 0
+  primaryRendererScale: 1
+  primarySizeReference: 800
+  blurShift: 1
+  dilateShift: 1
+  dilateIterations: 1
+  dilateQuality: 2
+  blurIterations: 0
+  blurType: 1
 --- !u!1 &528527939
 GameObject:
   m_ObjectHideFlags: 0
@@ -10787,6 +10813,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1692054029}
   - component: {fileID: 1692054028}
+  - component: {fileID: 1692054030}
   m_Layer: 0
   m_Name: BuildingPlacementManager
   m_TagString: Untagged
@@ -10848,6 +10875,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 698775030}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1692054030
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1692054027}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec8cd3e008ea0ca4ca185224ba681ba0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingHoverOutlineDriver
+  _mouseSelectController: {fileID: 250167905}
+  _placementController: {fileID: 1692054028}
 --- !u!1 &1699494003
 GameObject:
   m_ObjectHideFlags: 0
