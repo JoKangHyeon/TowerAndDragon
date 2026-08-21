@@ -48,6 +48,13 @@ public class CycleLight : MonoBehaviour
     private float _baseIntensity;
     private CancellationTokenSource _transitionCts;
 
+    // 게임 시작(또는 세이브 복원) 직후의 첫 전환은 연출 없이 목표 상태로 맞춘다.
+    // 씬에 저장된 라이트 상태가 시작 시점의 낮/밤과 다를 수 있는데, 그때 페이드를 재생하면
+    // "켜져 있던 것이 서서히 꺼지는" 연출이 시작 화면에서 재생된다 - 성 등불(_isOnWhileDay=false,
+    // 씬에는 켜진 상태로 저장)이 낮에 시작하면서 3초간 꺼지며 성이 어두워 보이던 원인이다.
+    // 이후의 낮↔밤 전환은 정상적으로 페이드한다.
+    private bool _hasAppliedInitialState;
+
     private void Awake()
     {
         _light2D = GetComponent<Light2D>();
@@ -96,8 +103,26 @@ public class CycleLight : MonoBehaviour
     private void StartTransition(Color targetColor, float targetIntensity)
     {
         CancelTransition();
+
+        // 첫 전환은 초기 상태를 맞추는 것이므로 연출하지 않는다.
+        if (!_hasAppliedInitialState)
+        {
+            _hasAppliedInitialState = true;
+            ApplyImmediate(targetColor, targetIntensity);
+            return;
+        }
+
         _transitionCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
         TransitionAsync(targetColor, targetIntensity, _transitionCts.Token).Forget();
+    }
+
+    // 색·밝기와 함께 활성 상태까지 한 번에 맞춘다. 밝기가 0인 Point 라이트를 켜 둘 이유가 없으므로
+    // 끈다 - 단일 글로벌 라이트는 밤 밝기가 0에 가까워도 계속 켜져 있어야 화면이 새까매지지 않는다.
+    private void ApplyImmediate(Color color, float intensity)
+    {
+        _light2D.color = color;
+        _light2D.intensity = intensity;
+        _light2D.enabled = _isSingleGlobalLight || intensity > 0f;
     }
 
     private void CancelTransition()
@@ -125,9 +150,7 @@ public class CycleLight : MonoBehaviour
         // 변화가 없는 전환은 그대로 스냅하고 애니메이션을 건너뛴다.
         if (startColor == targetColor && Mathf.Approximately(startIntensity, targetIntensity))
         {
-            _light2D.color = targetColor;
-            _light2D.intensity = targetIntensity;
-            _light2D.enabled = _isSingleGlobalLight || targetIntensity > 0f;
+            ApplyImmediate(targetColor, targetIntensity);
             return;
         }
 
@@ -150,8 +173,6 @@ public class CycleLight : MonoBehaviour
             _light2D.intensity = Mathf.Lerp(startIntensity, targetIntensity, easedT);
         }
 
-        _light2D.color = targetColor;
-        _light2D.intensity = targetIntensity;
-        _light2D.enabled = _isSingleGlobalLight || targetIntensity > 0f;
+        ApplyImmediate(targetColor, targetIntensity);
     }
 }

@@ -23,8 +23,11 @@ public class UI_DragonSkillWindow : MonoBehaviour
     // 여기가 모자라면 ScrollRect가 바깥 링을 화면 안으로 못 끌어와 클릭조차 되지 않는다.
     private const float CONTENT_EDGE_MARGIN = 160f;
 
-    // 창을 열었을 때의 배율 상한. 트리가 뷰포트보다 작아도 확대하지는 않는다.
+    // 창을 열었을 때의 배율 상한. 원본 크기(1)를 넘겨 확대하지는 않는다.
     private const float MAX_INITIAL_ZOOM = 1f;
+
+    private const float DEFAULT_INITIAL_ZOOM_MULTIPLIER = 1.6f;
+    private const float MIN_INITIAL_ZOOM_MULTIPLIER = 0.1f;
 
     // 반지름 → 지름.
     private const float DIAMETER_PER_RADIUS = 2f;
@@ -73,6 +76,13 @@ public class UI_DragonSkillWindow : MonoBehaviour
     [SerializeField] private float _branchAngleOffset = 11f;
 
     [SerializeField] private float _radiusUltimate = 1080f;
+
+    [Header("Initial Zoom")]
+    [Tooltip("창을 열었을 때의 시작 배율. '트리 전체가 뷰포트에 들어가는 배율'에 이 값을 곱한다. " +
+        "1이면 전체가 한 화면에 들어오고, 크게 잡으면 확대된 상태로 시작한다(바깥 링은 휠·드래그로 본다). " +
+        "결과는 원본 크기(1배)를 넘지 않는다.")]
+    [Min(MIN_INITIAL_ZOOM_MULTIPLIER)]
+    [SerializeField] private float _initialZoomMultiplier = DEFAULT_INITIAL_ZOOM_MULTIPLIER;
 
     [Header("Colors")]
     // 속성 색은 DragonAttributePalette가 단일 출처다(창마다 따로 지정하면 값이 어긋난다).
@@ -433,8 +443,10 @@ public class UI_DragonSkillWindow : MonoBehaviour
         _content.sizeDelta = new Vector2(side, side);
     }
 
-    // 트리 전체가 한 화면에 들어오게 축소하고 중앙으로 되돌린다. 이후 배율은
-    // 휠(UI_ScrollRectZoom)과 드래그가 이어받으므로 여기서는 시작 상태만 정한다.
+    // 시작 배율을 정하고 중앙으로 되돌린다. 기준은 '트리 전체가 뷰포트에 들어가는 배율'이고,
+    // 여기에 _initialZoomMultiplier를 곱해 확대된 상태로 열 수 있다 - 트리가 커서 전체를
+    // 담으면 노드 글씨를 읽을 수 없기 때문이다. 이후 배율은 휠(UI_ScrollRectZoom)과 드래그가
+    // 이어받으므로 여기서는 시작 상태만 정한다.
     private void FitContentToViewport()
     {
         if (_content == null || _content.parent is not RectTransform viewport)
@@ -450,8 +462,8 @@ public class UI_DragonSkillWindow : MonoBehaviour
             return;
         }
 
-        float scale = Mathf.Min(viewRect.width / size.x, viewRect.height / size.y);
-        scale = Mathf.Min(scale, MAX_INITIAL_ZOOM);
+        float fitScale = Mathf.Min(viewRect.width / size.x, viewRect.height / size.y);
+        float scale = Mathf.Min(fitScale * _initialZoomMultiplier, MAX_INITIAL_ZOOM);
         _content.localScale = new Vector3(scale, scale, 1f);
         _content.anchoredPosition = Vector2.zero;
     }
@@ -535,7 +547,10 @@ public class UI_DragonSkillWindow : MonoBehaviour
     private void HandleNodeClicked(DragonSkillNodeData node)
     {
         _selectedNode = node;
-        _detailsPanel?.Show(node);
+
+        // 노드에 얹은 것과 같은 아이콘을 그대로 넘긴다 - 상세 패널이 규칙을 다시 구현하면
+        // 슬롯 아이콘 표를 고칠 때 두 화면이 어긋난다.
+        _detailsPanel?.Show(node, IconFor(node));
     }
 
     private void RefreshDetailsPanel()

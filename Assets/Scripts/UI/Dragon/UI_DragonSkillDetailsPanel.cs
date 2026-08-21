@@ -21,6 +21,10 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
     private static readonly Color UPGRADE_DISABLED_COLOR_DEFAULT = new Color(0.5f, 0.5f, 0.5f, 1f);
 
     [SerializeField] private GameObject _root;
+
+    [Tooltip("트리 노드에 얹힌 것과 같은 아이콘. 아이콘이 없는 슬롯에서는 꺼진다.")]
+    [SerializeField] private Image _iconImage;
+
     [SerializeField] private TextMeshProUGUI _nameText;
     [SerializeField] private TextMeshProUGUI _descriptionText;
     [SerializeField] private TextMeshProUGUI _statusText;
@@ -48,6 +52,12 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
     private DragonTreeManager _dragonTreeManager;
     private ResourceManager _resourceManager;
     private DragonSkillNodeData _selectedNode;
+
+    // 아이콘을 어느 슬롯에 무엇으로 붙일지는 UI_DragonSkillWindow가 단독으로 정한다(슬롯 표 →
+    // 액티브 스킬 아이콘 → 알 아이콘). 같은 규칙을 이쪽에서 다시 구현하면 두 화면이 어긋나므로
+    // Show가 받은 스프라이트를 그대로 들고 있다가 갱신 때마다 다시 칠한다.
+    private Sprite _selectedIcon;
+
     private Action _onChanged;
     private readonly List<RaycastResult> _raycastResults = new();
     private Color _upgradeImageBaseColor = Color.white;
@@ -86,6 +96,7 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
     public void Clear()
     {
         _selectedNode = null;
+        _selectedIcon = null;
         _isOpen = false;
 
         if (!WiringGuard.Require(_root, nameof(_root), this))
@@ -115,6 +126,7 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
     private void HideImmediate()
     {
         _selectedNode = null;
+        _selectedIcon = null;
         _isOpen = false;
         _scaleTween?.Kill();
 
@@ -124,9 +136,11 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
         }
     }
 
-    public void Show(DragonSkillNodeData node)
+    /// <param name="icon">트리 노드에 얹힌 것과 같은 스프라이트. 없으면 null을 넘긴다.</param>
+    public void Show(DragonSkillNodeData node, Sprite icon)
     {
         _selectedNode = node;
+        _selectedIcon = icon;
 
         if (_root != null)
         {
@@ -220,6 +234,13 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
         if (_selectedNode == null || _root == null || !_root.activeSelf)
         {
             return;
+        }
+
+        if (_iconImage != null)
+        {
+            // 아이콘이 없는 슬롯에서 빈 사각형이 남지 않게 끈다(트리 노드와 같은 처리).
+            _iconImage.sprite = _selectedIcon;
+            _iconImage.enabled = _selectedIcon != null;
         }
 
         if (_nameText != null)
