@@ -5,7 +5,7 @@ using UnityEngine;
 public static class DumpBluerockTransforms
 {
     private const string PATH =
-        "Assets/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_Crack_RockAOE.prefab";
+        "Assets/Imported/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_Crack_RockAOE.prefab";
 
     public static string Execute()
     {

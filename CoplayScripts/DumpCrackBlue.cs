@@ -4,7 +4,7 @@ using UnityEngine;
 
 public static class DumpCrackBlue
 {
-    private const string ROOT = "Assets/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs";
+    private const string ROOT = "Assets/Imported/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs";
 
     public static string Execute()
     {

@@ -10,8 +10,8 @@ public static class DumpHierarchy
 
         foreach (string path in new[]
         {
-            "Assets/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_Dust_Fire.prefab",
-            "Assets/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_GroundCrack_Blue.prefab"
+            "Assets/Imported/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_Dust_Fire.prefab",
+            "Assets/Imported/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_GroundCrack_Blue.prefab"
         })
         {
             var root = AssetDatabase.LoadAssetAtPath<GameObject>(path);

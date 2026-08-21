@@ -10,7 +10,7 @@ public static class DumpStonePositions
 
         foreach (string path in new[]
         {
-            "Assets/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_Crack_Rock.prefab",
+            "Assets/Imported/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_Crack_Rock.prefab",
             "Assets/Imported/Prefabs/Effects/Status/FX_Impact_StoneCrack.prefab"
         })
         {

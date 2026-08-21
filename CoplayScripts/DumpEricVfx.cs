@@ -5,7 +5,7 @@ using UnityEngine;
 
 public static class DumpEricVfx
 {
-    private const string FOLDER = "Assets/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP";
+    private const string FOLDER = "Assets/Imported/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP";
 
     private static readonly string[] NAMES =
     {

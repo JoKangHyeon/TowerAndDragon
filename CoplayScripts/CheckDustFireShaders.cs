@@ -5,7 +5,7 @@ using UnityEngine;
 public static class CheckDustFireShaders
 {
     private const string PATH =
-        "Assets/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_Dust_Fire.prefab";
+        "Assets/Imported/Eric VFX Studio/Game VFX - Ground Crack & Explosion/Prefabs/URP/FX_Dust_Fire.prefab";
 
     public static string Execute()
     {
