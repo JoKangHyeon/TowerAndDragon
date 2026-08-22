@@ -16,11 +16,12 @@ MonoBehaviour:
   _nameLocKey: research_node_tower_reverse_engineering_name
   _descriptionLocKey: research_node_tower_reverse_engineering_description
   _branch: 0
-  _tier: 1
-  _prerequisites: []
-  _researchPointCost: 20
+  _tier: 4
+  _prerequisites:
+  - {fileID: 11400000, guid: 20da30fd0e52f0149a031d39fe9f259e, type: 2}
+  _researchPointCost: 90
   _resourceCost:
   - Type: 4
-    Amount: 20
+    Amount: 40
   _effects: []
   _requiredLandmark: {fileID: 11400000, guid: 57acd77db3acdce4b95d4a56618fb3d5, type: 2}

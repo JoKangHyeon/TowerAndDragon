@@ -17,7 +17,8 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
     IChunkYieldMultiplierQuery,
     IVisionRadiusBonusQuery,
     IConquestModifierQuery,
-    ITowerHitStatusQuery
+    ITowerHitStatusQuery,
+    ITowerMaxHealthMultiplierQuery
 {
     private const float BASE_DAMAGE_MULTIPLIER = 1f;
     private const float BASE_RANGE_MULTIPLIER = 1f;

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38ecfb0e94f007a42be5780914a37804, type: 3}
+  m_Name: RN_TowerArmor
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchNodeData
+  _nodeId: tower_armor
+  _nameLocKey: research_node_tower_armor_name
+  _descriptionLocKey: research_node_tower_armor_description
+  _branch: 0
+  _tier: 4
+  _prerequisites:
+  - {fileID: 11400000, guid: 07bffdd629392e0449dbc3189513af5f, type: 2}
+  - {fileID: 11400000, guid: 122b820a081203042b344a6e4a15ff41, type: 2}
+  _researchPointCost: 90
+  _resourceCost:
+  - Type: 4
+    Amount: 40
+  _effects:
+  - {fileID: 11400000, guid: 8fcb36e22f2294442ac31142d685bc5f, type: 2}
+  _requiredLandmark: {fileID: 0}

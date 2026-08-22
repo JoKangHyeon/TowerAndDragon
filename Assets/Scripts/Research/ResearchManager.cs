@@ -7,12 +7,15 @@ public sealed class ResearchManager : MonoBehaviour,
     ITowerStatMultiplierQuery,
     IConquestModifierQuery,
     IPopulationCapacityModifierQuery,
-    IVisionRadiusBonusQuery
+    IVisionRadiusBonusQuery,
+    ITowerMaxHealthMultiplierQuery,
+    ISealStoneUnlockQuery
 {
     private const float BASE_YIELD_MULTIPLIER = 1f;
     private const float BASE_DAMAGE_MULTIPLIER = 1f;
     private const float BASE_RANGE_MULTIPLIER = 1f;
     private const float BASE_ATTACK_SPEED_MULTIPLIER = 1f;
+    private const float BASE_MAX_HEALTH_MULTIPLIER = 1f;
     private const int MINIMUM_POPULATION_CAPACITY = 1;
 
     [SerializeField] private ResearchTreeData _tree;
@@ -24,6 +27,10 @@ public sealed class ResearchManager : MonoBehaviour,
     // ConquestResearchCoordinator가 담당한다(이 매니저를 이미 참조하고 있어 중복 배선이 없다).
     [SerializeField] private ChunkYieldMultiplierComposite _yieldComposite;
     [SerializeField] private TowerStatMultiplierComposite _statComposite;
+
+    [Tooltip("타워 최대체력 배율 Composite. 비어 있으면 최대체력 연구(중갑 타워)가 적용되지 않는다 - " +
+        "소비자가 TowerAttack이 아니라 TowerMaxHealthApplier라서 별도 Composite를 쓴다.")]
+    [SerializeField] private TowerMaxHealthMultiplierComposite _maxHealthComposite;
 
     [SerializeField] private UnityEvent<int> _researchPointsChanged = new();
     [SerializeField] private UnityEvent<ResearchNodeData> _nodeCompleted = new();
@@ -116,6 +123,7 @@ public sealed class ResearchManager : MonoBehaviour,
 
         _yieldComposite?.Register(this);
         _statComposite?.Register(this);
+        _maxHealthComposite?.Register(this);
 
         _isConstructed = true;
     }
@@ -129,6 +137,7 @@ public sealed class ResearchManager : MonoBehaviour,
 
         _yieldComposite?.Unregister(this);
         _statComposite?.Unregister(this);
+        _maxHealthComposite?.Unregister(this);
     }
 
     public bool RegisterLab(ResearchLab lab)
@@ -413,6 +422,31 @@ public sealed class ResearchManager : MonoBehaviour,
         return BASE_ATTACK_SPEED_MULTIPLIER + bonusRatio;
     }
 
+    // --- ITowerMaxHealthMultiplierQuery ---
+
+    public float GetMaxHealthMultiplier(TowerData towerData)
+    {
+        float bonusRatio = 0f;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    bonusRatio += effect.GetTowerMaxHealthMultiplierBonus(towerData);
+                }
+            }
+        }
+
+        return BASE_MAX_HEALTH_MULTIPLIER + bonusRatio;
+    }
+
     public float GetConquestCostReductionRatio()
     {
         float reductionRatio = 0f;
@@ -549,6 +583,32 @@ public sealed class ResearchManager : MonoBehaviour,
         }
 
         return moveAllowance;
+    }
+
+    // --- ISealStoneUnlockQuery ---
+    // 봉인석은 승리 조건(4포탈 동시 봉인)에 직결되므로 한 노드라도 해금하면 열린다.
+    public bool IsSealStoneUnlocked
+    {
+        get
+        {
+            foreach (string nodeId in _completedNodeIds)
+            {
+                if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+                {
+                    continue;
+                }
+
+                foreach (ResearchEffectSO effect in node.Effects)
+                {
+                    if (effect != null && effect.UnlocksSealStone())
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
     }
 
     private void CacheNodes()

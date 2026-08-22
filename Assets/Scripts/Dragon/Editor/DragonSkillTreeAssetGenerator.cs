@@ -77,12 +77,28 @@ public static class DragonSkillTreeAssetGenerator
 
     // 상태이상 수치(예시, 밸런싱 대상). 빙결은 기본 3초에서 랭크마다 1초씩 증가한다.
     private const float ICE_SLOW_MULTIPLIER = 0.5f;
+
+    // 궁극의 잔존분은 "절반 세기". 상태이상은 런타임 배율을 곱할 수 없어(DragonSkillStatusEffectSO
+    // 주석 참고) 약화된 에셋을 따로 만들어 표현한다. 감속 폭(1 - 배율)을 잔존 비율만큼 줄인다 -
+    // 0.5 감속(속도 50%)의 절반은 0.25 감속이므로 배율 0.75가 된다.
+    private const float ICE_SLOW_MULTIPLIER_PERSIST =
+        1f - (1f - ICE_SLOW_MULTIPLIER) * ULTIMATE_INACTIVE_SCALE;
     private const float ICE_SLOW_DURATION = 3f;
     private const float ICE_FREEZE_DURATION = 3f;
     private const float ICE_FREEZE_DURATION_R1 = 4f;
     private const float ICE_FREEZE_DURATION_R2 = 5f;
     private const float FIRE_BURN_DAMAGE_PER_TICK = 2f;
     private const float FIRE_BURN_DAMAGE_PER_TICK_R2 = 4f;
+
+    // 화상은 틱 피해가 곧 세기라 잔존 비율을 그대로 곱한다(ICE_SLOW_MULTIPLIER_PERSIST 주석 참고).
+    private const float FIRE_BURN_DAMAGE_PER_TICK_PERSIST =
+        FIRE_BURN_DAMAGE_PER_TICK * ULTIMATE_INACTIVE_SCALE;
+
+    // 새끼용 불 화상은 어미용 상시 화상과 StatusId를 나누고 지속시간도 유한하게 둔다 -
+    // 같은 id를 쓰면 두 화상이 중첩되지 않고 서로 갱신해 버려서, 어미용 불이 활성인 동안
+    // 새끼용 타워형 노드를 해금해도 체감이 전혀 없다.
+    private const string KIN_FIRE_BURN_STATUS_ID = "kin_fire_burn";
+    private const float KIN_FIRE_BURN_DURATION = 3f;
     private const float FIRE_BURN_TICK_INTERVAL = 1f;
     private const float FIRE_BURN_DURATION_INFINITE = 0f; // 상시 화상 - 몬스터가 죽을 때까지 유지.
 
@@ -92,7 +108,8 @@ public static class DragonSkillTreeAssetGenerator
     private const int METEOR_USE_PER_DAY = 2;
     private const float GLOBAL_DAMAGE_PERCENT_OF_CURRENT_HEALTH = 0.3f;
     private const float METEOR_FLAT_DAMAGE = 40f;
-    private const float METEOR_AREA_RADIUS = 2f;
+    // 밸런스 테스트에서 2 → 1.5로 줄인 값. 생성기를 다시 돌려도 되돌아가지 않도록 여기 반영한다.
+    private const float METEOR_AREA_RADIUS = 1.5f;
     private const float CASTLE_HEAL_AMOUNT = 50f;
 
     // 속성 하나의 고정 정보. 슬롯별 문구는 SlotText가 (속성, 슬롯)으로 따로 들고 있다.
@@ -128,6 +145,14 @@ public static class DragonSkillTreeAssetGenerator
         public FreezeStatusSO IceFreezeStrong;
         public DamageOverTimeStatusSO FireBurn;
         public DamageOverTimeStatusSO FireBurnStrong;
+
+        // 궁극의 잔존 전용 - 루트 각성이 주는 상태이상의 절반 세기.
+        public MoveSpeedStatusSO IceSlowPersist;
+        public DamageOverTimeStatusSO FireBurnPersist;
+
+        // 새끼용 타워형(불) 전용 - 어미용 화상과 별개 id·유한 지속.
+        public DamageOverTimeStatusSO KinFireBurn;
+        public DamageOverTimeStatusSO KinFireBurnStrong;
     }
 
     private sealed class LocRow
@@ -393,8 +418,23 @@ public static class DragonSkillTreeAssetGenerator
             // 랭크 상태의 StatusId를 같게 둬야 재부여가 중첩이 아니라 갱신으로 처리된다.
             IceFreezeStrong = CreateFreezeStatus("DS_IceFreeze_R2", "dragon_ice_freeze", ICE_FREEZE_DURATION_R2),
 
-            FireBurn = CreateDotStatus("DS_FireBurn", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK),
-            FireBurnStrong = CreateDotStatus("DS_FireBurn_R2", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK_R2),
+            FireBurn = CreateDotStatus(
+                "DS_FireBurn", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK, FIRE_BURN_DURATION_INFINITE),
+            FireBurnStrong = CreateDotStatus(
+                "DS_FireBurn_R2", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK_R2, FIRE_BURN_DURATION_INFINITE),
+
+            // 잔존용도 StatusId를 루트와 같게 둔다 - 속성을 바꾸는 순간 이미 걸려 있던 상태가
+            // 중첩되지 않고 약한 쪽으로 갱신된다(랭크 상태와 같은 이유).
+            IceSlowPersist = CreateMoveSpeedStatus(
+                "DS_IceSlow_Persist", "dragon_ice_slow", ICE_SLOW_DURATION, ICE_SLOW_MULTIPLIER_PERSIST),
+            FireBurnPersist = CreateDotStatus(
+                "DS_FireBurn_Persist", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK_PERSIST,
+                FIRE_BURN_DURATION_INFINITE),
+
+            KinFireBurn = CreateDotStatus(
+                "DS_KinFireBurn_R1", KIN_FIRE_BURN_STATUS_ID, FIRE_BURN_DAMAGE_PER_TICK, KIN_FIRE_BURN_DURATION),
+            KinFireBurnStrong = CreateDotStatus(
+                "DS_KinFireBurn_R2", KIN_FIRE_BURN_STATUS_ID, FIRE_BURN_DAMAGE_PER_TICK_R2, KIN_FIRE_BURN_DURATION),
         };
     }
 
@@ -428,14 +468,15 @@ public static class DragonSkillTreeAssetGenerator
             });
     }
 
-    private static DamageOverTimeStatusSO CreateDotStatus(string assetName, string statusId, float damagePerTick)
+    private static DamageOverTimeStatusSO CreateDotStatus(
+        string assetName, string statusId, float damagePerTick, float durationSeconds)
     {
         return CreateOrReplace<DamageOverTimeStatusSO>(
             $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/{assetName}.asset",
             so =>
             {
                 so.FindProperty("_statusId").stringValue = statusId;
-                so.FindProperty("_durationSeconds").floatValue = FIRE_BURN_DURATION_INFINITE;
+                so.FindProperty("_durationSeconds").floatValue = durationSeconds;
                 so.FindProperty("_damagePerTick").floatValue = damagePerTick;
                 so.FindProperty("_tickIntervalSeconds").floatValue = FIRE_BURN_TICK_INTERVAL;
             });
@@ -671,6 +712,16 @@ public static class DragonSkillTreeAssetGenerator
         var persistSo = new SerializedObject(persist);
         persistSo.FindProperty("_suppressWhileActive").boolValue = true;
         persistSo.FindProperty("_inactiveScale").floatValue = ULTIMATE_INACTIVE_SCALE;
+
+        // 숫자 효과(공속·생산량)는 _inactiveScale이 곱해져 저절로 절반이 되지만, 상태이상은
+        // 곱할 수 없다 - 얼음·불은 절반 세기 에셋으로 갈아끼워야 "절반 남는다"가 성립한다.
+        // 그 두 속성의 잔존 효과에만 _status가 있으므로 프로퍼티 유무로 갈린다.
+        SerializedProperty statusProp = persistSo.FindProperty("_status");
+        if (statusProp != null)
+        {
+            statusProp.objectReferenceValue = PersistStatusFor(attr.Type, statuses);
+        }
+
         persistSo.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(persist);
 
@@ -712,6 +763,22 @@ public static class DragonSkillTreeAssetGenerator
         return new[] { persist, unique };
     }
 
+    // 잔존 전용 상태이상. 루트 각성이 상태이상을 주는 속성(얼음·불)만 대상이다.
+    private static StatusEffectSO PersistStatusFor(DragonType attribute, StatusAssets statuses)
+    {
+        switch (attribute)
+        {
+            case DragonType.Ice:
+                return statuses.IceSlowPersist;
+
+            case DragonType.Fire:
+                return statuses.FireBurnPersist;
+
+            default:
+                return null;
+        }
+    }
+
     // 새끼용 A(타워형) - "그 새끼용 자신의" 능력만 강화한다.
     private static DragonSkillEffectSO CreateKinTowerEffect(
         AttributeSpec attr, string suffix, int index, StatusAssets statuses)
@@ -727,7 +794,8 @@ public static class DragonSkillTreeAssetGenerator
 
             // 불: 랭크가 오르면 더 센 화상으로 갈아끼운다(틱데미지 강화).
             case DragonType.Fire:
-                return CreateKinTowerStatusEffect(path, attr, rank == 1 ? statuses.FireBurn : statuses.FireBurnStrong);
+                return CreateKinTowerStatusEffect(
+                    path, attr, rank == 1 ? statuses.KinFireBurn : statuses.KinFireBurnStrong);
 
             // 생명 새끼용은 공격 데이터가 없는 버프 전용 개체라 전투 스탯이 의미가 없다 - 버프 반경을 준다.
             case DragonType.Life:

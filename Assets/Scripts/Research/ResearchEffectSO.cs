@@ -25,6 +25,13 @@ public abstract class ResearchEffectSO : ScriptableObject
         return 0f;
     }
 
+    // 최대체력만 소비 시점이 다르다 - Health가 최댓값을 값으로 들고 있어 매 공격마다 pull할 수 없고,
+    // TowerMaxHealthApplier가 밤 시작에 한 번 읽어 확정한다.
+    public virtual float GetTowerMaxHealthMultiplierBonus(TowerData towerData)
+    {
+        return 0f;
+    }
+
     public virtual float GetConquestCostReductionRatio()
     {
         return 0f;
@@ -60,5 +67,11 @@ public abstract class ResearchEffectSO : ScriptableObject
     public virtual TowerData GetUnlockedTower()
     {
         return null;
+    }
+
+    // 봉인석 건설 해금 여부. 타워 해금과 달리 대상 에셋이 하나뿐이라 bool로 둔다.
+    public virtual bool UnlocksSealStone()
+    {
+        return false;
     }
 }

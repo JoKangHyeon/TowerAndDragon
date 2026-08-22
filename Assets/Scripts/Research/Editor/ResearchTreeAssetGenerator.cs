@@ -68,9 +68,16 @@ public static class ResearchTreeAssetGenerator
 
     private static string[] After(params string[] nodeIds) => nodeIds;
 
+    // 티어는 Docs/연구트리_개편안.md §2의 확정 배치다. UI가 (갈래 × 티어) 격자로 자동 배치하고
+    // 한 칸의 폭이 갈래 열 폭(500)을 넘으면 옆 갈래를 침범하므로 칸당 3개가 상한이다.
+    // 배치를 바꿀 때는 그 상한을 먼저 확인할 것.
+    //
+    // RP 코스트는 티어 곡선(10 / 25 / 50 / 90 / 150)을 그대로 따른다 - 티어가 바뀐 노드는
+    // 새 티어의 값으로 맞췄다(밸런싱 대상).
     private static NodeSpec[] BuildNodeSpecs() => new[]
     {
-        // ---------------- 타워 갈래 (로드맵 §5.1) ----------------
+        // ================================ 타워 갈래 (13) ================================
+        // --- T1 ---
         new NodeSpec
         {
             NodeId = "tower_damage", AssetName = "RN_TowerDamage",
@@ -78,15 +85,15 @@ public static class ResearchTreeAssetGenerator
             ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_TowerDamageIncrease",
-            NameEn = "[TBD] Basic Training", NameKo = "[미정] 기본 훈련",
+            NameEn = "[TBD] Basic Training I", NameKo = "[미정] 기본 훈련 I",
             DescEn = "[TBD] All tower damage +10%.", DescKo = "[미정] 전 타워 공격력 +10%",
         },
         new NodeSpec
         {
             NodeId = "tower_range_1", AssetName = "RN_TowerRange1",
-            Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 30), Amount(ResourceType.Stone, 20)),
-            PrerequisiteIds = After("tower_damage"),
+            Branch = ResearchBranch.Tower, Tier = 1, ResearchPointCost = 10,
+            ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
+            PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_TowerRangeIncrease",
             NameEn = "[TBD] Range Extension I", NameKo = "[미정] 사거리 확장 I",
             DescEn = "[TBD] Tower range +15%.", DescKo = "[미정] 사거리 +15%",
@@ -94,17 +101,31 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "tower_firerate_1", AssetName = "RN_TowerFireRate1",
-            Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 25,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 鑛20 - 대응 자원 없음
-            PrerequisiteIds = After("tower_damage"),
+            Branch = ResearchBranch.Tower, Tier = 1, ResearchPointCost = 10,
+            ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
+            PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_TowerFireRateIncrease",
             NameEn = "[TBD] Rate of Fire I", NameKo = "[미정] 연사 개량 I",
             DescEn = "[TBD] Attack speed +12%.", DescKo = "[미정] 공격속도 +12%",
         },
+
+        // --- T2 ---
+        // 속성 타워 해금을 T2에 두는 것이 배치의 핵심이다. T3로 내리면 속성 강화 4개가 T4 한 칸
+        // (상한 3)에 들어가지 못해 하나가 T5로 밀리고, 궁극 노드와 같은 칸에서 선행 간선이 생긴다.
+        new NodeSpec
+        {
+            NodeId = "tower_elemental_unlock", AssetName = "RN_TowerElementalUnlock",
+            Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 25,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 30)),
+            PrerequisiteIds = Array.Empty<string>(),
+            NameEn = "[TBD] Elemental Tower Unlock", NameKo = "[미정] 속성 타워 해금",
+            DescEn = "[TBD] Allows building biome-specialized towers.",
+            DescKo = "[미정] 바이옴 특화 타워 건설 가능",
+        },
         new NodeSpec
         {
             NodeId = "tower_manpower_1", AssetName = "RN_TowerManpower1",
-            Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 30,
+            Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 25,
             ResourceCost = Cost(Amount(ResourceType.Stone, 30)),
             PrerequisiteIds = After("tower_damage"),
             EffectAssetName = "RE_TowerManpowerReduction",
@@ -114,51 +135,100 @@ public static class ResearchTreeAssetGenerator
         },
         new NodeSpec
         {
-            // 로드맵 선행은 "사거리·연사 중 1"(OR)이지만 Prerequisites는 AND 판정만 지원한다.
-            // 노드가 도달 불가해지지 않도록 둘 중 하나(사거리 확장 I)만 선행으로 둔다 - 팀 확인 필요.
-            NodeId = "tower_elemental_unlock", AssetName = "RN_TowerElementalUnlock",
-            Branch = ResearchBranch.Tower, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 특화×2종 - 종류 미정
+            NodeId = "tower_anti_air", AssetName = "RN_TowerAntiAir",
+            Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 25,
+            ResourceCost = Cost(Amount(ResourceType.Wood, 30), Amount(ResourceType.Stone, 20)),
             PrerequisiteIds = After("tower_range_1"),
-            NameEn = "[TBD] Elemental Towers", NameKo = "[미정] 속성 타워 해금",
-            DescEn = "[TBD] Allows building biome-specialized towers.",
-            DescKo = "[미정] 바이옴 특화 타워 건설 가능",
+            EffectAssetName = "RE_AntiAirTowerUnlock",
+            NameEn = "[TBD] Anti-Air Tower", NameKo = "[미정] 대공 타워",
+            DescEn = "[TBD] Unlocks the anti-air tower.", DescKo = "[미정] 대공 타워를 해금한다",
         },
+
+        // --- T3: 속성별 강화. TowerTargetFilter로 그 속성 타워만 골라 올린다. ---
         new NodeSpec
         {
-            NodeId = "tower_pierce_splash", AssetName = "RN_TowerPierceSplash",
+            NodeId = "tower_fire_damage", AssetName = "RN_TowerFireDamage",
             Branch = ResearchBranch.Tower, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 鑛40·특화
-            PrerequisiteIds = After("tower_firerate_1"),
-            NameEn = "[TBD] Pierce / Splash", NameKo = "[미정] 관통/스플래시",
-            DescEn = "[TBD] Unlocks multi-hit tower families.", DescKo = "[미정] 다중 타격 계열 해금",
-        },
-        new NodeSpec
-        {
-            NodeId = "tower_elemental_branch", AssetName = "RN_TowerElementalBranch",
-            Branch = ResearchBranch.Tower, Tier = 4, ResearchPointCost = 90,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 특화 다량
+            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("tower_elemental_unlock"),
-            NameEn = "[TBD] Elemental Specialization", NameKo = "[미정] 속성 특화 분기",
-            DescEn = "[TBD] Strengthens per-element specialization effects.",
-            DescKo = "[미정] 속성별 특화 효과 강화",
+            EffectAssetName = "RE_FireTowerDamage",
+            NameEn = "[TBD] Fire Tower Mastery", NameKo = "[미정] 화염 타워 강화",
+            DescEn = "[TBD] Fire tower damage +20%.", DescKo = "[미정] 화염 타워 공격력 +20%",
         },
         new NodeSpec
         {
-            // 역설계 노드. 선행 노드가 아니라 "타워 원형 랜드마크 점령"이 해금 조건이다 -
-            // 맵에서 무언가를 찾아내야 열리는 첫 연구라 티어를 낮게 두고 선행도 비워 둔다.
-            // 어떤 타워를 해금할지(EffectAssetName)는 밸런스 사안이라 팀 확인 전까지 비워 둔다 -
-            // 효과가 비어 있어도 해금 조건·상태 전이는 그대로 동작한다(로드맵 §8 stub과 같은 취급).
+            NodeId = "tower_ice_damage", AssetName = "RN_TowerIceDamage",
+            Branch = ResearchBranch.Tower, Tier = 3, ResearchPointCost = 50,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            PrerequisiteIds = After("tower_elemental_unlock"),
+            EffectAssetName = "RE_IceTowerDamage",
+            NameEn = "[TBD] Ice Tower Mastery", NameKo = "[미정] 얼음 타워 강화",
+            DescEn = "[TBD] Ice tower damage +20%.", DescKo = "[미정] 얼음 타워 공격력 +20%",
+        },
+        new NodeSpec
+        {
+            NodeId = "tower_stone_damage", AssetName = "RN_TowerStoneDamage",
+            Branch = ResearchBranch.Tower, Tier = 3, ResearchPointCost = 50,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            PrerequisiteIds = After("tower_elemental_unlock"),
+            EffectAssetName = "RE_StoneTowerDamage",
+            NameEn = "[TBD] Stone Tower Mastery", NameKo = "[미정] 암석 타워 강화",
+            DescEn = "[TBD] Stone tower damage +20%.", DescKo = "[미정] 암석 타워 공격력 +20%",
+        },
+
+        // --- T4 ---
+        new NodeSpec
+        {
+            // 시간 타워는 공격이 없고 오라만 있다(TAD_TimeTowerAura) - 오라 반경 배율 게터가 신규로 필요.
+            NodeId = "tower_time_range", AssetName = "RN_TowerTimeRange",
+            Branch = ResearchBranch.Tower, Tier = 4, ResearchPointCost = 90,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            PrerequisiteIds = After("tower_elemental_unlock"),
+            NameEn = "[TBD] Time Tower Expansion", NameKo = "[미정] 시간 타워 확장",
+            DescEn = "[TBD] Time tower effect radius +20%.",
+            DescKo = "[미정] 시간 타워 효과 범위 +20% 증가",
+        },
+        new NodeSpec
+        {
+            // 최대체력은 TowerAttack이 pull하지 않는 유일한 스탯이라 씬의 TowerMaxHealthApplier가
+            // 밤 시작에 push한다 - 그 적용기와 TowerMaxHealthMultiplierComposite가 씬에 있어야 한다.
+            NodeId = "tower_armor", AssetName = "RN_TowerArmor",
+            Branch = ResearchBranch.Tower, Tier = 4, ResearchPointCost = 90,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            PrerequisiteIds = After("tower_range_1", "tower_firerate_1"),
+            EffectAssetName = "RE_TowerArmor",
+            NameEn = "[TBD] Armored Tower", NameKo = "[미정] 중갑 타워",
+            DescEn = "[TBD] Tower max health +20%.", DescKo = "[미정] 타워 최대 체력 +20%",
+        },
+        new NodeSpec
+        {
             NodeId = "tower_reverse_engineering", AssetName = "RN_TowerReverseEngineering",
-            Branch = ResearchBranch.Tower, Tier = 1, ResearchPointCost = 20,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 20)),
-            PrerequisiteIds = Array.Empty<string>(),
+            Branch = ResearchBranch.Tower, Tier = 4, ResearchPointCost = 90,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            PrerequisiteIds = After("tower_manpower_1"),
             RequiredLandmarkAssetName = "LM_TowerPrototype",
             NameEn = "[TBD] Reverse Engineering", NameKo = "[미정] 역설계",
-            DescEn = "[TBD] Analyze a captured tower prototype to unlock a new tower.",
+            DescEn = "[TBD] Analyze the captured tower prototype to unlock a new tower.",
             DescKo = "[미정] 점령한 타워 원형을 분석해 새 타워를 해금한다.",
         },
-        // ---------------- 생산 갈래 (로드맵 §5.2) ----------------
+
+        // --- T5 ---
+        new NodeSpec
+        {
+            NodeId = "tower_elemental_master", AssetName = "RN_TowerElementalMaster",
+            Branch = ResearchBranch.Tower, Tier = 5, ResearchPointCost = 150,
+            ResourceCost = Array.Empty<ResourceAmount>(),
+            PrerequisiteIds = After(
+                "tower_reverse_engineering", "tower_fire_damage", "tower_ice_damage",
+                "tower_stone_damage", "tower_time_range"),
+            EffectAssetName = "RE_ElementalTowerDamage",
+            NameEn = "[TBD] Ultimate Element", NameKo = "[미정] 궁극의 속성",
+            DescEn = "[TBD] All elemental tower damage +20%.",
+            DescKo = "[미정] 모든 속성 타워 공격력 +20%",
+        },
+
+        // ================================ 생산 갈래 (13) ================================
+        // --- T1 ---
         new NodeSpec
         {
             NodeId = "grass_cultivation", AssetName = "RN_GrassCultivation",
@@ -167,73 +237,146 @@ public static class ResearchTreeAssetGenerator
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_GrassYieldMultiplier",
             NameEn = "[TBD] Grassland Cultivation", NameKo = "[미정] 초원 경작",
-            DescEn = "[TBD] Farm and mine production +10%.", DescKo = "[미정] 농장·광산 생산량 +10%",
+            DescEn = "[TBD] Farm and quarry yield +20%.", DescKo = "[미정] 농장·광산 생산량 +20%",
         },
         new NodeSpec
         {
+            // 선행이 같은 티어다(같은 칸 안에서 간선이 그려진다). Docs/연구트리_개편안.md §2 참고.
             NodeId = "production_outer_basic", AssetName = "RN_ProductionOuterBasic",
-            Branch = ResearchBranch.Production, Tier = 2, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 30), Amount(ResourceType.Stone, 30)),
+            Branch = ResearchBranch.Production, Tier = 1, ResearchPointCost = 10,
+            ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
             PrerequisiteIds = After("grass_cultivation"),
             NameEn = "[TBD] Outer Basic Harvesting", NameKo = "[미정] 외곽 기초자원 채집",
             DescEn = "[TBD] Unlocks basic resource harvesting in outer biomes.",
             DescKo = "[미정] 외곽 바이옴 기초 4자원 채집 해금",
         },
+
+        // --- T2: 자원별 인력 절감. 효과는 2차분(자원/건물별 필터 추가 후). ---
+        new NodeSpec
+        {
+            NodeId = "production_food_1", AssetName = "RN_ProductionFood1",
+            Branch = ResearchBranch.Production, Tier = 2, ResearchPointCost = 25,
+            ResourceCost = Cost(Amount(ResourceType.Food, 20)),
+            PrerequisiteIds = After("grass_cultivation"),
+            NameEn = "[TBD] Food Production I", NameKo = "[미정] 식량 생산 강화 I",
+            DescEn = "[TBD] Food facility population requirement -1.",
+            DescKo = "[미정] 식량 생산에 필요한 인구 -1",
+        },
+        new NodeSpec
+        {
+            NodeId = "production_wood_1", AssetName = "RN_ProductionWood1",
+            Branch = ResearchBranch.Production, Tier = 2, ResearchPointCost = 25,
+            ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
+            PrerequisiteIds = After("grass_cultivation"),
+            NameEn = "[TBD] Lumber Production I", NameKo = "[미정] 목재 생산 강화 I",
+            DescEn = "[TBD] Lumber facility population requirement -1.",
+            DescKo = "[미정] 목재 생산에 필요한 인구 -1",
+        },
+        new NodeSpec
+        {
+            NodeId = "production_stone_1", AssetName = "RN_ProductionStone1",
+            Branch = ResearchBranch.Production, Tier = 2, ResearchPointCost = 25,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 20)),
+            PrerequisiteIds = After("grass_cultivation"),
+            NameEn = "[TBD] Stone Production I", NameKo = "[미정] 석재 생산 강화 I",
+            DescEn = "[TBD] Stone facility population requirement -1.",
+            DescKo = "[미정] 석재 생산에 필요한 인구 -1",
+        },
+
+        // --- T3: 자원별 생산량. 1차분으로 효과가 붙는다. ---
+        new NodeSpec
+        {
+            NodeId = "production_food_2", AssetName = "RN_ProductionFood2",
+            Branch = ResearchBranch.Production, Tier = 3, ResearchPointCost = 50,
+            ResourceCost = Cost(Amount(ResourceType.Food, 40)),
+            PrerequisiteIds = After("production_food_1"),
+            EffectAssetName = "RE_FoodYieldMultiplier",
+            NameEn = "[TBD] Food Production II", NameKo = "[미정] 식량 생산 강화 II",
+            DescEn = "[TBD] Food yield +10%.", DescKo = "[미정] 식량 생산량 +10%",
+        },
+        new NodeSpec
+        {
+            NodeId = "production_wood_2", AssetName = "RN_ProductionWood2",
+            Branch = ResearchBranch.Production, Tier = 3, ResearchPointCost = 50,
+            ResourceCost = Cost(Amount(ResourceType.Wood, 40)),
+            PrerequisiteIds = After("production_wood_1"),
+            EffectAssetName = "RE_WoodYieldMultiplier",
+            NameEn = "[TBD] Lumber Production II", NameKo = "[미정] 목재 생산 강화 II",
+            DescEn = "[TBD] Lumber yield +10%.", DescKo = "[미정] 목재 생산량 +10%",
+        },
+        new NodeSpec
+        {
+            NodeId = "production_stone_2", AssetName = "RN_ProductionStone2",
+            Branch = ResearchBranch.Production, Tier = 3, ResearchPointCost = 50,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            PrerequisiteIds = After("production_stone_1"),
+            EffectAssetName = "RE_StoneYieldMultiplier",
+            NameEn = "[TBD] Stone Production II", NameKo = "[미정] 석재 생산 강화 II",
+            DescEn = "[TBD] Stone yield +10%.", DescKo = "[미정] 석재 생산량 +10%",
+        },
+
+        // --- T4 ---
         new NodeSpec
         {
             NodeId = "production_specialized", AssetName = "RN_ProductionSpecialized",
-            Branch = ResearchBranch.Production, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 특화
+            Branch = ResearchBranch.Production, Tier = 4, ResearchPointCost = 90,
+            ResourceCost = Array.Empty<ResourceAmount>(), // 특화 다량 - 기획 [미정]
             PrerequisiteIds = After("production_outer_basic"),
             EffectAssetName = "RE_SpecializedYieldMultiplier",
             NameEn = "[TBD] Specialized Facilities", NameKo = "[미정] 특화 생산 시설",
-            DescEn = "[TBD] Biome specialty resource efficiency +20%.",
-            DescKo = "[미정] 바이옴 특화 자원 효율 +20%",
+            DescEn = "[TBD] Biome specialized resource yield +20%.",
+            DescKo = "[미정] 바이옴 특화 자원 생산 효율 +20%",
         },
         new NodeSpec
         {
+            NodeId = "production_resource_mastery", AssetName = "RN_ProductionResourceMastery",
+            Branch = ResearchBranch.Production, Tier = 4, ResearchPointCost = 90,
+            ResourceCost = Cost(Amount(ResourceType.Wood, 30), Amount(ResourceType.Stone, 30)),
+            PrerequisiteIds = After("production_wood_2", "production_stone_2"),
+            EffectAssetName = "RE_WoodStoneYieldMultiplier",
+            NameEn = "[TBD] Resource Mastery I", NameKo = "[미정] 자원 생산 강화 I",
+            DescEn = "[TBD] Lumber and stone yield +10%.", DescKo = "[미정] 목재·석재 생산량 +10%",
+        },
+        new NodeSpec
+        {
+            // 선행 production_specialized가 같은 티어다(같은 칸 안 간선).
             NodeId = "production_slime_farm", AssetName = "RN_ProductionSlimeFarm",
-            Branch = ResearchBranch.Production, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 특화·슬
-            PrerequisiteIds = After("production_outer_basic"),
+            Branch = ResearchBranch.Production, Tier = 4, ResearchPointCost = 90,
+            ResourceCost = Array.Empty<ResourceAmount>(), // 특화×2종 - 기획 [미정]
+            PrerequisiteIds = After("production_specialized", "production_food_2"),
             EffectAssetName = "RE_SlimeYieldMultiplier",
             NameEn = "[TBD] Slime Farming", NameKo = "[미정] 슬라임 양식",
-            DescEn = "[TBD] Slime production in specialty areas +25%.",
+            DescEn = "[TBD] Specialized-area slime yield +25%.",
             DescKo = "[미정] 특화 지역 슬라임 생산 +25%",
+        },
+
+        // --- T5 ---
+        new NodeSpec
+        {
+            NodeId = "production_resource_mastery_2", AssetName = "RN_ProductionResourceMastery2",
+            Branch = ResearchBranch.Production, Tier = 5, ResearchPointCost = 150,
+            ResourceCost = Array.Empty<ResourceAmount>(),
+            PrerequisiteIds = After("production_food_2", "production_resource_mastery"),
+            EffectAssetName = "RE_SpecializedYieldMultiplier2",
+            NameEn = "[TBD] Resource Mastery II", NameKo = "[미정] 자원 생산 강화 II",
+            DescEn = "[TBD] Specialized resource yield +20%.",
+            DescKo = "[미정] 특화 자원 생산량 +20%",
         },
         new NodeSpec
         {
+            // 선행 production_resource_mastery_2가 같은 티어다(같은 칸 안 간선).
             NodeId = "production_optimize", AssetName = "RN_ProductionOptimize",
-            Branch = ResearchBranch.Production, Tier = 4, ResearchPointCost = 90,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 鑛40
-            PrerequisiteIds = After("production_specialized"),
+            Branch = ResearchBranch.Production, Tier = 5, ResearchPointCost = 150,
+            ResourceCost = Array.Empty<ResourceAmount>(),
+            PrerequisiteIds = After("production_slime_farm", "production_resource_mastery_2"),
             EffectAssetName = "RE_ProductionManpowerReduction",
             NameEn = "[TBD] Production Optimization", NameKo = "[미정] 생산 최적화",
             DescEn = "[TBD] Production facility population requirement -1 (min 1).",
             DescKo = "[미정] 생산 시설 필요 인구 -1 (하한 1)",
         },
-        new NodeSpec
-        {
-            NodeId = "production_diagonal", AssetName = "RN_ProductionDiagonal",
-            Branch = ResearchBranch.Production, Tier = 4, ResearchPointCost = 90,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 특화 다량
-            PrerequisiteIds = After("production_specialized"),
-            NameEn = "[TBD] Diagonal Zone Development", NameKo = "[미정] 대각선 지대 개발",
-            DescEn = "[TBD] Production bonus in high-yield diagonal zones.",
-            DescKo = "[미정] 고수익 대각선 지대 생산 보너스",
-        },
-        new NodeSpec
-        {
-            NodeId = "production_auto_line", AssetName = "RN_ProductionAutoLine",
-            Branch = ResearchBranch.Production, Tier = 5, ResearchPointCost = 150,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 특화·鑛 다량
-            PrerequisiteIds = After("production_optimize"),
-            NameEn = "[TBD] Automated Production Line", NameKo = "[미정] 자동 생산 라인",
-            DescEn = "[TBD] Some resources are auto-produced at settlement.",
-            DescKo = "[미정] 정산 시 일부 자원 자동 증산",
-        },
 
-        // ---------------- 편의 갈래 (로드맵 §5.3) ----------------
+        // ================================ 편의 갈래 (12) ================================
+        // --- T1 ---
         new NodeSpec
         {
             NodeId = "convenience_scout_1", AssetName = "RN_ConvenienceScout1",
@@ -242,80 +385,124 @@ public static class ResearchTreeAssetGenerator
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_ScoutRadius1",
             NameEn = "[TBD] Scouting I", NameKo = "[미정] 정찰 I",
-            DescEn = "[TBD] Fog of war vision radius +1 step.",
+            DescEn = "[TBD] Fog-of-war vision radius +1 step.",
             DescKo = "[미정] 전장의 안개 가시 반경 +1단계",
         },
         new NodeSpec
         {
-            NodeId = "convenience_lab_expand_1", AssetName = "RN_ConvenienceLabExpand1",
+            // 지금은 밤 재활성화가 무조건 동작한다. 이 노드로 잠그면 연구 전에는 부활하지 않는다 -
+            // convenience_tower_move와 같은 종류의 "연구 전 제약 강화"라 기획 확정이 필요하다.
+            NodeId = "convenience_tower_regeneration_unlock",
+            AssetName = "RN_ConvenienceTowerRegenerationUnlock",
             Branch = ResearchBranch.Convenience, Tier = 1, ResearchPointCost = 10,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 20), Amount(ResourceType.Stone, 20)),
+            ResourceCost = Cost(Amount(ResourceType.Stone, 20)),
             PrerequisiteIds = Array.Empty<string>(),
+            NameEn = "[TBD] Tower Repair", NameKo = "[미정] 타워 수리",
+            DescEn = "[TBD] Allows towers to reactivate during the night.",
+            DescKo = "[미정] 밤 동안 포탑의 재활성화 가능",
+        },
+
+        // --- T2 ---
+        new NodeSpec
+        {
+            NodeId = "convenience_lab_expand_1", AssetName = "RN_ConvenienceLabExpand1",
+            Branch = ResearchBranch.Convenience, Tier = 2, ResearchPointCost = 25,
+            ResourceCost = Cost(Amount(ResourceType.Wood, 20), Amount(ResourceType.Stone, 20)),
+            PrerequisiteIds = After("convenience_scout_1"),
             EffectAssetName = "RE_LabCapacityExpand1",
             NameEn = "[TBD] Lab Expansion I", NameKo = "[미정] 연구소 증축 I",
-            DescEn = "[TBD] Raises the research lab population cap (more RP per night).",
-            DescKo = "[미정] 연구소 배치 가능 최대 인구 +N (RP 생성량↑)",
+            DescEn = "[TBD] Research lab population cap +1.",
+            DescKo = "[미정] 연구소 배치 가능 최대 인구 +1",
         },
         new NodeSpec
         {
             NodeId = "convenience_tower_move", AssetName = "RN_ConvenienceTowerMove",
             Branch = ResearchBranch.Convenience, Tier = 2, ResearchPointCost = 25,
             ResourceCost = Cost(Amount(ResourceType.Stone, 30)),
-            PrerequisiteIds = After("convenience_scout_1"),
+            PrerequisiteIds = After("convenience_tower_regeneration_unlock"),
             EffectAssetName = "RE_MoveAllowance",
             NameEn = "[TBD] Tower Relocation", NameKo = "[미정] 타워 이동 해금",
-            DescEn = "[TBD] Move towers without demolishing them.",
+            DescEn = "[TBD] Move towers without demolishing.",
             DescKo = "[미정] 철거 없이 타워 이동 가능",
         },
         new NodeSpec
         {
             NodeId = "convenience_castle_regen_1", AssetName = "RN_ConvenienceCastleRegen1",
             Branch = ResearchBranch.Convenience, Tier = 2, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 20)), // 鑛10 생략
-            PrerequisiteIds = After("convenience_scout_1"),
+            ResourceCost = Cost(Amount(ResourceType.Stone, 20)),
+            PrerequisiteIds = After("convenience_tower_regeneration_unlock"),
             EffectAssetName = "RE_CastleDailyRegen",
-            NameEn = "[TBD] Castle Auto-Repair I", NameKo = "[미정] 성 자동 회복 I",
-            DescEn = "[TBD] Castle passively regenerates health each day.",
-            DescKo = "[미정] 매일 낮 성 체력 패시브 회복",
+            NameEn = "[TBD] Castle Regeneration I", NameKo = "[미정] 성 자동 회복 I",
+            DescEn = "[TBD] Castle heals 10 health each day.",
+            DescKo = "[미정] 매일 낮 성 체력 10 회복",
         },
+
+        // --- T3 ---
         new NodeSpec
         {
-            NodeId = "convenience_castle_repair", AssetName = "RN_ConvenienceCastleRepair",
+            NodeId = "convenience_lab_expand_2", AssetName = "RN_ConvenienceLabExpand2",
             Branch = ResearchBranch.Convenience, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)), // 鑛20 생략
-            PrerequisiteIds = After("convenience_castle_regen_1"),
-            NameEn = "[TBD] Emergency Castle Repair", NameKo = "[미정] 성 긴급 수리",
-            DescEn = "[TBD] Improves instant daytime repair efficiency.",
-            DescKo = "[미정] 낮 자원 소모 즉시 수리 효율↑",
+            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            PrerequisiteIds = After("convenience_lab_expand_1"),
+            EffectAssetName = "RE_LabCapacityExpand2",
+            NameEn = "[TBD] Lab Expansion II", NameKo = "[미정] 연구소 증축 II",
+            DescEn = "[TBD] Research lab population cap +1.",
+            DescKo = "[미정] 연구소 배치 가능 최대 인구 +1",
         },
         new NodeSpec
         {
             NodeId = "convenience_expedition_logistics", AssetName = "RN_ConvenienceExpeditionLogistics",
             Branch = ResearchBranch.Convenience, Tier = 3, ResearchPointCost = 50,
             ResourceCost = Cost(Amount(ResourceType.Wood, 40), Amount(ResourceType.Food, 20)),
-            PrerequisiteIds = After("convenience_tower_move"),
+            PrerequisiteIds = After("convenience_scout_1"),
             EffectAssetName = "RE_ExpeditionLogistics",
             NameEn = "[TBD] Expedition Logistics", NameKo = "[미정] 원정 물류",
-            DescEn = "[TBD] Reduces conquest expedition cost and duration.",
-            DescKo = "[미정] 점령 출격 비용/소요 감소",
+            DescEn = "[TBD] Conquest expedition resource cost -20%.",
+            DescKo = "[미정] 점령 출격 자원 소모량 20% 감소",
         },
         new NodeSpec
         {
-            NodeId = "convenience_lab_expand_2", AssetName = "RN_ConvenienceLabExpand2",
+            // 승리 조건(4포탈 동시 봉인)의 관문. 봉인석 본체는 이미 구현돼 있고
+            // (PortalSealManager·SealStone) 해금 접점 ISealStoneUnlockQuery만 비어 있었다.
+            NodeId = "convenience_seal_stone", AssetName = "RN_ConvenienceSealStone",
             Branch = ResearchBranch.Convenience, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)), // 鑛20 생략
-            PrerequisiteIds = After("convenience_lab_expand_1"),
-            EffectAssetName = "RE_LabCapacityExpand2",
-            NameEn = "[TBD] Lab Expansion II", NameKo = "[미정] 연구소 증축 II",
-            DescEn = "[TBD] Further raises the research lab population cap.",
-            DescKo = "[미정] 연구소 배치 가능 최대 인구 추가 확장",
+            ResourceCost = Cost(Amount(ResourceType.Stone, 60)),
+            PrerequisiteIds = After("convenience_castle_regen_1"),
+            EffectAssetName = "RE_SealStoneUnlock",
+            NameEn = "[TBD] Seal Stone Research", NameKo = "[미정] 봉인석 연구",
+            DescEn = "[TBD] Unlocks the seal stone that can seal all four portals.",
+            DescKo = "[미정] 4개의 포탈을 봉인할 수 있는 봉인석 건설을 해금합니다.",
+        },
+
+        // --- T4 ---
+        new NodeSpec
+        {
+            NodeId = "convenience_castle_regen_2", AssetName = "RN_ConvenienceCastleRegen2",
+            Branch = ResearchBranch.Convenience, Tier = 4, ResearchPointCost = 90,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            PrerequisiteIds = After("convenience_seal_stone"),
+            EffectAssetName = "RE_CastleDailyRegen2",
+            NameEn = "[TBD] Castle Regeneration II", NameKo = "[미정] 성 자동 회복 II",
+            DescEn = "[TBD] Castle heals an extra 10 health each day (20 total).",
+            DescKo = "[미정] 매일 낮 성 체력 10 추가 회복 (합계 20)",
+        },
+        new NodeSpec
+        {
+            NodeId = "convenience_lab_expand_3", AssetName = "RN_ConvenienceLabExpand3",
+            Branch = ResearchBranch.Convenience, Tier = 4, ResearchPointCost = 90,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            PrerequisiteIds = After("convenience_lab_expand_2"),
+            EffectAssetName = "RE_LabCapacityExpand3",
+            NameEn = "[TBD] Lab Expansion III", NameKo = "[미정] 연구소 증축 III",
+            DescEn = "[TBD] Research lab population cap +1.",
+            DescKo = "[미정] 연구소 배치 가능 최대 인구 +1",
         },
         new NodeSpec
         {
             NodeId = "convenience_scout_2", AssetName = "RN_ConvenienceScout2",
             Branch = ResearchBranch.Convenience, Tier = 4, ResearchPointCost = 90,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 鑛30
-            PrerequisiteIds = After("convenience_scout_1"),
+            ResourceCost = Array.Empty<ResourceAmount>(), // 鑛30 - 대응 자원 없음
+            PrerequisiteIds = After("convenience_expedition_logistics"),
             EffectAssetName = "RE_ScoutRadius2",
             NameEn = "[TBD] Scouting II", NameKo = "[미정] 정찰 II",
             DescEn = "[TBD] Greatly extends vision and marks landmarks.",
@@ -323,23 +510,30 @@ public static class ResearchTreeAssetGenerator
         },
         new NodeSpec
         {
-            NodeId = "convenience_batch_manage", AssetName = "RN_ConvenienceBatchManage",
+            // 원정 인구 -1. PopulationAssignmentType.Conquest 정원 델타로 표현할 수 있는지 확인 중이라
+            // 효과를 아직 붙이지 않았다(Docs/연구트리_개편안.md §3 보류 항목).
+            NodeId = "convenience_expedition_master", AssetName = "RN_ConvenienceExpeditionMaster",
             Branch = ResearchBranch.Convenience, Tier = 4, ResearchPointCost = 90,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 30)),
-            PrerequisiteIds = After("convenience_tower_move"),
-            NameEn = "[TBD] Batch Placement / Management", NameKo = "[미정] 일괄 배치/관리",
-            DescEn = "[TBD] Unlocks batch tower and population placement UI.",
-            DescKo = "[미정] 타워·인구 배치 편의 UI 해금",
+            ResourceCost = Cost(Amount(ResourceType.Food, 40)),
+            PrerequisiteIds = After("convenience_expedition_logistics", "convenience_tower_move"),
+            NameEn = "[TBD] Expert Expedition Corps", NameKo = "[미정] 전문 원정대",
+            DescEn = "[TBD] Expedition population requirement -1.",
+            DescKo = "[미정] 원정에 필요한 인구 -1",
         },
+
+        // --- T5 ---
         new NodeSpec
         {
-            NodeId = "convenience_auto_settle", AssetName = "RN_ConvenienceAutoSettle",
+            NodeId = "convenience_expedition_conqueror", AssetName = "RN_ConvenienceExpeditionConqueror",
             Branch = ResearchBranch.Convenience, Tier = 5, ResearchPointCost = 150,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 鑛 다량
-            PrerequisiteIds = After("convenience_scout_2"),
-            NameEn = "[TBD] Automated Settlement", NameKo = "[미정] 자동 정산 보조",
-            DescEn = "[TBD] Automates settlement and distribution.",
-            DescKo = "[미정] 정산·배분 자동화 편의",
+            ResourceCost = Array.Empty<ResourceAmount>(),
+            PrerequisiteIds = After(
+                "convenience_lab_expand_3", "convenience_expedition_master",
+                "convenience_castle_regen_2"),
+            EffectAssetName = "RE_ExpeditionConqueror",
+            NameEn = "[TBD] Conqueror", NameKo = "[미정] 정복자",
+            DescEn = "[TBD] Conquest expedition duration -1 day.",
+            DescKo = "[미정] 원정에 소모되는 날짜 -1",
         },
     };
 
