@@ -130,9 +130,9 @@ GameObject:
   - component: {fileID: 1782250389559104409}
   - component: {fileID: 4412623613816595417}
   - component: {fileID: 3695384532943105272}
-  - component: {fileID: 3299875822801283001}
+  - component: {fileID: 7819206622416822982}
   m_Layer: 0
-  m_Name: TP_SoulTower
+  m_Name: TP_EnhancementTower
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -206,7 +206,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 7436f7e92a97f7d42bfa95cef386fdcf, type: 3}
-  m_Color: {r: 0.21226418, g: 0.95423573, b: 1, a: 1}
+  m_Color: {r: 1, g: 0.2028302, b: 0.2028302, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -283,10 +283,10 @@ MonoBehaviour:
   - {x: 1, y: 1, z: 1}
   - {x: 1, y: 1, z: 1}
   - {x: 1, y: 1, z: 1}
-  _prefabId: TP_SoulTower
+  _prefabId: TP_EnhancementTower
   _isMoveable: 1
   _isRemoveable: 1
-  _towerData: {fileID: 11400000, guid: 53265d0fb49629c459cf25e7af7df40d, type: 2}
+  _towerData: {fileID: 11400000, guid: d1bae39abb52a844f9846680ecf1bbfb, type: 2}
   Disabled:
     m_PersistentCalls:
       m_Calls: []
@@ -337,7 +337,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4042602934233984407}
   m_CullTransparentMesh: 1
---- !u!114 &3299875822801283001
+--- !u!114 &7819206622416822982
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

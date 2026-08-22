@@ -53,6 +53,9 @@ public class TowerAllyHealer : MonoBehaviour
         if (!_isInitialized || _ownerTower.Data == null || !_ownerTower.Data.CanAttack)
             return;
 
+        if (_ownerTower.IsDead || _ownerTower.IsParalyzed || _ownerTower.IsReviving)
+            return;
+
         if (_staffing != null && !_staffing.CanOperate)
             return;
 
