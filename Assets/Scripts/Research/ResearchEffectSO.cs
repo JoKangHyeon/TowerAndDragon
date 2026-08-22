@@ -47,7 +47,11 @@ public abstract class ResearchEffectSO : ScriptableObject
         return 0f;
     }
 
-    public virtual int GetPopulationCapacityDelta(PopulationAssignmentType assignmentType)
+    // producedResources는 생산 시설이 만드는 자원(없으면 None). 자원별 인력 효율 연구가
+    // "식량 시설만" 같은 조건을 걸 수 있도록 배치 종류와 함께 넘긴다.
+    public virtual int GetPopulationCapacityDelta(
+        PopulationAssignmentType assignmentType,
+        ResourceType producedResources)
     {
         return 0;
     }

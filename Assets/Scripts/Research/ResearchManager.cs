@@ -516,7 +516,10 @@ public sealed class ResearchManager : MonoBehaviour,
         return regenAmount;
     }
 
-    public int ResolveCapacity(PopulationAssignmentType assignmentType, int baseCapacity)
+    public int ResolveCapacity(
+        PopulationAssignmentType assignmentType,
+        int baseCapacity,
+        ResourceType producedResources)
     {
         int capacityDelta = 0;
 
@@ -531,7 +534,8 @@ public sealed class ResearchManager : MonoBehaviour,
             {
                 if (effect != null)
                 {
-                    capacityDelta += effect.GetPopulationCapacityDelta(assignmentType);
+                    capacityDelta += effect.GetPopulationCapacityDelta(
+                        assignmentType, producedResources);
                 }
             }
         }
