@@ -74,6 +74,36 @@ public sealed class ProjectilePool : MonoBehaviour
     }
 
     /// <summary>
+    /// 스스로 걷히지 않는 연출을 꺼내 놓는다. 몬스터에 걸린 상태(화상 등)처럼 <b>끝나는 시점을
+    /// 미리 알 수 없는</b> 연출용이며, 반납은 부르는 쪽이 <see cref="ReleasePersistent"/>로 한다.
+    ///
+    /// <see cref="PlayForSeconds"/>와 통을 공유한다 - 새 통을 만들 이유가 없다. 통은 프리팹으로
+    /// 나뉘므로(<see cref="PrefabPool{T}"/>) 상태 연출과 명중 이펙트가 섞이지 않는다.
+    /// </summary>
+    public static Transform AcquirePersistent(GameObject prefab)
+    {
+        if (prefab == null)
+        {
+            return null;
+        }
+
+        return Current.AcquirePersistentEffect(prefab);
+    }
+
+    /// <summary><see cref="AcquirePersistent"/>로 꺼낸 연출을 되돌린다.</summary>
+    public static void ReleasePersistent(Transform effect)
+    {
+        // 널 검사를 Current보다 위에 둔다 - Current는 풀이 없으면 새로 만드는 프로퍼티라,
+        // 씬 정리 중(OnDisable)에 반납이 들어오면 방금 사라진 풀 오브젝트를 헛되이 되살린다.
+        if (effect == null || _current == null)
+        {
+            return;
+        }
+
+        _current.ReleasePersistentEffect(effect);
+    }
+
+    /// <summary>
     /// 유휴 인스턴스를 미리 만들어 둔다. 첫 발사에서 Instantiate 비용이 몰리는 것을 로딩 구간으로 옮기는
     /// 용도이며, 부르지 않아도 동작은 같다.
     /// </summary>
@@ -170,6 +200,29 @@ public sealed class ProjectilePool : MonoBehaviour
         // 반납은 조건 없이 건다. 시간이 0 이하라 걸지 않았더니 그 인스턴스가 풀 장부에서 빠진 채
         // 활성으로 남아, 발사할 때마다 새로 만들어지고 영영 회수되지 않았다.
         ReleaseEffectAfterAsync(effect, seconds, this.GetCancellationTokenOnDestroy()).Forget();
+    }
+
+    // 시간 반납을 걸지 않는다는 점만 AcquireEffect와 다르다. 회전은 걸지 않는다 - 몬스터를
+    // 따라다니는 연출이라 진행 방향 같은 기준이 없다.
+    private Transform AcquirePersistentEffect(GameObject prefab)
+    {
+        Transform effect = _effectPool.Acquire(prefab.transform);
+
+        if (effect == null)
+        {
+            return null;
+        }
+
+        effect.rotation = Quaternion.identity;
+        ParticleRewind.PlayFromStart(effect);
+
+        return effect;
+    }
+
+    private void ReleasePersistentEffect(Transform effect)
+    {
+        ParticleRewind.StopAndClear(effect);
+        _effectPool.Release(effect);
     }
 
     private async UniTaskVoid ReleaseEffectAfterAsync(

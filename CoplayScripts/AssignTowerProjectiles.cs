@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEditor;
@@ -9,6 +10,25 @@ using UnityEngine;
 public static class AssignTowerProjectiles
 {
     private const string OUTPUT_FOLDER = "Assets/Imported/Prefabs/Projectile/Tower";
+
+    // <b>산출물이 결과물이다. 이 스크립트는 그것을 만들어 낸 발판일 뿐이다.</b>
+    //
+    // 출력 폴더 Assets/Imported는 버려지는 곳이 아니라 팀이 공유하는 별도 private 저장소다
+    // (github.com/JoKangHyeon/TowerAndDragon_Imported, 메인 저장소에서만 .gitignore로 빠져 있다).
+    // 여기에 커밋한 프리팹은 팀원 전원이 그대로 받아 쓴다 - 각자 이 스크립트를 돌리지 않는다.
+    // 게임이 참조하는 것도 TowerData에 물린 이 프리팹이지 스크립트가 아니다.
+    //
+    // 덮어쓰기 보호: 이미 있는 Impact는 다시 만들지 않는다. 손으로 다듬은 값이 얹혀 있을 수 있고,
+    // 아직 커밋하지 않았다면 덮어쓰는 순간 사라지기 때문이다(커밋했다면
+    // git -C Assets/Imported checkout으로 되돌릴 수 있다).
+    //
+    // Muzzle·Projectile은 손튜닝이 없으므로 늘 다시 만든다 - 여기서 건너뛰면 TowerData 배선과
+    // 검증까지 같이 멈춰 이 진입점이 아무 일도 안 하게 된다.
+    //
+    // Impact까지 다시 만들려면 RebuildAll을 부른다. 덮어쓰기 전에 사본을 남긴다.
+    private const string BACKUP_FOLDER_NAME = "VfxBackup";
+    private const string BACKUP_STAMP_FORMAT = "yyyyMMdd_HHmmss";
+    private const string META_SUFFIX = ".meta";
     private const string PROJECTILE_PROPERTY = "_projectilePrefab";
     private const string MUZZLE_PROPERTY = "_muzzlePrefab";
     private const string IMPACT_PROPERTY = "_impactPrefab";
@@ -96,12 +116,31 @@ public static class AssignTowerProjectiles
         {
             TowerDataPath = "Assets/Data/TowerData/TD_CrossBow.asset",
             OutputName = "CrossBow",
-            ProjectileSourcePath = "Assets/Imported/Prefabs/Projectile/AAA_Vol1/Projectile_V1_21_red_arrow.prefab",
+            // 발사체를 화살과 같은 원본으로 바꾼다. 21_red_arrow는 궤적이 SubEnergy 하나뿐인데
+            // 그것이 넓은 삼각 조각이 흩날리는 그림이라(렌더러 길이배율도 -1.5로 음수여서 진행
+            // 방향 반대로 늘어난다) 아무리 배수를 줘도 선으로 읽히지 않았다.
+            // 01_nature_arrow는 SubSparks(작은 Stretch)와 Glow(Billboard)가 겹쳐 매끈한 한 줄을 그린다.
+            //
+            // 색은 HueDegrees로 갈라 놓으므로 두 타워가 같은 원본을 써도 헷갈리지 않는다.
+            ProjectileSourcePath = "Assets/Imported/Prefabs/Projectile/AAA_Vol1/Projectile_V1_01_nature_arrow.prefab",
             ImpactSourcePath = "Assets/Imported/Prefabs/Projectile/AAA_Vol1/Impact_V1_21_red_arrow.prefab",
             MuzzleSourcePath = "Assets/Imported/Prefabs/Projectile/AAA_Vol1/Muzzle_V1_11_orange_arrow.prefab",
-            RemovedImpactChildren = new[] { "Lightning", "SparksUp" },
-            ProjectileScaleMultiplier = 1.2f,
+            // SparksUp을 되살렸다. Lightning과 함께 뺐더니 사방으로 뻗는 불꽃 줄기가 통째로
+            // 사라져 뿌연 덩어리만 남았다(원본 7023픽셀 -> 4972). 번개인 Lightning은 석궁에
+            // 어울리지 않으므로 그대로 뺀다.
+            RemovedImpactChildren = new[] { "Lightning" },
+            // 화살(1.3)보다 조금 크게 둔다. 석궁은 더 느리고(속도 15) 더 무겁게 읽혀야 한다.
+            ProjectileScaleMultiplier = 1.5f,
             ImpactScaleMultiplier = 0.55f,
+
+            // 노랑. 화살이 210(파랑)이므로 같은 원본을 써도 색으로 갈린다.
+            // 이 값은 절대 색조라 원본이 무슨 색이든 그 값으로 바뀐다(채도·명도·알파는 유지).
+            // 발사체뿐 아니라 머즐·임팩트에도 걸리므로 세트 전체가 노랑이 된다.
+            HueDegrees = 60f,
+
+            // 이 원본은 궤적이 authoring 기준으로 매우 얇아(SubSparks 0.02, Glow 0.07)
+            // 배수 없이는 화면에서 실이 된다. 화살과 같은 값을 준다.
+            TrailSizeMultiplier = 3.5f,
             MuzzleLifetimeSeconds = 0.15f,
             ImpactLifetimeSeconds = 0.26f
         },
@@ -148,7 +187,10 @@ public static class AssignTowerProjectiles
             TowerDataPath = "Assets/Data/TowerData/TD_FireTower.asset",
             OutputName = "Fire",
             ProjectileSourcePath = "Assets/Imported/Vefects/Anime VFX URP/Shared/Particles/VFX_Fireball_Projectile_Static.prefab",
-            ImpactSourcePath = "Assets/Imported/Prefabs/Projectile/Impact_Fire_V1.prefab",
+            // 임팩트는 BuildStatusVfx가 만든 화염 불덩이를 쓴다(Impact_Fire_V1 바탕 + Risingfire의 바닥 불빛).
+            // 얼음·암석과 같은 이유로 회전을 끈다 - 지면에 깔린 불길이 발사각을 따라 돌면 바닥이 뒤집힌다.
+            ImpactSourcePath = "Assets/Imported/Prefabs/Effects/Status/FX_Impact_FireCrack.prefab",
+            RotatesImpactToTravelDirection = false,
             MuzzleSourcePath = "Assets/Imported/Prefabs/Projectile/Muzzle_Fire_V1.prefab",
             RemovedProjectileChildren = new[] { "Fireball Projectile Distortion 01" },
             ProjectileScaleMultiplier = 0.18f,
@@ -158,7 +200,10 @@ public static class AssignTowerProjectiles
                 "Fireball Projectile Trail 01", "Fireball Projectile Trail 02"
             },
             MuzzleLifetimeSeconds = 0.5f,
-            ImpactLifetimeSeconds = 1f
+
+            // 0.9초면 스스로 다 꺼진다(0.5초에 4148픽셀, 0.9초에 0). 끊기는 게 아니라
+            // 꺼진 뒤에 사라지는 값이라 팝이 없다.
+            ImpactLifetimeSeconds = 0.9f
         },
         // 둔화를 남기는 타워. 발사체는 결정 몸통과 눈가루 잔상이 함께 있는 Vol1 원본을 쓴다 -
         // Vol2의 ice는 몸통이 0.1에 불과해 날아가는 것이 보이지 않았다.
@@ -180,7 +225,8 @@ public static class AssignTowerProjectiles
         },
         // 유일한 광역(반경 2)·최저속(5) 곡사.
         //
-        // 임팩트는 BuildStatusVfx가 만든 암석 균열을 쓴다(Crack_Rock 바탕 + RockAOE의 광역 표시).
+        // 임팩트는 BuildStatusVfx가 만든 암석 균열을 쓴다(Crack_Rock 하나로, 광역 표시는 뺐다 -
+        // RockAOE의 바닥 판이 솟아오른 바위를 정면에서 덮어 버려서다).
         // 얼음과 같은 이유로 여기서 배수를 주지 않고, 회전도 끈다 - 지면 균열이 발사각을 따라
         // 돌면 바닥이 뒤집힌다.
         // 출력 이름은 StoneMeteor 그대로 둔다 - 바꾸면 프리팹 GUID가 갈려 참조가 끊긴다.
@@ -199,10 +245,24 @@ public static class AssignTowerProjectiles
         }
     };
 
+    // 이미 있는 Impact는 손대지 않는다. Muzzle·Projectile·TowerData 배선은 그대로 다시 만든다.
     public static string BuildAssignAndValidate()
+    {
+        return Run(false);
+    }
+
+    // Impact까지 전부 다시 만든다. 덮어쓰기 전에 사본을 남기지만,
+    // Apply*DecalTuning 계열을 다시 돌려야 손튜닝이 복구된다.
+    public static string RebuildAll()
+    {
+        return Run(true);
+    }
+
+    private static string Run(bool overwritesImpacts)
     {
         EnsureOutputFolder();
         var report = new StringBuilder();
+        string backupFolder = null;
 
         foreach (TowerEffectDefinition definition in DEFINITIONS)
         {
@@ -210,13 +270,27 @@ public static class AssignTowerProjectiles
             string muzzlePath = $"{OUTPUT_FOLDER}/Muzzle_Tower_{definition.OutputName}.prefab";
             string projectilePath = $"{OUTPUT_FOLDER}/Projectile_Tower_{definition.OutputName}.prefab";
 
-            CloneAndTrimEffect(
-                definition.ImpactSourcePath,
-                impactPath,
-                $"Impact_Tower_{definition.OutputName}",
-                definition.RemovedImpactChildren,
-                definition.ImpactScaleMultiplier,
-                definition.HueDegrees);
+            bool impactExists = File.Exists(impactPath);
+
+            if (impactExists && !overwritesImpacts)
+            {
+                report.AppendLine($"건너뜀(이미 있음): {impactPath}");
+            }
+            else
+            {
+                if (impactExists)
+                {
+                    backupFolder = BackUp(impactPath, backupFolder, report);
+                }
+
+                CloneAndTrimEffect(
+                    definition.ImpactSourcePath,
+                    impactPath,
+                    $"Impact_Tower_{definition.OutputName}",
+                    definition.RemovedImpactChildren,
+                    definition.ImpactScaleMultiplier,
+                    definition.HueDegrees);
+            }
 
             // 머즐도 언제나 복제한다. 예전에는 지울 자식이 있을 때만 복제하고 아니면 원본을 그대로
             // 물렸는데, 그러면 MuzzleScaleMultiplier와 색조가 조용히 무시됐다(값을 넣어도 아무 일이
@@ -239,8 +313,43 @@ public static class AssignTowerProjectiles
         ValidateSavedAssets();
         ValidateTimeTowerRemainsHitscan();
 
+        if (backupFolder != null)
+        {
+            report.AppendLine($"사본: {backupFolder}");
+        }
+
         report.Append("검증 완료: 타워 전용 투사체 7종, 축약 Impact 7종, Stone 전용 Muzzle, TimeTower 미변경");
         return report.ToString();
+    }
+
+    // 덮어쓰기 직전의 파일을 프로젝트 밖(Assets 아래가 아닌 곳)에 복사해 둔다.
+    // Assets 안에 두면 유니티가 GUID가 같은 프리팹을 하나 더 임포트해 참조가 꼬인다.
+    //
+    // 폴더는 실제로 백업할 것이 생겼을 때만 만든다.
+    private static string BackUp(string assetPath, string backupFolder, StringBuilder report)
+    {
+        if (backupFolder == null)
+        {
+            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            string stamp = DateTime.Now.ToString(BACKUP_STAMP_FORMAT);
+            backupFolder = Path.Combine(projectRoot, BACKUP_FOLDER_NAME, stamp);
+            Directory.CreateDirectory(backupFolder);
+        }
+
+        string fileName = Path.GetFileName(assetPath);
+        File.Copy(assetPath, Path.Combine(backupFolder, fileName), true);
+
+        // .meta도 같이 남긴다. GUID가 여기 들어 있어, 이것 없이 되돌리면 씬·데이터 참조가 끊긴다.
+        string metaPath = assetPath + META_SUFFIX;
+
+        if (File.Exists(metaPath))
+        {
+            File.Copy(metaPath, Path.Combine(backupFolder, fileName + META_SUFFIX), true);
+        }
+
+        report.AppendLine($"  백업: {fileName}");
+
+        return backupFolder;
     }
 
     private static void EnsureOutputFolder()
@@ -356,6 +465,16 @@ public static class AssignTowerProjectiles
         {
             ParticleSystem.MainModule main = ps.main;
             main.startColor = ShiftHue(main.startColor, hue);
+
+            // Color over Lifetime도 같이 돌린다. 이 모듈은 startColor에 곱해지므로,
+            // 여기에 색이 박혀 있으면 startColor를 아무리 돌려도 그 색이 이긴다.
+            // 화살 계열 궤적(SubSparks)이 정확히 그 경우다.
+            var overLifetime = ps.colorOverLifetime;
+
+            if (overLifetime.enabled)
+            {
+                overLifetime.color = ShiftHue(overLifetime.color, hue);
+            }
         }
     }
 
@@ -370,10 +489,46 @@ public static class AssignTowerProjectiles
                 return new ParticleSystem.MinMaxGradient(
                     ShiftHue(source.colorMin, hue), ShiftHue(source.colorMax, hue));
 
-            // 그라디언트 곡선까지 돌리려면 키를 하나씩 다시 써야 한다. 이 팩에는 없으므로 두고 본다.
+            // 그라디언트도 키를 하나씩 다시 써서 돌린다.
+            //
+            // 한때 "이 팩에는 없다"고 건너뛰었는데 틀렸다. AAA_Vol1의 화살 계열은 궤적 선을 그리는
+            // SubSparks가 startColor를 흰색으로 두고 ColorOverLifetime 그라디언트에 초록~청록
+            // (0.35,1,0 -> 0,1,0.71)을 박아 놨다. startColor만 돌리면 흰색을 돌리는 셈이라
+            // 아무 일도 일어나지 않고, 선은 어떤 색조를 줘도 청록으로 남는다.
+            //
+            // 알파 키는 손대지 않는다 - 페이드 타이밍이 같이 바뀐다.
+            // 채도가 0인 키(흰색·검정)는 ShiftHue가 채도를 유지하므로 저절로 그대로 남는다.
+            case ParticleSystemGradientMode.Gradient:
+                return new ParticleSystem.MinMaxGradient(ShiftHue(source.gradient, hue));
+
+            case ParticleSystemGradientMode.TwoGradients:
+                return new ParticleSystem.MinMaxGradient(
+                    ShiftHue(source.gradientMin, hue), ShiftHue(source.gradientMax, hue));
+
             default:
                 return source;
         }
+    }
+
+    private static Gradient ShiftHue(Gradient source, float hue)
+    {
+        if (source == null)
+        {
+            return null;
+        }
+
+        GradientColorKey[] colorKeys = source.colorKeys;
+
+        for (int i = 0; i < colorKeys.Length; i++)
+        {
+            colorKeys[i].color = ShiftHue(colorKeys[i].color, hue);
+        }
+
+        var shifted = new Gradient();
+        shifted.mode = source.mode;
+        shifted.SetKeys(colorKeys, source.alphaKeys);
+
+        return shifted;
     }
 
     private static Color ShiftHue(Color source, float hue)

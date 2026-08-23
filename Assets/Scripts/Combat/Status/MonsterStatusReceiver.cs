@@ -55,6 +55,11 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
     private readonly Dictionary<string, FreezeEntry> _freezeStatuses = new();
     private readonly List<string> _tickKeys = new(4);
 
+    // 지속 연출. 상태가 바뀌는 지점이 부여·만료·전체해제로 흩어져 있어 매번 재조정을 부르는 대신
+    // 플래그만 세우고 Update 끝에서 한 번 소비한다 - 한 프레임에 여러 번 바뀌어도 재조정은 1회다.
+    private readonly MonsterStatusVfx _vfx = new();
+    private bool _statusesDirty;
+
     public bool IsActionBlocked => _freezeStatuses.Count > 0;
 
     private BaseMonster _monster;
@@ -85,6 +90,26 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
     private void Awake()
     {
         _monster = GetComponent<BaseMonster>();
+        _vfx.Bind(transform);
+    }
+
+    // 스폰 직후 이미 상태가 걸려 있는 경우(불 어미용의 상시 화상 등)를 놓치지 않도록 한 번 반영하고
+    // 시작한다. OnDisable이 연출을 전부 반납하므로, 껐다 켜는 경로에서도 여기서 다시 살아난다.
+    private void OnEnable()
+    {
+        _statusesDirty = true;
+    }
+
+    // 이동이 끝난 뒤 따라가야 실제 위치보다 한 프레임 뒤처지지 않는다.
+    private void LateUpdate()
+    {
+        _vfx.Follow();
+    }
+
+    // 사망은 Destroy(gameObject)라 Clear()가 돌지 않는다 - 연출을 풀에 돌려보낼 자리는 여기뿐이다.
+    private void OnDisable()
+    {
+        _vfx.ReleaseAll();
     }
 
     public void Apply(StatusEffectSO status)
@@ -131,6 +156,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         _dotStatuses.Clear();
         _stackStatuses.Clear();
         _freezeStatuses.Clear();
+        _statusesDirty = true;
 
         _monster?.RefreshMoveSpeed();
     }
@@ -145,6 +171,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             RemainingSeconds = status.DurationSeconds,
         };
 
+        _statusesDirty = true;
         _monster?.RefreshMoveSpeed();
     }
 
@@ -161,6 +188,8 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             RemainingSeconds = status.DurationSeconds,
             TickTimer = tickTimer,
         };
+
+        _statusesDirty = true;
     }
 
     private void ApplyStack (StackingStatusEffectSO status, DragonType? element)
@@ -173,10 +202,11 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         if (stacks >= status.StacksToTrigger)
         {
             _stackStatuses.Remove(key);
+            _statusesDirty = true;
             TriggerStack(status, element);
             return;
         }
-        
+
         _stackStatuses[key] = new StackEntry
         {
             Source = status,
@@ -184,6 +214,8 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             RemainingSeconds = status.DurationSeconds,
             Stacks = stacks,
         };
+
+        _statusesDirty = true;
     }
 
     // 부여할 상태가 도 스택 상태이면 무시한다 - 서로를 가리키는 애셋 설정이 무한 재귀가 되는 것을 막는다.
@@ -207,6 +239,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             RemainingSeconds = status.DurationSeconds
         };
 
+        _statusesDirty = true;
         _monster?.RefreshMoveSpeed();
     }
 
@@ -224,6 +257,13 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
 
         TickDotStatuses(deltaTime);
         TickStackStatuses(deltaTime);
+
+        // 부여·만료가 한 프레임에 여러 번 나도 재조정은 한 번이면 된다.
+        if (_statusesDirty)
+        {
+            _statusesDirty = false;
+            _vfx.Refresh(this);
+        }
     }
 
     // Unity(Mono) 런타임의 Dictionary는 "기존 키에 값을 다시 대입"해도 내부 version이 올라가서
@@ -263,6 +303,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             if (entry.RemainingSeconds <= 0f)
             {
                 _stackStatuses.Remove(key);
+                _statusesDirty = true;
             }
             else
             {
@@ -294,6 +335,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             {
                 _moveSpeedStatuses.Remove(key);
                 anyExpired = true;
+                _statusesDirty = true;
             }
             else
             {
@@ -327,6 +369,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
             {
                 _freezeStatuses.Remove(key);
                 anyExpired = true;
+                _statusesDirty = true;
             }
             else
             {
@@ -374,6 +417,7 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
                 if (entry.RemainingSeconds <= 0f)
                 {
                     _dotStatuses.Remove(key);
+                    _statusesDirty = true;
                     continue;
                 }
             }
@@ -428,6 +472,59 @@ public sealed class MonsterStatusReceiver : MonoBehaviour
         {
             AppendStackLine(buffer, entry);
         }
+    }
+
+    /// <summary>
+    /// 지금 걸린 상태 중 지속 연출 프리팹을 가진 것만 buffer에 담는다(툴팁용과 달리 buffer를 비운다 -
+    /// 전역 줄과 합칠 일이 없다).
+    ///
+    /// 면역 판정은 여기서 하지 않는다 - 군중제어 면역은 Apply의 IsImmuneTo가, 속성 면역은
+    /// BaseMonster.ApplyStatus가 이미 걸러내므로 보관 중인 상태는 전부 통과한 것들이다.
+    /// 여기에 두 번째 검사를 두면 규칙이 두 곳으로 갈린다.
+    /// </summary>
+    public void CollectActiveVfxSources(List<StatusEffectSO> buffer)
+    {
+        if (buffer == null)
+        {
+            return;
+        }
+
+        buffer.Clear();
+
+        // 빙결 중에는 둔화 연출을 띄우지 않는다 - CollectActiveStatuses의 툴팁 규칙과 같은 이유로,
+        // 지금 효과가 없는 둔화가 켜져 보이면 안 된다.
+        bool isFrozen = _freezeStatuses.Count > 0;
+
+        foreach (FreezeEntry entry in _freezeStatuses.Values)
+        {
+            AppendVfxSource(buffer, entry.Source);
+        }
+
+        if (!isFrozen)
+        {
+            foreach (MoveSpeedEntry entry in _moveSpeedStatuses.Values)
+            {
+                AppendVfxSource(buffer, entry.Source);
+            }
+        }
+
+        foreach (DotEntry entry in _dotStatuses.Values)
+        {
+            AppendVfxSource(buffer, entry.Source);
+        }
+
+        // 스택은 쌓이는 중일 뿐 아직 발동하지 않은 상태다 - 연출은 임계치에서 부여되는 쪽이 맡는다.
+    }
+
+    // 연출을 안 채운 애셋은 조용히 빠진다 - 비워 두는 것이 기본이기 때문이다.
+    private static void AppendVfxSource(List<StatusEffectSO> buffer, StatusEffectSO source)
+    {
+        if (source == null || !source.HasActiveVfx)
+        {
+            return;
+        }
+
+        buffer.Add(source);
     }
 
     // 이름 키가 없는 상태는 줄을 만들지 않는다(StatusEffectSO.HasDisplayName 주석 참고).
