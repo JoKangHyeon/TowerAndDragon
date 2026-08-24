@@ -11,6 +11,10 @@ using UnityEngine;
 /// </summary>
 public class Projectile : MonoBehaviour
 {
+    // Vector3.normalized는 크기가 1e-5 미만이면 정규화 대신 zero를 준다. 그 구간을 걸러내지 않으면
+    // 진행 방향이 0이 되어 Atan2(0, 0)이 각도를 0도로 만든다. 제곱으로 비교하므로 임계값도 제곱한 값이다.
+    private const float MIN_AIM_DELTA_SQR = 1e-10f;
+
     private IAttackTarget _target;
     private AttackSO _attack;
     private AttackContext _context;
@@ -138,7 +142,7 @@ public class Projectile : MonoBehaviour
         Vector3 delta = _lastTargetPosition - transform.position;
 
         // 도착 직전에는 delta가 0에 수렴한다 - 그 값으로 각도를 다시 구하면 방향이 튄다.
-        if (delta.sqrMagnitude <= Mathf.Epsilon)
+        if (delta.sqrMagnitude <= MIN_AIM_DELTA_SQR)
         {
             return;
         }

@@ -130,6 +130,18 @@ public sealed class ProjectilePool : MonoBehaviour
     private void Awake()
     {
         // 정적 진입점이 만들지 않고 누군가 씬에 직접 붙였을 수도 있다 - 그 경우도 여기서 자리를 잡는다.
+        //
+        // 다만 이미 자리를 잡은 풀이 있으면 가로채지 않고 물러난다. 가로채면 앞 풀이 대여한 투사체가
+        // 이쪽으로 반납되는데, 이쪽 장부에는 없는 인스턴스라 비활성화만 되고 양쪽 장부에서 사라진다 -
+        // 그 뒤로는 모든 발사가 풀을 못 쓰고 새로 Instantiate된다.
+        // 이 클래스는 인스펙터에서 받는 것이 없으므로(클래스 주석 참고) 늦게 온 쪽을 버려도 잃는 설정이 없다.
+        if (_current != null && _current != this)
+        {
+            Debug.LogWarning("[ProjectilePool] 이미 풀이 있어 이 컴포넌트를 제거합니다.", this);
+            Destroy(this);
+            return;
+        }
+
         _current = this;
 
         _projectilePool = new PrefabPool<Projectile>(transform);
