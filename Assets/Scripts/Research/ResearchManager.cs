@@ -43,6 +43,22 @@ public sealed class ResearchManager : MonoBehaviour,
     private readonly HashSet<string> _completedNodeIds = new();
     private readonly List<ResearchLab> _activeLabs = new();
 
+    /// <summary>
+    /// 완료 노드의 효과를 한 겹으로 펼친 목록. 조회마다 <see cref="_completedNodeIds"/>를 돌며
+    /// 노드를 딕셔너리에서 찾고 <c>node.Effects</c>를 다시 foreach하면, 조회 한 번에
+    /// 완료 노드 수만큼의 딕셔너리 조회가 생기고 <c>IReadOnlyList</c> 인터페이스 순회라
+    /// 노드마다 열거자가 힙에 할당된다.
+    ///
+    /// 이 조회는 <c>TowerAttack.Update</c>가 프레임마다(사거리 판정 2회 + 인구 정원 1회) 부르고
+    /// 재탐색 프레임에는 후보 몬스터 수만큼 더 부른다. 그래서 완료 집합이 바뀔 때만 펼쳐 두고
+    /// 인덱스 for로 훑는다.
+    ///
+    /// <b>효과 값 자체는 캐시하지 않는다</b> - 플레이 중 인스펙터로 효과 에셋의 수치를 조정하면
+    /// 그 즉시 반영되어야 한다(밸런싱이 플레이모드에서 이뤄진다).
+    /// </summary>
+    private readonly List<ResearchEffectSO> _activeEffects = new();
+    private bool _isActiveEffectsDirty = true;
+
     private CycleManager _cycleManager;
     private ResourceManager _resourceManager;
     private GridMap _gridMap;
@@ -268,19 +284,13 @@ public sealed class ResearchManager : MonoBehaviour,
             return true;
         }
 
-        foreach (string nodeId in _completedNodeIds)
-        {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
+        RebuildActiveEffectsIfDirty();
 
-            foreach (ResearchEffectSO effect in node.Effects)
+        for (int i = 0; i < _activeEffects.Count; i++)
+        {
+            if (_activeEffects[i].GetUnlockedTower() == towerData)
             {
-                if (effect != null && effect.GetUnlockedTower() == towerData)
-                {
-                    return true;
-                }
+                return true;
             }
         }
 
@@ -319,6 +329,11 @@ public sealed class ResearchManager : MonoBehaviour,
         _researchPoints -= node.ResearchPointCost;
         _completedNodeIds.Add(node.NodeId);
 
+        // 완료 집합을 바꾼 바로 다음 줄에서 무효화한다. 아래 Invoke의 구독자가 곧바로 효과를
+        // 조회하므로(CastleVisionCoordinator -> GetVisionRadiusBonus) 여기서 미루면
+        // 시야·정원이 연구 한 번씩 뒤처진다.
+        _isActiveEffectsDirty = true;
+
         _researchPointsChanged.Invoke(_researchPoints);
         _nodeCompleted.Invoke(node);
         failureReason = ResearchFailureReason.None;
@@ -329,7 +344,7 @@ public sealed class ResearchManager : MonoBehaviour,
     /// 세이브 복원 전용. RP와 완료 노드 집합을 저장값으로 갈아 끼운다.
     /// TryResearch 경로를 타지 않으므로 자원과 RP가 다시 차감되지 않는다.
     ///
-    /// 연구 효과는 전부 pull 방식(GetYieldMultiplier 등이 호출 시점에 _completedNodeIds를 순회)이라
+    /// 연구 효과는 전부 pull 방식(GetYieldMultiplier 등이 호출 시점에 완료 효과 목록을 순회)이라
     /// 집합만 복원하면 자동으로 살아난다. NodeCompleted를 재발화하는 것은 push 방식 구독자
     /// (성 시야 확장, 인구 정원 재조정, UI 갱신)를 위해서이며 이들은 전부 멱등하다.
     /// </summary>
@@ -351,6 +366,9 @@ public sealed class ResearchManager : MonoBehaviour,
             _completedNodeIds.Add(nodeId);
         }
 
+        // 아래 재발화 루프의 구독자가 효과를 조회하기 전에 무효화해야 한다(TryResearch와 같은 이유).
+        _isActiveEffectsDirty = true;
+
         _researchPointsChanged.Invoke(_researchPoints);
 
         // 구독자가 완료 집합을 건드려도 순회가 깨지지 않도록 복사본을 돌린다.
@@ -364,29 +382,18 @@ public sealed class ResearchManager : MonoBehaviour,
         Vector2Int chunkCoord,
         ResourceType resourceType)
     {
+        RebuildActiveEffectsIfDirty();
+
+        // 지형은 효과마다 같으므로 루프 밖에서 한 번만 구한다.
+        TerrainType terrainType = ResolveDominantTerrain(chunkCoord);
         float bonusRatio = 0f;
-        Chunk chunk = _gridMap != null ? _gridMap.GetChunk(chunkCoord) : null;
-        TerrainType terrainType = chunk != null
-            ? chunk.DominantTerrain
-            : TerrainType.Default;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    bonusRatio += effect.GetYieldMultiplierBonus(
-                        chunkCoord,
-                        terrainType,
-                        resourceType);
-                }
-            }
+            bonusRatio += _activeEffects[i].GetYieldMultiplierBonus(
+                chunkCoord,
+                terrainType,
+                resourceType);
         }
 
         return BASE_YIELD_MULTIPLIER + bonusRatio;
@@ -394,25 +401,15 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public bool IsUnlocked(Vector2Int chunkCoord, ResourceType resourceType)
     {
-        Chunk chunk = _gridMap != null ? _gridMap.GetChunk(chunkCoord) : null;
-        TerrainType terrainType = chunk != null
-            ? chunk.DominantTerrain
-            : TerrainType.Default;
+        RebuildActiveEffectsIfDirty();
 
-        foreach (string nodeId in _completedNodeIds)
+        TerrainType terrainType = ResolveDominantTerrain(chunkCoord);
+
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            if (_activeEffects[i].UnlocksResourceNode(chunkCoord, terrainType, resourceType))
             {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null &&
-                    effect.UnlocksResourceNode(chunkCoord, terrainType, resourceType))
-                {
-                    return true;
-                }
+                return true;
             }
         }
 
@@ -423,19 +420,13 @@ public sealed class ResearchManager : MonoBehaviour,
     {
         get
         {
-            foreach (string nodeId in _completedNodeIds)
-            {
-                if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-                {
-                    continue;
-                }
+            RebuildActiveEffectsIfDirty();
 
-                foreach (ResearchEffectSO effect in node.Effects)
+            for (int i = 0; i < _activeEffects.Count; i++)
+            {
+                if (_activeEffects[i].UnlocksTowerCombatRepair())
                 {
-                    if (effect != null && effect.UnlocksTowerCombatRepair())
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
 
@@ -445,22 +436,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public float GetDamageMultiplier(TowerData towerData)
     {
+        RebuildActiveEffectsIfDirty();
+
         float bonusRatio = 0f;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    bonusRatio += effect.GetTowerDamageMultiplierBonus(towerData);
-                }
-            }
+            bonusRatio += _activeEffects[i].GetTowerDamageMultiplierBonus(towerData);
         }
 
         return BASE_DAMAGE_MULTIPLIER + bonusRatio;
@@ -468,22 +450,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public float GetRangeMultiplier(TowerData towerData)
     {
+        RebuildActiveEffectsIfDirty();
+
         float bonusRatio = 0f;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    bonusRatio += effect.GetTowerRangeMultiplierBonus(towerData);
-                }
-            }
+            bonusRatio += _activeEffects[i].GetTowerRangeMultiplierBonus(towerData);
         }
 
         return BASE_RANGE_MULTIPLIER + bonusRatio;
@@ -491,22 +464,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public float GetAttackSpeedMultiplier(TowerData towerData)
     {
+        RebuildActiveEffectsIfDirty();
+
         float bonusRatio = 0f;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    bonusRatio += effect.GetTowerAttackSpeedMultiplierBonus(towerData);
-                }
-            }
+            bonusRatio += _activeEffects[i].GetTowerAttackSpeedMultiplierBonus(towerData);
         }
 
         return BASE_ATTACK_SPEED_MULTIPLIER + bonusRatio;
@@ -516,22 +480,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public float GetMaxHealthMultiplier(TowerData towerData)
     {
+        RebuildActiveEffectsIfDirty();
+
         float bonusRatio = 0f;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    bonusRatio += effect.GetTowerMaxHealthMultiplierBonus(towerData);
-                }
-            }
+            bonusRatio += _activeEffects[i].GetTowerMaxHealthMultiplierBonus(towerData);
         }
 
         return BASE_MAX_HEALTH_MULTIPLIER + bonusRatio;
@@ -539,22 +494,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public float GetConquestCostReductionRatio()
     {
+        RebuildActiveEffectsIfDirty();
+
         float reductionRatio = 0f;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    reductionRatio += effect.GetConquestCostReductionRatio();
-                }
-            }
+            reductionRatio += _activeEffects[i].GetConquestCostReductionRatio();
         }
 
         return reductionRatio;
@@ -562,22 +508,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public int GetConquestDaysReduction()
     {
+        RebuildActiveEffectsIfDirty();
+
         int daysReduction = 0;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    daysReduction += effect.GetConquestDaysReduction();
-                }
-            }
+            daysReduction += _activeEffects[i].GetConquestDaysReduction();
         }
 
         return daysReduction;
@@ -585,22 +522,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public int GetConquestPopulationReduction()
     {
+        RebuildActiveEffectsIfDirty();
+
         int populationReduction = 0;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    populationReduction += effect.GetConquestPopulationReduction();
-                }
-            }
+            populationReduction += _activeEffects[i].GetConquestPopulationReduction();
         }
 
         return populationReduction;
@@ -608,22 +536,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public float GetCastleDailyRegenAmount()
     {
+        RebuildActiveEffectsIfDirty();
+
         float regenAmount = 0f;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    regenAmount += effect.GetCastleDailyRegenAmount();
-                }
-            }
+            regenAmount += _activeEffects[i].GetCastleDailyRegenAmount();
         }
 
         return regenAmount;
@@ -634,23 +553,14 @@ public sealed class ResearchManager : MonoBehaviour,
         int baseCapacity,
         ResourceType producedResources)
     {
+        RebuildActiveEffectsIfDirty();
+
         int capacityDelta = 0;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    capacityDelta += effect.GetPopulationCapacityDelta(
-                        assignmentType, producedResources);
-                }
-            }
+            capacityDelta += _activeEffects[i].GetPopulationCapacityDelta(
+                assignmentType, producedResources);
         }
 
         return Mathf.Max(MINIMUM_POPULATION_CAPACITY, baseCapacity + capacityDelta);
@@ -658,22 +568,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public int GetVisionRadiusBonus()
     {
+        RebuildActiveEffectsIfDirty();
+
         int radiusBonus = 0;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    radiusBonus += effect.GetVisionRadiusBonus();
-                }
-            }
+            radiusBonus += _activeEffects[i].GetVisionRadiusBonus();
         }
 
         return radiusBonus;
@@ -681,22 +582,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public int GetMoveAllowance()
     {
+        RebuildActiveEffectsIfDirty();
+
         int moveAllowance = 0;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    moveAllowance += effect.GetMoveAllowanceBonus();
-                }
-            }
+            moveAllowance += _activeEffects[i].GetMoveAllowanceBonus();
         }
 
         return moveAllowance;
@@ -704,22 +596,13 @@ public sealed class ResearchManager : MonoBehaviour,
 
     public int GetResearchLabBuildLimitBonus()
     {
+        RebuildActiveEffectsIfDirty();
+
         int buildLimitBonus = 0;
 
-        foreach (string nodeId in _completedNodeIds)
+        for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-            {
-                continue;
-            }
-
-            foreach (ResearchEffectSO effect in node.Effects)
-            {
-                if (effect != null)
-                {
-                    buildLimitBonus += effect.GetResearchLabBuildLimitBonus();
-                }
-            }
+            buildLimitBonus += _activeEffects[i].GetResearchLabBuildLimitBonus();
         }
 
         return buildLimitBonus;
@@ -731,19 +614,13 @@ public sealed class ResearchManager : MonoBehaviour,
     {
         get
         {
-            foreach (string nodeId in _completedNodeIds)
-            {
-                if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
-                {
-                    continue;
-                }
+            RebuildActiveEffectsIfDirty();
 
-                foreach (ResearchEffectSO effect in node.Effects)
+            for (int i = 0; i < _activeEffects.Count; i++)
+            {
+                if (_activeEffects[i].UnlocksSealStone())
                 {
-                    if (effect != null && effect.UnlocksSealStone())
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
 
@@ -751,9 +628,55 @@ public sealed class ResearchManager : MonoBehaviour,
         }
     }
 
+    private TerrainType ResolveDominantTerrain(Vector2Int chunkCoord)
+    {
+        Chunk chunk = _gridMap != null ? _gridMap.GetChunk(chunkCoord) : null;
+        return chunk != null ? chunk.DominantTerrain : TerrainType.Default;
+    }
+
+    /// <summary>
+    /// 완료 노드의 효과를 <see cref="_activeEffects"/>에 펼친다.
+    ///
+    /// 같은 효과 에셋을 두 노드가 함께 참조하면 <b>두 번 담는다</b> - 노드마다 순회하던
+    /// 기존 계산과 같은 값이 나와야 하기 때문이다. 인스턴스로 중복을 지우면 보너스가
+    /// 조용히 반토막 난다.
+    ///
+    /// 빈 효과 슬롯은 여기서 조용히 건너뛴다 - 신고는 CacheNodes가 시작할 때 한 번만 한다
+    /// (이 메서드는 연구를 완료할 때마다 다시 도므로 같은 노드로 로그가 반복된다).
+    /// </summary>
+    private void RebuildActiveEffectsIfDirty()
+    {
+        if (!_isActiveEffectsDirty)
+        {
+            return;
+        }
+
+        _isActiveEffectsDirty = false;
+        _activeEffects.Clear();
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect == null)
+                {
+                    continue;
+                }
+
+                _activeEffects.Add(effect);
+            }
+        }
+    }
+
     private void CacheNodes()
     {
         _nodesById.Clear();
+        _isActiveEffectsDirty = true;
 
         if (!WiringGuard.Require(_tree, nameof(_tree), this))
         {
@@ -769,8 +692,45 @@ public sealed class ResearchManager : MonoBehaviour,
 
             if (!_nodesById.TryAdd(node.NodeId, node))
             {
+                // 첫 노드를 유지한다. UI(UI_ResearchWindow.BuildTreeIfNeeded)도 같은 규칙을 써야
+                // 트리에 그려진 노드와 여기 등록된 노드가 어긋나지 않는다.
                 Debug.LogError(
-                    $"[ResearchManager] 중복 연구 노드 ID: {node.NodeId}",
+                    $"[ResearchManager] 중복 연구 노드 ID '{node.NodeId}' - 뒤에 온 노드를 버립니다.",
+                    node);
+                continue;
+            }
+
+            ReportInvalidAuthoring(node);
+        }
+    }
+
+    /// <summary>
+    /// 저작 실수를 시작할 때 한 번 짚는다. 둘 다 런타임에 예외를 내지 않고 <b>조용히</b>
+    /// "그 노드만 영원히 무의미해지는" 종류라 로그가 유일한 발견 수단이다.
+    /// </summary>
+    private static void ReportInvalidAuthoring(ResearchNodeData node)
+    {
+        // 범위 밖 티어는 IsTierUnlocked가 항상 false라 영구 잠금이고,
+        // 연구 창은 1~MaxTier 행만 배치하므로 트리에 아예 그려지지 않는다.
+        if (!ResearchTierRules.IsValidTier(node.Tier))
+        {
+            Debug.LogError(
+                $"[ResearchManager] 연구 노드 '{node.NodeId}'의 티어 {node.Tier}가 유효 범위" +
+                $"({ResearchTierRules.FIRST_TIER}~{ResearchTierRules.MaxTier}) 밖입니다 - " +
+                "연구 창에 표시되지 않고 영구 잠금으로 남습니다.",
+                node);
+        }
+
+        // 효과 배열 자체가 빈 stub 노드는 기획상 정상이므로 짚지 않고,
+        // 자리는 있는데 에셋만 비어 있는 경우(= 배선 실수)만 짚는다.
+        IReadOnlyList<ResearchEffectSO> effects = node.Effects;
+
+        for (int i = 0; i < effects.Count; i++)
+        {
+            if (effects[i] == null)
+            {
+                Debug.LogError(
+                    $"[ResearchManager] 연구 노드 '{node.NodeId}'의 효과 슬롯 {i}가 비어 있습니다.",
                     node);
             }
         }

@@ -90,8 +90,11 @@ public class TowerAllyHealer : MonoBehaviour
             return false;
         }
 
-        float radiusY = EffectiveRange * IsometricMath.RADIUS_Y_RATIO;
-        return IsometricMath.IsWithinEllipse(_target.transform.position, transform.position, EffectiveRange, radiusY);
+        // EffectiveRange는 읽을 때마다 사거리 배율을 다시 조회하는 파생값이다(아래 프로퍼티 참고).
+        // FindLowestHealthAlly처럼 지역 변수로 한 번만 받는다.
+        float radiusX = EffectiveRange;
+        float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
+        return IsometricMath.IsWithinEllipse(_target.transform.position, transform.position, radiusX, radiusY);
     }
 
     private Tower FindLowestHealthAlly()

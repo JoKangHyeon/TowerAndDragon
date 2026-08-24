@@ -122,7 +122,8 @@ public static class ResearchTreeAssetGenerator
             ResourceCost = Cost(Amount(ResourceType.Stone, 30)),
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetNames = Effects(
-                "RE_FireTowerUnlock", "RE_IceTowerUnlock", "RE_StoneTowerUnlock", "RE_TimeTowerUnlock"),
+                "RE_FireTowerUnlock", "RE_IceTowerUnlock", "RE_StoneTowerUnlock",
+                "RE_TimeTowerUnlock", "RE_LifeTowerUnlock"),
             NameEn = "[TBD] Elemental Tower Unlock", NameKo = "[미정] 속성 타워 해금",
             DescEn = "[TBD] Allows building biome-specialized towers.",
             DescKo = "[미정] 바이옴 특화 타워 건설 가능",
@@ -135,11 +136,10 @@ public static class ResearchTreeAssetGenerator
             PrerequisiteIds = After("tower_elemental_unlock"),
             RequiredLandmarkAssetName = "LM_TowerPrototype",
             EffectAssetNames = Effects(
-                "RE_StealthTowerUnlock", "RE_SoulTowerUnlock",
-                "RE_LifeTowerUnlock", "RE_EnhancementTowerUnlock"),
+                "RE_StealthTowerUnlock", "RE_SoulTowerUnlock", "RE_EnhancementTowerUnlock"),
             NameEn = "[TBD] Reverse Engineering", NameKo = "[미정] 역설계",
-            DescEn = "[TBD] Analyze the captured tower prototype to unlock stealth, soul, life, and enhancement towers.",
-            DescKo = "[미정] 점령한 타워 원형을 분석해 은신·영혼·생명·강화 타워를 해금한다.",
+            DescEn = "[TBD] Analyze the captured tower prototype to unlock stealth, soul, and enhancement towers.",
+            DescKo = "[미정] 점령한 타워 원형을 분석해 은신·영혼·강화 타워를 해금한다.",
         },
         new NodeSpec
         {

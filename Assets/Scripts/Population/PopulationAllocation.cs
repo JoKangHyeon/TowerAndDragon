@@ -29,8 +29,16 @@ public sealed class PopulationAllocation
 
     // 정원이 줄어드는 순간 배치 인구가 정원을 넘을 수 있다 - TowerAttack.GetAttackInterval이
     // 이 값으로 제산하므로 1을 넘기면 타워가 비정상적으로 빨라진다.
-    public float StaffingRatio =>
-        Capacity == 0 ? 0f : Mathf.Clamp01((float)AssignedPopulation / Capacity);
+    //
+    // Capacity는 매번 연구 보정을 다시 계산하므로 한 번만 읽는다.
+    public float StaffingRatio
+    {
+        get
+        {
+            int capacity = Capacity;
+            return capacity == 0 ? 0f : Mathf.Clamp01((float)AssignedPopulation / capacity);
+        }
+    }
 
     internal PopulationAllocation(
         PopulationAssignmentType assignmentType,

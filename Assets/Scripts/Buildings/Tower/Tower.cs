@@ -193,7 +193,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     // 타워의 회복
     public void Heal (float amount)
     {
-        if (!_isInitialized || IsDead || IsReviving || !CanUseCombatRepair)
+        if (!_isInitialized || IsDead || IsReviving)
         {
             return;
         }

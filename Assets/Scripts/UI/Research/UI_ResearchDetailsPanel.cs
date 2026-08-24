@@ -27,7 +27,19 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
     private ResearchManager _researchManager;
     private ResourceManager _resourceManager;
     private ResearchNodeData _selectedNode;
+
+    /// <summary>
+    /// 연구 창의 전체 갱신(UI_ResearchWindow.RefreshAll)을 되부르는 콜백.
+    ///
+    /// <b>이 콜백은 <see cref="HandleResearchClicked"/>에서만 호출한다.</b>
+    /// RefreshAll이 이 패널의 <see cref="Refresh"/>를 부르므로, Refresh에서 이 콜백을 부르면
+    /// <c>RefreshAll → Refresh → _onChanged → RefreshAll</c>로 무한 재귀가 된다.
+    /// 연구 시스템에서 유일하게 순환이 될 수 있는 지점이라 <see cref="_isRefreshing"/>으로
+    /// 실수까지 막아 둔다.
+    /// </summary>
     private Action _onChanged;
+
+    private bool _isRefreshing;
 
     /// <summary>
     /// 지금 화면에 떠 있는지. 연구 창이 Esc를 창 닫기에 쓸지 이 패널 닫기에 쓸지 정하는 데 본다
@@ -86,6 +98,27 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
             return;
         }
 
+        // 재진입만 막는다 - 갱신이 끝난 뒤 다시 부르는 것은 재진입이 아니라 그대로 동작한다.
+        // (막는 대상은 _onChanged 설명에 적은 RefreshAll -> Refresh -> _onChanged 순환이다)
+        if (_isRefreshing)
+        {
+            return;
+        }
+
+        _isRefreshing = true;
+
+        try
+        {
+            RefreshContents();
+        }
+        finally
+        {
+            _isRefreshing = false;
+        }
+    }
+
+    private void RefreshContents()
+    {
         if (_nameText != null)
         {
             _nameText.text = StringTable.GetString(_selectedNode.NameLocKey);
@@ -166,6 +199,18 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
         return string.Join(PREREQUISITE_SEPARATOR, names);
     }
 
+    /// <summary>
+    /// 코스트 슬롯을 <b>파괴·재생성하지 않고 재사용한다.</b>
+    ///
+    /// 예전에는 Refresh마다 전부 Destroy하고 다시 Instantiate했다. Destroy는 프레임 끝으로
+    /// 지연되는데 Instantiate는 즉시라, 한 프레임 동안 구 슬롯과 신 슬롯이 컨테이너에 같이 남아
+    /// 코스트 아이콘이 여러 벌 겹쳐 보였다 - 연구 한 번에 Refresh가 대여섯 번
+    /// (자원별 ResourceChanged + RP 변경 + NodeCompleted + 직접 호출) 돌기 때문에 눈에 띄었다.
+    ///
+    /// 아이콘은 항상 있다고 본다(자원 카탈로그의 RD_* 전부에 아이콘이 배선돼 있다).
+    /// <see cref="UI_ResourceCostSlot.Setup"/>은 icon이 null이면 기존 스프라이트를 그대로 두므로,
+    /// 아이콘 없는 자원이 생기면 재사용된 슬롯에 앞 자원의 아이콘이 남는다.
+    /// </summary>
     private void RebuildCostSlots()
     {
         if (_costContainer == null || _costSlotPrefab == null)
@@ -173,18 +218,28 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
             return;
         }
 
-        foreach (UI_ResourceCostSlot slot in _costSlots)
-        {
-            if (slot != null)
-            {
-                Destroy(slot.gameObject);
-            }
-        }
-        _costSlots.Clear();
+        // 바깥에서 파괴된 슬롯이 섞이면 그 자리 코스트가 통째로 안 그려진다 - 먼저 걸러낸다.
+        _costSlots.RemoveAll(slot => slot == null);
 
-        foreach (ResourceAmount cost in _selectedNode.ResourceCost)
+        IReadOnlyList<ResourceAmount> costs = _selectedNode.ResourceCost;
+
+        while (_costSlots.Count < costs.Count)
         {
-            UI_ResourceCostSlot slot = Instantiate(_costSlotPrefab, _costContainer);
+            _costSlots.Add(Instantiate(_costSlotPrefab, _costContainer));
+        }
+
+        for (int i = 0; i < _costSlots.Count; i++)
+        {
+            UI_ResourceCostSlot slot = _costSlots[i];
+            bool isUsed = i < costs.Count;
+            slot.gameObject.SetActive(isUsed);
+
+            if (!isUsed)
+            {
+                continue;
+            }
+
+            ResourceAmount cost = costs[i];
 
             Sprite icon = null;
             if (_resourceManager != null && _resourceManager.Catalog != null &&
@@ -198,7 +253,6 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
             Color textColor = hasEnough ? _sufficientColor : _insufficientColor;
 
             slot.Setup(icon, Color.white, cost.Amount.ToString(), textColor);
-            _costSlots.Add(slot);
         }
     }
 

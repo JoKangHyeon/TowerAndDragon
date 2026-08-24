@@ -241,10 +241,14 @@ public class TowerAttack : MonoBehaviour
 
     // 판정 반경은 타일 종횡비를 반영한 타원이다 - 그리드 셀이 세로로 눌려있어(IsometricMath 참고)
     // 월드 좌표 기준 진짜 원으로 판정하면 세로 방향으로 타일 두 배만큼 더 멀리 닿는 비대칭이 생긴다.
+    //
+    // EffectiveRange는 연구·용 스킬트리의 사거리 배율을 Composite로 합산해 만드는 파생값이므로
+    // 읽을 때마다 값이 계산된다. 한 판정 안에서 두 번 읽을 이유가 없어 지역 변수로 받는다.
     private bool IsWithinAttackRange(Vector3 targetPosition)
     {
-        float radiusY = EffectiveRange * IsometricMath.RADIUS_Y_RATIO;
-        return IsometricMath.IsWithinEllipse(targetPosition, transform.position, EffectiveRange, radiusY);
+        float radiusX = EffectiveRange;
+        float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
+        return IsometricMath.IsWithinEllipse(targetPosition, transform.position, radiusX, radiusY);
     }
 
     // 구현체가 없으면 공격하지 않는다 - 인구 할당 생성에 실패한 타워가 지금처럼
@@ -257,16 +261,20 @@ public class TowerAttack : MonoBehaviour
     // 후에 몬스터의 종류, 및 타워종류에 따라 공격 우선도 다르게
     private BaseMonster FindClosestTarget()
     {
+        // 사거리는 후보를 훑는 동안 변하지 않는다 - 파생값(연구·용 스킬트리 배율 합산)이라
+        // 읽을 때마다 계산되므로 후보마다 다시 읽으면 몬스터 수만큼 같은 계산을 반복한다.
+        float radiusX = EffectiveRange;
+        float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
+
         // 브로드페이즈: 타원의 두 반지름 중 더 큰 X 반지름의 원으로 넉넉히 후보를 모은 뒤
         // 타원 방정식으로 정확히 걸러낸다 (IsWithinAttackRange와 동일한 판정).
         Collider2D[] candidates = Physics2D.OverlapCircleAll(
             transform.position,
-            EffectiveRange,
+            radiusX,
             _targetLayers);
 
         BaseMonster closestTarget = null;
         float closestNormalizedDistanceSqr = float.PositiveInfinity;
-        float radiusY = EffectiveRange * IsometricMath.RADIUS_Y_RATIO;
 
         foreach (Collider2D candidate in candidates)
         {
@@ -279,7 +287,7 @@ public class TowerAttack : MonoBehaviour
             }
 
             float normalizedDistanceSqr = IsometricMath.EllipseNormalizedDistanceSqr(
-                monster.transform.position, transform.position, EffectiveRange, radiusY);
+                monster.transform.position, transform.position, radiusX, radiusY);
 
             if (normalizedDistanceSqr > 1f || normalizedDistanceSqr >= closestNormalizedDistanceSqr)
             {

@@ -68,6 +68,7 @@ public class UI_ResearchNode : MonoBehaviour
     private Image _branchAccent;
     private TextMeshProUGUI _tierText;
     private bool _decorationsReady;
+    private Action<ResearchNodeData> _onClick;
 
     public ResearchNodeData Node { get; private set; }
 
@@ -78,6 +79,7 @@ public class UI_ResearchNode : MonoBehaviour
         Action<ResearchNodeData> onClick)
     {
         Node = node;
+        _onClick = onClick;
         EnsureDecorations();
 
         float accentBrightness = AccentBrightnessOf(state);
@@ -130,16 +132,15 @@ public class UI_ResearchNode : MonoBehaviour
         {
             _branchAccent.color = accent;
         }
+    }
 
-        if (_button != null)
-        {
-            _button.onClick.RemoveAllListeners();
-            _button.onClick.AddListener(() =>
-            {
-                SoundManager.Play(SoundId.UiButtonClick);
-                onClick?.Invoke(Node);
-            });
-        }
+    // 클릭 리스너는 한 번만 등록한다. Bind는 트리 갱신마다(연구 완료·자원 변동·주기 전환)
+    // 노드 전체에 대해 다시 도는데, 예전에는 그때마다 RemoveAllListeners + 새 람다를 달아
+    // 갱신 한 번에 노드 수만큼 클로저가 할당됐다. 콜백은 필드로 받아 최신 값을 쓴다.
+    private void HandleClicked()
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+        _onClick?.Invoke(Node);
     }
 
     private void EnsureDecorations()
@@ -150,6 +151,12 @@ public class UI_ResearchNode : MonoBehaviour
         }
 
         _decorationsReady = true;
+
+        // 이 블록과 함께 클릭 리스너도 딱 한 번만 등록한다(HandleClicked 주석 참고).
+        if (_button != null)
+        {
+            _button.onClick.AddListener(HandleClicked);
+        }
 
         // 루트 Image는 클릭 판정만 맡고 그림은 자식들이 그린다(자식이 부모보다 위에 그려지므로).
         if (_background != null)

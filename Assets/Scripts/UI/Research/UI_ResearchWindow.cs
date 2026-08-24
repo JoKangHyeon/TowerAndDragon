@@ -386,7 +386,14 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
                 continue;
             }
 
-            _nodeLookup[node.NodeId] = node;
+            // 중복 id는 ResearchManager.CacheNodes가 에러로 신고하고 **첫** 노드만 등록한다.
+            // 여기서 마지막 노드로 덮어쓰면 UI가 매니저에 등록되지 않은 인스턴스를 바인딩해
+            // GetNodeState가 영구 Invalid를 돌려준다(증상과 로그가 이어지지 않는다).
+            // 같은 "첫 노드 유지" 규칙을 쓰고, 버린 노드는 그리지도 않는다.
+            if (!_nodeLookup.TryAdd(node.NodeId, node))
+            {
+                continue;
+            }
 
             if (!byCell.TryGetValue(node.Branch, out Dictionary<int, List<ResearchNodeData>> byTier))
             {
