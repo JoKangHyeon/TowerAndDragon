@@ -197,6 +197,16 @@ public class MonsterAttack : MonoBehaviour
         return (_enRouteTargetTypes & target.TargetType) != MonsterTargetType.None;
     }
 
+    private bool CanDamageTarget(IMonsterTarget target)
+    {
+        // 광역 폭발 시에는 은신(TargetType = None)이더라도 원래의 타겟 타입을 기준으로 피해를 줍니다.
+        if (target is StoneBarricade)
+        {
+            return true;
+        }
+        return (_enRouteTargetTypes & target.BaseTargetType) != MonsterTargetType.None;
+    }
+
     private float GetSqrDistance(Vector3 targetPosition)
     {
         return (targetPosition - transform.position).sqrMagnitude;
@@ -331,7 +341,7 @@ public class MonsterAttack : MonoBehaviour
             IMonsterTarget target = candidate.GetComponentInParent<IMonsterTarget>();
 
 
-            if (target == null || target.IsDead || !CanAttackTarget(target) || !hitTargets.Add(target))
+            if (target == null || target.IsDead || !CanDamageTarget(target) || !hitTargets.Add(target))
             {
                 continue;
             }

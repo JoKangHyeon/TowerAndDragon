@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38ecfb0e94f007a42be5780914a37804, type: 3}
+  m_Name: RN_ConvenienceExpeditionMaster
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchNodeData
+  _nodeId: convenience_expedition_master
+  _nameLocKey: research_node_convenience_expedition_master_name
+  _descriptionLocKey: research_node_convenience_expedition_master_description
+  _branch: 2
+  _tier: 4
+  _prerequisites:
+  - {fileID: 11400000, guid: db7664f50566031458456b7bdbbd2f8e, type: 2}
+  - {fileID: 11400000, guid: 4a7bd8faebb188e478d8fc5ef5fbcb00, type: 2}
+  _researchPointCost: 90
+  _resourceCost:
+  - Type: 1
+    Amount: 40
+  _effects:
+  - {fileID: 11400000, guid: 0e542e2924d2405f8bf7c14adc04227d, type: 2}
+  _requiredLandmark: {fileID: 0}

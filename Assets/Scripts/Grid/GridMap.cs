@@ -41,6 +41,9 @@ public class GridMap : MonoBehaviour
     // 청크 단위 생산량 배율 조회 - 연구 시스템이 없는 씬에서는 null로 두면 기본 배율 1을 적용한다.
     public IChunkYieldMultiplierQuery YieldMultiplierQuery { get; set; }
 
+    // 연구소 건설 가능 수 보너스 조회. null이면 기본 건설 가능 수만 적용한다.
+    public IResearchLabBuildLimitQuery ResearchLabBuildLimitQuery { get; set; }
+
     // 봉인석 배치 판정 조회 - PortalSealManager가 Awake에 자신을 등록한다.
     // null이면 봉인석을 어디에도 지을 수 없다(fail-closed) - 영역을 모르는 채 아무데나 짓게 두면 안 되기 때문
     // (해금 여부의 null 기본값이 fail-open인 것과 방향이 반대이며, 의도된 것이다).
@@ -713,6 +716,21 @@ public class GridMap : MonoBehaviour
         return false;
     }
 
+    public int CountBuildings<T>() where T : Building
+    {
+        int count = 0;
+
+        foreach (Building building in _buildingFootprintCells.Keys)
+        {
+            if (building is T)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     public void SetCellState(Vector3Int coord, ChunkState newState)
     {
         if (!_cells.TryGetValue(coord, out GridCell cell))
@@ -1131,24 +1149,40 @@ public class GridMap : MonoBehaviour
     // 호출자가 이미 GetFootprintCoords로 footprint를 계산해 둔 경우, 재계산 없이 그 결과를 그대로 검사한다(CanConstructFootPrint의 List 오버로드와 동일한 목적).
     public bool CanConstructResourceFootprint(List<Vector3Int> footprint, ResourceType requiredResourceNode, Building ignoreBuilding)
     {
-        if (!CanConstructFootPrint(footprint, ignoreBuilding))
-            return false;
-
         foreach (Vector3Int coord in footprint)
         {
-            if (!_cells.TryGetValue(coord, out GridCell cell) || !SatisfiesResourceRequirement(cell, requiredResourceNode))
+            if (!_cells.TryGetValue(coord, out GridCell cell))
+                return false;
+
+            if (!IsFactoryCellConstructible(cell, requiredResourceNode))
+                return false;
+
+            if (cell.ExistTypeOnCell != ExistTypeOnCell.None && cell.OccupantBuilding != ignoreBuilding)
+                return false;
+
+            if (!IsChunkConquered(coord))
+                return false;
+
+            if (!SatisfiesResourceRequirement(cell, requiredResourceNode))
                 return false;
         }
 
         return true;
     }
 
+    private bool IsFactoryCellConstructible(GridCell cell, ResourceType requiredResourceNode) =>
+        IsCellConstructible(cell) ||
+        IsResearchUnlockedResourceRequirement(cell, requiredResourceNode);
+
     // 어느 청크에도 속하지 않은 셀은 청크 단위 연구 해금을 조회할 근거가 없으므로 정적 자원 플래그만 본다.
     private bool SatisfiesResourceRequirement(GridCell cell, ResourceType requiredResourceNode) =>
         cell.HasResourceNode(requiredResourceNode) ||
-        (ResearchUnlockQuery != null &&
-         TryGetChunkCoord(cell.Coord, out Vector2Int chunkCoord) &&
-         ResearchUnlockQuery.IsUnlocked(chunkCoord, requiredResourceNode));
+        IsResearchUnlockedResourceRequirement(cell, requiredResourceNode);
+
+    private bool IsResearchUnlockedResourceRequirement(GridCell cell, ResourceType requiredResourceNode) =>
+        ResearchUnlockQuery != null &&
+        TryGetChunkCoord(cell.Coord, out Vector2Int chunkCoord) &&
+        ResearchUnlockQuery.IsUnlocked(chunkCoord, requiredResourceNode);
 
     private bool AllCellsSatisfyResourceRequirement(List<GridCell> cells, ResourceType requiredResourceNode)
     {
@@ -1236,11 +1270,15 @@ public class GridMap : MonoBehaviour
         if (!_cells.TryGetValue(coord, out GridCell cell))
             return PlacementBlockReason.OutOfGrid;
 
+        Factory factory = building as Factory;
+
         // 새끼용은 지형 건설 가능 여부를 무시하지만 길(Road)만은 막힌다
         // (CanConstructBabyDragonFootprint와 같은 기준). 이 예외를 빼면 미점령 청크의 길에서
         // "먼저 점령하라"고 안내하게 되는데, 점령해도 끝내 놓을 수 없는 자리라 헛수고를 시킨다.
         bool terrainBlocks = ignoresTerrain
             ? cell.TerrainType == TerrainType.Road
+            : factory != null
+            ? !IsFactoryCellConstructible(cell, factory.RequiredResourceNode)
             : !IsCellConstructible(cell);
 
         if (terrainBlocks)
@@ -1252,7 +1290,7 @@ public class GridMap : MonoBehaviour
         if (!IsChunkConquered(coord))
             return PlacementBlockReason.NotConquered;
 
-        if (building is Factory factory && !SatisfiesResourceRequirement(cell, factory.RequiredResourceNode))
+        if (factory != null && !SatisfiesResourceRequirement(cell, factory.RequiredResourceNode))
             return PlacementBlockReason.MissingResourceNode;
 
         return PlacementBlockReason.None;
@@ -1366,12 +1404,12 @@ public class GridMap : MonoBehaviour
             // 여기서 default(Vector2Int)를 버킷 키로 쓰면 (0,0) 청크의 배율이 엉뚱한 셀에 적용된다.
             if (!TryGetChunkCoord(cell.Coord, out Vector2Int chunkCoord))
             {
-                total += cell.GetYield(resourceType);
+                total += ResolveCellYield(cell, resourceType);
                 continue;
             }
 
             _chunkYieldBuffer.TryGetValue(chunkCoord, out int chunkSubtotal);
-            _chunkYieldBuffer[chunkCoord] = chunkSubtotal + cell.GetYield(resourceType);
+            _chunkYieldBuffer[chunkCoord] = chunkSubtotal + ResolveCellYield(cell, chunkCoord, resourceType);
         }
 
         foreach (KeyValuePair<Vector2Int, int> entry in _chunkYieldBuffer)
@@ -1384,6 +1422,31 @@ public class GridMap : MonoBehaviour
         }
 
         return total;
+    }
+
+    private int ResolveCellYield(GridCell cell, ResourceType resourceType)
+    {
+        if (!TryGetChunkCoord(cell.Coord, out Vector2Int chunkCoord))
+        {
+            return cell.GetYield(resourceType);
+        }
+
+        return ResolveCellYield(cell, chunkCoord, resourceType);
+    }
+
+    private int ResolveCellYield(GridCell cell, Vector2Int chunkCoord, ResourceType resourceType)
+    {
+        int staticYield = cell.GetYield(resourceType);
+        if (staticYield > 0 || !IsResearchUnlockedResourceRequirement(cell, resourceType))
+        {
+            return staticYield;
+        }
+
+        float multiplier = _chunkYieldTable != null
+            ? _chunkYieldTable.ResolveResourceMultiplier(chunkCoord, resourceType)
+            : 1f;
+
+        return Mathf.RoundToInt(cell.BaseYield * multiplier);
     }
 
     // 점령 UI 리워드 패널 등 표시 전용 - 자원별 배율을 적용하지 않은 청크 전체의 원시 생산력 합계다.

@@ -4,12 +4,13 @@ using UnityEngine.Events;
 
 public class ConquestManager : MonoBehaviour
 {
+    private const int MINIMUM_POPULATION_REQUIRED = 1;
     private const int MINIMUM_DAYS_REQUIRED = 1;
     private const int DEFAULT_NEAR_CASTLE_DISTANCE_THRESHOLD = 2;
     private const int DEFAULT_NEAR_CASTLE_DAYS_REDUCTION = 1;
 
     // 코디네이터(ConquestResearchCoordinator)가 배선한다 - 배선되지 않은 씬에서는 null로 남아
-    // 할인·기간감소가 적용되지 않는다(기존 동작 유지).
+    // 할인·인구/기간 감소가 적용되지 않는다(기존 동작 유지).
     public IConquestModifierQuery ResearchModifierQuery { get; set; }
 
     [SerializeField]
@@ -102,14 +103,25 @@ public class ConquestManager : MonoBehaviour
     {
         float reductionRatio = Mathf.Clamp01(
             ResearchModifierQuery?.GetConquestCostReductionRatio() ?? 0f);
+        int populationReduction = ResearchModifierQuery?.GetConquestPopulationReduction() ?? 0;
 
         return new ResourceCost
         {
-            Population = baseCost.Population,
+            Population = ReducePopulation(baseCost.Population, populationReduction),
             Food = ReduceAmount(baseCost.Food, reductionRatio),
             Wood = ReduceAmount(baseCost.Wood, reductionRatio),
             Stone = ReduceAmount(baseCost.Stone, reductionRatio),
         };
+    }
+
+    private static int ReducePopulation(int amount, int reduction)
+    {
+        if (amount <= 0)
+        {
+            return 0;
+        }
+
+        return Mathf.Max(MINIMUM_POPULATION_REQUIRED, amount - Mathf.Max(0, reduction));
     }
 
     private static int ReduceAmount(int amount, float reductionRatio) =>

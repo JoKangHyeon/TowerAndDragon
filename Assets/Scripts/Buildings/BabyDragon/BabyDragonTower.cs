@@ -22,7 +22,7 @@ public class BabyDragonTower : Tower, ITowerStaffing
     protected override bool UsesMoveGrant => false;
 
     public override bool RequiresPopulation => false;
-    public override MonsterTargetType TargetType => MonsterTargetType.Dragon;
+    public override MonsterTargetType BaseTargetType => MonsterTargetType.Dragon;
     public override int PopulationCapacity => 0;
 
     public BabyDragonData DragonData => Data as BabyDragonData;

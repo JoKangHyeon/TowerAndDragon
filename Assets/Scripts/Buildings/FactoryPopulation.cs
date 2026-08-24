@@ -51,7 +51,8 @@ public class FactoryPopulation : MonoBehaviour, IPopulationAllocationTarget
         bool created = populationManager.TryCreateAllocation(
             PopulationAssignmentType.Production,
             _factory.Data.PopulationCapacity,
-            out _allocation);
+            out _allocation,
+            _factory.Data.ProducedResourceType);
 
         if (!created)
         {

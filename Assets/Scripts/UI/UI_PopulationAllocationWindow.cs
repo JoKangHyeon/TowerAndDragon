@@ -502,7 +502,9 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
             _selectedTarget.AvailableCapacity >= POPULATION_STEP;
         bool canUnassign =
             canEdit &&
-            _selectedTarget.AssignedPopulation >= POPULATION_STEP;
+            (_selectedTarget is TowerPopulation tp
+                ? tp.RealAssignedPopulation >= POPULATION_STEP
+                : _selectedTarget.AssignedPopulation >= POPULATION_STEP);
 
         SetInteractable(_assignButton, canAssign);
         SetInteractable(_assignAllButton, canAssign);
@@ -554,7 +556,10 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
         if (CanEditTarget())
         {
-            RunUnassign(_selectedTarget.AssignedPopulation);
+            int amount = _selectedTarget is TowerPopulation tp
+                ? tp.RealAssignedPopulation
+                : _selectedTarget.AssignedPopulation;
+            RunUnassign(amount);
         }
     }
 

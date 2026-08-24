@@ -48,7 +48,13 @@ public abstract class DragonSkillEffectSO : ScriptableObject
 
     // 상태이상처럼 배율을 곱할 수 없는 (객체를 반환하는 ) 효과용 -
     // 지금 상태에서 이 효과가 발동해야 하는지만 판정
-    protected bool IsEffective(DragonType? activeAttribute) => Scale(activeAttribute) >= 1f;
+    //
+    // 0 초과로 보는 이유: 궁극의 잔존 효과는 (_suppressWhileActive=true, _inactiveScale=0.5)라
+    // Scale이 활성일 때 0, 비활성일 때 0.5여서 1 이상이 되는 경우가 없다. 1 기준으로 재면
+    // 얼음(둔화)·불(화상) 궁극의 잔존분이 어느 상태에서도 발동하지 않는다(실측).
+    // '절반'은 배율이 아니라 약화된 상태이상 에셋(DS_IceSlow_Persist 등)으로 표현하므로,
+    // 여기서는 발동 여부만 본다. _inactiveScale이 0인 효과의 동작은 그대로다.
+    protected bool IsEffective(DragonType? activeAttribute) => Scale(activeAttribute) > 0f;
 
     public virtual float GetTowerAttackSpeedMultiplierBonus(DragonType? activeAttribute, TowerData towerData) => 0f;
     public virtual float GetTowerDamageMultiplierBonus(DragonType? activeAttribute, TowerData towerData) => 0f;
@@ -64,6 +70,7 @@ public abstract class DragonSkillEffectSO : ScriptableObject
 
     public virtual int GetVisionRadiusBonus(DragonType? activeAttribute) => 0;
     public virtual float GetConquestCostReductionRatio(DragonType? activeAttribute) => 0f;
+    public virtual int GetConquestPopulationReduction(DragonType? activeAttribute) => 0;
     public virtual int GetConquestDaysReduction(DragonType? activeAttribute) => 0;
 
     // 타워 기본 공격이 명중할 때 대상에 얹을 상태이상 (얼음, 불)

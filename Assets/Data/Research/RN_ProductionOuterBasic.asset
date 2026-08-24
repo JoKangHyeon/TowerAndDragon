@@ -16,14 +16,13 @@ MonoBehaviour:
   _nameLocKey: research_node_production_outer_basic_name
   _descriptionLocKey: research_node_production_outer_basic_description
   _branch: 1
-  _tier: 2
+  _tier: 3
   _prerequisites:
   - {fileID: 11400000, guid: afc28cd6e9effe6418f2a35245c359ba, type: 2}
-  _researchPointCost: 25
+  _researchPointCost: 10
   _resourceCost:
   - Type: 2
-    Amount: 30
-  - Type: 4
-    Amount: 30
-  _effects: []
+    Amount: 20
+  _effects:
+  - {fileID: 11400000, guid: 18b35e43a97044aca6b8d506eacb9dc6, type: 2}
   _requiredLandmark: {fileID: 0}

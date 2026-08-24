@@ -2529,6 +2529,8 @@ GameObject:
   - component: {fileID: 1006164847}
   - component: {fileID: 1006164846}
   - component: {fileID: 1006164845}
+  - component: {fileID: 1006164859}
+  - component: {fileID: 1006164860}
   m_Layer: 0
   m_Name: Composites
   m_TagString: Untagged
@@ -2698,6 +2700,7 @@ MonoBehaviour:
   _yieldComposite: {fileID: 1006164858}
   _visionComposite: {fileID: 1006164855}
   _conquestComposite: {fileID: 1006164856}
+  _maxHealthComposite: {fileID: 1006164859}
 --- !u!114 &1006164855
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2749,6 +2752,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80a42836ddfa1764b952fb36229e47d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChunkYieldMultiplierComposite
+--- !u!114 &1006164859
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1006164843}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e207f6dd30b4baa4cb57b72cf5259787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerMaxHealthMultiplierComposite
+--- !u!114 &1006164860
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1006164843}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 820a3719b651b874eb18bf500807f09f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerMaxHealthApplier
+  _maxHealthComposite: {fileID: 1006164859}
+  _cycleManager: {fileID: 1632594319}
+  _gridMap: {fileID: 168384008}
 --- !u!224 &1025648584 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 4681505163447419565, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
@@ -2782,6 +2812,7 @@ GameObject:
   - component: {fileID: 1089675785}
   - component: {fileID: 1089675784}
   - component: {fileID: 1089675783}
+  - component: {fileID: 1089675787}
   m_Layer: 0
   m_Name: Landmark System
   m_TagString: Untagged
@@ -3567,6 +3598,7 @@ MonoBehaviour:
   _balance: {fileID: 11400000, guid: c3dcd05343aa2e241b228a947598d99f, type: 2}
   _yieldComposite: {fileID: 1006164858}
   _statComposite: {fileID: 1006164844}
+  _maxHealthComposite: {fileID: 1006164859}
   _researchPointsChanged:
     m_PersistentCalls:
       m_Calls: []

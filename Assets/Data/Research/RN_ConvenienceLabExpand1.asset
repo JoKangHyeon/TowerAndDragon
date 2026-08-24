@@ -16,9 +16,10 @@ MonoBehaviour:
   _nameLocKey: research_node_convenience_lab_expand_1_name
   _descriptionLocKey: research_node_convenience_lab_expand_1_description
   _branch: 2
-  _tier: 1
-  _prerequisites: []
-  _researchPointCost: 10
+  _tier: 2
+  _prerequisites:
+  - {fileID: 11400000, guid: cc17ecd362f50f04f8b885fd624194e0, type: 2}
+  _researchPointCost: 25
   _resourceCost:
   - Type: 2
     Amount: 20

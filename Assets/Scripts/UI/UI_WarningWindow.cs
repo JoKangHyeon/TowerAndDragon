@@ -31,7 +31,7 @@ public class UI_WarningWindow : MonoBehaviour
         // 건설 비용을 낼 자원이 모자라 건설창에서 건물을 고르지 못했을 때.
         NotEnoughResources,
 
-        // 이미 지어 둔 연구소가 있는데 두 번째 연구소를 놓으려 했을 때.
+        // 현재 연구소 건설 가능 수에 도달한 상태에서 추가 연구소를 놓으려 했을 때.
         ResearchLabDuplicate,
 
         // 밤에 건설 모드를 켜려 했을 때.

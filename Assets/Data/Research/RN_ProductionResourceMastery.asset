@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38ecfb0e94f007a42be5780914a37804, type: 3}
+  m_Name: RN_ProductionResourceMastery
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchNodeData
+  _nodeId: production_resource_mastery
+  _nameLocKey: research_node_production_resource_mastery_name
+  _descriptionLocKey: research_node_production_resource_mastery_description
+  _branch: 1
+  _tier: 4
+  _prerequisites:
+  - {fileID: 11400000, guid: d21e032bd15509347988fccd0fdd014d, type: 2}
+  - {fileID: 11400000, guid: f558afff1184a734eb43d552dd167d71, type: 2}
+  _researchPointCost: 90
+  _resourceCost:
+  - Type: 2
+    Amount: 30
+  - Type: 4
+    Amount: 30
+  _effects:
+  - {fileID: 11400000, guid: f49d9d71517f0324190b72e83e9c4d32, type: 2}
+  _requiredLandmark: {fileID: 0}

@@ -12,19 +12,49 @@ public class TowerPopulation : MonoBehaviour, IPopulationAllocationTarget, ITowe
     private PopulationAllocation _allocation;
     private bool _isInitialized;
 
-    public int AssignedPopulation =>
-        _allocation?.AssignedPopulation ?? 0;
+
 
     public int Capacity =>
         _allocation?.Capacity ?? 0;
 
-    public int AvailableCapacity =>
-        _allocation?.AvailableCapacity ?? 0;
+    public int SoulPopulation =>
+        _tower != null && _tower.AuraSystem != null
+        ? _tower.AuraSystem.ResolveModifiers(_tower).SoulPopulation
+        : 0;
 
-    public float StaffingRatio =>
-        _allocation?.StaffingRatio ?? 0f;
+    public int RealAssignedPopulation =>
+        _allocation?.AssignedPopulation ?? 0;
 
-    public bool HasAssignedPopulation => AssignedPopulation > 0f;
+    public int AssignedPopulation => ResolveAssignedPopulation(Capacity);
+
+    public int AvailableCapacity
+    {
+        get
+        {
+            int capacity = Capacity;
+            return Mathf.Max(0, capacity - ResolveAssignedPopulation(capacity));
+        }
+    }
+
+    public float StaffingRatio
+    {
+        get
+        {
+            int capacity = Capacity;
+            return capacity == 0
+                ? 0f
+                : Mathf.Clamp01((float)ResolveAssignedPopulation(capacity) / capacity);
+        }
+    }
+
+    public bool HasAssignedPopulation => AssignedPopulation > 0;
+
+    // 정원을 인자로 받아 호출부가 한 번만 읽게 한다. Capacity는 연구 정원 보정
+    // (ResearchManager.ResolveCapacity)을 읽을 때마다 다시 계산하는 파생값이라,
+    // 프로퍼티끼리 서로를 부르면 한 판정에 같은 계산이 두세 번 돈다 -
+    // StaffingRatio·CanOperate는 TowerAttack.Update가 프레임마다 지나는 경로다.
+    private int ResolveAssignedPopulation(int capacity) =>
+        Mathf.Min(capacity, RealAssignedPopulation + SoulPopulation);
 
     public bool IsInitialized => _isInitialized;
 

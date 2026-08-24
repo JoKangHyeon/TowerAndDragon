@@ -324,16 +324,16 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         }
     }
 
-    // 타워 해금 연구가 끝나면 현재 탭을 다시 그려 새 슬롯이 즉시 나타나게 한다.
+    // 건설 메뉴에 새 항목을 노출하는 연구가 끝나면 현재 탭을 다시 그려 새 슬롯이 즉시 나타나게 한다.
     //
-    // 완료된 노드가 실제로 타워를 해금할 때만 다시 그린다. 모든 완료 노드에 반응하면
+    // 완료된 노드가 실제로 건설 메뉴 항목을 해금할 때만 다시 그린다. 모든 완료 노드에 반응하면
     //  (1) SelectFilter가 OnTabSelected를 발화하는데 TutorialRunner가 이를 실제 탭 클릭으로 보고
     //      단계를 넘겨버리고,
     //  (2) 세이브 복원(ResearchManager.RestoreProgress)이 완료 노드마다 NodeCompleted를 재발화하므로
     //      불러올 때 슬롯 전체가 완료 노드 수만큼 파괴·재생성된다.
     private void HandleResearchCompleted(ResearchNodeData node)
     {
-        if (_filterTabs.Length == 0 || node == null || !UnlocksAnyTower(node))
+        if (_filterTabs.Length == 0 || node == null || !UnlocksAnyBuildMenuItem(node))
         {
             return;
         }
@@ -341,11 +341,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         SelectFilter(_currentFilterIndex);
     }
 
-    private static bool UnlocksAnyTower(ResearchNodeData node)
+    private static bool UnlocksAnyBuildMenuItem(ResearchNodeData node)
     {
         foreach (ResearchEffectSO effect in node.Effects)
         {
-            if (effect != null && effect.GetUnlockedTower() != null)
+            if (effect != null && (effect.GetUnlockedTower() != null || effect.UnlocksSealStone()))
             {
                 return true;
             }
@@ -598,19 +598,29 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         OnSlotViewChanged?.Invoke();
     }
 
-    // Hide research-locked towers until they are discovered.
-    // 연구로 해금해야 하는 타워인데 아직 해금되지 않았으면 슬롯 자체를 만들지 않는다.
-    // 잠긴 슬롯을 흐리게 보여주지 않는 이유: 역설계 타워는 해당 랜드마크를 점령하기 전까지
+    // Hide research-locked buildings until they are discovered.
+    // 연구로 해금해야 하는 건물인데 아직 해금되지 않았으면 슬롯 자체를 만들지 않는다.
+    // 잠긴 슬롯을 흐리게 보여주지 않는 이유: 역설계 타워와 봉인석은 조건을 만족하기 전까지
     // 존재 자체가 스포일러이므로, 발견하는 재미를 남긴다.
     // 연구 매니저가 없는 씬(튜토리얼·테스트)에서는 전부 노출한다.
     private bool IsUnlocked(Building building)
     {
-        if (_researchManager == null || building is not Tower tower)
+        if (_researchManager == null)
         {
             return true;
         }
 
-        return _researchManager.IsTowerUnlocked(tower.Data);
+        if (building is Tower tower)
+        {
+            return _researchManager.IsTowerUnlocked(tower.Data);
+        }
+
+        if (building is SealStone)
+        {
+            return _researchManager.IsSealStoneUnlocked;
+        }
+
+        return true;
     }
 
     // 슬롯 호버 - 건물 종류에 맞는 정보 창을 그 슬롯 오른쪽에 띄운다.

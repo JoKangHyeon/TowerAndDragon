@@ -1,6 +1,7 @@
 using UnityEngine;
 
-// 용 스킬트리의 타워 최대체력 보너스를 실제 타워에 반영한다.
+// 연구·용 스킬트리의 타워 최대체력 보너스를 실제 타워에 반영한다.
+// 두 트리의 기여는 TowerMaxHealthMultiplierComposite가 합성하므로 이쪽은 그 하나만 읽는다.
 //
 // 공격력·공속·사거리는 TowerAttack이 매 공격마다 ITowerStatMultiplierQuery로 pull하므로
 // 속성을 바꾸는 즉시 반영되지만, 최대체력만은 Health가 최대치를 "값"으로 들고 있어
@@ -12,7 +13,7 @@ using UnityEngine;
 // 체력 상한이 출렁여, 수리·피해 계산을 플레이어가 예측할 수 없게 된다.
 public sealed class TowerMaxHealthApplier : MonoBehaviour
 {
-    [SerializeField] private DragonTreeManager _dragonTreeManager;
+    [SerializeField] private TowerMaxHealthMultiplierComposite _maxHealthComposite;
     [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private GridMap _gridMap;
 
@@ -39,7 +40,7 @@ public sealed class TowerMaxHealthApplier : MonoBehaviour
 
     private void ApplyAll()
     {
-        if (!WiringGuard.Require(_dragonTreeManager, nameof(_dragonTreeManager), this) ||
+        if (!WiringGuard.Require(_maxHealthComposite, nameof(_maxHealthComposite), this) ||
             !WiringGuard.Require(_gridMap, nameof(_gridMap), this))
         {
             return;
@@ -52,7 +53,7 @@ public sealed class TowerMaxHealthApplier : MonoBehaviour
                 continue;
             }
 
-            tower.ApplyMaxHealthMultiplier(_dragonTreeManager.GetMaxHealthMultiplier(tower.Data));
+            tower.ApplyMaxHealthMultiplier(_maxHealthComposite.GetMaxHealthMultiplier(tower.Data));
         }
     }
 }

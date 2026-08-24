@@ -14,6 +14,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     private TowerAttack _attack;
     private ITowerStaffing _staffing;
     private TowerAuraSystem _auraSystem;
+    private ITowerCombatRepairUnlockQuery _combatRepairUnlockQuery;
     private CancellationTokenSource _reviveCts;
     private CancellationTokenSource _paralysisCts;
     protected Animator _animator;
@@ -40,12 +41,41 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     public bool IsDead => _health == null || _health.IsDead;
     public TowerAttack Attack => _attack;
     public TowerData Data => _towerData;
+    public TowerAuraSystem AuraSystem => _auraSystem;
     public override IReadOnlyList<ResourceAmount> BuildCost => _towerData != null ? _towerData.BuildCost : base.BuildCost;
     public override int PopulationCapacity => _towerData != null ? _towerData.PopulationCapacity : base.PopulationCapacity;
-    public virtual MonsterTargetType TargetType => MonsterTargetType.Tower;
+    
+    public virtual MonsterTargetType BaseTargetType => MonsterTargetType.Tower;
 
-    // 인구로 가동하지 않는 타워(새끼용 등)는 false로 override한다.
-    public virtual bool RequiresPopulation => true;
+    private int _lastAuraCheckFrame = -1;
+    private MonsterTargetType _cachedTargetType;
+
+    public MonsterTargetType TargetType
+    {
+        get
+        {
+            if (Time.frameCount != _lastAuraCheckFrame)
+            {
+                _lastAuraCheckFrame = Time.frameCount;
+                bool isStealth = false;
+                
+                if (TowerAuraSystem.TryGetActiveAura(this, out var myAura, out _) && myAura.IsStealth)
+                {
+                    isStealth = true;
+                }
+                else if (_auraSystem != null)
+                {
+                    isStealth = _auraSystem.ResolveModifiers(this).IsStealth;
+                }
+                
+                _cachedTargetType = isStealth ? MonsterTargetType.None : BaseTargetType;
+            }
+            return _cachedTargetType;
+        }
+    }
+
+    // 인구로 가동하지 않는 타워(새끼용, 영혼타워 등)는 false를 반환한다.
+    public virtual bool RequiresPopulation => GetComponent<TowerPopulation>() != null;
 
     // 공격 가능 여부에 추가 조건을 거는 서브클래스 훅(새끼용 버프모드 등). 기본은 항상 허용.
     protected virtual bool CanAttackInCurrentMode => true;
@@ -183,9 +213,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
             $"[Tower] {name}이 비활성화되었습니다. 재활성화 대기시간: {_towerData.ReviveDelay}초",
             this);
 
-        CancelRevive();
-        _reviveCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
-        ReviveAfterDelayAsync(_reviveCts.Token).Forget();
+        TryStartCombatRevive();
 
         RefreshBrokenAnimation();
 
@@ -201,6 +229,18 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
 
         CancelRevive();
         RestoreAndReactivate();
+    }
+
+    public bool TryRestoreDuringCombat()
+    {
+        if (!_isInitialized || !IsDead || !CanUseCombatRepair)
+        {
+            return false;
+        }
+
+        CancelRevive();
+        RestoreAndReactivate();
+        return true;
     }
 
     private async UniTaskVoid ReviveAfterDelayAsync(CancellationToken token)
@@ -238,6 +278,31 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     public void SetAuraSystem(TowerAuraSystem auraSystem)
     {
         _auraSystem = auraSystem;
+    }
+
+    public void SetCombatRepairUnlockQuery(ITowerCombatRepairUnlockQuery combatRepairUnlockQuery)
+    {
+        _combatRepairUnlockQuery = combatRepairUnlockQuery;
+
+        if (_isDisabled)
+        {
+            TryStartCombatRevive();
+        }
+    }
+
+    private bool CanUseCombatRepair =>
+        _combatRepairUnlockQuery != null &&
+        _combatRepairUnlockQuery.IsTowerCombatRepairUnlocked;
+
+    private void TryStartCombatRevive()
+    {
+        if (!CanUseCombatRepair || _reviveCts != null)
+        {
+            return;
+        }
+
+        _reviveCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        ReviveAfterDelayAsync(_reviveCts.Token).Forget();
     }
 
     private void CancelRevive()

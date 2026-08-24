@@ -43,10 +43,13 @@ public class PopulationManager : MonoBehaviour
 
     public UnityEvent<PopulationState> PopulationChanged;
 
+    // producedResources는 생산 시설만 넘긴다(자원별 인력 효율 연구용). 나머지 호출부는
+    // 기본값 None으로 두면 되므로 후행 선택 인자다.
     public bool TryCreateAllocation(
         PopulationAssignmentType assignmentType,
         int baseCapacity,
-        out PopulationAllocation allocation
+        out PopulationAllocation allocation,
+        ResourceType producedResources = ResourceType.None
     )
     {
         allocation = null;
@@ -64,7 +67,8 @@ public class PopulationManager : MonoBehaviour
         allocation = new PopulationAllocation(
             assignmentType,
             baseCapacity,
-            this
+            this,
+            producedResources
         );
 
         _allocations.Add(allocation);

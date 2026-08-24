@@ -30,6 +30,10 @@ public sealed class TowerAuraDataSO : ScriptableObject
     [Min(0f)]
     [SerializeField] private float _shieldAmount;
 
+    [Header("Utility")]
+    [SerializeField] private bool _isStealth;
+    [SerializeField] private int _soulPopulation;
+
     public float Radius => _radius;
     public bool ScaleRadiusWithStaffing => _scaleRadiusWithStaffing;
     public float DamageMultiplier => _damageMultiplier;
@@ -37,7 +41,8 @@ public sealed class TowerAuraDataSO : ScriptableObject
     public float ReviveSpeedMultiplier => _reviveSpeedMultiplier;
     public float MaxHealthMultiplier => _maxHealthMultiplier;
     public float ShieldAmount => _shieldAmount;
-
+    public bool IsStealth => _isStealth;
+    public int SoulPopulation => _soulPopulation;
 
     public bool HasArea => _radius > 0f;
 }

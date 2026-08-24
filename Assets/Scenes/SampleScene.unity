@@ -2659,7 +2659,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 820a3719b651b874eb18bf500807f09f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerMaxHealthApplier
-  _dragonTreeManager: {fileID: 914589622}
+  _maxHealthComposite: {fileID: 1652351663}
   _cycleManager: {fileID: 914589611}
   _gridMap: {fileID: 313449541}
 --- !u!114 &799234533 stripped
@@ -2930,6 +2930,7 @@ MonoBehaviour:
   _balance: {fileID: 11400000, guid: c3dcd05343aa2e241b228a947598d99f, type: 2}
   _yieldComposite: {fileID: 1652351647}
   _statComposite: {fileID: 1652351645}
+  _maxHealthComposite: {fileID: 1652351663}
   _researchPointsChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -5284,7 +5285,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4429832511105182359, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.0007019043
+      value: 0.000030517578
       objectReference: {fileID: 0}
     - target: {fileID: 4439690152447319859, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -5888,7 +5889,7 @@ PrefabInstance:
       objectReference: {fileID: 1692054028}
     - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _filterTabs.Array.data[0].Buildings.Array.size
-      value: 8
+      value: 12
       objectReference: {fileID: 0}
     - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _filterTabs.Array.data[1].Buildings.Array.size
@@ -5915,9 +5916,29 @@ PrefabInstance:
       value: 
       objectReference: {fileID: -1179263789838454351, guid: c11e5591fe2e14de4b5590efe36b5716, type: 3}
     - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[0].Buildings.Array.data[8]'
+      value: 
+      objectReference: {fileID: 1666454000564402049, guid: aa8d11f668b02154587ddddec40dcf73, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[0].Buildings.Array.data[9]'
+      value: 
+      objectReference: {fileID: -1179263789838454351, guid: 5a1d8d37f27637d4685768753ca03b95, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: '_filterTabs.Array.data[1].Buildings.Array.data[1]'
       value: 
       objectReference: {fileID: 3085158866344032203, guid: 234281619f70977409c9e4d5f49f92f4, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[0].Buildings.Array.data[10]'
+      value: 
+      objectReference: {fileID: -1179263789838454351, guid: 557afccaf84ef6a448a390b708767082, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[0].Buildings.Array.data[11]'
+      value: 
+      objectReference: {fileID: -1179263789838454351, guid: a38ace2a600940c439e19e3a9fe3d561, type: 3}
+    - target: {fileID: 5654372137667483191, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: '_filterTabs.Array.data[0].Buildings.Array.data[12]'
+      value: 
+      objectReference: {fileID: -1179263789838454351, guid: 557afccaf84ef6a448a390b708767082, type: 3}
     - target: {fileID: 5656464456546008163, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -8595,6 +8616,8 @@ GameObject:
   - component: {fileID: 1652351660}
   - component: {fileID: 1652351659}
   - component: {fileID: 1652351661}
+  - component: {fileID: 1652351663}
+  - component: {fileID: 1652351662}
   m_Layer: 0
   m_Name: Composites
   m_TagString: Untagged
@@ -8789,6 +8812,7 @@ MonoBehaviour:
   _yieldComposite: {fileID: 1652351647}
   _visionComposite: {fileID: 1652351657}
   _conquestComposite: {fileID: 1652351646}
+  _maxHealthComposite: {fileID: 1652351663}
 --- !u!114 &1652351657
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8859,6 +8883,33 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TerrainPenaltyCoordinator
   _gridMap: {fileID: 313449541}
   _terrainPenaltySystem: {fileID: 1652351659}
+--- !u!114 &1652351662
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1652351643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 820a3719b651b874eb18bf500807f09f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerMaxHealthApplier
+  _maxHealthComposite: {fileID: 1652351663}
+  _cycleManager: {fileID: 914589611}
+  _gridMap: {fileID: 313449541}
+--- !u!114 &1652351663
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1652351643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e207f6dd30b4baa4cb57b72cf5259787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerMaxHealthMultiplierComposite
 --- !u!1 &1692054027
 GameObject:
   m_ObjectHideFlags: 0
@@ -8965,6 +9016,7 @@ GameObject:
   - component: {fileID: 1698710671}
   - component: {fileID: 1698710670}
   - component: {fileID: 1698710669}
+  - component: {fileID: 1698710673}
   m_Layer: 0
   m_Name: Landmark System
   m_TagString: Untagged
@@ -9043,6 +9095,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1698710673
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1698710668}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5592dc28ae7c944491781a11e399b21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SealStoneResearchCoordinator
+  _researchManager: {fileID: 914589620}
+  _portalSealManager: {fileID: 914589624}
 --- !u!1 &1699494003
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -14,6 +15,33 @@ using UnityEngine.UI;
 public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 {
     private const float EDGE_REACHABLE_TINT_RATIO = 0.55f;
+
+    // 노드 테두리에서 선을 시작·끝내기 위한 절반 크기(ResearchNode 프리팹 220×130).
+    // 중심끼리 이으면 선이 노드 밑을 지나 아무 데서나 튀어나온 것처럼 보인다.
+    private static readonly Vector2 NODE_HALF_SIZE = new Vector2(110f, 65f);
+
+    // 같은 티어(같은 행) 판정 여유. 같은 행이면 옆면끼리 잇는다.
+    private const float SAME_ROW_EPSILON = 1f;
+
+    // 베지어 제어점을 양끝에서 얼마나 밀지 - 두 노드 사이 거리에 대한 비율이다.
+    // 블랙보드의 controlPointOffset(거리의 절반, 최소 50)과 같은 계산이다.
+    private const float CURVE_CONTROL_RATIO = 0.5f;
+    private const float MIN_CURVE_CONTROL = 50f;
+
+    // 곡선 하나를 몇 조각으로 자를지. 16이면 눈으로 각이 보이지 않는다.
+    private const int CURVE_SEGMENTS = 16;
+
+    // 창을 열 때의 배율. 블랙보드처럼 1:1로 열고 나머지는 패닝·휠에 맡긴다.
+    // 직렬화 필드로 두지 않는다: 필드를 추가한 시점의 기본값이 프리팹에 박혀 버려
+    // 코드에서 값을 바꿔도 반영되지 않는 함정이 있다(실측 - 0.6으로 고쳐도 0.75가 그대로 떴다).
+    private const float INITIAL_SCALE = 1f;
+
+    // 블랙보드 --bg-color(#1e1e1e). 트리 뒤에 깔아 창 패널색과 분리한다.
+    private static readonly Color CANVAS_COLOR = new Color(0.118f, 0.118f, 0.118f, 1f);
+
+    // 블랙보드 .tier-label(2rem bold rgba(255,255,255,.1)) - 티어를 크게 옅게 깔아 둔다.
+    private const float TIER_WATERMARK_FONT_SIZE = 64f;
+    private static readonly Color TIER_WATERMARK_COLOR = new Color(1f, 1f, 1f, 0.10f);
 
     [Header("Dependencies")]
     [SerializeField] private ResearchManager _researchManager;
@@ -37,10 +65,23 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private Button _exitButton;
     [SerializeField] private Button _blockerButton;
 
+    // 간격은 "선이 지날 길"을 남기는 값이다. 좁히면 ㄱ자 연결선이 노드에 붙어
+    // 어느 선이 어느 노드로 들어가는지 다시 안 보이게 된다(노드는 220×110).
     [Header("Grid (Docs/Sangwook/연구트리_시각화.html 기준)")]
-    [SerializeField] private float _columnWidth = 500f;
-    [SerializeField] private float _rowHeight = 104f;
-    [SerializeField] private float _nodeSpacing = 166f;
+    [Tooltip("갈래 열의 최소 폭. 실제 폭은 그 갈래에서 가장 붐비는 티어의 노드 수로 정해진다.")]
+    [SerializeField] private float _minBranchWidth = 760f;
+    [Tooltip("갈래 열 사이 여백.")]
+    [SerializeField] private float _branchGap = 90f;
+    [SerializeField] private float _rowHeight = 275f;
+    [SerializeField] private float _nodeSpacing = 270f;
+
+
+    [Header("연결선")]
+    [SerializeField] private float _edgeThickness = 4f;
+
+    [Tooltip("티어 행 사이 구분선. 블랙보드의 주기 구분선을 가로로 돌린 것.")]
+    [SerializeField] private float _tierSeparatorThickness = 2f;
+    [SerializeField] private Color _tierSeparatorColor = new Color(1f, 1f, 1f, 0.10f);
     [Header("우측 여백(UI 겹침 해소)")]
     [SerializeField] private float _columnSpacingWidth = 500f;
     [Tooltip("가장 왼쪽 갈래 열 중심에서 티어 라벨까지의 거리.")]
@@ -52,16 +93,18 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("트리를 감싼 Content 여백. 스크롤 영역이 트리에 꼭 맞게 잡히도록 쓴다.")]
     [SerializeField] private Vector2 _contentPadding = new Vector2(80f, 80f);
 
+    // 기획 블랙보드(Docs/연구트리_블랙보드.html)의 --branch-* 팔레트를 그대로 쓴다.
     [Header("Colors (ResearchBranch 선언 순: Tower, Production, Convenience)")]
     [SerializeField]
     private Color[] _branchColors =
     {
-        new Color(0.302f, 0.882f, 0.816f), // Tower - 시각화 HTML의 --line-active
-        new Color(0.498f, 0.820f, 0.310f), // Production
-        new Color(0.902f, 0.698f, 0.353f), // Convenience - 시각화 HTML의 --gold
+        new Color(1.000f, 0.420f, 0.420f), // Tower       - #ff6b6b
+        new Color(0.306f, 0.804f, 0.769f), // Production  - #4ecdc4
+        new Color(1.000f, 0.902f, 0.427f), // Convenience - #ffe66d
     };
 
-    [SerializeField] private Color _edgeLockedColor = new Color(0.169f, 0.184f, 0.220f, 0.8f);
+    // 잠긴 선도 배경과 확실히 구분돼야 선행 관계가 읽힌다 - 블랙보드의 회색 점선(#666)에 맞춘 밝기다.
+    [SerializeField] private Color _edgeLockedColor = new Color(0.40f, 0.40f, 0.40f, 1f);
     [SerializeField] private Color _tierLabelUnlockedColor = new Color(0.788f, 0.800f, 0.827f);
     [SerializeField] private Color _tierLabelLockedColor = new Color(0.482f, 0.506f, 0.557f, 0.6f);
 
@@ -76,6 +119,14 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     private readonly Dictionary<string, Vector2> _nodePositions = new();
     private readonly Dictionary<int, List<TextMeshProUGUI>> _tierLabels = new();
     private readonly List<EdgeView> _edgeViews = new();
+
+    // 곡선 점을 담아 넘기는 재사용 버퍼(선마다 새 리스트를 만들지 않는다).
+    private readonly List<Vector2> _curvePointBuffer = new();
+
+    // 갈래별 열 폭·중심. 갈래마다 "가장 붐비는 티어"에 맞춰 폭이 달라진다 -
+    // 고정 폭을 쓰면 한 칸에 넣을 수 있는 노드 수가 그 폭에 갇힌다.
+    private readonly List<float> _branchWidths = new();
+    private readonly List<float> _branchCenters = new();
 
     private bool _built;
     private bool _isOpen;
@@ -208,8 +259,12 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         RefreshAll();
     }
 
-    // 창을 열 때마다 확대·이동 상태를 되돌려 항상 트리 전체가 보이게 한다.
+    // 창을 열 때마다 확대·이동 상태를 되돌린다.
     // (휠 확대는 UI_DragonSkillTreeZoom이 Content localScale을 직접 바꾸므로 여기서 되돌린다)
+    //
+    // 전체를 한 화면에 우겨넣어 봤더니 배율이 0.56까지 떨어져 카드 글씨를 못 읽었다(실측).
+    // 블랙보드도 5000px 캔버스를 1:1로 열고 패닝하는 방식이므로 같게 맞춘다 - 배율 1로 열고
+    // 트리의 왼쪽 위(T1·타워)부터 보여준 뒤, 전체 조망은 휠 축소(하한 0.4)에 맡긴다.
     private void ResetView()
     {
         if (!WiringGuard.Require(_content, nameof(_content), this))
@@ -217,9 +272,68 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             return;
         }
 
-        _content.localScale = Vector3.one;
-        var spancing = new Vector2(_columnSpacingWidth, 0f);
-        _content.anchoredPosition = spancing / 2f;
+        ApplyInitialView();
+
+        // 창을 연 첫 프레임에는 뷰포트 RectTransform이 아직 레이아웃 전이라 크기가 실제와 다르다
+        // (실측: 1721 자리에 2036이 잡혀 배율이 0.63 대신 0.75로 나왔다).
+        // CLAUDE.md의 "한 프레임 지연" 규칙대로 레이아웃이 끝난 뒤 한 번 더 잡는다.
+        ApplyInitialViewNextFrameAsync().Forget();
+    }
+
+    private async UniTaskVoid ApplyInitialViewNextFrameAsync()
+    {
+        await UniTask.Yield(this.GetCancellationTokenOnDestroy());
+
+        if (_isOpen)
+        {
+            ApplyInitialView();
+        }
+    }
+
+    private void ApplyInitialView()
+    {
+        _content.localScale = new Vector3(INITIAL_SCALE, INITIAL_SCALE, 1f);
+        _content.anchoredPosition = ResolveInitialPosition(INITIAL_SCALE);
+    }
+
+    // 뷰포트를 넘치는 만큼은 왼쪽 위로 밀어 T1부터 보이게 한다.
+    private Vector2 ResolveInitialPosition(float scale)
+    {
+        var spacing = new Vector2(_columnSpacingWidth, 0f);
+
+        if (!TryGetViewportSize(out Vector2 viewSize))
+        {
+            return spacing / 2f;
+        }
+
+        Vector2 scaled = _content.sizeDelta * scale;
+        var overflow = new Vector2(
+            Mathf.Max(0f, scaled.x - viewSize.x),
+            Mathf.Max(0f, scaled.y - viewSize.y));
+
+        return spacing / 2f + new Vector2(overflow.x, -overflow.y) * 0.5f;
+    }
+
+    private bool TryGetViewportSize(out Vector2 size)
+    {
+        size = Vector2.zero;
+
+        if (_content.parent is not RectTransform viewport)
+        {
+            return false;
+        }
+
+        Rect viewRect = viewport.rect;
+        Vector2 contentSize = _content.sizeDelta;
+
+        if (viewRect.width <= 0f || viewRect.height <= 0f ||
+            contentSize.x <= 0f || contentSize.y <= 0f)
+        {
+            return false;
+        }
+
+        size = viewRect.size;
+        return true;
     }
 
     public void Close()
@@ -272,7 +386,14 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
                 continue;
             }
 
-            _nodeLookup[node.NodeId] = node;
+            // 중복 id는 ResearchManager.CacheNodes가 에러로 신고하고 **첫** 노드만 등록한다.
+            // 여기서 마지막 노드로 덮어쓰면 UI가 매니저에 등록되지 않은 인스턴스를 바인딩해
+            // GetNodeState가 영구 Invalid를 돌려준다(증상과 로그가 이어지지 않는다).
+            // 같은 "첫 노드 유지" 규칙을 쓰고, 버린 노드는 그리지도 않는다.
+            if (!_nodeLookup.TryAdd(node.NodeId, node))
+            {
+                continue;
+            }
 
             if (!byCell.TryGetValue(node.Branch, out Dictionary<int, List<ResearchNodeData>> byTier))
             {
@@ -292,13 +413,16 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         int branchCount = BRANCHES_IN_ORDER.Length;
         int tierCount = ResearchTierRules.MaxTier;
 
-        PlaceTierLabels(branchCount, tierCount);
+        ResolveBranchBands(byCell, branchCount, tierCount);
+
+        PlaceTierLabels(tierCount);
+        PlaceTierSeparators(tierCount);
 
         for (int branchIndex = 0; branchIndex < branchCount; branchIndex++)
         {
             ResearchBranch branch = BRANCHES_IN_ORDER[branchIndex];
 
-            PlaceBranchHeader(branchIndex, branchCount, tierCount, branch);
+            PlaceBranchHeader(branchIndex, tierCount, branch);
 
             if (!byCell.TryGetValue(branch, out Dictionary<int, List<ResearchNodeData>> byTier))
             {
@@ -316,7 +440,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
                 for (int i = 0; i < cellNodes.Count; i++)
                 {
-                    PlaceNode(cellNodes[i], branchIndex, branchCount, tierIndex, tierCount, i, cellNodes.Count);
+                    PlaceNode(cellNodes[i], branchIndex, tierIndex, tierCount, i, cellNodes.Count);
                 }
             }
         }
@@ -326,6 +450,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         CenterTreeInContent();
 
         BuildEdges();
+        PlaceCanvasBackground();
 
         _built = true;
     }
@@ -373,17 +498,51 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         _content.anchoredPosition = spancing/2f;
     }
 
+    // 갈래마다 "가장 붐비는 티어"에 맞춰 열 폭을 정하고 왼쪽부터 이어 붙인다.
+    // 이렇게 해야 한 칸에 넣을 수 있는 노드 수에 상한이 생기지 않는다 -
+    // 고정 폭이던 동안은 3개를 넘기면 옆 갈래를 침범했다.
+    private void ResolveBranchBands(
+        Dictionary<ResearchBranch, Dictionary<int, List<ResearchNodeData>>> byCell,
+        int branchCount,
+        int tierCount)
+    {
+        _branchWidths.Clear();
+
+        for (int branchIndex = 0; branchIndex < branchCount; branchIndex++)
+        {
+            int busiest = 0;
+
+            if (byCell.TryGetValue(BRANCHES_IN_ORDER[branchIndex],
+                out Dictionary<int, List<ResearchNodeData>> byTier))
+            {
+                for (int tierIndex = 0; tierIndex < tierCount; tierIndex++)
+                {
+                    int tier = tierIndex + ResearchTierRules.FIRST_TIER;
+
+                    if (byTier.TryGetValue(tier, out List<ResearchNodeData> cellNodes))
+                    {
+                        busiest = Mathf.Max(busiest, cellNodes.Count);
+                    }
+                }
+            }
+
+            _branchWidths.Add(ResearchTreeLayout.BranchWidth(
+                busiest, NODE_HALF_SIZE.x * 2f, _nodeSpacing, _minBranchWidth));
+        }
+
+        ResearchTreeLayout.ResolveBranchCenters(_branchWidths, _branchGap, _branchCenters);
+    }
+
     private void PlaceNode(
         ResearchNodeData node,
         int branchIndex,
-        int branchCount,
         int tierIndex,
         int tierCount,
         int indexInCell,
         int countInCell)
     {
         Vector2 position = ResearchTreeLayout.NodePosition(
-            branchIndex, branchCount, _columnWidth,
+            _branchCenters[branchIndex],
             tierIndex, tierCount, _rowHeight,
             indexInCell, countInCell, _nodeSpacing);
 
@@ -394,7 +553,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         _nodeViews[node.NodeId] = view;
     }
 
-    private void PlaceBranchHeader(int branchIndex, int branchCount, int tierCount, ResearchBranch branch)
+    private void PlaceBranchHeader(int branchIndex, int tierCount, ResearchBranch branch)
     {
         TextMeshProUGUI header = CreateLabel();
 
@@ -406,16 +565,16 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         header.text = StringTable.GetString(ResearchLocKeys.BranchLocKey(branch));
         header.color = ColorForBranch(branch);
         header.rectTransform.anchoredPosition = new Vector2(
-            ResearchTreeLayout.ColumnCenterX(branchIndex, branchCount, _columnWidth),
+            _branchCenters[branchIndex],
             ResearchTreeLayout.RowCenterY(0, tierCount, _rowHeight) + _branchHeaderOffsetY);
     }
 
     // 티어 행마다 번호 라벨과 해금 시점 캡션을 왼쪽에 세운다.
     // 두 줄을 한 텍스트에 넣지 않고 라벨 2개로 나눠, 줄바꿈 문자를 코드에 두지 않는다.
-    private void PlaceTierLabels(int branchCount, int tierCount)
+    private void PlaceTierLabels(int tierCount)
     {
-        float labelX =
-            ResearchTreeLayout.ColumnCenterX(0, branchCount, _columnWidth) - _tierLabelOffsetX;
+        // 첫 갈래의 왼쪽 변에서 더 왼쪽으로 - 노드에 가려지지 않게 폭까지 감안한다.
+        float labelX = TreeLeftEdge() - _tierLabelOffsetX;
 
         for (int tierIndex = 0; tierIndex < tierCount; tierIndex++)
         {
@@ -430,23 +589,96 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
                 return;
             }
 
+            // 티어 번호는 블랙보드의 .tier-label처럼 크고 옅게 깐다(워터마크).
+            // 캡션만 평소 크기로 그 아래에 둔다.
             numberLabel.text = string.Format(
                 StringTable.GetString(ResearchLocKeys.TIER_LABEL), tier);
+            numberLabel.fontSize = TIER_WATERMARK_FONT_SIZE;
+            numberLabel.fontStyle = FontStyles.Bold;
+            numberLabel.rectTransform.sizeDelta = new Vector2(
+                numberLabel.rectTransform.sizeDelta.x, TIER_WATERMARK_FONT_SIZE * 1.2f);
             numberLabel.rectTransform.anchoredPosition =
                 new Vector2(labelX, rowY + _tierLabelOffsetY);
 
             captionLabel.text =
                 StringTable.GetString(ResearchLocKeys.TierCaptionLocKey(tier));
             captionLabel.rectTransform.anchoredPosition =
-                new Vector2(labelX, rowY - _tierLabelOffsetY);
+                new Vector2(labelX, rowY - TIER_WATERMARK_FONT_SIZE * 0.55f - _tierLabelOffsetY);
 
             _tierLabels[tier] = new List<TextMeshProUGUI> { numberLabel, captionLabel };
         }
     }
 
+    private float TreeLeftEdge() =>
+        _branchCenters.Count > 0 ? _branchCenters[0] - _branchWidths[0] * 0.5f : 0f;
+
+    private float TreeRightEdge() =>
+        _branchCenters.Count > 0
+            ? _branchCenters[_branchCenters.Count - 1] + _branchWidths[_branchWidths.Count - 1] * 0.5f
+            : 0f;
+
     private TextMeshProUGUI CreateLabel()
     {
         return _labelPrefab != null ? Instantiate(_labelPrefab, _content) : null;
+    }
+
+    // 블랙보드의 캔버스 색(#1e1e1e)을 트리 뒤에 깐다. 창 패널색 위에 그대로 두면
+    // 카드와 배경의 대비가 블랙보드와 달라져 같은 팔레트로도 다르게 보인다.
+    // Content 크기가 확정된 뒤(CenterTreeInContent 이후) 불러야 크기를 맞출 수 있다.
+    private void PlaceCanvasBackground()
+    {
+        var backgroundObject = new GameObject(
+            "CanvasBackground", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        var rect = (RectTransform)backgroundObject.transform;
+        rect.SetParent(_content, false);
+
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        rect.SetAsFirstSibling(); // 연결선·노드보다 뒤로
+
+        var image = backgroundObject.GetComponent<Image>();
+        image.color = CANVAS_COLOR;
+        image.raycastTarget = false;
+    }
+
+    // 티어 행 사이에 옅은 구분선을 깐다. 블랙보드의 주기 구분선을 가로로 돌린 것으로,
+    // 어느 노드가 같은 티어인지 선 없이도 읽히게 하는 역할이다.
+    // 연결선 프리팹을 재사용하지만 _edgeViews에 넣지 않으므로 상태에 따라 색이 변하지 않는다.
+    private void PlaceTierSeparators(int tierCount)
+    {
+        if (_edgePrefab == null)
+        {
+            return;
+        }
+
+        float left = TreeLeftEdge();
+        float right = TreeRightEdge();
+
+        // 첫 행 위에는 긋지 않는다(갈래 이름표와 겹친다).
+        for (int tierIndex = 1; tierIndex < tierCount; tierIndex++)
+        {
+            float y =
+                ResearchTreeLayout.RowCenterY(tierIndex, tierCount, _rowHeight) + _rowHeight * 0.5f;
+
+            RectTransform line = Instantiate(_edgePrefab, _content);
+            line.SetAsFirstSibling();
+            line.localRotation = Quaternion.identity;
+            line.sizeDelta = new Vector2(right - left, _tierSeparatorThickness);
+            line.anchoredPosition = new Vector2((left + right) * 0.5f, y);
+
+            var image = line.GetComponent<Image>();
+            if (image != null)
+            {
+                // 블랙보드의 `border-left: 1px dashed` 를 그대로 옮긴다. 실선으로 두면
+                // 연결선보다 눈에 띄어 트리가 표처럼 보인다.
+                image.sprite = ResearchTreeSprites.DashSprite;
+                image.type = Image.Type.Tiled;
+                image.color = _tierSeparatorColor;
+            }
+        }
     }
 
     // 연결선은 노드의 Prerequisites에서 그대로 유도한다(용 스킬트리처럼 위상을 코드에 박지 않는다).
@@ -481,30 +713,84 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         string dependentNodeId,
         ResearchBranch branch)
     {
-        if (!WiringGuard.Require(_edgePrefab, nameof(_edgePrefab), this))
-        {
-            return;
-        }
+        BuildCurvePoints(from, to);
 
-        RectTransform edge = Instantiate(_edgePrefab, _content);
-        edge.SetAsFirstSibling(); // 노드 아래로 - 선이 클릭을 가로채거나 위에 그려지지 않게 한다
-        edge.anchoredPosition = from;
+        var curveObject = new GameObject("EdgeCurve", typeof(RectTransform), typeof(CanvasRenderer), typeof(UI_CurvedEdge));
+        var rect = (RectTransform)curveObject.transform;
+        rect.SetParent(_content, false);
 
-        Vector2 delta = to - from;
-        float angle = Mathf.Atan2(delta.x, delta.y) * Mathf.Rad2Deg;
-        edge.localRotation = Quaternion.Euler(0f, 0f, -angle);
+        // 점을 Content 좌표로 바로 넘기므로 이 RectTransform은 Content 중심에 크기 0으로 둔다.
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = Vector2.zero;
+        rect.SetAsFirstSibling(); // 노드 아래로 - 선이 클릭을 가로채거나 위에 그려지지 않게 한다
 
-        Vector2 size = edge.sizeDelta;
-        size.y = delta.magnitude;
-        edge.sizeDelta = size;
+        var curve = curveObject.GetComponent<UI_CurvedEdge>();
+        curve.raycastTarget = false;
+        curve.SetCurve(
+            _curvePointBuffer, _edgeThickness,
+            ResearchTreeSprites.DashTexture, ResearchTreeSprites.DashPeriod);
 
         _edgeViews.Add(new EdgeView
         {
-            Transform = edge,
+            Transform = rect,
             PrerequisiteNodeId = prerequisiteNodeId,
             DependentNodeId = dependentNodeId,
             Branch = branch,
         });
+    }
+
+    // 3차 베지어를 잘라 점 목록으로 만든다. 블랙보드가 SVG로 그리던 곡선과 같은 식이며,
+    // 그쪽은 가로 흐름이라 제어점을 x로 밀지만 이 창은 세로 흐름이라 y로 민다.
+    private void BuildCurvePoints(Vector2 from, Vector2 to)
+    {
+        _curvePointBuffer.Clear();
+
+        Vector2 start;
+        Vector2 end;
+        Vector2 startControl;
+        Vector2 endControl;
+
+        if (Mathf.Abs(from.y - to.y) <= SAME_ROW_EPSILON)
+        {
+            // 같은 티어끼리는 옆면에서 나가 옆면으로 들어간다.
+            float direction = Mathf.Sign(to.x - from.x);
+            start = new Vector2(from.x + direction * NODE_HALF_SIZE.x, from.y);
+            end = new Vector2(to.x - direction * NODE_HALF_SIZE.x, to.y);
+
+            float reach = Mathf.Max(Mathf.Abs(end.x - start.x) * CURVE_CONTROL_RATIO, MIN_CURVE_CONTROL);
+            startControl = start + new Vector2(direction * reach, 0f);
+            endControl = end - new Vector2(direction * reach, 0f);
+        }
+        else
+        {
+            // 아래 티어로 내려가는 선은 아래 변에서 나가 위 변으로 들어간다.
+            start = new Vector2(from.x, from.y - NODE_HALF_SIZE.y);
+            end = new Vector2(to.x, to.y + NODE_HALF_SIZE.y);
+
+            float reach = Mathf.Max(Mathf.Abs(end.y - start.y) * CURVE_CONTROL_RATIO, MIN_CURVE_CONTROL);
+            startControl = start - new Vector2(0f, reach);
+            endControl = end + new Vector2(0f, reach);
+        }
+
+        for (int i = 0; i <= CURVE_SEGMENTS; i++)
+        {
+            float t = (float)i / CURVE_SEGMENTS;
+            _curvePointBuffer.Add(EvaluateCubic(start, startControl, endControl, end, t));
+        }
+    }
+
+    private static Vector2 EvaluateCubic(Vector2 p0, Vector2 p1, Vector2 p2, Vector2 p3, float t)
+    {
+        float inverse = 1f - t;
+        float a = inverse * inverse * inverse;
+        float b = 3f * inverse * inverse * t;
+        float c = 3f * inverse * t * t;
+        float d = t * t * t;
+
+        return a * p0 + b * p1 + c * p2 + d * p3;
     }
 
     private void HandleNodeCompleted(ResearchNodeData node) => RefreshAll();
@@ -568,8 +854,9 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
                 continue;
             }
 
-            var image = edge.Transform.GetComponent<Image>();
-            if (image == null)
+            // 곡선(UI_CurvedEdge)과 직선 Image를 모두 다루려면 Graphic으로 잡아야 한다.
+            var graphic = edge.Transform.GetComponent<Graphic>();
+            if (graphic == null)
             {
                 continue;
             }
@@ -578,15 +865,15 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
             if (_researchManager.IsCompleted(edge.DependentNodeId))
             {
-                image.color = branchColor;
+                graphic.color = branchColor;
             }
             else if (_researchManager.IsCompleted(edge.PrerequisiteNodeId))
             {
-                image.color = Color.Lerp(_edgeLockedColor, branchColor, EDGE_REACHABLE_TINT_RATIO);
+                graphic.color = Color.Lerp(_edgeLockedColor, branchColor, EDGE_REACHABLE_TINT_RATIO);
             }
             else
             {
-                image.color = _edgeLockedColor;
+                graphic.color = _edgeLockedColor;
             }
         }
     }
@@ -605,12 +892,26 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             bool unlocked = ResearchTierRules.IsTierUnlocked(entry.Key, currentCycle);
             Color color = unlocked ? _tierLabelUnlockedColor : _tierLabelLockedColor;
 
-            foreach (TextMeshProUGUI label in entry.Value)
+            for (int i = 0; i < entry.Value.Count; i++)
             {
-                if (label != null)
+                TextMeshProUGUI label = entry.Value[i];
+
+                if (label == null)
                 {
-                    label.color = color;
+                    continue;
                 }
+
+                // 0번은 대형 워터마크(티어 번호)라 항상 옅게 두고, 잠긴 티어만 더 옅게 한다.
+                // 여기까지 해금 색을 입히면 블랙보드의 "배경에 깔린 큰 글자" 느낌이 사라진다.
+                if (i == 0)
+                {
+                    Color watermark = TIER_WATERMARK_COLOR;
+                    watermark.a *= unlocked ? 1f : 0.5f;
+                    label.color = watermark;
+                    continue;
+                }
+
+                label.color = color;
             }
         }
     }

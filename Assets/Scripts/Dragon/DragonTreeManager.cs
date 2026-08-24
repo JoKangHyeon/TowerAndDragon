@@ -17,7 +17,8 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
     IChunkYieldMultiplierQuery,
     IVisionRadiusBonusQuery,
     IConquestModifierQuery,
-    ITowerHitStatusQuery
+    ITowerHitStatusQuery,
+    ITowerMaxHealthMultiplierQuery
 {
     private const float BASE_DAMAGE_MULTIPLIER = 1f;
     private const float BASE_RANGE_MULTIPLIER = 1f;
@@ -601,6 +602,29 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
         }
 
         return days;
+    }
+
+    public int GetConquestPopulationReduction()
+    {
+        int population = 0;
+
+        foreach (string nodeId in UnlockedIds)
+        {
+            if (!TryGetNode(nodeId, out ProgressionNodeData node) || !(node is DragonSkillNodeData dragonNode))
+            {
+                continue;
+            }
+
+            foreach (DragonSkillEffectSO effect in dragonNode.Effects)
+            {
+                if (effect != null)
+                {
+                    population += effect.GetConquestPopulationReduction(ActiveAttribute);
+                }
+            }
+        }
+
+        return population;
     }
 
     // --- ITowerHitStatusQuery ---

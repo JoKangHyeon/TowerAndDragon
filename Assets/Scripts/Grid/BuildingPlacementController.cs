@@ -7,6 +7,8 @@ using UnityEngine.InputSystem;
 
 public class BuildingPlacementController : MonoBehaviour
 {
+    private const int BASE_RESEARCH_LAB_BUILD_LIMIT = 1;
+
     [SerializeField]
     private GridMap _gridMap;
 
@@ -686,9 +688,10 @@ public class BuildingPlacementController : MonoBehaviour
         if (_selectedBuilding == null)
             return false;
 
-        // 연구소는 하나만 둘 수 있다. 슬롯은 그대로 눌리므로, 안내가 없으면 타일을 찍어도
-        // 아무 일이 없는 것으로만 보인다(자원 부족과 같은 이유로 이유를 알린다).
-        if (_selectedBuilding is ResearchLab && _gridMap.HasBuilding<ResearchLab>())
+        // 연구소는 기본 1개까지만 둘 수 있고, 연구 효과가 최대 건설 수를 늘린다.
+        // 슬롯은 그대로 눌리므로, 안내가 없으면 타일을 찍어도 아무 일이 없는 것으로만 보인다.
+        if (_selectedBuilding is ResearchLab &&
+            _gridMap.CountBuildings<ResearchLab>() >= GetResearchLabBuildLimit())
         {
             if (_warningWindow != null)
             {
@@ -792,6 +795,12 @@ public class BuildingPlacementController : MonoBehaviour
         _gridMap.GetTerrainType(blockedCoord) == _iceUnlockableTerrain
             ? UI_WarningWindow.MessageId.VolcanoConstruction
             : UI_WarningWindow.MessageId.TerrainNotConstructible;
+
+    private int GetResearchLabBuildLimit()
+    {
+        int bonus = _gridMap.ResearchLabBuildLimitQuery?.GetResearchLabBuildLimitBonus() ?? 0;
+        return Mathf.Max(BASE_RESEARCH_LAB_BUILD_LIMIT, BASE_RESEARCH_LAB_BUILD_LIMIT + bonus);
+    }
 
     // 건물 종류별 건설 비용 데이터를 조회 - UI_BuildingSlot.ResolveName과 동일한 타입 분기 패턴.
     // 아직 비용이 정의되지 않은 건물(예: Tower)은 빈 배열을 돌려줘 비용 없이 취급된다.
