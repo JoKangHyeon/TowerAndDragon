@@ -9,7 +9,10 @@ public sealed class ResearchManager : MonoBehaviour,
     IPopulationCapacityModifierQuery,
     IVisionRadiusBonusQuery,
     ITowerMaxHealthMultiplierQuery,
-    ISealStoneUnlockQuery
+    IChunkResearchUnlockQuery,
+    ISealStoneUnlockQuery,
+    ITowerCombatRepairUnlockQuery,
+    IResearchLabBuildLimitQuery
 {
     private const float BASE_YIELD_MULTIPLIER = 1f;
     private const float BASE_DAMAGE_MULTIPLIER = 1f;
@@ -38,6 +41,7 @@ public sealed class ResearchManager : MonoBehaviour,
 
     private readonly Dictionary<string, ResearchNodeData> _nodesById = new();
     private readonly HashSet<string> _completedNodeIds = new();
+    private readonly List<ResearchLab> _activeLabs = new();
 
     private CycleManager _cycleManager;
     private ResourceManager _resourceManager;
@@ -70,8 +74,8 @@ public sealed class ResearchManager : MonoBehaviour,
         _cycleProgression != null
             ? _cycleProgression.CurrentCycleNumber
             : WaveCycleRules.FIRST_CYCLE_NUMBER;
-    public ResearchLab ActiveLab { get; private set; }
-    public bool HasActiveLab => ActiveLab != null;
+    public ResearchLab ActiveLab => _activeLabs.Count > 0 ? _activeLabs[0] : null;
+    public bool HasActiveLab => _activeLabs.Count > 0;
     public ResearchTreeData Tree => _tree;
     public UnityEvent<int> ResearchPointsChanged => _researchPointsChanged;
     public UnityEvent<ResearchNodeData> NodeCompleted => _nodeCompleted;
@@ -125,6 +129,14 @@ public sealed class ResearchManager : MonoBehaviour,
         _statComposite?.Register(this);
         _maxHealthComposite?.Register(this);
 
+        if (_gridMap != null)
+        {
+            _gridMap.ResearchUnlockQuery = this;
+            _gridMap.ResearchLabBuildLimitQuery = this;
+            _gridMap.OnBuildingAdded.AddListener(HandleBuildingAddedForTowerCombatRepair);
+            AssignTowerCombatRepairUnlockQueryToExistingTowers();
+        }
+
         _isConstructed = true;
     }
 
@@ -138,30 +150,57 @@ public sealed class ResearchManager : MonoBehaviour,
         _yieldComposite?.Unregister(this);
         _statComposite?.Unregister(this);
         _maxHealthComposite?.Unregister(this);
+
+        if (_gridMap != null && ReferenceEquals(_gridMap.ResearchUnlockQuery, this))
+        {
+            _gridMap.ResearchUnlockQuery = null;
+        }
+
+        if (_gridMap != null && ReferenceEquals(_gridMap.ResearchLabBuildLimitQuery, this))
+        {
+            _gridMap.ResearchLabBuildLimitQuery = null;
+        }
+
+        if (_gridMap != null)
+        {
+            _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingAddedForTowerCombatRepair);
+        }
     }
 
     public bool RegisterLab(ResearchLab lab)
     {
-        if (lab == null || ActiveLab != null)
+        if (lab == null || _activeLabs.Contains(lab))
         {
             return false;
         }
 
-        ActiveLab = lab;
-        _activeLabChanged.Invoke(ActiveLab);
+        bool hadActiveLab = HasActiveLab;
+        _activeLabs.Add(lab);
+
+        if (!hadActiveLab)
+        {
+            _activeLabChanged.Invoke(ActiveLab);
+        }
+
         return true;
     }
 
     public bool UnregisterLab(ResearchLab lab)
     {
-        if (lab == null || ActiveLab != lab)
+        if (lab == null)
         {
             return false;
         }
 
-        ActiveLab = null;
-        _activeLabChanged.Invoke(null);
-        return true;
+        ResearchLab previousActiveLab = ActiveLab;
+        bool removed = _activeLabs.Remove(lab);
+
+        if (removed && previousActiveLab != ActiveLab)
+        {
+            _activeLabChanged.Invoke(ActiveLab);
+        }
+
+        return removed;
     }
 
     public bool IsCompleted(string nodeId)
@@ -353,6 +392,57 @@ public sealed class ResearchManager : MonoBehaviour,
         return BASE_YIELD_MULTIPLIER + bonusRatio;
     }
 
+    public bool IsUnlocked(Vector2Int chunkCoord, ResourceType resourceType)
+    {
+        Chunk chunk = _gridMap != null ? _gridMap.GetChunk(chunkCoord) : null;
+        TerrainType terrainType = chunk != null
+            ? chunk.DominantTerrain
+            : TerrainType.Default;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null &&
+                    effect.UnlocksResourceNode(chunkCoord, terrainType, resourceType))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public bool IsTowerCombatRepairUnlocked
+    {
+        get
+        {
+            foreach (string nodeId in _completedNodeIds)
+            {
+                if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+                {
+                    continue;
+                }
+
+                foreach (ResearchEffectSO effect in node.Effects)
+                {
+                    if (effect != null && effect.UnlocksTowerCombatRepair())
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+
     public float GetDamageMultiplier(TowerData towerData)
     {
         float bonusRatio = 0f;
@@ -493,6 +583,29 @@ public sealed class ResearchManager : MonoBehaviour,
         return daysReduction;
     }
 
+    public int GetConquestPopulationReduction()
+    {
+        int populationReduction = 0;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    populationReduction += effect.GetConquestPopulationReduction();
+                }
+            }
+        }
+
+        return populationReduction;
+    }
+
     public float GetCastleDailyRegenAmount()
     {
         float regenAmount = 0f;
@@ -589,6 +702,29 @@ public sealed class ResearchManager : MonoBehaviour,
         return moveAllowance;
     }
 
+    public int GetResearchLabBuildLimitBonus()
+    {
+        int buildLimitBonus = 0;
+
+        foreach (string nodeId in _completedNodeIds)
+        {
+            if (!_nodesById.TryGetValue(nodeId, out ResearchNodeData node))
+            {
+                continue;
+            }
+
+            foreach (ResearchEffectSO effect in node.Effects)
+            {
+                if (effect != null)
+                {
+                    buildLimitBonus += effect.GetResearchLabBuildLimitBonus();
+                }
+            }
+        }
+
+        return buildLimitBonus;
+    }
+
     // --- ISealStoneUnlockQuery ---
     // 봉인석은 승리 조건(4포탈 동시 봉인)에 직결되므로 한 노드라도 해금하면 열린다.
     public bool IsSealStoneUnlocked
@@ -640,11 +776,27 @@ public sealed class ResearchManager : MonoBehaviour,
         }
     }
 
-    // 정산 시 이 연구소가 받게 될 RP. RP는 ActiveLab 한 곳에서만 나오므로
-    // 활성 연구소가 아니면 인구를 배치해도 0이다(UI가 그 사실을 그대로 보여줄 수 있게 public).
+    private void AssignTowerCombatRepairUnlockQueryToExistingTowers()
+    {
+        foreach (Building building in _gridMap.Buildings)
+        {
+            HandleBuildingAddedForTowerCombatRepair(building);
+        }
+    }
+
+    private void HandleBuildingAddedForTowerCombatRepair(Building building)
+    {
+        if (building is Tower tower)
+        {
+            tower.SetCombatRepairUnlockQuery(this);
+        }
+    }
+
+    // 정산 시 이 연구소가 받게 될 RP. 등록되지 않은 연구소면 인구를 배치해도 0이다
+    // (UI가 그 사실을 그대로 보여줄 수 있게 public).
     public int PreviewResearchPointsPerDay(ResearchLab lab, int assignedPopulation)
     {
-        if (lab == null || lab != ActiveLab)
+        if (lab == null || !_activeLabs.Contains(lab))
         {
             return 0;
         }
@@ -674,14 +826,18 @@ public sealed class ResearchManager : MonoBehaviour,
 
     private void GrantResearchPoints(int currentDay)
     {
-        if (ActiveLab == null || ActiveLab.Population == null)
+        int gained = 0;
+        foreach (ResearchLab lab in _activeLabs)
         {
-            return;
-        }
+            if (lab == null || lab.Population == null)
+            {
+                continue;
+            }
 
-        int gained = PreviewResearchPointsPerDay(
-            ActiveLab,
-            ActiveLab.Population.AssignedPopulation);
+            gained += PreviewResearchPointsPerDay(
+                lab,
+                lab.Population.AssignedPopulation);
+        }
 
         if (gained <= 0)
         {

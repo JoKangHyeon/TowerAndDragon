@@ -70,6 +70,7 @@ public abstract class DragonSkillEffectSO : ScriptableObject
 
     public virtual int GetVisionRadiusBonus(DragonType? activeAttribute) => 0;
     public virtual float GetConquestCostReductionRatio(DragonType? activeAttribute) => 0f;
+    public virtual int GetConquestPopulationReduction(DragonType? activeAttribute) => 0;
     public virtual int GetConquestDaysReduction(DragonType? activeAttribute) => 0;
 
     // 타워 기본 공격이 명중할 때 대상에 얹을 상태이상 (얼음, 불)

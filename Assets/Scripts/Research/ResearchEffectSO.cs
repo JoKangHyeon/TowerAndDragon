@@ -10,6 +10,14 @@ public abstract class ResearchEffectSO : ScriptableObject
         return 0f;
     }
 
+    public virtual bool UnlocksResourceNode(
+        Vector2Int chunkCoord,
+        TerrainType terrainType,
+        ResourceType resourceType)
+    {
+        return false;
+    }
+
     public virtual float GetTowerDamageMultiplierBonus(TowerData towerData)
     {
         return 0f;
@@ -35,6 +43,11 @@ public abstract class ResearchEffectSO : ScriptableObject
     public virtual float GetConquestCostReductionRatio()
     {
         return 0f;
+    }
+
+    public virtual int GetConquestPopulationReduction()
+    {
+        return 0;
     }
 
     public virtual int GetConquestDaysReduction()
@@ -66,6 +79,11 @@ public abstract class ResearchEffectSO : ScriptableObject
         return 0;
     }
 
+    public virtual int GetResearchLabBuildLimitBonus()
+    {
+        return 0;
+    }
+
     // 해금되는 타워. null이면 해금 효과가 아니다.
     // DragonSkillEffectSO.GetUnlockedSkill과 같은 형태 - ResearchManager가 pull한다.
     public virtual TowerData GetUnlockedTower()
@@ -75,6 +93,11 @@ public abstract class ResearchEffectSO : ScriptableObject
 
     // 봉인석 건설 해금 여부. 타워 해금과 달리 대상 에셋이 하나뿐이라 bool로 둔다.
     public virtual bool UnlocksSealStone()
+    {
+        return false;
+    }
+
+    public virtual bool UnlocksTowerCombatRepair()
     {
         return false;
     }

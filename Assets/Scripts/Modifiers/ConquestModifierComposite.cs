@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// 점령 비용 할인·소요일 감소는 배율이 아니라 감산치이므로 소스 간 합은 Σ.
+// 점령 비용 할인·인구/소요일 감소는 소스 간 합산한다.
 public sealed class ConquestModifierComposite : MonoBehaviour, IConquestModifierQuery
 {
     private readonly RefCountedSourceSet<IConquestModifierQuery> _sources = new();
@@ -40,5 +40,18 @@ public sealed class ConquestModifierComposite : MonoBehaviour, IConquestModifier
         }
 
         return days;
+    }
+
+    public int GetConquestPopulationReduction()
+    {
+        int population = 0;
+        IReadOnlyList<IConquestModifierQuery> sources = _sources.Sources;
+
+        for (int i = 0; i < sources.Count; i++)
+        {
+            population += sources[i].GetConquestPopulationReduction();
+        }
+
+        return population;
     }
 }

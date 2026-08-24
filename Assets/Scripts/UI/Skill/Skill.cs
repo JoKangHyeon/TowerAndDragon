@@ -436,8 +436,7 @@ public class GlobalCurrentHealthDamageSkill : Skill
 }
 
 /// <summary>용 스킬트리 시간 액티브(파괴된 타워 즉시 수리) - 현재 비활성화(파괴) 상태인 모든
-/// 타워를 재활성화 대기시간 없이 즉시 복구한다. Tower.RestoreAtMorning()과 동일한 복구 로직을
-/// 재사용한다(아침 정산이 매일 모든 타워에 거는 것과 같은 처리) - 새 메서드를 만들지 않는다.</summary>
+/// 타워를 재활성화 대기시간 없이 즉시 복구한다. 밤 전투 중 복구는 편의 연구 해금 조건을 따른다.</summary>
 public class RepairTowersSkill : Skill
 {
     public RepairTowersSkill(SkillSO skillData) : base(skillData) { }
@@ -449,14 +448,15 @@ public class RepairTowersSkill : Skill
         if (context.AllBuildings == null)
             return false;
 
+        bool restoredAny = false;
         foreach (Building building in context.AllBuildings)
         {
             if (building is Tower tower && tower.IsDead)
             {
-                tower.RestoreAtMorning();
+                restoredAny |= tower.TryRestoreDuringCombat();
             }
         }
-        return true;
+        return restoredAny;
     }
 }
 

@@ -8,6 +8,8 @@ using UnityEngine.UI;
 // 코스트 칸은 UI_DragonSkillDetailsPanel과 동일하게 UI_ResourceCostSlot을 필요한 개수만 인스턴스화한다.
 public class UI_ResearchDetailsPanel : MonoBehaviour
 {
+    private const string PREREQUISITE_SEPARATOR = ", ";
+
     [SerializeField] private GameObject _root;
     [SerializeField] private TextMeshProUGUI _nameText;
     [SerializeField] private TextMeshProUGUI _descriptionText;
@@ -98,7 +100,7 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
 
         if (_statusText != null)
         {
-            _statusText.text = StringTable.GetString(ResearchLocKeys.ResolveStateLocKey(state));
+            _statusText.text = BuildStatusText(state);
         }
 
         if (_researchPointCostText != null)
@@ -118,6 +120,50 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
         {
             _researchButton.interactable = state == ResearchNodeState.Available;
         }
+    }
+
+    private string BuildStatusText(ResearchNodeState state)
+    {
+        if (state != ResearchNodeState.PrerequisiteLocked)
+        {
+            return StringTable.GetString(ResearchLocKeys.ResolveStateLocKey(state));
+        }
+
+        string prerequisiteNames = BuildMissingPrerequisiteNames();
+        if (string.IsNullOrEmpty(prerequisiteNames))
+        {
+            return StringTable.GetString(ResearchLocKeys.STATE_PREREQUISITE_LOCKED);
+        }
+
+        return string.Format(
+            StringTable.GetString(ResearchLocKeys.STATE_PREREQUISITE_LOCKED_WITH_NAMES),
+            prerequisiteNames);
+    }
+
+    private string BuildMissingPrerequisiteNames()
+    {
+        if (_selectedNode == null)
+        {
+            return string.Empty;
+        }
+
+        List<string> names = new();
+        foreach (ResearchNodeData prerequisite in _selectedNode.Prerequisites)
+        {
+            if (prerequisite == null)
+            {
+                continue;
+            }
+
+            if (_researchManager != null && _researchManager.IsCompleted(prerequisite.NodeId))
+            {
+                continue;
+            }
+
+            names.Add(StringTable.GetString(prerequisite.NameLocKey));
+        }
+
+        return string.Join(PREREQUISITE_SEPARATOR, names);
     }
 
     private void RebuildCostSlots()

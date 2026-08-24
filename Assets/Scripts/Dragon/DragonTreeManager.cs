@@ -604,6 +604,29 @@ public sealed class DragonTreeManager : ProgressionManagerBase,
         return days;
     }
 
+    public int GetConquestPopulationReduction()
+    {
+        int population = 0;
+
+        foreach (string nodeId in UnlockedIds)
+        {
+            if (!TryGetNode(nodeId, out ProgressionNodeData node) || !(node is DragonSkillNodeData dragonNode))
+            {
+                continue;
+            }
+
+            foreach (DragonSkillEffectSO effect in dragonNode.Effects)
+            {
+                if (effect != null)
+                {
+                    population += effect.GetConquestPopulationReduction(ActiveAttribute);
+                }
+            }
+        }
+
+        return population;
+    }
+
     // --- ITowerHitStatusQuery ---
 
     // 새끼용 타워형(자기 속성 타워 한정, KinTowerStatusEffectSO)을 어미용 패시브(전체 타워,

@@ -34,6 +34,7 @@ public static class ResearchTreeAssetGenerator
         public ResourceAmount[] ResourceCost;
         public string[] PrerequisiteIds;
         public string EffectAssetName; // null이면 효과 미구현(stub) - 로드맵 §8과 동일한 취급
+        public string[] EffectAssetNames;
 
         // 역설계 노드 전용. 이 랜드마크를 점령해야 연구가 열린다. null이면 조건 없음.
         // 에셋 경로는 LANDMARK_DATA_FOLDER 기준이다.
@@ -68,6 +69,8 @@ public static class ResearchTreeAssetGenerator
 
     private static string[] After(params string[] nodeIds) => nodeIds;
 
+    private static string[] Effects(params string[] effectAssetNames) => effectAssetNames;
+
     // 티어는 Docs/연구트리_개편안.md §2의 확정 배치다. UI가 (갈래 × 티어) 격자로 자동 배치하고
     // 한 칸의 폭이 갈래 열 폭(500)을 넘으면 옆 갈래를 침범하므로 칸당 3개가 상한이다.
     // 배치를 바꿀 때는 그 상한을 먼저 확인할 것.
@@ -76,7 +79,7 @@ public static class ResearchTreeAssetGenerator
     // 새 티어의 값으로 맞췄다(밸런싱 대상).
     private static NodeSpec[] BuildNodeSpecs() => new[]
     {
-        // ================================ 타워 갈래 (13) ================================
+        // ================================ 타워 갈래 (12) ================================
         // --- T1 ---
         new NodeSpec
         {
@@ -118,9 +121,25 @@ public static class ResearchTreeAssetGenerator
             Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 25,
             ResourceCost = Cost(Amount(ResourceType.Stone, 30)),
             PrerequisiteIds = Array.Empty<string>(),
+            EffectAssetNames = Effects(
+                "RE_FireTowerUnlock", "RE_IceTowerUnlock", "RE_StoneTowerUnlock", "RE_TimeTowerUnlock"),
             NameEn = "[TBD] Elemental Tower Unlock", NameKo = "[미정] 속성 타워 해금",
             DescEn = "[TBD] Allows building biome-specialized towers.",
             DescKo = "[미정] 바이옴 특화 타워 건설 가능",
+        },
+        new NodeSpec
+        {
+            NodeId = "tower_reverse_engineering", AssetName = "RN_TowerReverseEngineering",
+            Branch = ResearchBranch.Tower, Tier = 3, ResearchPointCost = 50,
+            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            PrerequisiteIds = After("tower_elemental_unlock"),
+            RequiredLandmarkAssetName = "LM_TowerPrototype",
+            EffectAssetNames = Effects(
+                "RE_StealthTowerUnlock", "RE_SoulTowerUnlock",
+                "RE_LifeTowerUnlock", "RE_EnhancementTowerUnlock"),
+            NameEn = "[TBD] Reverse Engineering", NameKo = "[미정] 역설계",
+            DescEn = "[TBD] Analyze the captured tower prototype to unlock stealth, soul, life, and enhancement towers.",
+            DescKo = "[미정] 점령한 타워 원형을 분석해 은신·영혼·생명·강화 타워를 해금한다.",
         },
         new NodeSpec
         {
@@ -179,17 +198,6 @@ public static class ResearchTreeAssetGenerator
         // --- T4 ---
         new NodeSpec
         {
-            // 시간 타워는 공격이 없고 오라만 있다(TAD_TimeTowerAura) - 오라 반경 배율 게터가 신규로 필요.
-            NodeId = "tower_time_range", AssetName = "RN_TowerTimeRange",
-            Branch = ResearchBranch.Tower, Tier = 4, ResearchPointCost = 90,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
-            PrerequisiteIds = After("tower_elemental_unlock"),
-            NameEn = "[TBD] Time Tower Expansion", NameKo = "[미정] 시간 타워 확장",
-            DescEn = "[TBD] Time tower effect radius +20%.",
-            DescKo = "[미정] 시간 타워 효과 범위 +20% 증가",
-        },
-        new NodeSpec
-        {
             // 최대체력은 TowerAttack이 pull하지 않는 유일한 스탯이라 씬의 TowerMaxHealthApplier가
             // 밤 시작에 push한다 - 그 적용기와 TowerMaxHealthMultiplierComposite가 씬에 있어야 한다.
             NodeId = "tower_armor", AssetName = "RN_TowerArmor",
@@ -200,18 +208,6 @@ public static class ResearchTreeAssetGenerator
             NameEn = "[TBD] Armored Tower", NameKo = "[미정] 중갑 타워",
             DescEn = "[TBD] Tower max health +20%.", DescKo = "[미정] 타워 최대 체력 +20%",
         },
-        new NodeSpec
-        {
-            NodeId = "tower_reverse_engineering", AssetName = "RN_TowerReverseEngineering",
-            Branch = ResearchBranch.Tower, Tier = 4, ResearchPointCost = 90,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
-            PrerequisiteIds = After("tower_manpower_1"),
-            RequiredLandmarkAssetName = "LM_TowerPrototype",
-            NameEn = "[TBD] Reverse Engineering", NameKo = "[미정] 역설계",
-            DescEn = "[TBD] Analyze the captured tower prototype to unlock a new tower.",
-            DescKo = "[미정] 점령한 타워 원형을 분석해 새 타워를 해금한다.",
-        },
-
         // --- T5 ---
         new NodeSpec
         {
@@ -220,7 +216,7 @@ public static class ResearchTreeAssetGenerator
             ResourceCost = Array.Empty<ResourceAmount>(),
             PrerequisiteIds = After(
                 "tower_reverse_engineering", "tower_fire_damage", "tower_ice_damage",
-                "tower_stone_damage", "tower_time_range"),
+                "tower_stone_damage"),
             EffectAssetName = "RE_ElementalTowerDamage",
             NameEn = "[TBD] Ultimate Element", NameKo = "[미정] 궁극의 속성",
             DescEn = "[TBD] All elemental tower damage +20%.",
@@ -241,14 +237,14 @@ public static class ResearchTreeAssetGenerator
         },
         new NodeSpec
         {
-            // 선행이 같은 티어다(같은 칸 안에서 간선이 그려진다). Docs/연구트리_개편안.md §2 참고.
             NodeId = "production_outer_basic", AssetName = "RN_ProductionOuterBasic",
-            Branch = ResearchBranch.Production, Tier = 1, ResearchPointCost = 10,
+            Branch = ResearchBranch.Production, Tier = 3, ResearchPointCost = 10,
             ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
             PrerequisiteIds = After("grass_cultivation"),
+            EffectAssetName = "RE_OuterBasicResourceUnlock",
             NameEn = "[TBD] Outer Basic Harvesting", NameKo = "[미정] 외곽 기초자원 채집",
-            DescEn = "[TBD] Unlocks basic resource harvesting in outer biomes.",
-            DescKo = "[미정] 외곽 바이옴 기초 4자원 채집 해금",
+            DescEn = "[TBD] Unlocks food, wood, and stone harvesting in outer biomes.",
+            DescKo = "[미정] 외곽 바이옴 식량·목재·석재 채집 해금",
         },
 
         // --- T2: 자원별 인력 절감. 효과는 2차분(자원/건물별 필터 추가 후). ---
@@ -400,9 +396,10 @@ public static class ResearchTreeAssetGenerator
             Branch = ResearchBranch.Convenience, Tier = 1, ResearchPointCost = 10,
             ResourceCost = Cost(Amount(ResourceType.Stone, 20)),
             PrerequisiteIds = Array.Empty<string>(),
+            EffectAssetName = "RE_TowerCombatRepairUnlock",
             NameEn = "[TBD] Tower Repair", NameKo = "[미정] 타워 수리",
-            DescEn = "[TBD] Allows towers to reactivate during the night.",
-            DescKo = "[미정] 밤 동안 포탑의 재활성화 가능",
+            DescEn = "[TBD] Allows towers to heal and reactivate during night battles.",
+            DescKo = "[미정] 밤 전투 중 타워 회복 및 재활성화 가능",
         },
 
         // --- T2 ---
@@ -447,10 +444,10 @@ public static class ResearchTreeAssetGenerator
             Branch = ResearchBranch.Convenience, Tier = 3, ResearchPointCost = 50,
             ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("convenience_lab_expand_1"),
-            EffectAssetName = "RE_LabCapacityExpand2",
+            EffectAssetName = "RE_LabBuildLimitExpand",
             NameEn = "[TBD] Lab Expansion II", NameKo = "[미정] 연구소 증축 II",
-            DescEn = "[TBD] Research lab population cap +1.",
-            DescKo = "[미정] 연구소 배치 가능 최대 인구 +1",
+            DescEn = "[TBD] Research lab build limit +1.",
+            DescKo = "[미정] 건설 가능한 연구소 +1",
         },
         new NodeSpec
         {
@@ -513,12 +510,11 @@ public static class ResearchTreeAssetGenerator
         },
         new NodeSpec
         {
-            // 원정 인구 -1. PopulationAssignmentType.Conquest 정원 델타로 표현할 수 있는지 확인 중이라
-            // 효과를 아직 붙이지 않았다(Docs/연구트리_개편안.md §3 보류 항목).
             NodeId = "convenience_expedition_master", AssetName = "RN_ConvenienceExpeditionMaster",
             Branch = ResearchBranch.Convenience, Tier = 4, ResearchPointCost = 90,
             ResourceCost = Cost(Amount(ResourceType.Food, 40)),
             PrerequisiteIds = After("convenience_expedition_logistics", "convenience_tower_move"),
+            EffectAssetName = "RE_ExpeditionMaster",
             NameEn = "[TBD] Expert Expedition Corps", NameKo = "[미정] 전문 원정대",
             DescEn = "[TBD] Expedition population requirement -1.",
             DescKo = "[미정] 원정에 필요한 인구 -1",
@@ -535,8 +531,8 @@ public static class ResearchTreeAssetGenerator
                 "convenience_castle_regen_2"),
             EffectAssetName = "RE_ExpeditionConqueror",
             NameEn = "[TBD] Conqueror", NameKo = "[미정] 정복자",
-            DescEn = "[TBD] Conquest expedition duration -1 day.",
-            DescKo = "[미정] 원정에 소모되는 날짜 -1",
+            DescEn = "[TBD] Removes Food, Wood, and Stone costs from conquest expeditions. Population and duration stay unchanged.",
+            DescKo = "[미정] 점령 원정의 식량, 목재, 석재 비용 제거. 필요 인구와 소요일은 유지",
         },
     };
 
@@ -607,7 +603,7 @@ public static class ResearchTreeAssetGenerator
         string descLocKey = $"research_node_{spec.NodeId}_description";
         string assetPath = $"{DATA_FOLDER}/{spec.AssetName}.asset";
 
-        ResearchEffectSO[] effects = ResolveEffects(spec.EffectAssetName);
+        ResearchEffectSO[] effects = ResolveEffects(spec);
 
         ResearchNodeData node = CreateOrReplace<ResearchNodeData>(assetPath, so =>
         {
@@ -660,24 +656,42 @@ public static class ResearchTreeAssetGenerator
     }
 
     // 이미 만들어져 있던 효과 SO(RE_*)는 그대로 재사용한다 - 새로 만들지 않는다.
-    private static ResearchEffectSO[] ResolveEffects(string effectAssetName)
+    private static ResearchEffectSO[] ResolveEffects(NodeSpec spec)
     {
-        if (string.IsNullOrEmpty(effectAssetName))
+        var effectAssetNames = new List<string>();
+
+        if (!string.IsNullOrEmpty(spec.EffectAssetName))
+        {
+            effectAssetNames.Add(spec.EffectAssetName);
+        }
+
+        if (spec.EffectAssetNames != null)
+        {
+            effectAssetNames.AddRange(spec.EffectAssetNames);
+        }
+
+        if (effectAssetNames.Count == 0)
         {
             return Array.Empty<ResearchEffectSO>();
         }
 
-        var effect = AssetDatabase.LoadAssetAtPath<ResearchEffectSO>(
-            $"{DATA_FOLDER}/{effectAssetName}.asset");
-
-        if (effect == null)
+        var effects = new List<ResearchEffectSO>();
+        foreach (string effectAssetName in effectAssetNames)
         {
-            Debug.LogWarning(
-                $"[ResearchTreeAssetGenerator] 효과 에셋 '{effectAssetName}'을 찾지 못해 비워 둡니다.");
-            return Array.Empty<ResearchEffectSO>();
+            var effect = AssetDatabase.LoadAssetAtPath<ResearchEffectSO>(
+                $"{DATA_FOLDER}/{effectAssetName}.asset");
+
+            if (effect == null)
+            {
+                Debug.LogWarning(
+                    $"[ResearchTreeAssetGenerator] 효과 에셋 '{effectAssetName}'을 찾지 못해 건너뜁니다.");
+                continue;
+            }
+
+            effects.Add(effect);
         }
 
-        return new[] { effect };
+        return effects.ToArray();
     }
 
     private static void AssignObjectArray(SerializedProperty arrayProp, UnityEngine.Object[] values)

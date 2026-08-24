@@ -27,6 +27,8 @@ public static class ResearchLocKeys
     public const string STATE_DAY_ONLY = "research_state_day_only";
     public const string STATE_TIER_LOCKED = "research_state_tier_locked";
     public const string STATE_PREREQUISITE_LOCKED = "research_state_prerequisite_locked";
+    public const string STATE_PREREQUISITE_LOCKED_WITH_NAMES =
+        "research_state_prerequisite_locked_with_names";
     public const string STATE_INSUFFICIENT_RP = "research_state_insufficient_rp";
     public const string STATE_INSUFFICIENT_RESOURCES = "research_state_insufficient_resources";
     public const string STATE_AVAILABLE = "research_state_available";

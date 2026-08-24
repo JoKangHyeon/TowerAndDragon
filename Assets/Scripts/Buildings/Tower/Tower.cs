@@ -14,6 +14,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     private TowerAttack _attack;
     private ITowerStaffing _staffing;
     private TowerAuraSystem _auraSystem;
+    private ITowerCombatRepairUnlockQuery _combatRepairUnlockQuery;
     private CancellationTokenSource _reviveCts;
     private CancellationTokenSource _paralysisCts;
     protected Animator _animator;
@@ -192,7 +193,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     // 타워의 회복
     public void Heal (float amount)
     {
-        if (!_isInitialized || IsDead || IsReviving)
+        if (!_isInitialized || IsDead || IsReviving || !CanUseCombatRepair)
         {
             return;
         }
@@ -212,9 +213,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
             $"[Tower] {name}이 비활성화되었습니다. 재활성화 대기시간: {_towerData.ReviveDelay}초",
             this);
 
-        CancelRevive();
-        _reviveCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
-        ReviveAfterDelayAsync(_reviveCts.Token).Forget();
+        TryStartCombatRevive();
 
         RefreshBrokenAnimation();
 
@@ -230,6 +229,18 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
 
         CancelRevive();
         RestoreAndReactivate();
+    }
+
+    public bool TryRestoreDuringCombat()
+    {
+        if (!_isInitialized || !IsDead || !CanUseCombatRepair)
+        {
+            return false;
+        }
+
+        CancelRevive();
+        RestoreAndReactivate();
+        return true;
     }
 
     private async UniTaskVoid ReviveAfterDelayAsync(CancellationToken token)
@@ -267,6 +278,31 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     public void SetAuraSystem(TowerAuraSystem auraSystem)
     {
         _auraSystem = auraSystem;
+    }
+
+    public void SetCombatRepairUnlockQuery(ITowerCombatRepairUnlockQuery combatRepairUnlockQuery)
+    {
+        _combatRepairUnlockQuery = combatRepairUnlockQuery;
+
+        if (_isDisabled)
+        {
+            TryStartCombatRevive();
+        }
+    }
+
+    private bool CanUseCombatRepair =>
+        _combatRepairUnlockQuery != null &&
+        _combatRepairUnlockQuery.IsTowerCombatRepairUnlocked;
+
+    private void TryStartCombatRevive()
+    {
+        if (!CanUseCombatRepair || _reviveCts != null)
+        {
+            return;
+        }
+
+        _reviveCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        ReviveAfterDelayAsync(_reviveCts.Token).Forget();
     }
 
     private void CancelRevive()
