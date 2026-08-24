@@ -26,6 +26,10 @@ public sealed class MonsterStatusVfx
     // 프리팹별 위치 보정. 매 프레임 상태 목록을 다시 읽지 않도록 재조정 시점에만 갱신한다.
     private readonly Dictionary<GameObject, Vector2> _offsetByPrefab = new();
 
+    // 프리팹별 앵커(StatusVfxAnchor). 위 보정과 같은 시점에 같은 키로 갱신한다 -
+    // Follow가 인덱서로 읽으므로 _activeByPrefab에 있는 키는 여기에도 반드시 있어야 한다.
+    private readonly Dictionary<GameObject, StatusVfxAnchor.AnchorMode> _anchorByPrefab = new();
+
     private readonly List<StatusEffectSO> _sourceBuffer = new(4);
     private readonly List<GameObject> _staleBuffer = new(4);
 
@@ -85,6 +89,7 @@ public sealed class MonsterStatusVfx
             ProjectilePool.ReleasePersistent(_activeByPrefab[prefab]);
             _activeByPrefab.Remove(prefab);
             _offsetByPrefab.Remove(prefab);
+            _anchorByPrefab.Remove(prefab);
         }
 
         foreach (StatusEffectSO source in _sourceBuffer)
@@ -94,6 +99,10 @@ public sealed class MonsterStatusVfx
             // 보정값은 매번 덮어쓴다 - 같은 프리팹을 쓰는 상태가 둘이면 나중 것을 따르지만,
             // 같은 연출이면 보정도 같은 것이 정상이라 실제로 갈릴 일이 없다.
             _offsetByPrefab[prefab] = source.ActiveVfxOffset;
+
+            // 앵커는 상태가 아니라 그림의 성질이라 프리팹에서 읽는다(StatusVfxAnchor 주석 참고).
+            // 대여한 인스턴스가 아니라 프리팹 애셋에서 읽으므로 대여 성공 여부와 무관하다.
+            _anchorByPrefab[prefab] = ResolveAnchorMode(prefab);
 
             if (_activeByPrefab.ContainsKey(prefab))
             {
@@ -112,7 +121,7 @@ public sealed class MonsterStatusVfx
         Follow();
     }
 
-    /// <summary>떠 있는 연출을 몬스터 몸통으로 옮긴다. 매 프레임 부른다.</summary>
+    /// <summary>떠 있는 연출을 몬스터의 앵커 위치로 옮긴다. 매 프레임 부른다.</summary>
     public void Follow()
     {
         // 대부분의 몬스터는 대부분의 시간 동안 상태 연출이 없다 - 그 경우 아무 일도 하지 않는다.
@@ -121,7 +130,8 @@ public sealed class MonsterStatusVfx
             return;
         }
 
-        Vector3 body = ResolveBodyPosition();
+        // 두 앵커를 한 번에 구한다 - 프리팹마다 고르는 것이 달라도 경계 계산은 한 번이면 된다.
+        ResolveAnchors(out Vector3 body, out Vector3 feet);
 
         foreach (KeyValuePair<GameObject, Transform> pair in _activeByPrefab)
         {
@@ -133,8 +143,9 @@ public sealed class MonsterStatusVfx
                 continue;
             }
 
+            Vector3 anchor = _anchorByPrefab[pair.Key] == StatusVfxAnchor.AnchorMode.Feet ? feet : body;
             Vector2 offset = _offsetByPrefab[pair.Key];
-            effect.position = new Vector3(body.x + offset.x, body.y + offset.y, body.z);
+            effect.position = new Vector3(anchor.x + offset.x, anchor.y + offset.y, anchor.z);
         }
     }
 
@@ -148,20 +159,35 @@ public sealed class MonsterStatusVfx
 
         _activeByPrefab.Clear();
         _offsetByPrefab.Clear();
+        _anchorByPrefab.Clear();
     }
 
-    // 스프라이트 경계(월드 AABB)의 중심. 경계를 쓰므로 몬스터 크기가 달라도 같은 코드로 몸통을 찾는다.
-    private Vector3 ResolveBodyPosition()
+    // 스프라이트 경계(월드 AABB)에서 몸통 중앙과 발밑을 구한다. 경계를 쓰므로 루트 스케일이
+    // 0.1~1.5로 갈려도 같은 코드로 두 자리를 찾는다 - 고정 오프셋이면 어느 크기에서 반드시 어긋난다.
+    private void ResolveAnchors(out Vector3 body, out Vector3 feet)
     {
         if (_bodyRenderer == null)
         {
-            return _owner.position + new Vector3(0f, FALLBACK_BODY_HEIGHT, 0f);
+            feet = _owner.position;
+            body = feet + new Vector3(0f, FALLBACK_BODY_HEIGHT, 0f);
+            return;
         }
 
         Bounds bounds = _bodyRenderer.bounds;
 
         // z는 몬스터의 것을 그대로 쓴다 - 경계의 z는 스프라이트 두께라 정렬 기준이 되지 못한다.
-        return new Vector3(bounds.center.x, bounds.center.y, _owner.position.z);
+        float z = _owner.position.z;
+
+        body = new Vector3(bounds.center.x, bounds.center.y, z);
+        feet = new Vector3(bounds.center.x, bounds.min.y, z);
+    }
+
+    // 붙이지 않은 프리팹은 Body다 - 기존 연출의 자리를 바꾸지 않기 위해서다.
+    private static StatusVfxAnchor.AnchorMode ResolveAnchorMode(GameObject prefab)
+    {
+        StatusVfxAnchor anchor = prefab.GetComponent<StatusVfxAnchor>();
+
+        return anchor == null ? StatusVfxAnchor.AnchorMode.Body : anchor.Mode;
     }
 
     // List.Exists는 델리게이트를 만들고 캡처가 붙는다 - 매 재조정마다 도는 자리라 직접 돈다.
