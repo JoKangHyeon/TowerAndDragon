@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -24,11 +26,20 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
     private const string GUIDE_LEVEL_FULL_LOC_KEY = "config_guide_full";
     private const string GUIDE_LEVEL_OFF_LOC_KEY = "config_guide_off";
 
+    // stringtable — 되돌릴 수 없는 조작 직전에 물어보는 확인 문구.
+    // 버튼 라벨 쪽 key는 코드가 아니라 프리팹의 LocalizedText가 갖는다
+    // (config_button_save·config_button_load와 같은 처리).
+    private const string RETURN_TO_TITLE_CONFIRM_LOC_KEY = "config_confirm_return_to_title";
+    private const string QUIT_GAME_CONFIRM_LOC_KEY = "config_confirm_quit_game";
+
     private const string LANGUAGE_CODE_KO_KR = "ko_kr";
 
     // Prev/Next 버튼이 해상도 인덱스를 움직이는 방향.
     private const int STEP_PREVIOUS = -1;
     private const int STEP_NEXT = 1;
+
+    // ScrollRect의 세로 위치는 0이 맨 아래, 1이 맨 위다.
+    private const float SCROLL_TOP = 1f;
 
     [Header("Dependencies")]
     [SerializeField] private SettingsService _settings;
@@ -96,12 +107,32 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("두 버튼을 담은 줄(SaveLoad_Button). 버튼이 전부 빠질 때 줄째로 접기 위해 받는다.")]
     [SerializeField] private GameObject _slotButtonRow;
 
+    [Header("메인으로 / 종료")]
+    [Tooltip("진행 중인 게임을 버리고 메인 화면(StartScene)으로 나가는 버튼.")]
+    [SerializeField] private Button _returnToTitleButton;
+    [Tooltip("위 버튼을 담은 레이아웃 칸(ReturnToTitle_Button). 줄이 ForceExpandWidth라 안쪽 버튼만 끄면 " +
+        "바깥 칸이 남아 줄 절반이 빈 구멍이 된다 - 이 버튼만 접을 때는 칸째로 꺼야 한다.")]
+    [SerializeField] private GameObject _returnToTitleItem;
+    [Tooltip("게임을 끄는 버튼.")]
+    [SerializeField] private Button _quitGameButton;
+    [Tooltip("두 버튼을 담은 줄(System_Buttons). 타이틀 화면 인스턴스에서 줄째로 접기 위해 받는다.")]
+    [SerializeField] private GameObject _systemButtonRow;
+    [Tooltip("두 버튼이 공유하는 YES/NO 확인 팝업. 이 창의 자식이라 창을 끄면 화면에서 같이 사라진다.")]
+    [SerializeField] private UI_ConfirmPopup _confirmPopup;
+
+    [Header("좌측 목록")]
+    [Tooltip("그래픽·사운드·언어 항목이 든 좌측 스크롤(Setting_Scroll). 창을 열 때마다 맨 위로 되돌리려고 받는다.")]
+    [SerializeField] private ScrollRect _settingScroll;
+
     private readonly List<string> _dropdownOptionBuffer = new();
 
     // 사운드 줄은 자식에서 모아 쓴다 - 줄이 늘어도 창 쪽 배선을 고칠 필요가 없다.
     private UI_VolumeRow[] _volumeRows;
 
     private bool _isOpen;
+
+    // 씬 로드는 되돌릴 수 없으므로 두 번 눌려도 한 번만 나간다(UI_TutorialQuitPanel과 같은 방어).
+    private bool _hasRequestedSceneChange;
 
     private void Awake()
     {
@@ -170,6 +201,16 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
             _loadButton.onClick.AddListener(OpenLoadWindow);
         }
 
+        if (_returnToTitleButton != null)
+        {
+            _returnToTitleButton.onClick.AddListener(ConfirmReturnToTitle);
+        }
+
+        if (_quitGameButton != null)
+        {
+            _quitGameButton.onClick.AddListener(ConfirmQuitGame);
+        }
+
         // 단순 setter라 슬롯 창의 Awake보다 앞서도 안전하다(UI_TitleWindow의 Construct와 같은 처리).
         if (_slotWindow != null)
         {
@@ -178,6 +219,7 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
 
         RenderSlotButtons();
         RenderGuideSection();
+        RenderSystemButtons();
 
         _volumeRows = GetComponentsInChildren<UI_VolumeRow>(true);
         foreach (UI_VolumeRow row in _volumeRows)
@@ -206,6 +248,8 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
 
         // 구독 직후 현재 값을 한 번 반영해 초기 발화를 놓쳐도 안전하게 한다.
         Render();
+
+        ScrollListToTop();
     }
 
     private void OnDisable()
@@ -215,6 +259,14 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         if (_closeAction != null)
         {
             _closeAction.action.performed -= OnCloseActionPerformed;
+        }
+
+        // 확인 팝업도 같이 접는다. 팝업은 이 창의 자식이라 창을 끄면 화면에서는 사라지지만
+        // activeSelf가 그대로 남아, 창을 다시 열면 지난번 확인 창이 떠 있는 것처럼 보인다
+        // (UI_LoadGameWindow.OnDisable과 같은 처리).
+        if (_confirmPopup != null && _confirmPopup.IsOpen)
+        {
+            _confirmPopup.Close();
         }
 
         ResumeGameOnClose();
@@ -361,6 +413,20 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         {
             _settings.SetGuideLevelIndex(index);
         }
+    }
+
+    // 좌측 목록은 뷰포트보다 길어 스크롤된다. 프리팹에 저장된 스크롤 위치가 맨 아래라 그대로 두면
+    // 창을 열 때마다 목록의 끝(마지막 버튼 줄)이 잘린 채로 먼저 보인다 - 설정 목록은 늘 위에서부터 읽는다.
+    // 스크롤 위치는 뷰포트와 내용의 높이 비로 계산되므로, 레이아웃이 이번 프레임에 다시 잡힌 뒤에 넣어야 한다.
+    private void ScrollListToTop()
+    {
+        if (_settingScroll == null)
+        {
+            return;
+        }
+
+        Canvas.ForceUpdateCanvases();
+        _settingScroll.verticalNormalizedPosition = SCROLL_TOP;
     }
 
     private void Render()
@@ -560,6 +626,34 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
+    // 배선은 인스펙터에서 정해지고 런타임에 바뀌지 않으므로 Awake에서 한 번만 반영한다
+    // (RenderSlotButtons·RenderGuideSection과 같은 처리).
+    //
+    // 타이틀 화면 인스턴스에서는 줄째 접는다 - 이미 메인 화면이고, 종료 버튼은 타이틀 메뉴가 따로 갖고 있다.
+    // 튜토리얼에서는 "메인 화면으로"만 접는다. 튜토리얼을 벗어나는 길은 UI_TutorialQuitPanel이
+    // 본게임으로 넘기는 경로 하나로 정해져 있어 목적지가 다른 두 번째 출구를 두지 않지만,
+    // 앱을 끄는 수단은 튜토리얼에도 있어야 한다.
+    private void RenderSystemButtons()
+    {
+        bool isInGame = !IsTitleScreenInstance;
+
+        if (_returnToTitleItem != null)
+        {
+            _returnToTitleItem.SetActive(isInGame && !SceneNames.IsTutorialScene);
+        }
+
+        if (_quitGameButton != null)
+        {
+            _quitGameButton.gameObject.SetActive(isInGame);
+        }
+
+        // 버튼만 끄면 세로 레이아웃에 빈 줄이 남는다. 줄을 끄면 VerticalLayoutGroup이 자리째 거둔다.
+        if (_systemButtonRow != null)
+        {
+            _systemButtonRow.SetActive(isInGame);
+        }
+    }
+
     private void OpenSaveWindow() => OpenSlotWindow(UI_LoadGameWindow.WindowMode.Save);
 
     private void OpenLoadWindow() => OpenSlotWindow(UI_LoadGameWindow.WindowMode.Load);
@@ -585,5 +679,62 @@ public class UI_ConfigWindow : MonoBehaviour, IExclusiveMode
         {
             _slotWindow.OpenForLoad();
         }
+    }
+
+    private void ConfirmReturnToTitle() => OpenConfirm(RETURN_TO_TITLE_CONFIRM_LOC_KEY, ReturnToTitle);
+
+    private void ConfirmQuitGame() => OpenConfirm(QUIT_GAME_CONFIRM_LOC_KEY, QuitGame);
+
+    // 슬롯 창과 달리 이 창을 닫지 않고 팝업을 그 위에 띄운다. 팝업이 이 창의 자식이라 창을 닫으면
+    // 팝업도 같이 꺼지기 때문이고, 팝업 루트의 전면 딤이 바깥 클릭 닫기(_blockerButton)를 대신 막아 준다.
+    // 두 창이 같은 Esc 액션을 구독해 겹쳐 둘 수 없었던 슬롯 창의 사정은 여기엔 없다 -
+    // UI_ConfirmPopup은 입력 액션을 구독하지 않는다.
+    private void OpenConfirm(string messageLocKey, Action onConfirmed)
+    {
+        SoundManager.Play(SoundId.UiButtonClick);
+
+        // 팝업이 없다고 되돌릴 수 없는 조작을 그냥 실행하지는 않는다 - 물어볼 수 없으면 하지 않는다.
+        if (!WiringGuard.Require(_confirmPopup, nameof(_confirmPopup), this))
+        {
+            return;
+        }
+
+        _confirmPopup.Open(messageLocKey, onConfirmed);
+    }
+
+    /// <summary>진행 중인 게임을 버리고 메인 화면으로 나간다.</summary>
+    // 씬을 열기 전에 Close()를 먼저 부르는 데는 두 가지 이유가 있다.
+    //  1. Close()가 설정 저장을 겸한다 - 볼륨을 바꾸자마자 나가도 그 값이 디스크에 남는다.
+    //  2. Time.timeScale 복구 순서를 확정한다. timeScale은 GameSpeedManager만 건드리는 값이라
+    //     여기서 직접 1로 되돌릴 수 없는데, 창을 연 채로 나가면 씬이 내려갈 때 이 창의 OnDisable
+    //     (창 정지 해제 → 현재 배속 값으로 복귀)과 GameSpeedManager.OnDisable(1로 복귀)이
+    //     순서 보장 없이 돈다. 밤에 배속을 켜 둔 채 나갔다면 그 배속이 남을 수 있고,
+    //     StartScene에는 그것을 되돌릴 GameSpeedManager가 없다. Close()를 먼저 부르면
+    //     이 창의 OnDisable이 지금 돌고, 프레임 끝의 씬 교체에서 GameSpeedManager가 마지막으로 1을 쓴다.
+    private void ReturnToTitle()
+    {
+        if (_hasRequestedSceneChange)
+        {
+            return;
+        }
+
+        _hasRequestedSceneChange = true;
+
+        Close();
+
+        SceneManager.LoadScene(SceneNames.START);
+    }
+
+    // 에디터에서는 Application.Quit이 아무 일도 하지 않아 확인할 수 없으므로 플레이 모드를 끈다
+    // (UI_TitleWindow.QuitGame과 같은 처리). 여기서도 Close()로 설정을 먼저 디스크에 남긴다.
+    private void QuitGame()
+    {
+        Close();
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 }

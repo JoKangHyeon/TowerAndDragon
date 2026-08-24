@@ -174,6 +174,40 @@ public class TowerAttack : MonoBehaviour
         return !float.IsInfinity(interval);
     }
 
+    /// <summary>
+    /// 한 번의 공격이 실제로 주는 피해량. 연구·어미용 스킬트리·오라 보정이 곱해진 값이라
+    /// 데이터 원본(DamageEffectSO.Amount)과 다르다 - 표시(창·툴팁)와 판정이 같은 값을 보게 하려고
+    /// 노출한다. EffectiveRange·TryGetEffectiveAttackInterval과 같은 이유다.
+    ///
+    /// 사거리·간격과 달리 지형 페널티와 충원율은 피해량에 관여하지 않는다(간격만 늘린다).
+    ///
+    /// 아직 Setup 전이거나 피해 효과가 없는 타워(시간 타워 등)는 값이 성립하지 않아 false를 돌려준다.
+    /// </summary>
+    public bool TryGetEffectiveDamage(out float damage)
+    {
+        damage = 0f;
+
+        // Attack 프로퍼티가 _towerData를 그대로 역참조하므로 먼저 막는다(TryGetEffectiveAttackInterval과 같다).
+        if (_towerData == null || !_towerData.CanAttack)
+        {
+            return false;
+        }
+
+        return Attack.TryGetTotalDamage(ResolveDamageModifier(), out damage);
+    }
+
+    // 발사(Fire)와 표시(TryGetEffectiveDamage)가 같은 배율을 보도록 한 곳에 모았다.
+    private ResolvedEnemyStatModifier ResolveDamageModifier()
+    {
+        float globalDamageMultiplier = _statMultiplierQuery != null
+            ? _statMultiplierQuery.GetDamageMultiplier(_towerData)
+            : 1f;
+
+        return new ResolvedEnemyStatModifier(
+            0f,
+            globalDamageMultiplier * ResolveAuraModifiers().DamageMultiplier);
+    }
+
     private float GetAttackInterval()
     {
         // 인구 할당 생성에 실패한 타워는 구현체가 없다(CanAttackWithCurrentStaffing과 같은 이유).
@@ -293,18 +327,7 @@ public class TowerAttack : MonoBehaviour
 
         SoundManager.Play(SoundId.TowerFire);
 
-        float globalDamageMultiplier = _statMultiplierQuery != null
-            ? _statMultiplierQuery.GetDamageMultiplier(_towerData)
-            : 1f;
-
-        TowerAuraModifiers auraModifiers =
-            ResolveAuraModifiers();
-
-        float damageMultiplier =
-            globalDamageMultiplier *
-            auraModifiers.DamageMultiplier;
-
-        var damageModifier = new ResolvedEnemyStatModifier(0f, damageMultiplier);
+        ResolvedEnemyStatModifier damageModifier = ResolveDamageModifier();
 
         StatusEffectSO hitStatus = _hitStatusQuery?.GetTowerHitStatus(_towerData);
         StatusEffectSO[] extraStatuses = hitStatus != null

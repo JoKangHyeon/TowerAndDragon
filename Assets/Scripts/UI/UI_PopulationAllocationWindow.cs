@@ -5,10 +5,13 @@ using UnityEngine.UI;
 
 // 선택한 건물 하나의 산출량·인구 현황을 보여주고 인구를 배치/회수하는 창(이슈 #110).
 // 산출 행은 건물 종류마다 의미가 달라 타입별로 채운다 - 생산시설은 자원 생산량,
-// 타워는 가동 여부·충원율, 연구소는 정산 시 받는 연구 포인트.
-// 생산시설은 ProducedResourceType이 다중 비트일 수 있어(슬라임 농장) 산출 행이 여러 개가 되므로
-// 행을 풀링한다. 항상 하나인 인구/가용 인구 행은 프리팹에 고정 배치해 값만 갱신한다
+// 타워는 가동 여부·충원율에 이어 실효 전투 스탯, 연구소는 정산 시 받는 연구 포인트.
+// 건물마다 행 개수가 달라(슬라임 농장은 ProducedResourceType이 다중 비트, 타워는 스탯이 여럿)
+// 산출 행을 풀링한다. 언제나 하나인 인구 행만 프리팹에 고정 배치해 값을 갱신한다
 // (점령 창 UI_ConquestWindow와 같은 2단 방식).
+//
+// 전역 값(가용 인구)은 여기에 두지 않는다 - 상단 HUD가 상시 보여주고, 배치 버튼의 활성 여부로도
+// 드러난다. 이 창은 선택한 건물 하나만 말한다.
 //
 // 배타 모드에는 한 방향으로만 참여한다 - 진입에 "어떤 건물인가"라는 인자가 필요해 인자 없는
 // Open()을 쓸 수 없기 때문이다(SkillTargetingController와 같은 형태). 자세한 것은 파일 끝의
@@ -18,6 +21,13 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
     private const int POPULATION_STEP = 1;
     private const float PERCENT_MULTIPLIER = 100f;
     private const string VALUE_FORMAT = "{0} / {1}";
+
+    // 소수 첫 자리까지만 보여준다(BabyDragonTooltipBuilder.DISTANCE_FORMAT와 같은 표기).
+    private const string NUMBER_FORMAT = "{0:0.#}";
+
+    // 체력·오라·용 속성 전환은 선택 변경도 인구 변경도 아니어서 이벤트가 오지 않는다 - 창이 열려 있는 동안
+    // 이 간격으로 다시 그린다. 매 프레임 다시 그리면 행마다 문자열을 새로 만들어 버리는 값이 커진다.
+    private const float REFRESH_INTERVAL_SECONDS = 0.5f;
 
     private const string ASSIGN_ALL_LOC_KEY =
         "population_allocation_assign_all";
@@ -31,8 +41,6 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         "building_window_close";
     private const string POPULATION_LABEL_LOC_KEY =
         "building_window_population_label";
-    private const string AVAILABLE_POPULATION_LABEL_LOC_KEY =
-        "building_window_available_population_label";
     private const string OPERATION_LABEL_LOC_KEY =
         "building_window_operation_label";
     private const string OPERATION_ON_FORMAT_LOC_KEY =
@@ -43,6 +51,21 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         "building_window_research_label";
     private const string NIGHT_LOCKED_LOC_KEY =
         "building_window_night_locked";
+
+    private const string HEALTH_LABEL_LOC_KEY =
+        "building_window_health_label";
+    private const string ATTACK_LABEL_LOC_KEY =
+        "building_window_attack_label";
+    private const string ATTACK_INTERVAL_LABEL_LOC_KEY =
+        "building_window_attack_interval_label";
+    private const string DPS_LABEL_LOC_KEY =
+        "building_window_dps_label";
+    private const string RANGE_LABEL_LOC_KEY =
+        "building_window_range_label";
+
+    // 시간 단위는 언어마다 붙는 자리가 달라 서식을 스트링테이블에 둔다("1.6초" / "1.6s").
+    private const string INTERVAL_VALUE_LOC_KEY =
+        "building_window_interval_value";
 
     [SerializeField] private GameObject _windowRoot;
     [SerializeField] private BuildingPlacementController _buildingPlacementController;
@@ -74,7 +97,6 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
     [Header("항상 존재하는 행 - 값만 갱신한다")]
     [SerializeField] private UI_ConquestInfoSlot _populationRow;
-    [SerializeField] private UI_ConquestInfoSlot _availablePopulationRow;
 
     [Tooltip("인구 행 아이콘. 인구는 자원이 아니라 ResourceData가 없어 별도 지정한다.")]
     [SerializeField] private Sprite _populationIcon;
@@ -84,6 +106,15 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
     [Tooltip("연구소 연구 포인트 행 아이콘.")]
     [SerializeField] private Sprite _researchPointIcon;
+
+    // 산출 행은 건물을 바꿔 가며 재사용하는 풀이고 UI_ConquestInfoSlot.Setup은 null 아이콘을 무시하므로,
+    // 비워 두면 직전에 선택했던 생산시설의 자원 아이콘이 그대로 남는다. 다섯 개 모두 배선해야 한다.
+    [Header("타워 스탯 행 아이콘 - 비워 두면 이전 건물의 아이콘이 남는다")]
+    [SerializeField] private Sprite _healthIcon;
+    [SerializeField] private Sprite _attackIcon;
+    [SerializeField] private Sprite _attackIntervalIcon;
+    [SerializeField] private Sprite _dpsIcon;
+    [SerializeField] private Sprite _rangeIcon;
 
     [Header("버튼")]
     [SerializeField] private Button _assignButton;
@@ -100,8 +131,12 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
     private Building _selectedBuilding;
     private IPopulationAllocationTarget _selectedTarget;
+
+    // 선택한 건물의 체력. 타워 체력 행에만 쓰며, 체력이 없는 건물에서는 null로 남는다.
+    private Health _selectedHealth;
     private ComponentPool<UI_ConquestInfoSlot> _outputRowPool;
     private bool _wasInputSuppressed;
+    private float _nextRefreshTime;
 
     private bool IsDay =>
         _cycleManager != null &&
@@ -184,14 +219,20 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         bool inputSuppressed =
             _buildingPlacementController.InputSuppressed;
 
-        if (_selectedBuilding == selectedBuilding &&
-            _wasInputSuppressed == inputSuppressed)
+        if (_selectedBuilding != selectedBuilding ||
+            _wasInputSuppressed != inputSuppressed)
         {
+            _wasInputSuppressed = inputSuppressed;
+            Bind(selectedBuilding);
             return;
         }
 
-        _wasInputSuppressed = inputSuppressed;
-        Bind(selectedBuilding);
+        // 타워 스탯·체력은 이벤트 없이 바뀌므로 창이 열려 있는 동안 주기적으로 다시 그린다.
+        // timeScale이 게임 속도 설정에 따라 달라지므로 unscaledTime으로 잰다.
+        if (IsWindowOpen && Time.unscaledTime >= _nextRefreshTime)
+        {
+            Refresh();
+        }
     }
 
     private void Bind(Building building)
@@ -199,6 +240,9 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         _selectedBuilding = building;
         _selectedTarget = building != null
             ? building.GetComponent<IPopulationAllocationTarget>()
+            : null;
+        _selectedHealth = building != null
+            ? building.GetComponent<Health>()
             : null;
 
         // 점령 모드 등 다른 모드가 클릭을 점유한 동안에는 그쪽 창(Claim_window)이 같은 자리를
@@ -228,6 +272,8 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
             return;
         }
 
+        _nextRefreshTime = Time.unscaledTime + REFRESH_INTERVAL_SECONDS;
+
         if (_buildingNameText != null)
         {
             _buildingNameText.text = ResolveBuildingName(_selectedBuilding);
@@ -245,18 +291,6 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
                     VALUE_FORMAT,
                     _selectedTarget.AssignedPopulation,
                     _selectedTarget.Capacity));
-        }
-
-        if (_availablePopulationRow != null)
-        {
-            _availablePopulationRow.Setup(
-                _populationIcon,
-                Color.white,
-                StringTable.GetString(AVAILABLE_POPULATION_LABEL_LOC_KEY),
-                string.Format(
-                    VALUE_FORMAT,
-                    _populationManager.AvailablePopulation,
-                    _populationManager.MaxPopulation));
         }
 
         RefreshButtonState();
@@ -307,7 +341,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
                     ResolveResearchPointsPerDay(
                         researchLab, _selectedTarget.Capacity)));
         }
-        else if (_selectedBuilding is Tower)
+        else if (_selectedBuilding is Tower tower)
         {
             SetOutputRow(
                 usedCount++,
@@ -315,9 +349,86 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
                 Color.white,
                 StringTable.GetString(OPERATION_LABEL_LOC_KEY),
                 ResolveTowerOperationText());
+
+            usedCount = AppendTowerStatRows(tower, usedCount);
         }
 
         _outputRowPool.DeactivateFrom(usedCount);
+    }
+
+    // 지금 이 타워에 실제로 적용되는 수치를 낸다 - 데이터 원본이 아니라 인구 충원율·연구·어미용
+    // 스킬트리·오라·지형 페널티가 모두 곱해진 값이다(BabyDragonTooltipBuilder.AppendAttackEffects와
+    // 같은 원칙). 값이 성립하지 않는 행은 아예 내지 않는다 - 0을 보여주면 "공격력 0인 타워"로 읽힌다
+    // (UI_TowerInfoPopup.RenderAttack과 같은 판단).
+    private int AppendTowerStatRows(Tower tower, int usedCount)
+    {
+        if (_selectedHealth != null)
+        {
+            SetOutputRow(
+                usedCount++,
+                _healthIcon,
+                Color.white,
+                StringTable.GetString(HEALTH_LABEL_LOC_KEY),
+                string.Format(
+                    VALUE_FORMAT,
+                    Mathf.RoundToInt(_selectedHealth.CurrentHealth),
+                    Mathf.RoundToInt(_selectedHealth.MaxHealth)));
+        }
+
+        TowerAttack attack = tower.Attack;
+        if (attack == null)
+        {
+            return usedCount;
+        }
+
+        bool hasDamage = attack.TryGetEffectiveDamage(out float damage);
+        bool hasInterval = attack.TryGetEffectiveAttackInterval(out float interval);
+
+        if (hasDamage)
+        {
+            SetOutputRow(
+                usedCount++,
+                _attackIcon,
+                Color.white,
+                StringTable.GetString(ATTACK_LABEL_LOC_KEY),
+                string.Format(NUMBER_FORMAT, damage));
+        }
+
+        if (hasInterval)
+        {
+            SetOutputRow(
+                usedCount++,
+                _attackIntervalIcon,
+                Color.white,
+                StringTable.GetString(ATTACK_INTERVAL_LABEL_LOC_KEY),
+                string.Format(
+                    StringTable.GetString(INTERVAL_VALUE_LOC_KEY),
+                    interval));
+        }
+
+        // 초당 피해는 적용되는 값이 아니라 위 둘에서 파생한 표시용 수치라 여기서 나눈다.
+        // 간격이 0인 데이터는 나눗셈이 무한대가 되므로 행을 내지 않는다.
+        if (hasDamage && hasInterval && interval > 0f)
+        {
+            SetOutputRow(
+                usedCount++,
+                _dpsIcon,
+                Color.white,
+                StringTable.GetString(DPS_LABEL_LOC_KEY),
+                string.Format(NUMBER_FORMAT, damage / interval));
+        }
+
+        if (tower.Data != null && tower.Data.CanAttack)
+        {
+            SetOutputRow(
+                usedCount++,
+                _rangeIcon,
+                Color.white,
+                StringTable.GetString(RANGE_LABEL_LOC_KEY),
+                string.Format(NUMBER_FORMAT, attack.EffectiveRange));
+        }
+
+        return usedCount;
     }
 
     private void SetOutputRow(int index, Sprite icon, Color iconColor, string label, string value)

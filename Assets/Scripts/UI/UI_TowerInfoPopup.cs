@@ -93,30 +93,16 @@ public class UI_TowerInfoPopup : UI_BuildSlotInfoPopup
 
         if (_attackText != null)
         {
-            _attackText.text = Mathf.RoundToInt(SumDamage(attack)).ToString();
+            // 연구·용 스킬 보정은 반영하지 않는다(Neutral) - 이 창은 타워 자체의 기본 수치를 보여준다.
+            // 배치된 타워의 실효 피해량은 TowerAttack.TryGetEffectiveDamage가 따로 돌려준다.
+            attack.TryGetTotalDamage(ResolvedEnemyStatModifier.Neutral, out float damage);
+            _attackText.text = Mathf.RoundToInt(damage).ToString();
         }
 
         if (_rangeText != null)
         {
             _rangeText.text = attack.Range.ToString();
         }
-    }
-
-    // 한 번의 공격이 주는 피해량. 효과가 여러 개면 합산한다(피해 효과가 아닌 것은 건너뛴다).
-    // 연구·용 스킬 보정은 반영하지 않는다 - 이 창은 타워 자체의 기본 수치를 보여준다.
-    private static float SumDamage(AttackSO attack)
-    {
-        float total = 0f;
-
-        foreach (AttackEffectSO effect in attack.Effects)
-        {
-            if (effect is DamageEffectSO damage)
-            {
-                total += damage.Amount;
-            }
-        }
-
-        return total;
     }
 
     // 에셋 이름을 바꾸면 키가 어긋나지만, 그때는 StringTable이 키 문자열을 그대로 돌려주므로

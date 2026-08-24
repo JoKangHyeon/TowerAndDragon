@@ -33,6 +33,33 @@ public class AttackSO : ScriptableObject
     public float AreaRadius => _areaRadius;
     public bool HasArea => _areaRadius > 0f;
 
+    /// <summary>
+    /// 한 번의 공격이 한 대상에게 주는 피해량 합. 피해 효과가 하나도 없는 공격(회복 오라 등)은
+    /// 값이 성립하지 않으므로 false를 돌려준다 - 0을 돌려주면 "공격력 0인 타워"로 읽힌다.
+    ///
+    /// modifier는 DamageEffectSO.Apply와 같은 순서로 효과마다 적용한다(합산 뒤 한 번이 아니다) -
+    /// 가산 보정이 생기면 두 방식의 결과가 달라져 표시값이 실제 피해와 어긋나기 때문이다.
+    /// 보정 없는 데이터 원본이 필요하면 ResolvedEnemyStatModifier.Neutral을 넘긴다.
+    /// </summary>
+    public bool TryGetTotalDamage(in ResolvedEnemyStatModifier modifier, out float total)
+    {
+        total = 0f;
+        bool hasDamage = false;
+
+        foreach (AttackEffectSO effect in Effects)
+        {
+            if (effect is not DamageEffectSO damage)
+            {
+                continue;
+            }
+
+            total += Mathf.Max(0f, modifier.Apply(damage.Amount));
+            hasDamage = true;
+        }
+
+        return hasDamage;
+    }
+
     public void Execute(IDamageable target, in AttackContext context)
     {
         if (!HasArea ||
