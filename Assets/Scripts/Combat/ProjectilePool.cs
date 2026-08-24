@@ -73,6 +73,33 @@ public sealed class ProjectilePool : MonoBehaviour
         Current.AcquireEffect(prefab, position, rotation, seconds);
     }
 
+    /// <summary>근거리 사격의 시작점과 명중점을 잇는 트레이서를 잠깐 재생한다.</summary>
+    public static void PlayTracerForSeconds(
+        GameObject prefab,
+        Vector3 startPosition,
+        Vector3 endPosition,
+        float seconds,
+        float widthMultiplier,
+        float brightnessMultiplier,
+        Color coreColor,
+        Color glowColor)
+    {
+        if (prefab == null)
+        {
+            return;
+        }
+
+        Current.AcquireTracerEffect(
+            prefab,
+            startPosition,
+            endPosition,
+            seconds,
+            widthMultiplier,
+            brightnessMultiplier,
+            coreColor,
+            glowColor);
+    }
+
     /// <summary>
     /// 스스로 걷히지 않는 연출을 꺼내 놓는다. 몬스터에 걸린 상태(화상 등)처럼 <b>끝나는 시점을
     /// 미리 알 수 없는</b> 연출용이며, 반납은 부르는 쪽이 <see cref="ReleasePersistent"/>로 한다.
@@ -211,6 +238,45 @@ public sealed class ProjectilePool : MonoBehaviour
 
         // 반납은 조건 없이 건다. 시간이 0 이하라 걸지 않았더니 그 인스턴스가 풀 장부에서 빠진 채
         // 활성으로 남아, 발사할 때마다 새로 만들어지고 영영 회수되지 않았다.
+        ReleaseEffectAfterAsync(effect, seconds, this.GetCancellationTokenOnDestroy()).Forget();
+    }
+
+    private void AcquireTracerEffect(
+        GameObject prefab,
+        Vector3 startPosition,
+        Vector3 endPosition,
+        float seconds,
+        float widthMultiplier,
+        float brightnessMultiplier,
+        Color coreColor,
+        Color glowColor)
+    {
+        Transform effect = _effectPool.Acquire(prefab.transform);
+
+        if (effect == null)
+        {
+            return;
+        }
+
+        ProjectileTracerVisual tracer = effect.GetComponent<ProjectileTracerVisual>();
+
+        if (tracer == null)
+        {
+            Debug.LogError("[ProjectilePool] 트레이서 프리팹에 ProjectileTracerVisual이 없습니다.", prefab);
+            _effectPool.Release(effect);
+            return;
+        }
+
+        effect.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+        tracer.Play(
+            startPosition,
+            endPosition,
+            seconds,
+            widthMultiplier,
+            brightnessMultiplier,
+            coreColor,
+            glowColor);
+
         ReleaseEffectAfterAsync(effect, seconds, this.GetCancellationTokenOnDestroy()).Forget();
     }
 

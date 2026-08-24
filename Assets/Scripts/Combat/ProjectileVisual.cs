@@ -14,6 +14,14 @@ public sealed class ProjectileVisual : MonoBehaviour
 {
     private const float DEFAULT_MUZZLE_LIFETIME_SECONDS = 0.5f;
     private const float DEFAULT_IMPACT_LIFETIME_SECONDS = 1f;
+    private const float DEFAULT_NEAR_TRACER_MAX_SCREEN_DISTANCE_PIXELS = 48f;
+    private const float DEFAULT_NEAR_TRACER_LIFETIME_SECONDS = 0.1f;
+    private const float DEFAULT_VERTICAL_SCREEN_RATIO = 0.25f;
+    private const float DEFAULT_VERTICAL_WIDTH_MULTIPLIER = 1.25f;
+    private const float DEFAULT_VERTICAL_BRIGHTNESS_MULTIPLIER = 1.25f;
+
+    private static readonly Color DEFAULT_TRACER_CORE_COLOR = new(1f, 0.95f, 0.75f, 1f);
+    private static readonly Color DEFAULT_TRACER_GLOW_COLOR = new(1f, 0.45f, 0.05f, 0.65f);
 
     [Tooltip("날아가는 동안 재생할 궤적 파티클. **비워 두면 자식 파티클 전부를 쓴다** - " +
              "일부만 골라 쓰고 싶을 때만 채운다.")]
@@ -40,6 +48,41 @@ public sealed class ProjectileVisual : MonoBehaviour
     [Tooltip("켜면 명중 이펙트를 투사체가 날아온 방향으로 돌려 놓는다. " +
              "사방으로 터지는 폭발형은 꺼도 차이가 없다.")]
     [SerializeField] private bool _rotateImpactToTravelDirection = true;
+
+    [Header("Impact Placement")]
+    [Tooltip("명중 연출의 시각 위치. 피해 판정 위치에는 영향을 주지 않는다.")]
+    [SerializeField] private ProjectileImpactPlacement _impactPlacement;
+
+    [Header("Near Tracer")]
+    [Tooltip("근거리 명중 뒤 잠깐 남길 공용 트레이서. 비우면 기존 동작을 유지한다.")]
+    [WiringOptional]
+    [SerializeField] private GameObject _nearTracerPrefab;
+
+    [Tooltip("근거리 트레이서를 사용할 최대 화면 거리(px).")]
+    [Min(0f)]
+    [SerializeField] private float _nearTracerMaxScreenDistancePixels =
+        DEFAULT_NEAR_TRACER_MAX_SCREEN_DISTANCE_PIXELS;
+
+    [Tooltip("근거리 트레이서가 페이드하며 남는 시간(초).")]
+    [Min(0f)]
+    [SerializeField] private float _nearTracerLifetimeSeconds =
+        DEFAULT_NEAR_TRACER_LIFETIME_SECONDS;
+
+    [Tooltip("화면 X 변화량이 Y 변화량의 이 비율 이하면 수직에 가까운 사격으로 본다.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _verticalScreenRatio = DEFAULT_VERTICAL_SCREEN_RATIO;
+
+    [Tooltip("수직에 가까운 근거리 트레이서의 폭 배율.")]
+    [Min(1f)]
+    [SerializeField] private float _verticalWidthMultiplier = DEFAULT_VERTICAL_WIDTH_MULTIPLIER;
+
+    [Tooltip("수직에 가까운 근거리 트레이서의 밝기 배율.")]
+    [Min(1f)]
+    [SerializeField] private float _verticalBrightnessMultiplier =
+        DEFAULT_VERTICAL_BRIGHTNESS_MULTIPLIER;
+
+    [SerializeField] private Color _nearTracerCoreColor = DEFAULT_TRACER_CORE_COLOR;
+    [SerializeField] private Color _nearTracerGlowColor = DEFAULT_TRACER_GLOW_COLOR;
 
     /// <summary>발사 직후. 풀에서 꺼낸 인스턴스는 지난번 입자를 들고 있으므로 되감아 재생한다.</summary>
     public void OnLaunched(Vector3 travelDirection)
@@ -100,9 +143,16 @@ public sealed class ProjectileVisual : MonoBehaviour
     /// <summary>
     /// 명중 직후, 투사체가 반납되기 직전. 궤적을 멈추고 명중 이펙트를 띄운다.
     /// </summary>
-    public void OnHit(Vector3 hitPosition, Vector3 travelDirection)
+    public void OnHit(
+        Vector3 launchPosition,
+        Vector3 hitPosition,
+        Vector3 travelDirection,
+        GameObject targetObject)
     {
         StopTrails();
+
+        Vector3 visualImpactPosition = ResolveVisualImpactPosition(hitPosition, targetObject);
+        PlayNearTracer(launchPosition, visualImpactPosition);
 
         if (_impactPrefab == null)
         {
@@ -111,11 +161,78 @@ public sealed class ProjectileVisual : MonoBehaviour
 
         ProjectilePool.PlayForSeconds(
             _impactPrefab,
-            hitPosition,
+            visualImpactPosition,
             _rotateImpactToTravelDirection
                 ? ResolveDirectionRotation(travelDirection)
                 : Quaternion.identity,
             _impactLifetimeSeconds);
+    }
+
+    private Vector3 ResolveVisualImpactPosition(Vector3 hitPosition, GameObject targetObject)
+    {
+        if (_impactPlacement == ProjectileImpactPlacement.TargetOrigin || targetObject == null)
+        {
+            return hitPosition;
+        }
+
+        SpriteRenderer bodyRenderer = targetObject.GetComponent<SpriteRenderer>();
+
+        if (bodyRenderer == null)
+        {
+            bodyRenderer = targetObject.GetComponentInChildren<SpriteRenderer>(true);
+        }
+
+        if (bodyRenderer == null)
+        {
+            return hitPosition;
+        }
+
+        Bounds bounds = bodyRenderer.bounds;
+
+        return _impactPlacement == ProjectileImpactPlacement.Ground
+            ? new Vector3(bounds.center.x, bounds.min.y, hitPosition.z)
+            : new Vector3(bounds.center.x, bounds.center.y, hitPosition.z);
+    }
+
+    private void PlayNearTracer(Vector3 launchPosition, Vector3 impactPosition)
+    {
+        if (_nearTracerPrefab == null || _nearTracerLifetimeSeconds <= 0f)
+        {
+            return;
+        }
+
+        Camera worldCamera = Camera.main;
+
+        if (worldCamera == null)
+        {
+            return;
+        }
+
+        Vector2 launchScreenPosition = worldCamera.WorldToScreenPoint(launchPosition);
+        Vector2 impactScreenPosition = worldCamera.WorldToScreenPoint(impactPosition);
+        Vector2 screenDelta = impactScreenPosition - launchScreenPosition;
+        float maxDistanceSqr =
+            _nearTracerMaxScreenDistancePixels * _nearTracerMaxScreenDistancePixels;
+
+        if (screenDelta.sqrMagnitude > maxDistanceSqr)
+        {
+            return;
+        }
+
+        bool isNearlyVertical =
+            Mathf.Abs(screenDelta.x) <= Mathf.Abs(screenDelta.y) * _verticalScreenRatio;
+        float widthMultiplier = isNearlyVertical ? _verticalWidthMultiplier : 1f;
+        float brightnessMultiplier = isNearlyVertical ? _verticalBrightnessMultiplier : 1f;
+
+        ProjectilePool.PlayTracerForSeconds(
+            _nearTracerPrefab,
+            launchPosition,
+            impactPosition,
+            _nearTracerLifetimeSeconds,
+            widthMultiplier,
+            brightnessMultiplier,
+            _nearTracerCoreColor,
+            _nearTracerGlowColor);
     }
 
     private void StopTrails()
