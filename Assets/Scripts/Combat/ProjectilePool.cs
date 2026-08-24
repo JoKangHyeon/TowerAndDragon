@@ -73,14 +73,20 @@ public sealed class ProjectilePool : MonoBehaviour
         Current.AcquireEffect(prefab, position, rotation, seconds);
     }
 
-    /// <summary>근거리 사격의 시작점과 명중점을 잇는 트레이서를 잠깐 재생한다.</summary>
+    /// <summary>
+    /// 근거리 사격의 시작점과 명중점을 잇는 트레이서를 잠깐 재생한다.
+    ///
+    /// 명중 이펙트와 달리 <b>배속을 무시한 실시간</b>으로 걷힌다 - 짧게 보이는 것을 보완하는
+    /// 연출인데 3배속에서 스케일 시간을 쓰면 스스로 2프레임으로 줄어든다.
+    /// <see cref="ProjectileTracerVisual"/>의 페이드도 같은 기준이다(한쪽만 바꾸면 어긋난다).
+    /// </summary>
     public static void PlayTracerForSeconds(
         GameObject prefab,
         Vector3 startPosition,
         Vector3 endPosition,
         float seconds,
-        float widthMultiplier,
-        float brightnessMultiplier,
+        float headWidthWorld,
+        float intensity,
         Color coreColor,
         Color glowColor)
     {
@@ -94,8 +100,8 @@ public sealed class ProjectilePool : MonoBehaviour
             startPosition,
             endPosition,
             seconds,
-            widthMultiplier,
-            brightnessMultiplier,
+            headWidthWorld,
+            intensity,
             coreColor,
             glowColor);
     }
@@ -246,8 +252,8 @@ public sealed class ProjectilePool : MonoBehaviour
         Vector3 startPosition,
         Vector3 endPosition,
         float seconds,
-        float widthMultiplier,
-        float brightnessMultiplier,
+        float headWidthWorld,
+        float intensity,
         Color coreColor,
         Color glowColor)
     {
@@ -267,17 +273,19 @@ public sealed class ProjectilePool : MonoBehaviour
             return;
         }
 
+        // LineRenderer가 월드 공간이라 루트 위치는 그림에 영향을 주지 않는다.
         effect.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
         tracer.Play(
             startPosition,
             endPosition,
             seconds,
-            widthMultiplier,
-            brightnessMultiplier,
+            headWidthWorld,
+            intensity,
             coreColor,
             glowColor);
 
-        ReleaseEffectAfterAsync(effect, seconds, this.GetCancellationTokenOnDestroy()).Forget();
+        ReleaseEffectAfterAsync(
+            effect, seconds, this.GetCancellationTokenOnDestroy(), ignoreTimeScale: true).Forget();
     }
 
     // 시간 반납을 걸지 않는다는 점만 AcquireEffect와 다르다. 회전은 걸지 않는다 - 몬스터를
@@ -303,14 +311,20 @@ public sealed class ProjectilePool : MonoBehaviour
         _effectPool.Release(effect);
     }
 
+    // ignoreTimeScale은 트레이서만 켠다. 명중 이펙트는 게임 시간에 묶여 있어야 배속에서
+    // 전투 속도와 함께 빨라진다 - 거기까지 실시간으로 만들면 3배속에서 잔상이 밀린다.
     private async UniTaskVoid ReleaseEffectAfterAsync(
-        Transform effect, float delaySeconds, CancellationToken token)
+        Transform effect,
+        float delaySeconds,
+        CancellationToken token,
+        bool ignoreTimeScale = false)
     {
         // WaitForSeconds에 0 이하를 넘기면 프레임을 하나도 쉬지 않아, 방금 켠 이펙트를 같은 프레임에
         // 도로 끄게 된다(한 장도 그려지지 않는다). 그래서 최소 한 프레임은 보장한다.
         if (delaySeconds > 0f)
         {
-            await UniTask.WaitForSeconds(delaySeconds, cancellationToken: token);
+            await UniTask.WaitForSeconds(
+                delaySeconds, ignoreTimeScale, cancellationToken: token);
         }
         else
         {

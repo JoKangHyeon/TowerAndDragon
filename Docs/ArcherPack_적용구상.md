@@ -17,6 +17,54 @@
   "팩 소유 UniversalRenderPipelineAsset을 Graphics Settings에 넣어라"는 지시는
   프로젝트의 2D 렌더러 설정을 덮어쓴다.
 
+### 실측으로 뒤집힌 것 (2026-08-24 추가) ★
+
+아래 3·4절은 `Archer_Projectile_<속성>`(접미사 없음)을 전제로 쓰였다. **그 프리팹에는 화살이 없다** —
+글로우 구슬이다. 화살 형상은 `Archer_Projectile_<속성>_2` 여섯 개뿐이며, 이들만
+`AP_Models/AP_Arrow/AP_Arrow.FBX`를 `MeshFilter`/`MeshRenderer`로 물고 있다.
+
+`_2`로 바꾸면 문서가 예상하지 못한 두 가지가 따라온다.
+
+**(1) 화살 메시가 한 픽셀도 안 그려진다. 마젠타가 아니라 통째로 스킵된다.**
+
+| 머티리얼 | 셰이더 | 패스 LightMode |
+|---|---|---|
+| `AP_Arrow_<속성>` | `Standard` | FORWARDBASE / FORWARDADD / SHADOWCASTER / DEFERRED / META |
+| `AP_Arrow_<속성>_Alpha` | `Particles/Standard Surface` | GRABPASS / SHADOWCASTER / FORWARDBASE / DEFERRED |
+| 자식 파티클 | `Particles/Standard Unlit` | (LightMode 없음 = SRPDefaultUnlit) |
+
+URP 2D 렌더러는 `Universal2D` / `UniversalForward` / `SRPDefaultUnlit` 패스만 그린다.
+화살 머티리얼은 하나도 해당되지 않아 드로우콜이 안 나간다. `shader.isSupported`가 `true`라
+마젠타(셰이더 없음/컴파일 실패 표시)도 안 뜬다. 6속성 전부 0픽셀을 확인했다.
+
+0절의 "에디터에서 정상 표시 확인"은 `AP_Materials/`의 `fileID: 211` 파티클 머티리얼 38개에 대한
+것이고, `AP_Models/`의 `fileID: 46`·`210`에는 해당되지 않는다.
+
+해결: 알베도만 물린 `Universal Render Pipeline/Unlit`(Transparent) 머티리얼을 새로 만들어 꽂는다.
+원본은 건드리지 않는다.
+
+**(2) `Projectile`이 화살 방향을 지운다. 정확히 180도 반대로 날아간다.**
+
+`_2` 루트는 촉(로컬 +Y)을 월드 −X로 돌리는 보정을 구워 놨다(`m_LocalEulerAnglesHint: {90, 0, 90}`,
+팩 데모가 `Velocity: {x: -13}`로 왼쪽으로 쏜다). `Projectile.cs`는 `transform.rotation`을
+`Euler(0, 0, degrees)`로 **덮어쓰고 +X를 앞으로 본다.**
+
+해결: 새 빈 루트에 `Projectile`+`ProjectileVisual`을 얹고 Archer 루트를 자식으로 둔다.
+자식 로컬 회전에 Z +180을 얹으면 8방향 실측 오차가 전부 0.0이 된다.
+
+**(3) 추가로 확인된 값**
+
+- 모든 Archer 렌더러의 정렬 레이어가 `0`(Default)이다. 프로젝트 발사체는 `Projectile`(value 3)이다.
+  파티클 렌더러 전부 + MeshRenderer까지 바꿔야 한다. **MeshRenderer도 URP 2D에서
+  `sortingLayerID`를 따른다**(레이어만 바꿔 굽는 대조 실험으로 확인).
+- 이 프리팹들은 `rateOverTime: 0` / `rateOverDistance: 5~10` / 버스트 없음이다.
+  **제자리에 두면 한 알도 안 나온다.** 궤적을 보려면 실제로 날려야 한다.
+- 머즐·임팩트는 현재 세트보다 면적 기준 50~90배 크고, 최대치가 t=0.16에 온다.
+  `PlayForSeconds`는 지정 시각에 `StopAndClear`로 살아있는 입자를 지우므로,
+  스스로 0이 되는 시각(머즐 0.75초 · 임팩트 0.9초) 뒤로 수명을 잡아야 안 끊긴다.
+
+---
+
 ### 같이 검토한 ArrowsVFX는 못 쓴다
 
 `Assets/Imported/ArrowsVFX`는 VFX Graph(`.vfx`) 기반이다.

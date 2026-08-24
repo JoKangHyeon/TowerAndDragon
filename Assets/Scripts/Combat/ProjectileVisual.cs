@@ -14,11 +14,6 @@ public sealed class ProjectileVisual : MonoBehaviour
 {
     private const float DEFAULT_MUZZLE_LIFETIME_SECONDS = 0.5f;
     private const float DEFAULT_IMPACT_LIFETIME_SECONDS = 1f;
-    private const float DEFAULT_NEAR_TRACER_MAX_SCREEN_DISTANCE_PIXELS = 48f;
-    private const float DEFAULT_NEAR_TRACER_LIFETIME_SECONDS = 0.1f;
-    private const float DEFAULT_VERTICAL_SCREEN_RATIO = 0.25f;
-    private const float DEFAULT_VERTICAL_WIDTH_MULTIPLIER = 1.25f;
-    private const float DEFAULT_VERTICAL_BRIGHTNESS_MULTIPLIER = 1.25f;
 
     private static readonly Color DEFAULT_TRACER_CORE_COLOR = new(1f, 0.95f, 0.75f, 1f);
     private static readonly Color DEFAULT_TRACER_GLOW_COLOR = new(1f, 0.45f, 0.05f, 0.65f);
@@ -54,34 +49,20 @@ public sealed class ProjectileVisual : MonoBehaviour
     [SerializeField] private ProjectileImpactPlacement _impactPlacement;
 
     [Header("Near Tracer")]
-    [Tooltip("근거리 명중 뒤 잠깐 남길 공용 트레이서. 비우면 기존 동작을 유지한다.")]
+    [Tooltip("근거리 명중 뒤 잠깐 남길 공용 트레이서. 비우면 트레이서 없이 동작한다.")]
     [WiringOptional]
     [SerializeField] private GameObject _nearTracerPrefab;
 
-    [Tooltip("근거리 트레이서를 사용할 최대 화면 거리(px).")]
-    [Min(0f)]
-    [SerializeField] private float _nearTracerMaxScreenDistancePixels =
-        DEFAULT_NEAR_TRACER_MAX_SCREEN_DISTANCE_PIXELS;
+    [Tooltip("트레이서 튜닝값. 공격 투사체 타워 7종이 같은 애셋을 공유한다.\n" +
+             "비우면 트레이서가 재생되지 않는다 - 값을 코드 기본값으로 얼버무리면 " +
+             "배선 누락이 조용히 묻힌다.")]
+    [WiringOptional]
+    [SerializeField] private NearTracerTuningSO _nearTracerTuning;
 
-    [Tooltip("근거리 트레이서가 페이드하며 남는 시간(초).")]
-    [Min(0f)]
-    [SerializeField] private float _nearTracerLifetimeSeconds =
-        DEFAULT_NEAR_TRACER_LIFETIME_SECONDS;
-
-    [Tooltip("화면 X 변화량이 Y 변화량의 이 비율 이하면 수직에 가까운 사격으로 본다.")]
-    [Range(0f, 1f)]
-    [SerializeField] private float _verticalScreenRatio = DEFAULT_VERTICAL_SCREEN_RATIO;
-
-    [Tooltip("수직에 가까운 근거리 트레이서의 폭 배율.")]
-    [Min(1f)]
-    [SerializeField] private float _verticalWidthMultiplier = DEFAULT_VERTICAL_WIDTH_MULTIPLIER;
-
-    [Tooltip("수직에 가까운 근거리 트레이서의 밝기 배율.")]
-    [Min(1f)]
-    [SerializeField] private float _verticalBrightnessMultiplier =
-        DEFAULT_VERTICAL_BRIGHTNESS_MULTIPLIER;
-
+    [Tooltip("트레이서 코어(가운데 흰 선) 색. 프리팹을 공유해도 타워별로 다를 수 있게 여기에 둔다.")]
     [SerializeField] private Color _nearTracerCoreColor = DEFAULT_TRACER_CORE_COLOR;
+
+    [Tooltip("트레이서 글로우(바깥 선) 색. 타워 성격을 이 색으로 구분한다.")]
     [SerializeField] private Color _nearTracerGlowColor = DEFAULT_TRACER_GLOW_COLOR;
 
     /// <summary>발사 직후. 풀에서 꺼낸 인스턴스는 지난번 입자를 들고 있으므로 되감아 재생한다.</summary>
@@ -152,7 +133,7 @@ public sealed class ProjectileVisual : MonoBehaviour
         StopTrails();
 
         Vector3 visualImpactPosition = ResolveVisualImpactPosition(hitPosition, targetObject);
-        PlayNearTracer(launchPosition, visualImpactPosition);
+        PlayNearTracer(launchPosition, visualImpactPosition, travelDirection);
 
         if (_impactPrefab == null)
         {
@@ -194,9 +175,19 @@ public sealed class ProjectileVisual : MonoBehaviour
             : new Vector3(bounds.center.x, bounds.center.y, hitPosition.z);
     }
 
-    private void PlayNearTracer(Vector3 launchPosition, Vector3 impactPosition)
+    /// <summary>
+    /// 근거리 보조 트레이서. <b>방향이 아니라 화면 길이 부족분</b>으로 강도를 정한다.
+    ///
+    /// v1은 "수직인가"로 대상을 골랐다가 실패했다 - 수직은 원인이 아니라 증상이었다.
+    /// 상방 사격이 안 보인 이유는 방향이 아니라 사거리 타원(RADIUS_Y_RATIO 0.5)과
+    /// FirePoint 높이가 겹쳐 <b>화면 길이가 횡의 1/2.5로 줄기</b> 때문이고, 그래서 v1의
+    /// 48px 게이트에 걸려 정작 문제 구간(상방 최대 199px)은 한 픽셀도 그리지 않았다.
+    /// 길이를 직접 재면 그 구간이 자동으로 포함된다. 근거는 작업노트 5-1 · 5-3-1.
+    /// </summary>
+    private void PlayNearTracer(
+        Vector3 launchPosition, Vector3 impactPosition, Vector3 travelDirection)
     {
-        if (_nearTracerPrefab == null || _nearTracerLifetimeSeconds <= 0f)
+        if (_nearTracerPrefab == null || _nearTracerTuning == null)
         {
             return;
         }
@@ -208,29 +199,62 @@ public sealed class ProjectileVisual : MonoBehaviour
             return;
         }
 
-        Vector2 launchScreenPosition = worldCamera.WorldToScreenPoint(launchPosition);
-        Vector2 impactScreenPosition = worldCamera.WorldToScreenPoint(impactPosition);
-        Vector2 screenDelta = impactScreenPosition - launchScreenPosition;
-        float maxDistanceSqr =
-            _nearTracerMaxScreenDistancePixels * _nearTracerMaxScreenDistancePixels;
-
-        if (screenDelta.sqrMagnitude > maxDistanceSqr)
+        // 줌 아웃 가드. 폭이 줌 독립이 되고 게이트도 화면 px이라, 이것이 없으면 최대 축소에서
+        // 모든 사격이 트레이서를 받고 최소 길이 보정이 타워보다 긴 줄을 만든다.
+        if (worldCamera.orthographicSize > _nearTracerTuning.MaxOrthographicSize)
         {
             return;
         }
 
-        bool isNearlyVertical =
-            Mathf.Abs(screenDelta.x) <= Mathf.Abs(screenDelta.y) * _verticalScreenRatio;
-        float widthMultiplier = isNearlyVertical ? _verticalWidthMultiplier : 1f;
-        float brightnessMultiplier = isNearlyVertical ? _verticalBrightnessMultiplier : 1f;
+        // WorldToScreenPoint가 돌려주는 것과 같은 픽셀 공간이어야 한다 - Screen.height를 쓰면
+        // 레터박스·렌더 텍스처에서 길이 판정과 폭이 서로 다른 기준을 보게 된다.
+        float worldPerPixel = 2f * worldCamera.orthographicSize / worldCamera.pixelHeight;
+
+        if (worldPerPixel <= 0f)
+        {
+            return;
+        }
+
+        Vector3 tracerStart = launchPosition;
+
+        // 방향은 종점-시작점이 아니라 진행 방향을 따른다. Ground 정책은 종점을 대상 발밑으로
+        // 내리므로, 상방 근거리에서 종점이 발사점보다 아래로 와 선의 부호가 뒤집힌다
+        // (v1에서 위로 쏜 트레이서가 아래를 향했다).
+        Vector3 direction = travelDirection.sqrMagnitude > Mathf.Epsilon
+            ? travelDirection.normalized
+            : (impactPosition - tracerStart).normalized;
+
+        float minLengthWorld = _nearTracerTuning.MinScreenLengthPixels * worldPerPixel;
+        float lengthAlongTravel = Vector3.Dot(impactPosition - tracerStart, direction);
+
+        if (lengthAlongTravel < minLengthWorld)
+        {
+            // 끝점(몬스터)은 고정하고 시작점만 뒤로 늘린다 - 시선이 있는 쪽을 건드리지 않는다.
+            // 이 연장은 트레이서가 몬스터 쪽에서 밝고 타워 쪽으로 흐려질 때만 자연스럽다
+            // (반대 방향이면 타워 스프라이트 안쪽에서 밝은 끝이 시작돼 고장으로 읽힌다).
+            float extension = Mathf.Min(
+                minLengthWorld, _nearTracerTuning.MaxExtensionWorldUnits);
+
+            tracerStart = impactPosition - direction * extension;
+        }
+
+        float screenLengthPixels = (impactPosition - tracerStart).magnitude / worldPerPixel;
+        float intensity = _nearTracerTuning.ResolveIntensity(screenLengthPixels);
+
+        // 램프로 바꾸면 사거리 안 사격 대부분이 0보다 큰 강도를 받는다. 이 가드가 없으면
+        // "보조 연출"이 상시 연출이 되고 3배속 x 다수 타워에서 풀 대여가 폭증한다.
+        if (intensity < _nearTracerTuning.MinEffectiveIntensity)
+        {
+            return;
+        }
 
         ProjectilePool.PlayTracerForSeconds(
             _nearTracerPrefab,
-            launchPosition,
+            tracerStart,
             impactPosition,
-            _nearTracerLifetimeSeconds,
-            widthMultiplier,
-            brightnessMultiplier,
+            _nearTracerTuning.LifetimeSeconds,
+            _nearTracerTuning.GlowHeadWidthPixels * worldPerPixel,
+            intensity,
             _nearTracerCoreColor,
             _nearTracerGlowColor);
     }
