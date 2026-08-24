@@ -1,3 +1,4 @@
+using TMPro;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -30,6 +31,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
 
     [SerializeField]
     private ActiveButtons _activeButtons;
+
+    [Tooltip("삭제 버튼 안의 환급률 안내(Button_Remove/Text (1)). 선택한 건물이 당일 건설인지에 따라 " +
+        "문구가 달라지므로 LocalizedText로 고정하지 않고 코드가 채운다.")]
+    [SerializeField]
+    private TMP_Text _refundInfoText;
 
     [SerializeField]
     private FilterTab[] _filterTabs;
@@ -119,6 +125,18 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
     private Tween _panelTween;
     private int _currentFilterIndex;
     private bool _initialized;
+
+    // stringtable — buildMode_panel_info_refund : "{0}%를 반환"
+    private const string REFUND_INFO_LOC_KEY = "buildMode_panel_info_refund";
+    private const int PERCENT_SCALE = 100;
+
+    // 아직 한 번도 쓰지 않은 상태. 어떤 실제 퍼센트와도 겹치지 않는 값이어야 한다.
+    private const int UNSET_REFUND_PERCENT = -1;
+
+    private int _shownRefundPercent = UNSET_REFUND_PERCENT;
+
+    private static string RefundInfo(int percent) =>
+        string.Format(StringTable.GetString(REFUND_INFO_LOC_KEY), percent);
 
     private readonly List<UI_BuildingSlot> _spawnedSlots = new();
     private readonly List<IBuildModeInteractionQuery> _interactionQueries = new();
@@ -282,6 +300,9 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
             BuildResources.ResourceChanged.AddListener(HandleResourceChanged);
         }
 
+        // 환급률 안내는 코드가 채우므로 LocalizedText 대신 여기서 언어 변경을 듣는다.
+        StringTable.OnLanguageChanged += HandleLanguageChanged;
+
         _initialized = true;
     }
 
@@ -301,6 +322,8 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         {
             BuildResources.ResourceChanged.RemoveListener(HandleResourceChanged);
         }
+
+        StringTable.OnLanguageChanged -= HandleLanguageChanged;
     }
 
     // 보유량이 바뀌면 비용 색과 슬롯 활성 상태가 곧바로 낡는다(생산 정산, 다른 건물 건설 등) -
@@ -391,8 +414,35 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
             _activeButtons.Remove.interactable = _buildingPlacementController.CanRemoveNow(target);
         }
 
+        RefreshRefundInfo(target);
+
         HandleCloseInput();
     }
+
+    // 환급률은 선택한 건물이 당일 건설인지에 따라 달라지므로, 실제 환급과 같은 판정을 배치 컨트롤러에
+    // 물어본다 - 여기서 따로 계산하면 안내와 실제 지급이 조용히 어긋난다.
+    // 퍼센트가 실제로 바뀔 때만 다시 쓴다(매 프레임 string.Format을 돌리면 GC만 쌓인다).
+    private void RefreshRefundInfo(Building target)
+    {
+        if (_refundInfoText == null)
+        {
+            return;
+        }
+
+        float ratio = _buildingPlacementController.GetDemolishRefundRatio(target);
+        int percent = Mathf.RoundToInt(ratio * PERCENT_SCALE);
+
+        if (percent == _shownRefundPercent)
+        {
+            return;
+        }
+
+        _shownRefundPercent = percent;
+        _refundInfoText.text = RefundInfo(percent);
+    }
+
+    // 퍼센트가 그대로여도 문구는 바뀌므로, 캐시를 비워 다음 Update가 다시 쓰게 한다.
+    private void HandleLanguageChanged() => _shownRefundPercent = UNSET_REFUND_PERCENT;
 
     // ESC 입력 시 빌드모드 패널을 닫고 배치/이동 중이던 상태도 함께 취소한다.
     private void HandleCloseInput()

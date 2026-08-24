@@ -361,19 +361,33 @@ public class BuildingPlacementController : MonoBehaviour
         NotifySelectedBuildingChanged();
     }
 
+    // 철거 시 돌려받는 비율. 실제 환급과 UI 안내가 같은 판정을 쓰도록 여기서만 결정한다 -
+    // 표시와 지급이 따로 판정하면 "전액 반환"이라 써놓고 일부만 주는 식으로 조용히 어긋난다.
+    // 선택된 건물이 없으면(안내 문구의 기본값) 당일이 아닌 쪽 비율을 준다.
+    public float GetDemolishRefundRatio(Building building)
+    {
+        if (!WiringGuard.Require(_economyBalance, nameof(_economyBalance), this))
+            return 0f;
+
+        bool isSameDay = building != null && _cycleManager != null &&
+            building.ConstructedCycle == _cycleManager.CurrentCycleNumber;
+
+        return isSameDay
+            ? _economyBalance.DemolishRefundRatioSameDay
+            : _economyBalance.DemolishRefundRatioLate;
+    }
+
     // 건설 비용을 환급한다 - 낮밤 사이클이 한 번도 돌지 않은 당일 건설/철거는 전액, 그 외엔 일부만.
     private void RefundBuildCost(Building building)
     {
         if (_resourceManager == null)
             return;
 
+        // 비율을 모르는 채로 임의 값을 주지 않도록, 계산에 들어가기 전에 여기서도 한 번 막는다.
         if (!WiringGuard.Require(_economyBalance, nameof(_economyBalance), this))
             return;
 
-        bool isSameDay = _cycleManager != null && building.ConstructedCycle == _cycleManager.CurrentCycleNumber;
-        float refundRatio = isSameDay
-            ? _economyBalance.DemolishRefundRatioSameDay
-            : _economyBalance.DemolishRefundRatioLate;
+        float refundRatio = GetDemolishRefundRatio(building);
 
         IReadOnlyList<ResourceAmount> cost = building.BuildCost;
         var refund = new ResourceAmount[cost.Count];
