@@ -193,6 +193,39 @@ public class ResourceManager : MonoBehaviour
             Add(entry.Type, entry.Amount);
     }
 
+#if UNITY_EDITOR
+    /// <summary>
+    /// [에디터 테스트 전용] 카탈로그에 등록된 모든 단일 자원에 같은 수량을 지급한다.
+    /// 기존 Add 경로를 반복 호출해 UI 이벤트와 세이브 대상 상태를 일관되게 유지한다.
+    /// </summary>
+    public int DebugAddToAllCatalogResources(int amount)
+    {
+        if (amount <= 0)
+        {
+            return 0;
+        }
+
+        if (!WiringGuard.Require(_catalog, nameof(_catalog), this))
+        {
+            return 0;
+        }
+
+        int addedResourceCount = 0;
+        foreach (ResourceData resource in _catalog.All)
+        {
+            if (resource == null || !IsSingleType(resource.Type))
+            {
+                continue;
+            }
+
+            Add(resource.Type, amount);
+            addedResourceCount++;
+        }
+
+        return addedResourceCount;
+    }
+#endif
+
     // --- ResourceCost 브리지 (점령 시스템 호환) ---
 
     // 점령 시스템이 요구하는 보유량 스냅샷(기본 자원만).

@@ -378,6 +378,51 @@ public sealed class ResearchManager : MonoBehaviour,
         }
     }
 
+#if UNITY_EDITOR
+    /// <summary>
+    /// [에디터 테스트 전용] 비용, 선행 조건, 주기, 랜드마크 조건을 무시하고 트리의 모든 연구를 완료한다.
+    /// 완료 이벤트는 새로 완료된 노드에만 발화해 연구 효과 소비자와 UI 갱신 경로를 기존 계약에 맞춘다.
+    /// </summary>
+    public int DebugCompleteAllResearchNodes()
+    {
+        if (_nodesById.Count == 0)
+        {
+            CacheNodes();
+        }
+
+        if (!WiringGuard.Require(_tree, nameof(_tree), this))
+        {
+            return 0;
+        }
+
+        var completedNodes = new List<ResearchNodeData>();
+        foreach (ResearchNodeData node in _tree.Nodes)
+        {
+            if (!IsRegisteredNode(node) || IsCompleted(node.NodeId))
+            {
+                continue;
+            }
+
+            _completedNodeIds.Add(node.NodeId);
+            completedNodes.Add(node);
+        }
+
+        if (completedNodes.Count <= 0)
+        {
+            return 0;
+        }
+
+        _isActiveEffectsDirty = true;
+
+        foreach (ResearchNodeData node in completedNodes)
+        {
+            _nodeCompleted.Invoke(node);
+        }
+
+        return completedNodes.Count;
+    }
+#endif
+
     public float GetYieldMultiplier(
         Vector2Int chunkCoord,
         ResourceType resourceType)

@@ -72,6 +72,11 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
             // 보장되므로(CycleManager.cs:52-56) OnNightEnd에서 재계산한다.
             _cycleManager.OnNightEnd.AddListener(RecomputeAllOnNightEnd);
         }
+
+        if (_dragonTreeManager != null)
+        {
+            _dragonTreeManager.NodeUnlocked.AddListener(HandleNodeUnlocked);
+        }
     }
 
     private void OnDisable()
@@ -89,6 +94,11 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         if (_cycleManager != null)
         {
             _cycleManager.OnNightEnd.RemoveListener(RecomputeAllOnNightEnd);
+        }
+
+        if (_dragonTreeManager != null)
+        {
+            _dragonTreeManager.NodeUnlocked.RemoveListener(HandleNodeUnlocked);
         }
     }
 
@@ -137,6 +147,8 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
     // 쓰인다 - 하루 지연이지만 순환 의존은 아니다(먹이 계산에는 버프가 관여하지 않음).
     // 배치/철거/이동에 의한 재계산은 CanOperate가 낮 동안 바뀌지 않으므로 같은 값을 그대로 쓴다.
     private void RecomputeAllOnNightEnd(int _) => RecomputeAll();
+    
+    private void HandleNodeUnlocked(ProgressionNodeData _) => RecomputeAll();
 
     private void RecomputeAll()
     {
