@@ -24,7 +24,11 @@ using UnityEngine;
 //    활성 중에는 기본 패시브와 이중 계산되지 않고, 다른 속성으로 갈아타도 절반이 남는다.
 //    → "속성 몇 개를 동시에 굴릴 것인가"라는 축이 생긴다.
 // 2) 궁극 게이트 = OR 두 경로. (그 속성 새끼용 랭크 4) 또는 (양갈래 완주).
-//    → 알이 안 나온 플레이어도 자력으로 궁극에 도달할 수 있고, 두 개의 다른 빌드가 생긴다.
+//    주의: 이 OR은 "알 없이도 궁극에 갈 수 있다"를 뜻하지 않는다. 양갈래 완주에 필요한
+//    ActiveUp2·PassiveUp2가 NeedsDeepGate이고, 그 DG_KinRank_Deep_*이 _scopeToAttribute로
+//    같은 속성 새끼용 노드 2개를 요구하며, 새끼용 노드는 다시 KinOwnedGateSO(그 속성 알 보유)를
+//    지난다. 즉 두 경로 모두 그 속성 알을 전제한다 - 속성당 14노드 중 9노드(kin 4 · 심화 4 · 궁극 1)가
+//    주기 보스의 랜덤 알에 종속된다. 알 없는 경로를 만들려면 심화 게이트 자체를 손봐야 한다.
 public static class DragonSkillTreeAssetGenerator
 {
     private const string DATA_FOLDER = "Assets/Data/Dragon";
@@ -97,6 +101,14 @@ public static class DragonSkillTreeAssetGenerator
     // 새끼용 불 화상은 어미용 상시 화상과 StatusId를 나누고 지속시간도 유한하게 둔다 -
     // 같은 id를 쓰면 두 화상이 중첩되지 않고 서로 갱신해 버려서, 어미용 불이 활성인 동안
     // 새끼용 타워형 노드를 해금해도 체감이 전혀 없다.
+    // 툴팁 표시 이름 키. StatusId가 같으면 같은 키를 쓴다 - 궁극의 잔존판(약화 에셋)도
+    // 플레이어에게는 같은 "둔화"·"화상"이라 이름이 달라질 이유가 없다.
+    // 비워 두면 MonsterStatusReceiver.AppendLine이 그 상태의 툴팁 줄을 아예 만들지 않으므로
+    // (StatusEffectSO.HasDisplayName), 잔존만 걸린 몬스터에서 표시가 사라진다.
+    private const string STATUS_NAME_SLOW_LOC_KEY = "status_name_slow";
+    private const string STATUS_NAME_BURN_LOC_KEY = "status_name_burn";
+    private const string STATUS_NAME_FREEZE_LOC_KEY = "status_name_freeze";
+
     private const string KIN_FIRE_BURN_STATUS_ID = "kin_fire_burn";
     private const float KIN_FIRE_BURN_DURATION = 3f;
     private const float FIRE_BURN_TICK_INTERVAL = 1f;
@@ -144,7 +156,6 @@ public static class DragonSkillTreeAssetGenerator
         public FreezeStatusSO IceFreezeRank1;
         public FreezeStatusSO IceFreezeStrong;
         public DamageOverTimeStatusSO FireBurn;
-        public DamageOverTimeStatusSO FireBurnStrong;
 
         // 궁극의 잔존 전용 - 루트 각성이 주는 상태이상의 절반 세기.
         public MoveSpeedStatusSO IceSlowPersist;
@@ -411,30 +422,38 @@ public static class DragonSkillTreeAssetGenerator
     {
         return new StatusAssets
         {
-            IceSlow = CreateMoveSpeedStatus("DS_IceSlow", "dragon_ice_slow", ICE_SLOW_DURATION, ICE_SLOW_MULTIPLIER),
-            IceFreeze = CreateFreezeStatus("DS_IceFreeze", "dragon_ice_freeze", ICE_FREEZE_DURATION),
-            IceFreezeRank1 = CreateFreezeStatus("DS_IceFreeze_R1", "dragon_ice_freeze", ICE_FREEZE_DURATION_R1),
+            IceSlow = CreateMoveSpeedStatus(
+                "DS_IceSlow", "dragon_ice_slow", STATUS_NAME_SLOW_LOC_KEY, ICE_SLOW_DURATION, ICE_SLOW_MULTIPLIER),
+            IceFreeze = CreateFreezeStatus(
+                "DS_IceFreeze", "dragon_ice_freeze", STATUS_NAME_FREEZE_LOC_KEY, ICE_FREEZE_DURATION),
+            IceFreezeRank1 = CreateFreezeStatus(
+                "DS_IceFreeze_R1", "dragon_ice_freeze", STATUS_NAME_FREEZE_LOC_KEY, ICE_FREEZE_DURATION_R1),
 
             // 랭크 상태의 StatusId를 같게 둬야 재부여가 중첩이 아니라 갱신으로 처리된다.
-            IceFreezeStrong = CreateFreezeStatus("DS_IceFreeze_R2", "dragon_ice_freeze", ICE_FREEZE_DURATION_R2),
+            IceFreezeStrong = CreateFreezeStatus(
+                "DS_IceFreeze_R2", "dragon_ice_freeze", STATUS_NAME_FREEZE_LOC_KEY, ICE_FREEZE_DURATION_R2),
 
+            // 어미용 상시 화상은 랭크 강화가 없다(불의 두 패시브 갈래는 생산량·공격력이다) -
+            // 강화판을 만들어 두면 어디에도 배선되지 않은 고아 에셋만 남는다.
             FireBurn = CreateDotStatus(
-                "DS_FireBurn", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK, FIRE_BURN_DURATION_INFINITE),
-            FireBurnStrong = CreateDotStatus(
-                "DS_FireBurn_R2", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK_R2, FIRE_BURN_DURATION_INFINITE),
+                "DS_FireBurn", "dragon_fire_burn", STATUS_NAME_BURN_LOC_KEY,
+                FIRE_BURN_DAMAGE_PER_TICK, FIRE_BURN_DURATION_INFINITE),
 
             // 잔존용도 StatusId를 루트와 같게 둔다 - 속성을 바꾸는 순간 이미 걸려 있던 상태가
             // 중첩되지 않고 약한 쪽으로 갱신된다(랭크 상태와 같은 이유).
             IceSlowPersist = CreateMoveSpeedStatus(
-                "DS_IceSlow_Persist", "dragon_ice_slow", ICE_SLOW_DURATION, ICE_SLOW_MULTIPLIER_PERSIST),
+                "DS_IceSlow_Persist", "dragon_ice_slow", STATUS_NAME_SLOW_LOC_KEY,
+                ICE_SLOW_DURATION, ICE_SLOW_MULTIPLIER_PERSIST),
             FireBurnPersist = CreateDotStatus(
-                "DS_FireBurn_Persist", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK_PERSIST,
-                FIRE_BURN_DURATION_INFINITE),
+                "DS_FireBurn_Persist", "dragon_fire_burn", STATUS_NAME_BURN_LOC_KEY,
+                FIRE_BURN_DAMAGE_PER_TICK_PERSIST, FIRE_BURN_DURATION_INFINITE),
 
             KinFireBurn = CreateDotStatus(
-                "DS_KinFireBurn_R1", KIN_FIRE_BURN_STATUS_ID, FIRE_BURN_DAMAGE_PER_TICK, KIN_FIRE_BURN_DURATION),
+                "DS_KinFireBurn_R1", KIN_FIRE_BURN_STATUS_ID, STATUS_NAME_BURN_LOC_KEY,
+                FIRE_BURN_DAMAGE_PER_TICK, KIN_FIRE_BURN_DURATION),
             KinFireBurnStrong = CreateDotStatus(
-                "DS_KinFireBurn_R2", KIN_FIRE_BURN_STATUS_ID, FIRE_BURN_DAMAGE_PER_TICK_R2, KIN_FIRE_BURN_DURATION),
+                "DS_KinFireBurn_R2", KIN_FIRE_BURN_STATUS_ID, STATUS_NAME_BURN_LOC_KEY,
+                FIRE_BURN_DAMAGE_PER_TICK_R2, KIN_FIRE_BURN_DURATION),
         };
     }
 
@@ -444,38 +463,43 @@ public static class DragonSkillTreeAssetGenerator
     //
     // 전역 빙결은 쿨다운으로 제한된 어미용 액티브 한 방이라 보스의 군중제어 면역을 관통한다 -
     // 이 플래그를 생성기에서 켜지 않으면 생성기를 다시 돌릴 때 조용히 꺼진다.
-    private static FreezeStatusSO CreateFreezeStatus(string assetName, string statusId, float duration)
+    private static FreezeStatusSO CreateFreezeStatus(
+        string assetName, string statusId, string displayNameLocKey, float duration)
     {
         return CreateOrReplace<FreezeStatusSO>(
             $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/{assetName}.asset",
             so =>
             {
                 so.FindProperty("_statusId").stringValue = statusId;
+                so.FindProperty("_displayNameLocKey").stringValue = displayNameLocKey;
                 so.FindProperty("_durationSeconds").floatValue = duration;
                 so.FindProperty("_piercesCrowdControlImmunity").boolValue = true;
             });
     }
 
-    private static MoveSpeedStatusSO CreateMoveSpeedStatus(string assetName, string statusId, float duration, float multiplier)
+    private static MoveSpeedStatusSO CreateMoveSpeedStatus(
+        string assetName, string statusId, string displayNameLocKey, float duration, float multiplier)
     {
         return CreateOrReplace<MoveSpeedStatusSO>(
             $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/{assetName}.asset",
             so =>
             {
                 so.FindProperty("_statusId").stringValue = statusId;
+                so.FindProperty("_displayNameLocKey").stringValue = displayNameLocKey;
                 so.FindProperty("_durationSeconds").floatValue = duration;
                 so.FindProperty("_speedMultiplier").floatValue = multiplier;
             });
     }
 
     private static DamageOverTimeStatusSO CreateDotStatus(
-        string assetName, string statusId, float damagePerTick, float durationSeconds)
+        string assetName, string statusId, string displayNameLocKey, float damagePerTick, float durationSeconds)
     {
         return CreateOrReplace<DamageOverTimeStatusSO>(
             $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/{assetName}.asset",
             so =>
             {
                 so.FindProperty("_statusId").stringValue = statusId;
+                so.FindProperty("_displayNameLocKey").stringValue = displayNameLocKey;
                 so.FindProperty("_durationSeconds").floatValue = durationSeconds;
                 so.FindProperty("_damagePerTick").floatValue = damagePerTick;
                 so.FindProperty("_tickIntervalSeconds").floatValue = FIRE_BURN_TICK_INTERVAL;
@@ -824,7 +848,8 @@ public static class DragonSkillTreeAssetGenerator
 
         switch (attr.Type)
         {
-            // 얼음의 "강 결빙"과 시간의 "사막 페널티 완화"는 둘 다 BuffRadius로 판정되므로,
+            // 얼음의 "화산 지대 건설 해제"와 시간의 "사막 페널티 완화"는 둘 다 BuffRadius로 판정되므로,
+            // (실제 해제 지형은 BD_Ice._constructionUnlockTerrains = TerrainType.Volcano다 - 문구를 여기 맞춘다)
             // 반경을 넓히는 것이 곧 그 효과를 강화하는 것이다(BabyDragonBuffSystem 참고).
             case DragonType.Ice:
             case DragonType.Time:
@@ -1160,7 +1185,7 @@ public static class DragonSkillTreeAssetGenerator
         switch (attr.Type)
         {
             case DragonType.Ice:
-                return "얼음 새끼용의 버프 범위가 넓어져 강 결빙(건설 해제) 범위가 확대됩니다.";
+                return "얼음 새끼용의 버프 범위가 넓어져 화산 지대 건설 해제 범위가 확대됩니다.";
             case DragonType.Fire:
                 return "불 새끼용 자신의 공격 사거리가 증가합니다.";
             case DragonType.Time:
