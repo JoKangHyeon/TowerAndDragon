@@ -113,8 +113,19 @@ public static class ResearchTreeAssetGenerator
         },
 
         // --- T2 ---
-        // 속성 타워 해금을 T2에 두는 것이 배치의 핵심이다. T3로 내리면 속성 강화 4개가 T4 한 칸
-        // (상한 3)에 들어가지 못해 하나가 T5로 밀리고, 궁극 노드와 같은 칸에서 선행 간선이 생긴다.
+        // 속성 타워 해금을 T2에 두는 것이 배치의 핵심이다. T3로 내리면 속성 강화 노드들이
+        // T4로 밀리고, 궁극 노드와 같은 칸에서 선행 간선이 생긴다.
+        //
+        // **생명 타워가 여기서 열리는 것은 의도다(팀 확정).** 설정상 생명은 어미용 5속성의
+        // 하나이므로 속성 타워로 분류한다 - 그래서 TD_LifeTower는 ElementalTowerData이고,
+        // 랜드마크 게이트가 걸린 tower_reverse_engineering이 아니라 이 노드가 해금한다.
+        // 옛 배치(역설계가 생명 타워를 해금)를 기억하고 되돌리지 말 것.
+        //
+        // 파급 두 가지:
+        //  - TowerTargetFilter.ElementalTowers를 쓰는 RE_ElementalTowerDamage(궁극의 속성)가
+        //    생명 타워에도 걸린다.
+        //  - DragonType.Life는 화염·얼음·암석과 값이 달라 속성별 강화(RE_FireTowerDamage 등,
+        //    MatchingElement)에는 걸리지 않는다.
         new NodeSpec
         {
             NodeId = "tower_elemental_unlock", AssetName = "RN_TowerElementalUnlock",
