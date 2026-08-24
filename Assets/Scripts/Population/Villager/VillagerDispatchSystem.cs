@@ -817,6 +817,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     // 이펙트는 파티클이라 재사용할 때 반드시 되감아야 한다. 비활성화만으로는 재생 위치가
     // 정해지지 않는다(playOnAwake가 꺼져 있으면 멈춘 채로 다시 나타난다).
+    // 되감기·정리는 투사체 연출과 같은 처리라 ParticleRewind로 모아 두었다.
     private Transform AcquireEffect(GameObject prefab, Vector3 worldPosition)
     {
         if (prefab == null)
@@ -832,12 +833,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         }
 
         effect.SetPositionAndRotation(worldPosition, Quaternion.identity);
-
-        foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
-        {
-            particles.Clear(true);
-            particles.Play(true);
-        }
+        ParticleRewind.PlayFromStart(effect);
 
         return effect;
     }
@@ -849,12 +845,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
             return;
         }
 
-        // 남아 있던 파티클을 지우지 않으면 다음에 꺼내 쓸 때 이전 자리의 잔상이 한 프레임 비친다.
-        foreach (ParticleSystem particles in effect.GetComponentsInChildren<ParticleSystem>(true))
-        {
-            particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        }
-
+        ParticleRewind.StopAndClear(effect);
         _effectPool.Release(effect);
     }
 

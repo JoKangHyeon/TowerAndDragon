@@ -377,16 +377,12 @@ public class TowerAttack : MonoBehaviour
             ? _firePoint.position
             : transform.position;
 
-        GameObject projectileObject = Instantiate(
-            _towerData.ProjectilePrefab,
-            spawnPosition,
-            Quaternion.identity);
+        // 프리팹 검증(Projectile 유무)과 널일 때의 로그는 풀이 한다 - 여기서 되풀이하지 않는다.
+        Projectile projectile = ProjectilePool.Spawn(_towerData.ProjectilePrefab, spawnPosition);
 
-        Projectile projectile = projectileObject.GetComponent<Projectile>();
         if (projectile == null)
         {
-            Debug.LogError("[TowerAttack] 투사체 프리팹에 Projectile이 없습니다.", projectileObject);
-            Destroy(projectileObject);
+            // 연출을 못 내보냈다고 피해까지 사라지면 안 된다 - 즉시 적용으로 떨어진다.
             Attack.Execute(target, in context);
             return;
         }

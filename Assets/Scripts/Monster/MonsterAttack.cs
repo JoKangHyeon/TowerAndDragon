@@ -264,16 +264,12 @@ public class MonsterAttack : MonoBehaviour
             ? _firePoint.position
             : transform.position;
 
-        GameObject projectileObject = Instantiate(
-            _data.ProjectilePrefab,
-            spawnPosition,
-            Quaternion.identity);
+        // 타워와 같은 풀을 쓴다 - Projectile이 풀로 반납하기 시작했으므로 여기가 Instantiate로
+        // 남으면 그 인스턴스는 돌아갈 곳이 없다.
+        Projectile projectile = ProjectilePool.Spawn(_data.ProjectilePrefab, spawnPosition);
 
-        Projectile projectile = projectileObject.GetComponent<Projectile>();
         if (projectile == null)
         {
-            Debug.LogError("[MonsterAttack] 투사체 프리팹에 Projectile이 없습니다.", projectileObject);
-            Destroy(projectileObject);
             _attack.Execute(target, in context);
             return;
         }
