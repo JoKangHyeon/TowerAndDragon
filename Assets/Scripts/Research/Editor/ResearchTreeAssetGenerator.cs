@@ -145,7 +145,10 @@ public static class ResearchTreeAssetGenerator
             Branch = ResearchBranch.Tower, Tier = 3, ResearchPointCost = 50,
             ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("tower_elemental_unlock"),
-            RequiredLandmarkAssetName = "LM_TowerPrototype",
+            // 일단 랜드마크 게이트를 해제한다 - 역설계 연구를 완료하는 것만으로
+            // 은신·영혼·강화 타워 3종이 해금된다.
+            // 랜드마크(타워 원형) 점령 경로를 되살릴 때 아래 줄을 복구할 것.
+            // RequiredLandmarkAssetName = "LM_TowerPrototype",
             EffectAssetNames = Effects(
                 "RE_StealthTowerUnlock", "RE_SoulTowerUnlock", "RE_EnhancementTowerUnlock"),
             NameEn = "[TBD] Reverse Engineering", NameKo = "[미정] 역설계",
