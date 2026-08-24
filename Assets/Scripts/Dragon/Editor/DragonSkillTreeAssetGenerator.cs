@@ -24,7 +24,11 @@ using UnityEngine;
 //    활성 중에는 기본 패시브와 이중 계산되지 않고, 다른 속성으로 갈아타도 절반이 남는다.
 //    → "속성 몇 개를 동시에 굴릴 것인가"라는 축이 생긴다.
 // 2) 궁극 게이트 = OR 두 경로. (그 속성 새끼용 랭크 4) 또는 (양갈래 완주).
-//    → 알이 안 나온 플레이어도 자력으로 궁극에 도달할 수 있고, 두 개의 다른 빌드가 생긴다.
+//    주의: 이 OR은 "알 없이도 궁극에 갈 수 있다"를 뜻하지 않는다. 양갈래 완주에 필요한
+//    ActiveUp2·PassiveUp2가 NeedsDeepGate이고, 그 DG_KinRank_Deep_*이 _scopeToAttribute로
+//    같은 속성 새끼용 노드 2개를 요구하며, 새끼용 노드는 다시 KinOwnedGateSO(그 속성 알 보유)를
+//    지난다. 즉 두 경로 모두 그 속성 알을 전제한다 - 속성당 14노드 중 9노드(kin 4 · 심화 4 · 궁극 1)가
+//    주기 보스의 랜덤 알에 종속된다. 알 없는 경로를 만들려면 심화 게이트 자체를 손봐야 한다.
 public static class DragonSkillTreeAssetGenerator
 {
     private const string DATA_FOLDER = "Assets/Data/Dragon";
@@ -144,7 +148,6 @@ public static class DragonSkillTreeAssetGenerator
         public FreezeStatusSO IceFreezeRank1;
         public FreezeStatusSO IceFreezeStrong;
         public DamageOverTimeStatusSO FireBurn;
-        public DamageOverTimeStatusSO FireBurnStrong;
 
         // 궁극의 잔존 전용 - 루트 각성이 주는 상태이상의 절반 세기.
         public MoveSpeedStatusSO IceSlowPersist;
@@ -418,10 +421,10 @@ public static class DragonSkillTreeAssetGenerator
             // 랭크 상태의 StatusId를 같게 둬야 재부여가 중첩이 아니라 갱신으로 처리된다.
             IceFreezeStrong = CreateFreezeStatus("DS_IceFreeze_R2", "dragon_ice_freeze", ICE_FREEZE_DURATION_R2),
 
+            // 어미용 상시 화상은 랭크 강화가 없다(불의 두 패시브 갈래는 생산량·공격력이다) -
+            // 강화판을 만들어 두면 어디에도 배선되지 않은 고아 에셋만 남는다.
             FireBurn = CreateDotStatus(
                 "DS_FireBurn", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK, FIRE_BURN_DURATION_INFINITE),
-            FireBurnStrong = CreateDotStatus(
-                "DS_FireBurn_R2", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK_R2, FIRE_BURN_DURATION_INFINITE),
 
             // 잔존용도 StatusId를 루트와 같게 둔다 - 속성을 바꾸는 순간 이미 걸려 있던 상태가
             // 중첩되지 않고 약한 쪽으로 갱신된다(랭크 상태와 같은 이유).
@@ -824,7 +827,8 @@ public static class DragonSkillTreeAssetGenerator
 
         switch (attr.Type)
         {
-            // 얼음의 "강 결빙"과 시간의 "사막 페널티 완화"는 둘 다 BuffRadius로 판정되므로,
+            // 얼음의 "화산 지대 건설 해제"와 시간의 "사막 페널티 완화"는 둘 다 BuffRadius로 판정되므로,
+            // (실제 해제 지형은 BD_Ice._constructionUnlockTerrains = TerrainType.Volcano다 - 문구를 여기 맞춘다)
             // 반경을 넓히는 것이 곧 그 효과를 강화하는 것이다(BabyDragonBuffSystem 참고).
             case DragonType.Ice:
             case DragonType.Time:
@@ -1160,7 +1164,7 @@ public static class DragonSkillTreeAssetGenerator
         switch (attr.Type)
         {
             case DragonType.Ice:
-                return "얼음 새끼용의 버프 범위가 넓어져 강 결빙(건설 해제) 범위가 확대됩니다.";
+                return "얼음 새끼용의 버프 범위가 넓어져 화산 지대 건설 해제 범위가 확대됩니다.";
             case DragonType.Fire:
                 return "불 새끼용 자신의 공격 사거리가 증가합니다.";
             case DragonType.Time:
