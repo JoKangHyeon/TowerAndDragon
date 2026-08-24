@@ -20,6 +20,10 @@ public sealed class UI_HelpListSlot : MonoBehaviour
     [WiringOptional]
     [SerializeField] private GameObject _selectedHighlight;
 
+    [Tooltip("아직 도감에서 펼쳐 보지 않은 항목임을 알리는 붉은 점. 없으면 표시가 생략된다.")]
+    [WiringOptional]
+    [SerializeField] private GameObject _unviewedDot;
+
     private HelpEntrySO _entry;
     private Action<HelpEntrySO> _onClick;
 
@@ -31,7 +35,12 @@ public sealed class UI_HelpListSlot : MonoBehaviour
         }
     }
 
-    public void Setup(HelpEntrySO entry, bool isSelected, Action<HelpEntrySO> onClick)
+    /// <summary>
+    /// 이 줄의 전 상태를 한 번에 덮는다. 슬롯은 ComponentPool이 재사용하고 풀은 상태를 초기화하지
+    /// 않으므로(활성화만 한다), 주입을 여러 메서드로 갈라 두면 한쪽을 잊은 경로에서 이전 항목의
+    /// 표시가 그대로 남는다. 그래서 SetUnviewed 같은 별도 메서드를 두지 않고 파라미터로 받는다.
+    /// </summary>
+    public void Setup(HelpEntrySO entry, bool isSelected, bool isUnviewed, Action<HelpEntrySO> onClick)
     {
         _entry = entry;
         _onClick = onClick;
@@ -50,6 +59,11 @@ public sealed class UI_HelpListSlot : MonoBehaviour
         if (_selectedHighlight != null)
         {
             _selectedHighlight.SetActive(isSelected);
+        }
+
+        if (_unviewedDot != null)
+        {
+            _unviewedDot.SetActive(isUnviewed);
         }
     }
 

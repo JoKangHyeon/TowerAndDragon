@@ -25,8 +25,22 @@ public static class HelpProfile
 
     private static HashSet<string> _unlockedIds;
 
+    // 해금과 따로 둔다 - "만났다"와 "읽었다"는 소비자가 다르다(전자는 목록, 후자는 붉은 점).
+    private static HashSet<string> _viewedIds;
+
     /// <summary>해금 목록이 바뀌었다. 도감 창이 열린 채로 해금되면 목록을 다시 그린다.</summary>
     public static event Action Changed;
+
+    /// <summary>
+    /// 열람 이력이 바뀌었다(붉은 점 하나가 사라졌다). Changed와 나누는 이유는 소비자가 다르기
+    /// 때문이다 - 이 신호로는 목록 구성·정렬·자동 선택이 절대 바뀌지 않으므로, 받는 쪽은
+    /// 목록을 재구성할 필요가 없다.
+    ///
+    /// <b>렌더 경로 안에서는 이 이벤트를 유발하지 않는다.</b> UI_HelpWindow는 이것을 구독해
+    /// 다시 그리므로, 렌더 도중에 TryMarkViewed를 부르면 Render가 자기 안으로 재진입한다
+    /// (UI_HelpWindow.MarkSelectedViewed 주석에 무엇이 깨지는지 적어 두었다).
+    /// </summary>
+    public static event Action ViewedChanged;
 
     public static IReadOnlyCollection<string> UnlockedIds
     {
@@ -46,6 +60,18 @@ public static class HelpProfile
 
         EnsureLoaded();
         return _unlockedIds.Contains(entryId);
+    }
+
+    /// <summary>도감 창에서 본문을 펼쳐 본 항목인가. 붉은 점을 지우는 조건은 해금이 아니라 이쪽이다.</summary>
+    public static bool IsViewed(string entryId)
+    {
+        if (string.IsNullOrWhiteSpace(entryId))
+        {
+            return false;
+        }
+
+        EnsureLoaded();
+        return _viewedIds.Contains(entryId);
     }
 
     /// <summary>
@@ -71,6 +97,30 @@ public static class HelpProfile
         return true;
     }
 
+    /// <summary>
+    /// 처음 열람한 것이면 true를 돌려주고 즉시 기록한다(TryUnlock과 같은 계약).
+    /// 최초 조우 팝업은 이것을 부르지 않는다 - 붉은 점의 의미를 "도감에서 직접 펼쳐 봤는가"
+    /// 하나로 유지한다(항목 대부분이 AutoPopup이라, 팝업을 세면 점이 사실상 뜨지 않는다).
+    /// </summary>
+    public static bool TryMarkViewed(string entryId)
+    {
+        if (string.IsNullOrWhiteSpace(entryId))
+        {
+            return false;
+        }
+
+        EnsureLoaded();
+
+        if (!_viewedIds.Add(entryId))
+        {
+            return false;
+        }
+
+        Save();
+        ViewedChanged?.Invoke();
+        return true;
+    }
+
     private static void EnsureLoaded()
     {
         if (_unlockedIds != null)
@@ -78,7 +128,10 @@ public static class HelpProfile
             return;
         }
 
+        // 두 집합은 같은 JSON 하나에서 나오므로 아래 이른 return들보다 앞에서 함께 만든다 -
+        // 읽기에 실패해도 _viewedIds가 null로 남으면 IsViewed가 터진다.
         _unlockedIds = new HashSet<string>();
+        _viewedIds = new HashSet<string>();
 
         string json = PlayerPrefs.GetString(PROFILE_PREF_KEY, string.Empty);
         if (string.IsNullOrEmpty(json))
@@ -95,16 +148,25 @@ public static class HelpProfile
             return;
         }
 
-        if (dto.UnlockedEntryIds == null)
+        AddAll(dto.UnlockedEntryIds, _unlockedIds);
+
+        // v1에는 이 목록이 없어 역직렬화 후 빈 채로 남는다(구버전 해금분은 전부 미확인으로 잡힌다).
+        // 팝업으로 봤을 뿐 도감에서 펼쳐 본 적은 없으므로 그게 사실에 맞다.
+        AddAll(dto.ViewedEntryIds, _viewedIds);
+    }
+
+    private static void AddAll(List<string> source, HashSet<string> target)
+    {
+        if (source == null)
         {
             return;
         }
 
-        foreach (string entryId in dto.UnlockedEntryIds)
+        foreach (string entryId in source)
         {
             if (!string.IsNullOrWhiteSpace(entryId))
             {
-                _unlockedIds.Add(entryId);
+                target.Add(entryId);
             }
         }
     }
@@ -118,6 +180,7 @@ public static class HelpProfile
         {
             SchemaVersion = HelpProfileDto.CURRENT_VERSION,
             UnlockedEntryIds = new List<string>(_unlockedIds),
+            ViewedEntryIds = new List<string>(_viewedIds),
         };
 
         if (!SaveJson.TrySerialize(dto, out string json, out string error))
@@ -131,7 +194,7 @@ public static class HelpProfile
     }
 
 #if UNITY_EDITOR
-    /// <summary>검증용. 해금 이력을 전부 지운다(Tools 메뉴에서 부른다).</summary>
+    /// <summary>검증용. 해금·열람 이력을 전부 지운다(Tools 메뉴에서 부른다).</summary>
     public static void ResetAll()
     {
         PlayerPrefs.DeleteKey(PROFILE_PREF_KEY);
@@ -139,7 +202,23 @@ public static class HelpProfile
         PlayerPrefs.Save();
 
         _unlockedIds = null;
+        _viewedIds = null;
         Changed?.Invoke();
+        ViewedChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// 검증용. 해금은 남기고 열람 이력만 지운다(Tools 메뉴에서 부른다).
+    /// 항목 대부분이 AutoPopup이라, 이것 없이 붉은 점을 다시 보려면 한 판을 다시 해서
+    /// 최초 조우 트리거를 전부 다시 밟아야 한다.
+    /// </summary>
+    public static void ResetViewedOnly()
+    {
+        EnsureLoaded();
+
+        _viewedIds.Clear();
+        Save();
+        ViewedChanged?.Invoke();
     }
 
     // Reload Domain이 꺼진 프로젝트 설정에서는 플레이 종료 후에도 static이 그대로 남는다.
@@ -149,7 +228,9 @@ public static class HelpProfile
     private static void ResetStaticState()
     {
         _unlockedIds = null;
+        _viewedIds = null;
         Changed = null;
+        ViewedChanged = null;
     }
 #endif
 }

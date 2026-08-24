@@ -100,6 +100,10 @@ public sealed class UI_HelpWindow : MonoBehaviour, IExclusiveMode
         StringTable.OnLanguageChanged += Render;
         HelpProfile.Changed += Render;
 
+        // 창 밖에서(에디터의 열람 이력 초기화 등) 열람 상태가 바뀌어도 붉은 점을 맞춘다.
+        // 이 창이 스스로 유발한 발화도 여기로 돌아오는데, 발화 지점이 렌더 루프 밖이라 안전하다.
+        HelpProfile.ViewedChanged += Render;
+
         if (_closeAction != null)
         {
             _closeAction.action.performed += OnCloseActionPerformed;
@@ -116,6 +120,7 @@ public sealed class UI_HelpWindow : MonoBehaviour, IExclusiveMode
 
         StringTable.OnLanguageChanged -= Render;
         HelpProfile.Changed -= Render;
+        HelpProfile.ViewedChanged -= Render;
 
         if (_closeAction != null)
         {
@@ -142,6 +147,11 @@ public sealed class UI_HelpWindow : MonoBehaviour, IExclusiveMode
         gameObject.SetActive(true);
 
         Render();
+
+        // 자동 선택된 첫 항목도 우측에 본문이 실제로 그려지므로 확인 처리한다.
+        // Render() '다음'이어야 한다 - 안에 넣으면 렌더 루프 도중 ViewedChanged가 나면서
+        // Render가 재진입한다(MarkSelectedViewed 주석 참조).
+        MarkSelectedViewed();
     }
 
     public void Close()
@@ -188,7 +198,9 @@ public sealed class UI_HelpWindow : MonoBehaviour, IExclusiveMode
 
         foreach (HelpEntrySO entry in _catalog.Entries)
         {
-            if (entry != null && (entry.UnlockedFromStart || HelpProfile.IsUnlocked(entry.EntryId)))
+            // 가시성 규칙은 카탈로그가 든다 - HUD 붉은 점이 같은 규칙을 봐야 하고,
+            // 두 곳에 적으면 "점은 있는데 볼 게 없다"가 된다.
+            if (HelpCatalogSO.IsVisible(entry))
             {
                 _visibleEntries.Add(entry);
             }
@@ -258,7 +270,7 @@ public sealed class UI_HelpWindow : MonoBehaviour, IExclusiveMode
             }
 
             UI_HelpListSlot slot = _slotPool.Get(slotCount);
-            slot.Setup(entry, entry == _selectedEntry, Select);
+            slot.Setup(entry, entry == _selectedEntry, !HelpProfile.IsViewed(entry.EntryId), Select);
             slot.transform.SetSiblingIndex(rowIndex);
 
             slotCount++;
@@ -274,8 +286,31 @@ public sealed class UI_HelpWindow : MonoBehaviour, IExclusiveMode
         SoundManager.Play(SoundId.UiButtonClick);
 
         _selectedEntry = entry;
+
+        // 렌더보다 먼저, 그리고 반드시 렌더 루프 밖에서 한다. 이 메서드는 슬롯 버튼의 onClick으로
+        // 불리므로 RenderList의 순회 중이 아니다.
+        MarkSelectedViewed();
+
         RenderList();
         RenderDetail();
+    }
+
+    /// <summary>
+    /// 확인 처리의 유일한 지점. 우측에 본문이 실제로 표시되는 항목만 센다 - 최초 조우 팝업은
+    /// 세지 않는다(항목 대부분이 AutoPopup이라, 팝업을 세면 붉은 점이 사실상 뜨지 않는다).
+    ///
+    /// <b>Render 계열 안에서 부르면 안 된다.</b> TryMarkViewed가 ViewedChanged를 발화하고 이 창이
+    /// 그것을 구독하므로 Render가 재진입하는데, 그러면 (1) 재사용하는 단일 리스트인 _visibleEntries를
+    /// 재진입 패스가 Clear해 RenderList의 foreach가 터지고, (2) 머리글·항목이 다른 풀에서 나와
+    /// 형제 순서를 직접 지정하는 구조라 두 패스의 rowIndex가 어긋나며, (3) 풀은 상태를 초기화하지
+    /// 않으므로 DeactivateFrom 개수가 맞지 않아 이전 내용을 든 줄이 남는다.
+    /// </summary>
+    private void MarkSelectedViewed()
+    {
+        if (_selectedEntry != null)
+        {
+            HelpProfile.TryMarkViewed(_selectedEntry.EntryId);
+        }
     }
 
     private void RenderDetail()
