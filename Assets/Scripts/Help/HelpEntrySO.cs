@@ -104,5 +104,15 @@ public sealed class HelpEntrySO : ScriptableObject
         {
             Debug.LogWarning($"[HelpEntrySO] {name}: 기다릴 자원 종류를 지정하지 않았습니다.", this);
         }
+
+        // 지형 필터는 청크를 고르는 조건에서만 읽힌다. 다른 조건에 켜 두면 의도가 있는 것처럼
+        // 보여 헷갈리고, 지형이 맞을 때만 뜨기를 기대한 항목이 아무 때나 뜬다.
+        if (_unlockTrigger.FilterByTerrain &&
+            _unlockTrigger.Condition != TutorialConditionType.ConquestChunkSelected)
+        {
+            Debug.LogWarning(
+                $"[HelpEntrySO] {name}: 지형 필터를 켰지만 조건이 ConquestChunkSelected가 아니라 쓰이지 않습니다.",
+                this);
+        }
     }
 }

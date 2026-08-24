@@ -36,6 +36,14 @@ public sealed class TutorialTriggerSpec
     [Tooltip("DragonEggGranted / DragonEggHatched 조건에서 기다릴 용 속성. 위 스위치를 켜야 쓰인다.")]
     [SerializeField] private DragonType _targetDragon = DragonType.Ice;
 
+    [Tooltip("지형 조건에서 지형까지 가릴 때만 켠다. 끄면 어떤 지형이든 통과한다 - " +
+             "TerrainType에는 None이 없어 값만으로는 \"지정 안 함\"을 나타낼 수 없다(위 용 속성과 같은 이유).")]
+    [SerializeField] private bool _filterByTerrain;
+
+    [Tooltip("ConquestChunkSelected 조건에서 기다릴 지형. 위 스위치를 켜야 쓰인다. " +
+             "청크가 여러 지형에 걸쳐 있으면 Chunk.DominantTerrain(다수결)과 비교한다.")]
+    [SerializeField] private TerrainType _targetTerrain = TerrainType.Grass;
+
     public TutorialConditionType Condition => _condition;
     public TutorialExclusiveModeKind TargetMode => _targetMode;
     public TutorialBuildingKind TargetBuilding => _targetBuilding;
@@ -43,9 +51,13 @@ public sealed class TutorialTriggerSpec
     public ResourceType TargetResource => _targetResource;
     public bool FilterByDragon => _filterByDragon;
     public DragonType TargetDragon => _targetDragon;
+    public bool FilterByTerrain => _filterByTerrain;
+    public TerrainType TargetTerrain => _targetTerrain;
 
     public bool MatchesBuilding(Building building) =>
         TutorialTargetMatcher.MatchesBuilding(building, _targetBuilding, _targetFactoryData);
 
     public bool MatchesDragon(DragonType type) => !_filterByDragon || _targetDragon == type;
+
+    public bool MatchesTerrain(TerrainType terrain) => !_filterByTerrain || _targetTerrain == terrain;
 }

@@ -425,9 +425,28 @@ public sealed class HelpDiscoveryController : MonoBehaviour
             || entry.UnlockTrigger.MatchesBuilding(building);
     }
 
-    // 점령지를 골라 패널이 열린 순간. 아직 원정을 보내기 전이다.
-    private void HandleConquestChunkSelected(Vector2Int _) =>
-        DiscoverMatching(TutorialConditionType.ConquestChunkSelected, null);
+    /// <summary>
+    /// 점령지를 골라 패널이 열린 순간. 아직 원정을 보내기 전이다 - 지형별 항목이 페널티를
+    /// 치르기 전에 읽히는 유일한 시점이라, 어느 지형을 골랐는지까지 가려서 그 항목만 띄운다.
+    ///
+    /// ConquestManager.GetDominantTerrain을 쓰지 않는 이유: 그 안의 GridMap.GetChunk가 null을
+    /// 돌려줄 수 있어 그대로 부르면 도감 팝업 경로에서 NullReferenceException이 난다.
+    /// 청크를 못 찾으면 지형을 묻지 않고 필터 없는 항목만 통과시킨다 - 틀린 지형을 띄우는 것보다 침묵이 낫다.
+    /// </summary>
+    private void HandleConquestChunkSelected(Vector2Int chunkCoord)
+    {
+        Chunk chunk = _gridMap != null ? _gridMap.GetChunk(chunkCoord) : null;
+
+        if (chunk == null)
+        {
+            DiscoverMatching(TutorialConditionType.ConquestChunkSelected,
+                entry => !entry.UnlockTrigger.FilterByTerrain);
+            return;
+        }
+
+        DiscoverMatching(TutorialConditionType.ConquestChunkSelected,
+            entry => entry.UnlockTrigger.MatchesTerrain(chunk.DominantTerrain));
+    }
 
     // 용 창의 탭이 바뀐 순간. 어미용은 속성을 바꾸기 전, 새끼용은 배치하기 전이다.
     private void HandleDragonTabDisplayed(bool isBabyTab)

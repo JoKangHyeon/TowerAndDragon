@@ -24,6 +24,7 @@ public static class HelpLocKeys
     private const string CATEGORY_COMBAT = "help_category_combat";
     private const string CATEGORY_CONQUEST = "help_category_conquest";
     private const string CATEGORY_RESEARCH = "help_category_research";
+    private const string CATEGORY_TERRAIN = "help_category_terrain";
 
     /// <summary>
     /// 갈래 이름 키. 문자열을 조합하지 않고 switch로 명시한다 -
@@ -41,6 +42,7 @@ public static class HelpLocKeys
             HelpCategory.Combat => CATEGORY_COMBAT,
             HelpCategory.Conquest => CATEGORY_CONQUEST,
             HelpCategory.Research => CATEGORY_RESEARCH,
+            HelpCategory.Terrain => CATEGORY_TERRAIN,
             _ => CATEGORY_BASICS,
         };
     }

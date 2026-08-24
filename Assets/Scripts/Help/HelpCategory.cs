@@ -17,4 +17,8 @@ public enum HelpCategory
     Combat,
     Conquest,
     Research,
+
+    // 지형별 페널티와 그 땅에서 얻는 자원. 자원 갈래에 섞지 않고 따로 두는 이유는
+    // 다섯 항목이 한 덩어리로 읽혀야 "어디에 무엇을 지을지"의 비교표가 되기 때문이다.
+    Terrain,
 }
