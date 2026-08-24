@@ -101,6 +101,14 @@ public static class DragonSkillTreeAssetGenerator
     // 새끼용 불 화상은 어미용 상시 화상과 StatusId를 나누고 지속시간도 유한하게 둔다 -
     // 같은 id를 쓰면 두 화상이 중첩되지 않고 서로 갱신해 버려서, 어미용 불이 활성인 동안
     // 새끼용 타워형 노드를 해금해도 체감이 전혀 없다.
+    // 툴팁 표시 이름 키. StatusId가 같으면 같은 키를 쓴다 - 궁극의 잔존판(약화 에셋)도
+    // 플레이어에게는 같은 "둔화"·"화상"이라 이름이 달라질 이유가 없다.
+    // 비워 두면 MonsterStatusReceiver.AppendLine이 그 상태의 툴팁 줄을 아예 만들지 않으므로
+    // (StatusEffectSO.HasDisplayName), 잔존만 걸린 몬스터에서 표시가 사라진다.
+    private const string STATUS_NAME_SLOW_LOC_KEY = "status_name_slow";
+    private const string STATUS_NAME_BURN_LOC_KEY = "status_name_burn";
+    private const string STATUS_NAME_FREEZE_LOC_KEY = "status_name_freeze";
+
     private const string KIN_FIRE_BURN_STATUS_ID = "kin_fire_burn";
     private const float KIN_FIRE_BURN_DURATION = 3f;
     private const float FIRE_BURN_TICK_INTERVAL = 1f;
@@ -414,30 +422,38 @@ public static class DragonSkillTreeAssetGenerator
     {
         return new StatusAssets
         {
-            IceSlow = CreateMoveSpeedStatus("DS_IceSlow", "dragon_ice_slow", ICE_SLOW_DURATION, ICE_SLOW_MULTIPLIER),
-            IceFreeze = CreateFreezeStatus("DS_IceFreeze", "dragon_ice_freeze", ICE_FREEZE_DURATION),
-            IceFreezeRank1 = CreateFreezeStatus("DS_IceFreeze_R1", "dragon_ice_freeze", ICE_FREEZE_DURATION_R1),
+            IceSlow = CreateMoveSpeedStatus(
+                "DS_IceSlow", "dragon_ice_slow", STATUS_NAME_SLOW_LOC_KEY, ICE_SLOW_DURATION, ICE_SLOW_MULTIPLIER),
+            IceFreeze = CreateFreezeStatus(
+                "DS_IceFreeze", "dragon_ice_freeze", STATUS_NAME_FREEZE_LOC_KEY, ICE_FREEZE_DURATION),
+            IceFreezeRank1 = CreateFreezeStatus(
+                "DS_IceFreeze_R1", "dragon_ice_freeze", STATUS_NAME_FREEZE_LOC_KEY, ICE_FREEZE_DURATION_R1),
 
             // 랭크 상태의 StatusId를 같게 둬야 재부여가 중첩이 아니라 갱신으로 처리된다.
-            IceFreezeStrong = CreateFreezeStatus("DS_IceFreeze_R2", "dragon_ice_freeze", ICE_FREEZE_DURATION_R2),
+            IceFreezeStrong = CreateFreezeStatus(
+                "DS_IceFreeze_R2", "dragon_ice_freeze", STATUS_NAME_FREEZE_LOC_KEY, ICE_FREEZE_DURATION_R2),
 
             // 어미용 상시 화상은 랭크 강화가 없다(불의 두 패시브 갈래는 생산량·공격력이다) -
             // 강화판을 만들어 두면 어디에도 배선되지 않은 고아 에셋만 남는다.
             FireBurn = CreateDotStatus(
-                "DS_FireBurn", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK, FIRE_BURN_DURATION_INFINITE),
+                "DS_FireBurn", "dragon_fire_burn", STATUS_NAME_BURN_LOC_KEY,
+                FIRE_BURN_DAMAGE_PER_TICK, FIRE_BURN_DURATION_INFINITE),
 
             // 잔존용도 StatusId를 루트와 같게 둔다 - 속성을 바꾸는 순간 이미 걸려 있던 상태가
             // 중첩되지 않고 약한 쪽으로 갱신된다(랭크 상태와 같은 이유).
             IceSlowPersist = CreateMoveSpeedStatus(
-                "DS_IceSlow_Persist", "dragon_ice_slow", ICE_SLOW_DURATION, ICE_SLOW_MULTIPLIER_PERSIST),
+                "DS_IceSlow_Persist", "dragon_ice_slow", STATUS_NAME_SLOW_LOC_KEY,
+                ICE_SLOW_DURATION, ICE_SLOW_MULTIPLIER_PERSIST),
             FireBurnPersist = CreateDotStatus(
-                "DS_FireBurn_Persist", "dragon_fire_burn", FIRE_BURN_DAMAGE_PER_TICK_PERSIST,
-                FIRE_BURN_DURATION_INFINITE),
+                "DS_FireBurn_Persist", "dragon_fire_burn", STATUS_NAME_BURN_LOC_KEY,
+                FIRE_BURN_DAMAGE_PER_TICK_PERSIST, FIRE_BURN_DURATION_INFINITE),
 
             KinFireBurn = CreateDotStatus(
-                "DS_KinFireBurn_R1", KIN_FIRE_BURN_STATUS_ID, FIRE_BURN_DAMAGE_PER_TICK, KIN_FIRE_BURN_DURATION),
+                "DS_KinFireBurn_R1", KIN_FIRE_BURN_STATUS_ID, STATUS_NAME_BURN_LOC_KEY,
+                FIRE_BURN_DAMAGE_PER_TICK, KIN_FIRE_BURN_DURATION),
             KinFireBurnStrong = CreateDotStatus(
-                "DS_KinFireBurn_R2", KIN_FIRE_BURN_STATUS_ID, FIRE_BURN_DAMAGE_PER_TICK_R2, KIN_FIRE_BURN_DURATION),
+                "DS_KinFireBurn_R2", KIN_FIRE_BURN_STATUS_ID, STATUS_NAME_BURN_LOC_KEY,
+                FIRE_BURN_DAMAGE_PER_TICK_R2, KIN_FIRE_BURN_DURATION),
         };
     }
 
@@ -447,38 +463,43 @@ public static class DragonSkillTreeAssetGenerator
     //
     // 전역 빙결은 쿨다운으로 제한된 어미용 액티브 한 방이라 보스의 군중제어 면역을 관통한다 -
     // 이 플래그를 생성기에서 켜지 않으면 생성기를 다시 돌릴 때 조용히 꺼진다.
-    private static FreezeStatusSO CreateFreezeStatus(string assetName, string statusId, float duration)
+    private static FreezeStatusSO CreateFreezeStatus(
+        string assetName, string statusId, string displayNameLocKey, float duration)
     {
         return CreateOrReplace<FreezeStatusSO>(
             $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/{assetName}.asset",
             so =>
             {
                 so.FindProperty("_statusId").stringValue = statusId;
+                so.FindProperty("_displayNameLocKey").stringValue = displayNameLocKey;
                 so.FindProperty("_durationSeconds").floatValue = duration;
                 so.FindProperty("_piercesCrowdControlImmunity").boolValue = true;
             });
     }
 
-    private static MoveSpeedStatusSO CreateMoveSpeedStatus(string assetName, string statusId, float duration, float multiplier)
+    private static MoveSpeedStatusSO CreateMoveSpeedStatus(
+        string assetName, string statusId, string displayNameLocKey, float duration, float multiplier)
     {
         return CreateOrReplace<MoveSpeedStatusSO>(
             $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/{assetName}.asset",
             so =>
             {
                 so.FindProperty("_statusId").stringValue = statusId;
+                so.FindProperty("_displayNameLocKey").stringValue = displayNameLocKey;
                 so.FindProperty("_durationSeconds").floatValue = duration;
                 so.FindProperty("_speedMultiplier").floatValue = multiplier;
             });
     }
 
     private static DamageOverTimeStatusSO CreateDotStatus(
-        string assetName, string statusId, float damagePerTick, float durationSeconds)
+        string assetName, string statusId, string displayNameLocKey, float damagePerTick, float durationSeconds)
     {
         return CreateOrReplace<DamageOverTimeStatusSO>(
             $"{DATA_FOLDER}/{STATUS_SUBFOLDER}/{assetName}.asset",
             so =>
             {
                 so.FindProperty("_statusId").stringValue = statusId;
+                so.FindProperty("_displayNameLocKey").stringValue = displayNameLocKey;
                 so.FindProperty("_durationSeconds").floatValue = durationSeconds;
                 so.FindProperty("_damagePerTick").floatValue = damagePerTick;
                 so.FindProperty("_tickIntervalSeconds").floatValue = FIRE_BURN_TICK_INTERVAL;
