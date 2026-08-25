@@ -264,7 +264,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     //
     // 전체를 한 화면에 우겨넣어 봤더니 배율이 0.56까지 떨어져 카드 글씨를 못 읽었다(실측).
     // 블랙보드도 5000px 캔버스를 1:1로 열고 패닝하는 방식이므로 같게 맞춘다 - 배율 1로 열고
-    // 트리의 왼쪽 위(T1·타워)부터 보여준 뒤, 전체 조망은 휠 축소(하한 0.4)에 맡긴다.
+    // 트리의 왼쪽 아래(T1·타워)부터 보여준 뒤, 전체 조망은 휠 축소(하한 0.4)에 맡긴다.
     private void ResetView()
     {
         if (!WiringGuard.Require(_content, nameof(_content), this))
@@ -296,7 +296,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         _content.anchoredPosition = ResolveInitialPosition(INITIAL_SCALE);
     }
 
-    // 뷰포트를 넘치는 만큼은 왼쪽 위로 밀어 T1부터 보이게 한다.
+    // 뷰포트를 넘치는 만큼은 왼쪽 아래로 밀어 T1부터 보이게 한다(티어 1이 트리의 맨 아래다).
     private Vector2 ResolveInitialPosition(float scale)
     {
         var spacing = new Vector2(_columnSpacingWidth, 0f);
@@ -311,7 +311,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             Mathf.Max(0f, scaled.x - viewSize.x),
             Mathf.Max(0f, scaled.y - viewSize.y));
 
-        return spacing / 2f + new Vector2(overflow.x, -overflow.y) * 0.5f;
+        return spacing / 2f + new Vector2(overflow.x, overflow.y) * 0.5f;
     }
 
     private bool TryGetViewportSize(out Vector2 size)
@@ -564,9 +564,11 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         header.text = StringTable.GetString(ResearchLocKeys.BranchLocKey(branch));
         header.color = ColorForBranch(branch);
+        // 갈래 이름표는 트리 꼭대기에 붙는다. 티어 1은 맨 아래이므로 RowCenterY(0)이 아니라
+        // 가장 위 행을 기준으로 잡아야 한다.
         header.rectTransform.anchoredPosition = new Vector2(
             _branchCenters[branchIndex],
-            ResearchTreeLayout.RowCenterY(0, tierCount, _rowHeight) + _branchHeaderOffsetY);
+            ResearchTreeLayout.TopRowCenterY(tierCount, _rowHeight) + _branchHeaderOffsetY);
     }
 
     // 티어 행마다 번호 라벨과 해금 시점 캡션을 왼쪽에 세운다.
@@ -657,11 +659,10 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         float left = TreeLeftEdge();
         float right = TreeRightEdge();
 
-        // 첫 행 위에는 긋지 않는다(갈래 이름표와 겹친다).
+        // 행과 행 사이에만 긋는다 - 트리 바깥(맨 위)에 그으면 갈래 이름표와 겹친다.
         for (int tierIndex = 1; tierIndex < tierCount; tierIndex++)
         {
-            float y =
-                ResearchTreeLayout.RowCenterY(tierIndex, tierCount, _rowHeight) + _rowHeight * 0.5f;
+            float y = ResearchTreeLayout.RowBoundaryY(tierIndex, tierCount, _rowHeight);
 
             RectTransform line = Instantiate(_edgePrefab, _content);
             line.SetAsFirstSibling();
@@ -766,13 +767,15 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         }
         else
         {
-            // 아래 티어로 내려가는 선은 아래 변에서 나가 위 변으로 들어간다.
-            start = new Vector2(from.x, from.y - NODE_HALF_SIZE.y);
-            end = new Vector2(to.x, to.y + NODE_HALF_SIZE.y);
+            // 다음 티어로 넘어가는 선은 선행 노드의 "다음 티어 쪽 변"에서 나가 반대 변으로 들어간다.
+            // 방향을 부호로 유도하므로 티어가 위로 쌓이든 아래로 쌓이든 선이 카드를 뚫지 않는다.
+            float direction = Mathf.Sign(to.y - from.y);
+            start = new Vector2(from.x, from.y + direction * NODE_HALF_SIZE.y);
+            end = new Vector2(to.x, to.y - direction * NODE_HALF_SIZE.y);
 
             float reach = Mathf.Max(Mathf.Abs(end.y - start.y) * CURVE_CONTROL_RATIO, MIN_CURVE_CONTROL);
-            startControl = start - new Vector2(0f, reach);
-            endControl = end + new Vector2(0f, reach);
+            startControl = start + new Vector2(0f, direction * reach);
+            endControl = end - new Vector2(0f, direction * reach);
         }
 
         for (int i = 0; i <= CURVE_SEGMENTS; i++)
