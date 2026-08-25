@@ -60,6 +60,10 @@ public class UI_IngameWindow : MonoBehaviour
     [SerializeField] private GameObject _imageDay;
     [Tooltip("밤에 켜질 아이콘.")]
     [SerializeField] private GameObject _imageLight;
+    [Tooltip("낮/밤 아이콘을 원형 마스크 안에서 굴려 교체하는 연출. " +
+        "비우면 아이콘을 즉시 켜고 끈다(기존 동작).")]
+    [WiringOptional]
+    [SerializeField] private UI_CycleSymbolSwapper _symbolSwapper;
 
     [Header("날짜 표시")]
     [Tooltip("날짜 텍스트(Day)")]
@@ -773,14 +777,22 @@ public class UI_IngameWindow : MonoBehaviour
     {
         bool isDay = state == CycleManager.CycleState.Day;
 
-        if (_imageDay != null)
+        // 연출이 배선돼 있으면 아이콘 표시는 그쪽이 전담한다 - 여기서 끄면 스윕 도중 사라진다.
+        if (_symbolSwapper != null)
         {
-            _imageDay.SetActive(isDay);
+            _symbolSwapper.Apply(isDay);
         }
-
-        if (_imageLight != null)
+        else
         {
-            _imageLight.SetActive(!isDay);
+            if (_imageDay != null)
+            {
+                _imageDay.SetActive(isDay);
+            }
+
+            if (_imageLight != null)
+            {
+                _imageLight.SetActive(!isDay);
+            }
         }
 
         // 낮에는 '다음 밤으로' 버튼, 밤에는 속도 조절 UI를 켠다.
