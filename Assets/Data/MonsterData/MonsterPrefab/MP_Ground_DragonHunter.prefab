@@ -49,8 +49,12 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: dfbc8ee0004504700a2ec85a508526d3, type: 2}
     - target: {fileID: 3650293775990265320, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 3650293775990265320, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 12e842c49538cd74cb8dfb202609beb3, type: 2}
     - target: {fileID: 3682136594341346212, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
       propertyPath: _firePoint
       value: 
@@ -129,6 +133,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 265247682064661445, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
       insertIndex: -1
       addedObject: {fileID: -8313769988569263917}
+    - targetCorrespondingSourceObject: {fileID: 265247682064661445, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -6561367018830206921}
   m_SourcePrefab: {fileID: 100100000, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
 --- !u!1 &6206960855871347269 stripped
 GameObject:
@@ -153,6 +160,19 @@ MonoBehaviour:
   ShieldBroken:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &-6561367018830206921
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6206960855871347269}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa898d7f17f76bf45b9b1745290cefa7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterSpriteFlipper
+  _isSourceSpriteFacingRight: 1
 --- !u!4 &7626554675555277306 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4349105385719986298, guid: d5ce33384fbed7f46876a26f9fdb3207, type: 3}
