@@ -93,21 +93,9 @@ public sealed class BuildingClickCycle
                 _collectBuffer.Add(building);
         }
 
-        _collectBuffer.Sort(CompareCandidateDepth);
-    }
-
-    // 화면 앞쪽(DepthSortOrder가 큰 쪽)이 먼저 온다.
-    // List.Sort는 불안정 정렬이라, 동점을 좌표로 끊어 주지 않으면 같은 후보 집합이 클릭마다
-    // 다른 순서로 나와 HasSameCandidates가 매번 실패하고 순환이 진행되지 않는다.
-    private static int CompareCandidateDepth(Building left, Building right)
-    {
-        int byDepth = right.DepthSortOrder.CompareTo(left.DepthSortOrder);
-
-        if (byDepth != 0)
-            return byDepth;
-
-        int byX = left.PlacementAnchor.x.CompareTo(right.PlacementAnchor.x);
-        return byX != 0 ? byX : left.PlacementAnchor.y.CompareTo(right.PlacementAnchor.y);
+        // 정렬 규칙은 Building이 들고 있다 - 호버 아웃라인도 같은 비교자를 써서
+        // "눌리는 것"과 "아웃라인이 뜨는 것"을 일치시킨다.
+        _collectBuffer.Sort(Building.CompareFrontToBack);
     }
 
     private bool HasSameCandidates()

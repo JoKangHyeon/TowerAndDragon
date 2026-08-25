@@ -83,6 +83,23 @@ public class Building : MonoBehaviour
     // 계산하지 않고 실제로 적용된 값을 읽어야, 렌더 순서와 선택 순서가 갈라지지 않는다.
     public int DepthSortOrder { get; private set; }
 
+    /// <summary>겹친 건물을 "보이는 순서"대로 줄 세우는 비교자. 화면 앞쪽(DepthSortOrder가 큰 쪽)이 먼저 온다.
+    /// 클릭 순환(BuildingClickCycle)과 호버 아웃라인(BuildingHoverOutline)이 같은 규칙을 써야
+    /// "눌리는 것"과 "아웃라인이 뜨는 것"이 갈라지지 않는다.
+    ///
+    /// 동점을 앵커 좌표로 끊는 이유: List.Sort는 불안정 정렬이라, 같은 후보 집합이 호출마다 다른 순서로
+    /// 나오면 클릭 순환이 "후보가 바뀌었다"고 오판해 진행되지 않는다.</summary>
+    public static int CompareFrontToBack(Building left, Building right)
+    {
+        int byDepth = right.DepthSortOrder.CompareTo(left.DepthSortOrder);
+
+        if (byDepth != 0)
+            return byDepth;
+
+        int byX = left.PlacementAnchor.x.CompareTo(right.PlacementAnchor.x);
+        return byX != 0 ? byX : left.PlacementAnchor.y.CompareTo(right.PlacementAnchor.y);
+    }
+
     // 원본(회전 0도) 모양 - 회전 계산의 기준이 된다.
     public FootprintShape BaseFootprintShape => _footprintShape;
 

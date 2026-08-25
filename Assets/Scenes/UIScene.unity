@@ -1060,6 +1060,7 @@ GameObject:
   - component: {fileID: 519420029}
   - component: {fileID: 519420030}
   - component: {fileID: 519420033}
+  - component: {fileID: 519420034}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1166,7 +1167,7 @@ Camera:
   m_HDR: 1
   m_AllowMSAA: 0
   m_AllowDynamicResolution: 0
-  m_ForceIntoRT: 0
+  m_ForceIntoRT: 1
   m_OcclusionCulling: 0
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
@@ -1218,6 +1219,31 @@ MonoBehaviour:
   _boundsMarginMax: {x: 0, y: 0}
   _mapMin: {x: -60, y: -60}
   _mapMax: {x: 60, y: 60}
+--- !u!114 &519420034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7bb42831ee5422f409e7f24f9e7488ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: EPO::EPOOutline.Outliner
+  stage: 1
+  renderingStrategy: 0
+  renderingMode: 0
+  outlineLayerMask: -1
+  primaryBufferSizeMode: 0
+  primaryRendererScale: 1
+  primarySizeReference: 800
+  blurShift: 1
+  dilateShift: 1
+  dilateIterations: 1
+  dilateQuality: 2
+  blurIterations: 0
+  blurType: 1
 --- !u!1 &528527939
 GameObject:
   m_ObjectHideFlags: 0
@@ -2447,6 +2473,7 @@ MonoBehaviour:
   _balance: {fileID: 11400000, guid: c3dcd05343aa2e241b228a947598d99f, type: 2}
   _yieldComposite: {fileID: 1652351647}
   _statComposite: {fileID: 1652351645}
+  _maxHealthComposite: {fileID: 0}
   _researchPointsChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -4918,6 +4945,22 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2875398142255749830, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2875398142255749830, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2875398142255749830, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2875398142255749830, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2892259120956312843, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -5500,7 +5543,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.00015724449
+      value: -0.000038949747
       objectReference: {fileID: 0}
     - target: {fileID: 3531365243633958967, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -8486,6 +8529,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7772685905652646071, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7779274323016822514, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -8563,6 +8610,22 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7838512620985581141, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7859817439035798666, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7859817439035798666, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7859817439035798666, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7859817439035798666, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
@@ -10707,6 +10770,7 @@ MonoBehaviour:
   _yieldComposite: {fileID: 1652351647}
   _visionComposite: {fileID: 1652351657}
   _conquestComposite: {fileID: 1652351646}
+  _maxHealthComposite: {fileID: 0}
 --- !u!114 &1652351657
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10787,6 +10851,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1692054029}
   - component: {fileID: 1692054028}
+  - component: {fileID: 1692054030}
   m_Layer: 0
   m_Name: BuildingPlacementManager
   m_TagString: Untagged
@@ -10848,6 +10913,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 698775030}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1692054030
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1692054027}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec8cd3e008ea0ca4ca185224ba681ba0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BuildingHoverOutlineDriver
+  _mouseSelectController: {fileID: 250167905}
+  _placementController: {fileID: 1692054028}
 --- !u!1 &1699494003
 GameObject:
   m_ObjectHideFlags: 0
