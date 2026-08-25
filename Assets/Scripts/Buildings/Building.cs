@@ -84,7 +84,7 @@ public class Building : MonoBehaviour
     public int DepthSortOrder { get; private set; }
 
     /// <summary>겹친 건물을 "보이는 순서"대로 줄 세우는 비교자. 화면 앞쪽(DepthSortOrder가 큰 쪽)이 먼저 온다.
-    /// 클릭 순환(BuildingClickCycle)과 호버 아웃라인(BuildingOutlineHoverSource)이 같은 규칙을 써야
+    /// 클릭 순환(BuildingClickCycle)과 호버 아웃라인(BuildingHoverOutline)이 같은 규칙을 써야
     /// "눌리는 것"과 "아웃라인이 뜨는 것"이 갈라지지 않는다.
     ///
     /// 동점을 앵커 좌표로 끊는 이유: List.Sort는 불안정 정렬이라, 같은 후보 집합이 호출마다 다른 순서로
