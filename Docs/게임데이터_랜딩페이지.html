@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tower and Dragons — 게임 데이터 아카이브</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --bg-2: #10141d;
+    --panel: #151b28;
+    --panel-2: #1a2130;
+    --line: #26304a;
+    --text: #e8ecf4;
+    --muted: #93a0b8;
+    --gold: #e8b64c;
+    --gold-soft: rgba(232, 182, 76, .14);
+    --ice: #6fc3ff;
+    --fire: #ff6b4a;
+    --time: #e0c078;
+    --stone: #b3a68f;
+    --life: #7ed491;
+    --danger: #ff5c7a;
+    --radius: 16px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--gold); color: #14100a; }
+
+  .wrap { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
+  section { padding: clamp(56px, 8vw, 104px) 0; position: relative; }
+  .kicker {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--gold); letter-spacing: .22em; text-transform: uppercase;
+    font-size: 12px; font-weight: 700; margin-bottom: 14px;
+  }
+  .kicker::before { content: ""; width: 26px; height: 1px; background: var(--gold); }
+  h2.title { font-size: clamp(26px, 4vw, 40px); font-weight: 800; line-height: 1.25; margin-bottom: 10px; }
+  p.sub { color: var(--muted); max-width: 640px; margin-bottom: 36px; font-size: 15px; }
+
+  nav {
+    position: fixed; inset-inline: 0; top: 0; z-index: 100;
+    background: rgba(11, 14, 20, .82); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(38, 48, 74, .6);
+  }
+  .nav-inner { display: flex; align-items: center; gap: 18px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .04em; white-space: nowrap; }
+  .brand-mark {
+    width: 30px; height: 30px; border-radius: 8px; flex: none;
+    background: conic-gradient(from 210deg, var(--fire), var(--gold), var(--life), var(--ice), var(--fire));
+    box-shadow: 0 0 14px rgba(232, 182, 76, .45);
+  }
+  .nav-links { display: flex; gap: 2px; margin-left: auto; overflow-x: auto; scrollbar-width: none; }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600;
+    padding: 7px 11px; border-radius: 8px; white-space: nowrap; transition: .2s;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--gold-soft); }
+  .nav-toggle { display: none; margin-left: auto; background: none; border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 15px; }
+  @media (max-width: 980px) {
+    .nav-links {
+      display: none; position: absolute; top: 60px; left: 0; right: 0;
+      flex-direction: column; background: rgba(11,14,20,.97); border-bottom: 1px solid var(--line);
+      padding: 10px 16px 16px;
+    }
+    .nav-links.open { display: flex; }
+    .nav-toggle { display: block; }
+  }
+
+  header.hero {
+    min-height: 100svh; display: grid; place-items: center; text-align: center;
+    padding: 120px 20px 80px; position: relative; overflow: hidden;
+    background:
+      radial-gradient(1000px 500px at 50% -10%, rgba(232,182,76,.13), transparent 60%),
+      radial-gradient(800px 420px at 85% 110%, rgba(111,195,255,.10), transparent 60%),
+      radial-gradient(700px 380px at 10% 100%, rgba(255,107,74,.09), transparent 60%),
+      var(--bg);
+  }
+  .hero-grid-bg {
+    position: absolute; inset: 0; pointer-events: none; opacity: .35;
+    background-image:
+      linear-gradient(rgba(147,160,184,.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(147,160,184,.07) 1px, transparent 1px);
+    transform: perspective(600px) rotateX(58deg) scale(1.6) translateY(18%);
+    mask-image: linear-gradient(to top, black 30%, transparent 75%);
+    -webkit-mask-image: linear-gradient(to top, black 30%, transparent 75%);
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid rgba(232,182,76,.4); color: var(--gold);
+    padding: 7px 16px; border-radius: 999px; font-size: 13px; font-weight: 700;
+    background: var(--gold-soft); margin-bottom: 26px; letter-spacing: .08em;
+  }
+  .hero h1 {
+    font-size: clamp(42px, 9vw, 96px); font-weight: 900; line-height: 1.02;
+    letter-spacing: -.01em; text-transform: uppercase;
+    background: linear-gradient(115deg, #f5f0e2 20%, var(--gold) 55%, #b57f1f 90%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 8px 32px rgba(232,182,76,.25));
+  }
+  .hero .tagline { margin-top: 20px; font-size: clamp(16px, 2.6vw, 22px); color: var(--muted); font-weight: 500; }
+  .hero .tagline b { color: var(--text); }
+  .hero-chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 30px; }
+  .chip {
+    border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+    font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 999px;
+  }
+  .chip.gold { border-color: rgba(232,182,76,.45); color: var(--gold); background: var(--gold-soft); }
+  .hero-stats {
+    margin-top: 52px; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px; width: min(860px, 100%); margin-inline: auto;
+  }
+  .hstat {
+    background: rgba(21,27,40,.72); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px 10px 14px; backdrop-filter: blur(6px);
+  }
+  .hstat .num { font-size: clamp(24px, 4vw, 34px); font-weight: 900; color: var(--gold); }
+  .hstat .lbl { font-size: 12.5px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+  .scroll-hint {
+    position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+    color: var(--muted); font-size: 12px; letter-spacing: .2em; animation: bob 2s infinite ease-in-out;
+  }
+  @keyframes bob { 50% { transform: translate(-50%, 8px); opacity: .4; } }
+
+  .grid { display: grid; gap: 16px; }
+  .g-auto { grid-template-columns: repeat(auto-fill, minmax(min(270px, 100%), 1fr)); }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 20px; transition: transform .25s, border-color .25s, box-shadow .25s;
+    display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(232,182,76,.5); box-shadow: 0 14px 34px rgba(0,0,0,.4); }
+  .card h4 { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .card .desc { color: var(--muted); font-size: 13.5px; flex: 1; }
+  .tag {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; letter-spacing: .03em;
+    border: 1px solid var(--line); color: var(--muted); white-space: nowrap;
+  }
+  .tag.el-ice   { color: var(--ice);   border-color: rgba(111,195,255,.45);  background: rgba(111,195,255,.1); }
+  .tag.el-fire  { color: var(--fire);  border-color: rgba(255,107,74,.45);   background: rgba(255,107,74,.1); }
+  .tag.el-time  { color: var(--time);  border-color: rgba(224,192,120,.45);  background: rgba(224,192,120,.1); }
+  .tag.el-stone { color: var(--stone); border-color: rgba(179,166,143,.45);  background: rgba(179,166,143,.1); }
+  .tag.el-life  { color: var(--life);  border-color: rgba(126,212,145,.45);  background: rgba(126,212,145,.1); }
+  .tag.el-none  { color: #aab6cc; border-color: rgba(170,182,204,.35); background: rgba(170,182,204,.08); }
+  .tag.boss     { color: var(--danger); border-color: rgba(255,92,122,.5); background: rgba(255,92,122,.12); }
+  .tag.special  { color: var(--gold); border-color: rgba(232,182,76,.5); background: var(--gold-soft); }
+
+  .stat-row { display: grid; grid-template-columns: 64px 1fr 46px; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .stat-row .val { text-align: right; font-weight: 700; color: var(--text); }
+  .bar { height: 6px; background: rgba(147,160,184,.14); border-radius: 99px; overflow: hidden; }
+  .bar i {
+    display: block; height: 100%; width: 0; border-radius: 99px;
+    background: linear-gradient(90deg, var(--bar-c, var(--gold)), color-mix(in srgb, var(--bar-c, var(--gold)) 55%, white));
+    transition: width 1s cubic-bezier(.2,.7,.2,1);
+  }
+
+  .meta-line { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); }
+  .meta-line b { color: var(--text); font-weight: 700; }
+  .res { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+  .alt { background: var(--bg-2); border-block: 1px solid rgba(38,48,74,.5); }
+
+  .loop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 16px; counter-reset: loop; }
+  .loop-card { counter-increment: loop; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; position: relative; }
+  .loop-card::before {
+    content: "0" counter(loop); position: absolute; top: 16px; right: 20px;
+    font-size: 40px; font-weight: 900; color: rgba(232,182,76,.14); line-height: 1;
+  }
+  .loop-card h4 { color: var(--gold); font-size: 18px; margin-bottom: 8px; }
+  .loop-card p { color: var(--muted); font-size: 14px; }
+  .cycle-bar { margin-top: 44px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .cycle-seg {
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px; text-align: center;
+    background: linear-gradient(180deg, var(--panel), transparent);
+    font-size: 13px; color: var(--muted); position: relative;
+  }
+  .cycle-seg b { display: block; color: var(--text); font-size: 15px; margin-bottom: 2px; }
+  .cycle-seg .boss-flag { color: var(--danger); font-weight: 800; font-size: 11.5px; letter-spacing: .06em; }
+  .cycle-seg .portal { color: var(--ice); font-weight: 700; font-size: 11.5px; }
+  @media (max-width: 640px) { .cycle-bar { grid-template-columns: repeat(2, 1fr); } }
+
+  .biome-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .biome-swatch { width: 40px; height: 40px; border-radius: 10px; flex: none; box-shadow: inset 0 0 0 2px rgba(255,255,255,.08); }
+
+  table.data {
+    width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 18px;
+    background: var(--panel); border-radius: var(--radius); overflow: hidden;
+  }
+  table.data th, table.data td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--line); }
+  table.data th { background: var(--panel-2); color: var(--gold); font-size: 12.5px; letter-spacing: .05em; }
+  table.data tr:last-child td { border-bottom: none; }
+  .table-scroll { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--line); }
+  .table-scroll table.data { margin-top: 0; border-radius: 0; border: none; }
+
+  .res-card { align-items: flex-start; }
+  .res-icon {
+    width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+    font-weight: 900; font-size: 17px; color: #10131a; flex: none;
+  }
+  .res-cat { font-size: 11px; letter-spacing: .14em; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 22px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tab {
+    border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+    padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; transition: .2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--gold); border-color: var(--gold); color: #171106; }
+  input.search {
+    flex: 1; min-width: 180px; max-width: 320px; margin-left: auto;
+    background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    border-radius: 999px; padding: 9px 18px; font-size: 13.5px; outline: none; transition: .2s;
+  }
+  input.search:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(232,182,76,.15); }
+  @media (max-width: 640px) { input.search { margin-left: 0; max-width: none; } }
+  .empty-note { color: var(--muted); text-align: center; padding: 40px 0; display: none; }
+
+  .monster-card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .monster-card .hp-big { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .monster-card .hp-big b { color: var(--danger); font-size: 16px; }
+  .ability { font-size: 13px; background: rgba(147,160,184,.08); border-left: 3px solid var(--gold); padding: 8px 12px; border-radius: 6px; color: var(--text); }
+
+  .dragon-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .dragon-panel { display: none; animation: fadeUp .4s both; }
+  .dragon-panel.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .dragon-hero {
+    display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 20px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; margin-bottom: 18px;
+  }
+  @media (max-width: 760px) { .dragon-hero { grid-template-columns: 1fr; } }
+  .dragon-emblem {
+    aspect-ratio: 1; border-radius: 14px; display: grid; place-items: center;
+    font-size: clamp(40px, 6vw, 64px); font-weight: 900; color: #10131a;
+    background: linear-gradient(140deg, var(--dc, var(--gold)), color-mix(in srgb, var(--dc, var(--gold)) 40%, #000));
+    box-shadow: 0 12px 40px color-mix(in srgb, var(--dc, var(--gold)) 30%, transparent);
+  }
+  .skill-list { display: grid; gap: 10px; }
+  .skill { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 13px 16px; }
+  .skill h5 { font-size: 14px; margin-bottom: 4px; display: flex; gap: 8px; align-items: center; }
+  .skill p { font-size: 13px; color: var(--muted); }
+
+  .branch-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 16px; }
+  .branch-col { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  .branch-col > h4 { color: var(--gold); font-size: 17px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: baseline; }
+  .branch-col > h4 small { color: var(--muted); font-size: 12px; font-weight: 600; }
+  .node {
+    display: flex; justify-content: space-between; gap: 12px; padding: 10px 4px;
+    border-bottom: 1px dashed rgba(38,48,74,.8); font-size: 13.5px;
+  }
+  .node:last-child { border-bottom: none; }
+  .node .nm { font-weight: 700; }
+  .node .ds { color: var(--muted); font-size: 12px; display: block; margin-top: 1px; }
+  .node .rp { color: var(--time); font-weight: 800; white-space: nowrap; }
+
+  .wave-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; }
+  .wave-cell {
+    aspect-ratio: 1; min-height: 44px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--panel-2); display: grid; place-items: center; font-size: 12px; color: var(--muted); font-weight: 700;
+    position: relative; transition: .2s; cursor: default;
+  }
+  .wave-cell:hover { border-color: var(--gold); color: var(--text); transform: scale(1.06); }
+  .wave-cell.boss { background: linear-gradient(150deg, rgba(255,92,122,.28), rgba(255,92,122,.08)); border-color: rgba(255,92,122,.6); color: #ffb3c2; }
+  .wave-cycle-row { display: grid; grid-template-columns: 110px 1fr; gap: 14px; align-items: center; margin-top: 14px; }
+  .wave-cycle-label { font-weight: 800; font-size: 14px; color: var(--gold); }
+  .wave-cycle-label small { display: block; color: var(--muted); font-weight: 600; font-size: 11.5px; }
+  @media (max-width: 640px) {
+    .wave-cycle-row { grid-template-columns: 1fr; gap: 6px; }
+    .wave-cell { font-size: 10.5px; }
+  }
+
+  .mut-card { gap: 6px; }
+  .tier-line { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: baseline; }
+  .tier-pill {
+    flex: none; font-size: 10.5px; font-weight: 800; color: var(--gold);
+    border: 1px solid rgba(232,182,76,.4); border-radius: 6px; padding: 1px 7px; letter-spacing: .05em;
+  }
+
+  footer { border-top: 1px solid var(--line); padding: 44px 0 60px; color: var(--muted); font-size: 13px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; align-items: center; }
+
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    html { scroll-behavior: auto; }
+    .scroll-hint { animation: none; }
+  }
+</style>
+</head>
+
+<body>
+
+<nav>
+  <div class="wrap nav-inner">
+    <div class="brand"><span class="brand-mark"></span>TOWER AND DRAGONS</div>
+    <button class="nav-toggle" id="navToggle" aria-label="메뉴 열기">☰ 메뉴</button>
+    <div class="nav-links" id="navLinks">
+      <a href="#intro">소개</a>
+      <a href="#loop">게임 루프</a>
+      <a href="#world">지형</a>
+      <a href="#resources">자원</a>
+      <a href="#towers">타워</a>
+      <a href="#dragon">용</a>
+      <a href="#monsters">몬스터</a>
+      <a href="#buildings">건물</a>
+      <a href="#research">연구</a>
+      <a href="#waves">웨이브</a>
+      <a href="#mutators">변이</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="wrap">
+    <div class="hero-badge">수성록 프로젝트 · 타워디펜스 × 도시건설</div>
+    <h1>Tower<br>and Dragons</h1>
+    <p class="tagline"><b>"낮의 선택이 밤의 생존을 결정한다"</b><br>용의 운용 × 인구의 배분 × 전략적 확장</p>
+    <div class="hero-chips">
+      <span class="chip gold">Windows · PC · 싱글플레이</span>
+      <span class="chip">Unity · URP 2D Isometric</span>
+      <span class="chip">데이터 기반 설계 (ScriptableObject)</span>
+    </div>
+    <div class="hero-stats">
+      <div class="hstat"><div class="num" data-count="13">0</div><div class="lbl">타워 종류</div></div>
+      <div class="hstat"><div class="num" data-count="31">0</div><div class="lbl">몬스터 도감</div></div>
+      <div class="hstat"><div class="num" data-count="12">0</div><div class="lbl">자원</div></div>
+      <div class="hstat"><div class="num" data-count="5">0</div><div class="lbl">용의 속성</div></div>
+      <div class="hstat"><div class="num" data-count="4">0</div><div class="lbl">포탈 / 주기</div></div>
+      <div class="hstat"><div class="num" data-count="28">0</div><div class="lbl">웨이브</div></div>
+    </div>
+  </div>
+  <div class="scroll-hint">SCROLL</div>
+</header>
+
+<section id="intro">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="kicker">Introduction</span>
+      <h2 class="title">이세계의 전쟁, 마지막 격전지</h2>
+      <p class="sub">포탈 너머에서 온 괴물들이 인간의 도시를 무너뜨리는 가운데, 용들이 인간의 편에 서서 참전했습니다.
+      플레이어는 용과 함께 도시를 성장시키고, 네 개의 포탈을 봉인할지 — 혹은 끝까지 버텨내야 합니다.</p>
+    </div>
+    <div class="grid g-auto">
+      <div class="card reveal">
+        <h4>승리 — 두 가지 길</h4>
+        <p class="desc"><b>최종 보스 격파</b>: 모든 웨이브를 버티고 4주기 최종 보스를 막으면 승리. 방어 중심의 입문자용 엔딩.<br><br>
+        <b>4개 포탈 동시 봉인</b>: 각 포탈까지 영역을 확장해 봉인석을 건설. 적극적 확장이 필요한 숙련자용 조기 엔딩.</p>
+      </div>
+      <div class="card reveal">
+        <h4>패배 — 메인 성 파괴</h4>
+        <p class="desc">성에 도달한 적은 격퇴될 때까지 성을 공격합니다. 성 회복은 연구로 해금 —
+        매일 낮 패시브 회복과 자원 소모 수리 두 가지 방법이 있습니다.</p>
+      </div>
+      <div class="card reveal">
+        <h4>확장의 대가</h4>
+        <p class="desc">점령해야만 인구·특화 자원·신규 타워를 얻습니다. 하지만 <b>획득한 땅의 가치만큼 적의 난이도가 상승</b>합니다.
+        확장 욕심은 곧 위험입니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="loop" class="alt">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="kicker">Game Loop</span>
+      <h2 class="title">하루의 사이클</h2>
+      <p class="sub">낮에는 시간 제한 없이 준비하고, 밤에는 포탈에서 쏟아지는 웨이브를 전멸시키면 승리합니다.
+      밤이 끝나면 정산으로 낮의 선택이 결실을 맺습니다.</p>
+    </div>
+    <div class="loop-grid">
+      <div class="loop-card reveal">
+        <h4>낮 — 점령 · 운영</h4>
+        <p>건설 · 연구 · 타워 배치 · 인구 배분 · 점령 출격. 종료 버튼을 누를 때까지 시간은 흐르지 않습니다.</p>
+      </div>
+      <div class="loop-card reveal">
+        <h4>밤 — 자동 방어</h4>
+        <p>포탈에서 적 웨이브 진입. 그날 등장한 <b>모든 적을 격퇴하면 승리</b>. 시간 제약은 없지만 성은 무너질 수 있습니다.</p>
+      </div>
+      <div class="loop-card reveal">
+        <h4>정산 — 성장</h4>
+        <p>낮에 배치한 시설에서 자원·연구 포인트·점령 결과가 발생합니다. 생산 → 투자 → 성장 → 더 큰 생산의 순환.</p>
+      </div>
+    </div>
+    <div class="cycle-bar reveal" id="cycleBar"></div>
+  </div>
+</section>
+
+<section id="world">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="kicker">World &amp; Terrain</span>
+      <h2 class="title">중앙의 초원, 네 방향의 바이옴</h2>
+      <p class="sub">격자 단위 고정 맵. 중앙 초원에서 기초 자원을 생산하고, 외곽 4바이옴에서 특화 자원을 얻습니다.
+      대각선 지대는 진격로에서 멀어 방어엔 불리하지만 자원이 풍부한 하이 리스크 — 리워드 구역입니다.</p>
+    </div>
+    <div class="grid g-auto" id="biomeGrid"></div>
+    <div class="reveal" style="margin-top:34px">
+      <h3 style="font-size:19px;margin-bottom:4px">지형 페널티</h3>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:6px">거점을 지을 때 고려해야 할 지역별 페널티입니다.</p>
+      <div class="table-scroll">
+        <table class="data">
+          <thead><tr><th>지형</th><th>생산량</th><th>타워 공격속도</th><th>인구당 유지비</th></tr></thead>
+          <tbody>
+            <tr><td><b style="color:var(--life)">초원</b></td><td>-</td><td>-</td><td>-</td></tr>
+            <tr><td><b style="color:var(--stone)">암석 지대</b></td><td>-</td><td>-</td><td>돌 1</td></tr>
+            <tr><td><b style="color:var(--fire)">화산 지대</b></td><td>-</td><td>-</td><td>-</td></tr>
+            <tr><td><b style="color:var(--time)">사막 지대</b></td><td><b style="color:var(--danger)">-30%</b></td><td><b style="color:var(--danger)">-30%</b></td><td>-</td></tr>
+            <tr><td><b style="color:var(--ice)">설원 지대</b></td><td>-</td><td>-</td><td>목재 1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:30px">
+      <h3 style="font-size:19px;margin-bottom:4px">전장의 안개</h3>
+      <p style="color:var(--muted);font-size:14px">메인 지역 주변 일정 반경만 부분 노출됩니다. 나머지는 완전히 가려져 있으며,
+      정찰 연구로 가시 반경을 확장할 수 있습니다.</p>
+    </div>
+  </div>
+</section>
+
+<section id="resources" class="alt">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="kicker">Resources</span>
+      <h2 class="title">기본 3종 + 특화 4종 + 슬라임 5종</h2>
+      <p class="sub">식량은 인구 유지비로 상시 소모됩니다. 인구가 늘수록 유지비가 증가하니, 생산과 소비의 균형이 곧 도시의 운명입니다.</p>
+    </div>
+    <div class="grid g-auto" id="resGrid"></div>
+  </div>
+</section>
+
+<section id="towers">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="kicker">Towers</span>
+      <h2 class="title">타워 — 13종</h2>
+      <p class="sub">타워는 인구로 가동되며(On/Off 가능), 체력이 소진되면 파괴되지 않고 <b>일정 시간 후 재활성화</b>됩니다.
+      속성 타워와 특수 타워는 연구로 해금됩니다.</p>
+    </div>
+    <div class="toolbar reveal">
+      <div class="tabs" id="towerTabs">
+        <button class="tab active" data-f="all">전체</button>
+        <button class="tab" data-f="basic">기본</button>
+        <button class="tab" data-f="elemental">속성</button>
+        <button class="tab" data-f="special">특수</button>
+      </div>
+    </div>
+    <div class="grid g-auto" id="towerGrid"></div>
+    <p class="reveal" style="color:var(--muted);font-size:12.5px;margin-top:14px">
+      * DPS = 데미지 ÷ 공격 간격 (연구·오라 버프 미포함 기준값). 철거 환급은 당일 100% / 이후 70%.
+    </p>
+  </div>
+</section>
+
+<section id="dragon" class="alt">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="kicker">Dragons</span>
+      <h2 class="title">어미용 &amp; 새끼용</h2>
+      <p class="sub">어미용은 맵 중앙 메인 성에 위치하며 <b>속성은 낮에 1회 변경 가능</b>합니다.
+      용의 성장은 연구와 분리된 별도의 용 스킬트리에서, 슬라임 섭취로 이루어집니다.</p>
+    </div>
+    <div class="dragon-tabs reveal" id="dragonTabs"></div>
+    <div id="dragonPanels"></div>
+    <div class="reveal" style="margin-top:44px">
+      <h3 style="font-size:19px;margin-bottom:14px">새끼용 — 설치형 동반자</h3>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:16px">주기 보스 보상 또는 맵의 용알 둥지에서 획득합니다 (주기당 1마리).
+      전투형 능력과 주변 버프를 동시에 제공하는 설치형 구조물입니다.</p>
+      <div class="grid g-auto" id="babyGrid"></div>
+    </div>
+  </div>
+</section>
+
+<section id="monsters">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="kicker">Bestiary</span>
+      <h2 class="title">몬스터 도감</h2>
+      <p class="sub">괴물들은 포탈에서 고정 경로로 진격합니다. <b>성과 타워만 공격</b>하며, 유형별로 완전히 다른 대응이 요구됩니다.
+      속성 면역·흡수 개체에는 다른 속성으로 맞서세요.</p>
+    </div>
+    <div class="toolbar reveal">
+      <div class="tabs" id="monTabs">
+        <button class="tab active" data-f="all">전체</button>
+        <button class="tab" data-f="ground">지상</button>
+        <button class="tab" data-f="air">공중</button>
+        <button class="tab" data-f="elite">정예</button>
+        <button class="tab" data-f="element">속성 내성</button>
+        <button class="tab" data-f="boss">보스</button>
+      </div>
+      <input type="search" class="search" id="monSearch" placeholder="몬스터 검색...">
+    </div>
+    <div class="grid g-auto" id="monGrid"></div>
+    <p class="empty-note" id="monEmpty">조건에 맞는 몬스터가 없습니다.</p>
+  </div>
+</section>
+
+<section id="buildings" class="alt">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="kicker">Buildings &amp; Landmarks</span>
+      <h2 class="title">생산 시설과 랜드마크</h2>
+      <p class="sub">생산 시설에 인구를 배치하면 밤 종료 정산 때 자원이 생산됩니다. 강화와 On/Off가 가능합니다.</p>
+    </div>
+    <div class="grid g-auto" id="buildingGrid"></div>
+    <div class="reveal" style="margin-top:40px">
+      <h3 style="font-size:19px;margin-bottom:14px">랜드마크</h3>
+      <div class="grid g-auto" id="landmarkGrid"></div>
+    </div>
+    <div class="reveal" style="margin-top:40px;display:flex;flex-wrap:wrap;gap:16px;align-items:stretch">
+      <div class="card" style="flex:1;min-width:min(340px,100%)">
+        <h4>봉인석 <span class="tag special">조기 엔딩 열쇠</span></h4>
+        <p class="desc">각 포탈을 봉인하는 최종 구조물. 특화 자원 4종을 각 <b>250</b>씩 소모해 건설합니다.
+        4개를 모두 세우면 즉시 승리합니다.</p>
+        <div class="meta-line" id="sealCost"></div>
+      </div>
+      <div class="card" style="flex:1;min-width:min(340px,100%)">
+        <h4>점령 — 땅을 얻는 유일한 길</h4>
+        <p class="desc">아침에 출격해 여러 지역을 동시에 공격할 수 있습니다. 판정은 그날 밤 디펜스 —
+        방어에 성공하면 땅과 인구, 지역 자원을 획득합니다. 점령 실패는 없습니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="research">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="kicker">Research</span>
+      <h2 class="title">연구 — 3갈래</h2>
+      <p class="sub">연구소에 인구를 배치하면 정산 시 인구 1명당 <b>연구 포인트(RP) 5</b>를 얻습니다.
+      RP는 전역 풀로 누적되며, 연구 실행 시 코스트를 즉시 소모하고 효과는 즉시 적용됩니다.</p>
+    </div>
+    <div class="branch-cols" id="researchCols"></div>
+  </div>
+</section>
+
+<section id="waves" class="alt">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="kicker">Wave Schedule</span>
+      <h2 class="title">총 28웨이브 — 4주기 × 7일</h2>
+      <p class="sub">각 주기의 7일차는 보스 웨이브. 주기가 끝날수록 새 포탈이 개방되어 진격로가 늘어납니다.</p>
+    </div>
+    <div id="waveBoard" class="reveal"></div>
+  </div>
+</section>
+
+<section id="mutators">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="kicker">Run Mutators</span>
+      <h2 class="title">런 변이 — 도전 모디파이어</h2>
+      <p class="sub">플레이 시작 전 선택하는 규칙 변이. 최대 3단계까지 강화되는 것들로, 리스크만큼 보상이 커집니다.</p>
+    </div>
+    <div class="grid g-auto" id="mutGrid"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <b style="color:var(--text)">TOWER AND DRAGONS</b> — 수성록 프로젝트 3팀
+      <br>조강현 · 김지해 · 이하늘 · 나상욱
+    </div>
+    <div style="text-align:right">
+      데이터 기준: 프로젝트 ScriptableObject / 로컬라이즈 CSV
+      <br>문서 생성일 2026-08-25 · 베타 마일스톤
+    </div>
+  </div>
+</footer>
+
+<script>
+/* 데이터 (Assets/Data 의 ScriptableObject 값 기준) */
+const RES = {
+  1:  { name: "식량",       c: "#7ed491" },
+  2:  { name: "목재",       c: "#b98d5a" },
+  4:  { name: "돌",         c: "#aeb6c4" },
+  8:  { name: "불꽃의 심장", c: "#ff6b4a" },
+  16: { name: "눈의 결정",   c: "#6fc3ff" },
+  32: { name: "시간의 모래", c: "#e0c078" },
+  64: { name: "현자의 돌",   c: "#c9a6ff" },
+};
+const costHTML = arr => arr.map(([t, n]) =>
+  `<span class="res"><i class="dot" style="background:${RES[t].c}"></i>${RES[t].name} ${n}</span>`).join("");
+const EL_NAME = { ice:"얼음", fire:"불", time:"시간", stone:"암석", life:"생명", none:"무속성" };
+const elTagHTML = x => `<span class="tag ${x}">${EL_NAME[x.replace("el-", "")] || "특수"}</span>`;
+
+const TOWERS = [
+  { cat:"basic", name:"마나 타워", tags:["el-none"], pop:5, hp:100, range:4, interval:0.75, dmg:10, dps:13.3,
+    cost:[[2,20]], unlock:null, note:"시작부터 건설 가능한 만능 포탑. 지상·공중 모두 공격." },
+  { cat:"basic", name:"화살 타워", tags:["el-none"], pop:5, hp:100, range:5, interval:1.25, dmg:15, dps:12,
+    cost:[[2,25],[4,10]], unlock:null, note:"마나 타워보다 긴 사거리와 강한 한 발." },
+  { cat:"basic", name:"머스킷 타워", tags:["el-none"], pop:7, hp:100, range:6.5, interval:2, dmg:20, dps:10,
+    cost:[[2,30],[4,20]], unlock:null, note:"최장 사거리의 중화기. 인구 소모가 크다." },
+  { cat:"basic", name:"대공 타워", tags:["el-none"], pop:6, hp:100, range:6.5, interval:2, dmg:20, dps:10,
+    cost:[[2,30],[4,20]], unlock:"연구 해금", airOnly:true, note:"공중 적 전용 포탑. 비행 웨이브의 유일한 해답." },
+  { cat:"elemental", name:"화염 타워", tags:["el-fire"], pop:6, hp:120, range:4, interval:1, dmg:10, dps:10,
+    cost:[[2,30],[4,30],[8,30]], unlock:"연구 해금", note:"피격 적에게 화상 부여 — 3초간 추가 피해." },
+  { cat:"elemental", name:"얼음 타워", tags:["el-ice"], pop:6, hp:120, range:4, interval:1, dmg:10, dps:10,
+    cost:[[2,30],[4,50],[16,30]], unlock:"연구 해금", note:"피격 적 이동속도 80% 감속 (2초)." },
+  { cat:"elemental", name:"암석 타워", tags:["el-stone"], pop:6, hp:120, range:6, interval:2.5, dmg:24, dps:9.6,
+    cost:[[4,60],[64,30]], unlock:"연구 해금", aoe:2, note:"반경 2의 광역 타격. 무리 상대로 강력." },
+  { cat:"elemental", name:"생명 타워", tags:["el-life"], pop:6, hp:120, range:3, interval:2, heal:20,
+    cost:[[2,60],[64,60],[32,40]], unlock:"연구 해금", support:true, note:"공격 대신 아군 타워를 회복 (20)." },
+  { cat:"elemental", name:"시간 타워", tags:["el-time"], pop:4, hp:120, aura:{ r:2, txt:"공격속도 +20% · 재활성화 속도 +20%" },
+    cost:[[2,40],[4,40],[32,40]], unlock:"연구 해금", support:true, note:"직접 공격이 없다. 오라로 주변 타워를 가속." },
+  { cat:"special", name:"강화 타워", tags:["special"], pop:4, hp:120, aura:{ r:2, txt:"주변 타워 데미지 ×1.5" },
+    cost:[[2,50],[4,50],[64,80],[8,80]], unlock:"연구 해금", support:true, note:"핵심 타워 군집 옆에 세우면 화력이 폭증한다." },
+  { cat:"special", name:"영혼 타워", tags:["special"], pop:6, hp:120, aura:{ r:2, txt:"영혼 인구 2 흡수" },
+    cost:[[64,70],[32,100],[16,70],[8,100]], unlock:"연구 해금", support:true, note:"특화 자원 4종을 모두 요구하는 최상위 특수 타워." },
+  { cat:"special", name:"은신 타워", tags:["special"], pop:6, hp:120, aura:{ r:2, txt:"주변 구조물 은신" },
+    cost:[[2,40],[4,40],[16,40],[8,40]], unlock:"연구 해금", support:true, note:"오라 반경 내 구조물을 적의 표적으로부터 숨긴다." },
+];
+
+const MOTHER = [
+  { key:"ice", label:"얼음", c:"var(--ice)", glyph:"빙",
+    passive:"모든 기본 타워의 공격에 둔화 부여 (3초간 50%).",
+    active:"[전역 빙결] — 모든 적을 3~5초간 빙결. 쿨다운 60초.",
+    nodes:[
+      ["절대 영도","빙결 지속시간 랭크당 +1초 (3→5초)"],
+      ["서리 순환","액티브 쿨다운 랭크당 -12%"],
+      ["설원 채집","설원 슬라임·눈의 결정 생산량 랭크당 +12%"],
+      ["냉기 조율","얼음 타워 공격속도 랭크당 +10%"],
+      ["영원한 겨울 (궁극)","비활성 중에도 둔화 유지 + 쿨다운 -20%"],
+    ]},
+  { key:"fire", label:"불", c:"var(--fire)", glyph:"염",
+    passive:"새로 등장하는 모든 적이 죽을 때까지 초당 2의 화상 피해.",
+    active:"[전역 화염] — 모든 적의 이동 경로를 따라 강력한 화염 피해 (현재 체력의 30%).",
+    nodes:[
+      ["맹렬한 화염","액티브 피해 랭크당 +20% (최대 42%)"],
+      ["연쇄 분화","액티브 쿨다운 랭크당 -12%"],
+      ["화산 채집","용암 슬라임·불꽃의 심장 생산량 랭크당 +12%"],
+      ["화력 조율","화염 타워 공격력 랭크당 +10%"],
+      ["대화재 (궁극)","비활성 중에도 화상 유지 + 피해 +30% + 쿨다운 -20%"],
+    ]},
+  { key:"time", label:"시간", c:"var(--time)", glyph:"시",
+    passive:"모든 타워의 공격속도 +15%.",
+    active:"[즉시 재활성화] — 모든 타워를 즉시 재활성화. 쿨다운 60초.",
+    nodes:[
+      ["시간 압축","액티브 쿨다운 랭크당 -12%"],
+      ["시간 역행","추가 -12% (두 갈래 합계 -48%)"],
+      ["사막 채집","사막 슬라임·시간의 모래 생산량 랭크당 +12%"],
+      ["가속 조율","시간 타워 공격속도 랭크당 +10%"],
+      ["영원의 모래시계 (궁극)","비활성 중 공속 +7.5% 유지 + 원정 소요 -1일"],
+    ]},
+  { key:"stone", label:"암석", c:"var(--stone)", glyph:"암",
+    passive:"돌·암석 슬라임·현자의 돌 생산량 +20% 및 메인 성 보호막.",
+    active:"[메테오 방벽] — 당일 밤 메인 성 앞에 벽 생성 + 전 타워 보호막. 1일 2회.",
+    nodes:[
+      ["운석 낙하","액티브 피해 랭크당 +20% (40→56)"],
+      ["견고한 방벽","방벽 최대 체력 랭크당 +50% (50→100)"],
+      ["채석 증산","생산량 랭크당 추가 +12%"],
+      ["암반 조율","암석 타워 공격력 랭크당 +10%"],
+      ["대지의 군주 (궁극)","비활성 중 생산 보너스 절반 유지 + 사용 횟수 3회"],
+    ]},
+  { key:"life", label:"생명", c:"var(--life)", glyph:"생",
+    passive:"식량·초원 슬라임 생산량 +20% 및 전 타워 최대 체력 증가.",
+    active:"[성벽 재생] — 메인 성 체력 50 회복.",
+    nodes:[
+      ["신속한 치유","액티브 쿨다운 랭크당 -12%"],
+      ["만개하는 생명","회복량 랭크당 +20% (50→70)"],
+      ["초원 증산","생산량 랭크당 추가 +12%"],
+      ["생명 조율","전 타워 최대 체력 랭크당 +10%"],
+      ["세계수의 축복 (궁극)","비활성 중 생산 절반 유지 + 회복 +30% + 쿨다운 -20%"],
+    ]},
+];
+
+const BABIES = [
+  { name:"불 새끼용", tag:"el-fire", hp:100, atk:"12 · 2초 · 사거리 4",
+    buff:"주변 버프 반경 3", note:"공격 시 화상 부여. 스킬트리로 사거리/화상 강화." },
+  { name:"얼음 새끼용", tag:"el-ice", hp:100, atk:"15 · 1.6초 · 사거리 4",
+    buff:"주변 버프 반경 3", note:"둔화·빙결 스택 부여. 반경 내 화산 지대에도 건설 가능." },
+  { name:"시간 새끼용", tag:"el-time", hp:100, atk:"8 · 0.5초 · 사거리 5",
+    buff:"주변 버프 반경 5", note:"초고속 연사. 반경 내 사막 지대 페널티 해제." },
+  { name:"암석 새끼용", tag:"el-stone", hp:100, atk:"30 · 2.5초 · 사거리 6 · 광역",
+    buff:"주변 생산시설 배율 ×2.0", note:"강타 + 스턴. 돌·특화 자원 생산 배율 제공." },
+  { name:"생명 새끼용", tag:"el-life", hp:120, atk:"15 · 1.5초 · 사거리 4",
+    buff:"주변 생산시설 배율 ×2.0", note:"타워 치유 아우라. 식량·통나무 생산 배율 제공." },
+];
+</script>
+
+<script>
+const MONSTERS = [
+  { n:"약탈병", t:"ground", hp:50, spd:2, dmg:5, ivl:1.5, rng:0.5, tgt:"castle", d:"평범한 보병. 무엇에도 멈추지 않고 성까지 걸어간다." },
+  { n:"돌격병", t:"ground", hp:40, spd:2, dmg:5, ivl:1.5, rng:0.5, tgt:"towers", d:"지나는 길의 타워를 부수고 다시 나아간다." },
+  { n:"투석병", t:"ground", hp:30, spd:2, dmg:10, ivl:1.5, rng:2, tgt:"towers", d:"타워에 달라붙지 않고 조금 떨어진 거리에서 쏜다." },
+  { n:"중장병", t:"ground", hp:150, spd:1, dmg:5, ivl:1.5, rng:0.5, tgt:"castle", d:"느리지만 대단히 단단하다. 다른 적의 방패 역할." },
+  { n:"자폭병", t:"ground", hp:60, spd:2, dmg:100, ivl:1, rng:0.3, tgt:"towers", sp:"특수", d:"처음 만난 타워나 용에게 달려들어 스스로 터진다. 대미지 100!" },
+  { n:"마비병", t:"ground", hp:60, spd:2, dmg:5, ivl:1, rng:0.5, tgt:"towers", sp:"특수", d:"몸을 던져 스러지면서 상대를 마비시킨다." },
+  { n:"용 사냥꾼", t:"ground", hp:80, spd:2, dmg:10, ivl:2.5, rng:2, tgt:"dragon", d:"타워는 지나치고 용만 먼 거리에서 노린다." },
+  { n:"치유사", t:"ground", hp:100, spd:2, tgt:"castle", sp:"특수", d:"일정 간격으로 주변 아군을 회복. 스스로는 공격하지 않는다." },
+  { n:"수호자", t:"ground", hp:80, sh:30, spd:2, tgt:"castle", sp:"특수", d:"범위에 들어온 아군에게 방어막 30을 씌운다. 한 아군당 1회." },
+  { n:"생성자", t:"ground", hp:80, spd:2, tgt:"castle", sp:"특수", d:"지속적으로 자신의 보호막을 재생성한다." },
+  { n:"석갑병", t:"ground", hp:150, sh:50, spd:1, tgt:"castle", d:"단단한 방어막을 두른 채 등장. 방어막이 깨지기 전까진 본체가 무적." },
+  { n:"파쇄병", t:"ground", hp:80, spd:2, dmg:15, ivl:2, rng:0.5, aoe:1.5, tgt:"towers", d:"가까이 붙어 넓은 범위(반경 1.5)를 파괴하는 전사." },
+  { n:"저격병", t:"ground", hp:30, spd:2, dmg:20, ivl:6, rng:5.5, tgt:"castle", d:"아주 먼 거리(사거리 5.5)에서 성을 저격한다." },
+  { n:"성기사", t:"ground", hp:120, spd:2, tgt:"castle", sp:"특수", d:"주변 아군에게 1회 방어막 + 지속 체력 회복." },
+  { n:"잿가죽", t:"ground", hp:80, spd:2, el:"fire-immune", tgt:"castle", d:"불 속성 공격 완전 면역. 다른 속성으로 상대하세요." },
+  { n:"서리가죽", t:"ground", hp:80, spd:2, el:"ice-immune", tgt:"castle", d:"얼음 속성 공격 완전 면역. 다른 속성으로 상대하세요." },
+  { n:"역병가죽", t:"ground", hp:80, spd:2, el:"life-immune", tgt:"castle", d:"생명 속성 공격 완전 면역. 다른 속성으로 상대하세요." },
+  { n:"바위가죽", t:"ground", hp:80, spd:2, el:"stone-immune", tgt:"castle", d:"암석 속성 공격 완전 면역. 다른 속성으로 상대하세요." },
+  { n:"불의 정령", t:"ground", hp:40, spd:2, el:"fire-only", tgt:"castle", d:"오직 불 속성 공격만 통한다." },
+  { n:"얼음의 정령", t:"ground", hp:40, spd:2, el:"ice-only", tgt:"castle", d:"오직 얼음 속성 공격만 통한다." },
+  { n:"생명의 정령", t:"ground", hp:40, spd:2, el:"life-only", tgt:"castle", d:"오직 생명 속성 공격만 통한다." },
+  { n:"암석의 정령", t:"ground", hp:40, spd:2, el:"stone-only", tgt:"castle", d:"오직 암석 속성 공격만 통한다." },
+  { n:"정예병", t:"ground", hp:80, spd:2.5, dmg:15, ivl:2, rng:0.5, tgt:"towers", elite:true, cc:true, d:"강력한 체력. 마비·빙결 등 모든 군중제어에 면역." },
+  { n:"정예 용사냥꾼", t:"ground", hp:80, spd:2, dmg:10, ivl:2.5, rng:2, tgt:"dragon", elite:true, cc:true, d:"용만을 사냥하기 위해 훈련된 정예병." },
+  { n:"공허껍질 정예병", t:"ground", hp:100, spd:2, dmg:15, ivl:2, rng:0.5, tgt:"towers", elite:true, cc:true, el:"void", d:"모든 속성을 흡수하여 아군을 보호하는 정예병." },
+  { n:"비행 정찰병", t:"air", hp:30, spd:4, tgt:"castle", d:"빠르게 날아 성으로 곧장 향한다. 도중의 어떤 것도 노리지 않는다." },
+  { n:"비행 습격병", t:"air", hp:50, spd:4, dmg:10, ivl:1, rng:2, tgt:"towers", d:"성으로 날아가는 길에 공중에서 타워를 쏘아 맞힌다." },
+  { n:"공중 저격병", t:"air", hp:50, spd:1.5, dmg:20, ivl:6, rng:5.5, tgt:"castle", d:"공중에서 성을 저격한다." },
+  { n:"서리 거인", t:"boss", hp:1000, spd:0.5, dmg:20, ivl:1.5, rng:0.5, boss:true, cyc:1, cc:true, d:"만년동안 서리에 갇혀있던 거인. 주기 1의 최후의 문턱." },
+  { n:"폭군", t:"boss", hp:2000, spd:0.5, dmg:40, ivl:1.5, rng:0.5, boss:true, cyc:2, cc:true, d:"악마들에게 자신의 왕국을 넘긴 폭군." },
+  { n:"포식자", t:"boss", hp:3000, spd:0.5, dmg:60, ivl:2, rng:0.5, boss:true, cyc:3, cc:true, d:"모든 것을 집어삼키는 포식자." },
+  { n:"타락 군주", t:"boss", hp:5000, spd:0.75, dmg:80, ivl:2.5, rng:0.5, boss:true, cyc:4, final:true, cc:true, d:"저 너머의 세계의 타락한 군주. 최종 보스." },
+  { n:"부활한 서리 거인", t:"boss", hp:5000, spd:0.5, dmg:20, ivl:1.5, rng:0.5, boss:true, revived:true, cc:true, d:"타락 군주의 부름에 죽음에서 돌아온 서리 거인. 최종 웨이브." },
+  { n:"부활한 폭군", t:"boss", hp:5000, spd:0.5, dmg:40, ivl:1.5, rng:0.5, boss:true, revived:true, cc:true, d:"타락 군주의 부름에 죽음에서 돌아온 폭군. 최종 웨이브." },
+  { n:"부활한 포식자", t:"boss", hp:5000, spd:0.5, dmg:60, ivl:2, rng:0.5, boss:true, revived:true, cc:true, d:"타락 군주의 부름에 죽음에서 돌아온 포식자. 최종 웨이브." },
+];
+const EL_LABEL = {
+  "fire-immune":  ["불 면역","#ff6b4a"],  "ice-immune":  ["얼음 면역","#6fc3ff"],
+  "life-immune":  ["생명 면역","#7ed491"],"stone-immune":["암석 면역","#b3a68f"],
+  "fire-only":    ["불만 통함","#ff6b4a"],"ice-only":    ["얼음만 통함","#6fc3ff"],
+  "life-only":    ["생명만 통함","#7ed491"],"stone-only":["암석만 통함","#b3a68f"],
+  "void":         ["전속성 흡수","#c9a6ff"],
+};
+
+const BUILDINGS = [
+  { n:"농지", cat:"기본 생산", out:"식량", pop:10, cost:"목재 8", d:"초원의 기본 식량 생산 시설." },
+  { n:"벌목장", cat:"기본 생산", out:"목재", pop:10, cost:"목재 12", d:"통나무를 벌목한다." },
+  { n:"채석장", cat:"기본 생산", out:"돌", pop:10, cost:"목재 18", d:"돌을 채석한다." },
+  { n:"슬라임 농장", cat:"용 사육", out:"초원 슬라임", pop:5, cost:"식량 5 · 목재 5 · 돌 5", d:"용의 먹이가 되는 슬라임을 양식한다. 연구 필요." },
+  { n:"불꽃의 심장 채굴장", cat:"특화 생산", out:"불꽃의 심장", pop:5, cost:"식량 10 · 목재 10 · 돌 10", d:"용암 지대의 특화 자원 생산." },
+  { n:"눈의 결정 채굴장", cat:"특화 생산", out:"눈의 결정", pop:5, cost:"식량 10 · 목재 10 · 돌 10", d:"설원 지대의 특화 자원 생산." },
+  { n:"시간의 모래 채굴장", cat:"특화 생산", out:"시간의 모래", pop:5, cost:"식량 10 · 목재 10 · 돌 10", d:"사막 지대의 특화 자원 생산." },
+  { n:"현자의 돌 채굴장", cat:"특화 생산", out:"현자의 돌", pop:5, cost:"식량 10 · 목재 10 · 돌 10", d:"암석 지대의 특화 자원 생산." },
+  { n:"연구소", cat:"연구", out:"연구 포인트", pop:2, cost:"목재 · 돌", d:"배치 인구 1명당 정산 시 RP 5 생성. 연구로 배치 상한 확장." },
+];
+const LANDMARKS = [
+  { n:"타워 원형", pop:3, d:"점령 보상 — 새로운 타워의 원형. 역설계 연구로 실전 타워 해금." },
+  { n:"고대 채석장", pop:4, d:"점령 보상 — 석재 생산에 특화된 유적." },
+  { n:"용알 둥지 ×4", pop:0, d:"용암·설원·사막·암석 각 바이옴에 존재. 점령하면 해당 속성의 새끼용 알을 얻는다." },
+];
+
+const RESEARCH = {
+  tower: { title:"타워", sub:"전투력 강화", nodes:[
+    ["기본 훈련", 10, "전 타워 공격력 +10%"],
+    ["사거리 확장 I", 10, "사거리 +15%"],
+    ["연사 개량 I", 10, "공격속도 +12%"],
+    ["타워 인력 효율 I", 25, "타워 필요 인구 -1 (하한 1)"],
+    ["대공 타워", 25, "대공 타워 해금"],
+    ["속성 타워 해금", 25, "바이옴 특화 타워 건설 가능"],
+    ["화염 강화", 50, "화염 타워 공격력 +20%"],
+    ["얼음 강화", 50, "얼음 타워 공격력 +20%"],
+    ["암석 강화", 50, "암석 타워 공격력 +20%"],
+    ["역설계", 50, "점령한 타워 원형 분석 → 신규 타워 해금"],
+    ["중갑 타워", 90, "타워 최대 체력 +20%"],
+    ["궁극의 속성", 150, "모든 속성 타워 공격력 +20%"],
+  ]},
+  production: { title:"생산 시설", sub:"경제 확장", nodes:[
+    ["외곽 기초자원 채집", 10, "외곽 바이옴에서 기초 자원 채집 해금"],
+    ["초원 경작", 10, "농장·광산 생산량 +10%"],
+    ["식량 생산 강화 I", 25, "식량 생산 필요 인구 -1"],
+    ["목재 생산 강화 I", 25, "목재 생산 필요 인구 -1"],
+    ["석재 생산 강화 I", 25, "석재 생산 필요 인구 -1"],
+    ["식량 생산 강화 II", 50, "식량 생산량 +10%"],
+    ["목재 생산 강화 II", 50, "목재 생산량 +10%"],
+    ["석재 생산 강화 II", 50, "석재 생산량 +10%"],
+    ["특화 생산 시설", 90, "바이옴 특화 자원 효율 +20%"],
+    ["슬라임 양식", 90, "특화 지역 슬라임 생산 +25%"],
+    ["자원 생산 강화 II", 150, "특화 자원 생산량 +20%"],
+    ["생산 최적화", 150, "생산 시설 필요 인구 -1 (하한 1)"],
+  ]},
+  convenience: { title:"편의 기능", sub:"운영의 질", nodes:[
+    ["정찰 I", null, "안개 가시 반경 +1단계"],
+    ["성 자동 회복 I", null, "매일 낮 성 체력 패시브 회복"],
+    ["연구소 증축 I", null, "연구소 배치 인구 상한 +1"],
+    ["타워 이동 해금", null, "철거 없이 타워 이동"],
+    ["타워 수리", null, "밤 동안 파괴된 포탑 재활성화"],
+    ["원정 물류", null, "점령 출격 비용 -20%"],
+    ["정찰 II", null, "가시 반경 대폭 확장 + 랜드마크 표시"],
+    ["성 자동 회복 II", null, "매일 낮 성 체력 +10 추가 회복"],
+    ["전문 원정대", null, "원정 필요 인구 -1"],
+    ["정복자", null, "원정 소요 일수 -1"],
+    ["봉인석 연구", null, "포탈 봉인석 건설 해금"],
+  ]},
+};
+
+const CYCLES = [
+  { no:1, portal:"동쪽 포탈 1개 개방", waves:7 },
+  { no:2, portal:"포탈 추가 개방 (총 3개)", waves:7 },
+  { no:3, portal:"포탈 개방 (총 4개 경로)", waves:7 },
+  { no:4, portal:"전 포탈 개방 + 최종 보스", waves:7 },
+];
+
+const MUTATORS = [
+  { n:"흉포한 무리", tiers:["적 체력·공격력 +20%","+40%","+70%"] },
+  { n:"끝없는 행렬", tiers:["스폰 수 +1 · 간격 -10%","+3 · -25%","+5 · -40%"] },
+  { n:"약한 지반", tiers:["타워 최대 체력 -20%","-40%","-60%"] },
+  { n:"긴 밤", tiers:["아침에 타워 복구 없음, 낮 동안 부활 정지"] },
+  { n:"배수의 진", tiers:["메인 성 최대 체력 -50%"] },
+  { n:"굳은 맹세", tiers:["어미용 속성 변경 주기당 1회"] },
+  { n:"중력 적응", tiers:["알 부화 소요 일수 +1"] },
+  { n:"큰 식욕", tiers:["[미정] 식량 소모 관련 변이"] },
+  { n:"텃밭 수확", tiers:["[미정] 수확량 관련 변이"] },
+  { n:"혹한의 겨울", tiers:["[미정] 설원 관련 변이"] },
+  { n:"낙석", tiers:["[미정] 지형 관련 변이"] },
+  { n:"빈손", tiers:["[미정] 초기 자원 관련 변이"] },
+];
+</script>
+
+<script>
+const $ = s => document.querySelector(s);
+
+/* 히어로 카운터 */
+document.querySelectorAll(".hstat .num").forEach(el => {
+  const target = +el.dataset.count;
+  new IntersectionObserver((es, o) => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    o.disconnect();
+    if (document.hidden) { el.textContent = target; return; }
+    const t0 = performance.now(), dur = 900;
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / dur);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(tick); else el.textContent = target;
+    };
+    requestAnimationFrame(tick);
+  }), { threshold: .6 }).observe(el);
+});
+
+/* 주기 바 */
+$("#cycleBar").innerHTML = CYCLES.map((c, i) => `
+  <div class="cycle-seg">
+    <b>주기 ${c.no}</b>
+    <span class="portal">${c.portal}</span><br>
+    ${Array.from({length:c.waves}, (_, w) => `<span style="${w===6?"color:var(--danger);font-weight:800":"opacity:.65"}">D${w+1}</span>`).join(" ")}<br>
+    <span class="boss-flag">D7 BOSS${i===3 ? " × FINAL" : ""}</span>
+  </div>`).join("");
+
+/* 바이옴 */
+const BIOMES = [
+  { n:"초원 (중앙)", c:"#7ed491", d:"메인 성이 있는 시작 지역. 식량·목재·돌 등 기초 자원 생산.", extra:"페널티 없음" },
+  { n:"암석 지대", c:"#b3a68f", d:"현자의 돌·암석 슬라임 산출. 인구당 돌 1 유지비.", extra:"유지비: 돌 1/인구" },
+  { n:"용암 지대", c:"#ff6b4a", d:"불꽃의 심장·용암 슬라임 산출.", extra:"페널티 없음" },
+  { n:"사막 지대", c:"#e0c078", d:"시간의 모래·사막 슬라임 산출. 대신 생산량·타워 공속 -30%. 시간 새끼용으로 해제 가능.", extra:"생산/공속 -30%" },
+  { n:"설원 지대", c:"#9fd8ff", d:"눈의 결정·설원 슬라임 산출. 인구당 목재 1 유지비.", extra:"유지비: 목재 1/인구" },
+  { n:"대각선 지대", c:"#c9a6ff", d:"진격로에서 먼 하이 리스크-리워드 구역. 자원이 풍부하다.", extra:"자원 보너스" },
+];
+$("#biomeGrid").innerHTML = BIOMES.map(b => `
+  <div class="card reveal">
+    <div class="biome-head">
+      <span class="biome-swatch" style="background:linear-gradient(135deg, ${b.c}, ${b.c}66)"></span>
+      <h4>${b.n}</h4>
+    </div>
+    <p class="desc">${b.d}</p>
+    <span class="tag" style="align-self:flex-start;color:${b.c};border-color:${b.c}55;background:${b.c}18">${b.extra}</span>
+  </div>`).join("");
+
+/* 자원 */
+const RES_CARDS = [
+  ...[1,2,4].map(k => ({ ...RES[k], cat:"기본 · 초원", k })),
+  ...[8,16,32,64].map(k => ({ ...RES[k], cat:"특화 · 외곽 바이옴", k })),
+  { name:"슬라임 ×5색", cat:"용의 먹이", c:"#9be564", k:128 },
+];
+$("#resGrid").innerHTML = RES_CARDS.map(r => `
+  <div class="card res-card reveal">
+    <div style="display:flex;gap:12px;align-items:center">
+      <span class="res-icon" style="background:${r.c}">${r.name.charAt(0)}</span>
+      <div><div class="res-cat">${r.cat}</div><h4>${r.name}</h4></div>
+    </div>
+  </div>`).join("");
+
+/* 타워 */
+function statBar(label, val, max, unit, color) {
+  const pct = Math.min(100, Math.round(val / max * 100));
+  return `<div class="stat-row" style="--bar-c:${color}">
+    <span>${label}</span><span class="bar"><i data-w="${pct}"></i></span><span class="val">${val}${unit}</span></div>`;
+}
+function towerCard(t) {
+  const dps = t.dmg && !t.support ? `<div class="meta-line"><span>DPS <b>${t.dps}</b></span>${t.aoe ? `<span>광역 반경 <b>${t.aoe}</b></span>` : ""}${t.airOnly ? `<span style="color:var(--ice)">공중 전용</span>` : ""}</div>` : "";
+  const effect = t.aura ? `<div class="ability">${t.aura.txt} <span style="color:var(--muted)">(반경 ${t.aura.r})</span></div>` : "";
+  const mainStat = t.heal ? statBar("회복", t.heal, 30, "", "var(--life)")
+                 : t.dmg ? statBar("데미지", t.dmg, 30, "", "var(--fire)") : "";
+  return `<div class="card tower-card reveal" data-cat="${t.cat}">
+    <h4>${t.name}
+      ${t.tags.map(elTagHTML).join("")}
+      ${t.unlock ? `<span class="tag boss">${t.unlock}</span>` : ""}
+    </h4>
+    <p class="desc">${t.note}</p>
+    ${effect}
+    <div>
+      ${mainStat}
+      ${statBar("체력", t.hp, 150, "", "var(--life)")}
+      ${statBar("사거리", t.range, 7, "", "var(--ice)")}
+      ${statBar("공속", Math.round(1/t.interval*10)/10, 1.5, "/s", "var(--time)")}
+      ${statBar("인구", t.pop, 8, "", "var(--gold)")}
+    </div>
+    ${dps}
+    <div class="meta-line"><span class="res">건설:</span>${costHTML(t.cost)}</div>
+  </div>`;
+}
+$("#towerGrid").innerHTML = TOWERS.map(towerCard).join("");
+$("#towerTabs").addEventListener("click", e => {
+  const btn = e.target.closest(".tab"); if (!btn) return;
+  document.querySelectorAll("#towerTabs .tab").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  const f = btn.dataset.f;
+  document.querySelectorAll("#towerGrid .tower-card").forEach(c => {
+    c.style.display = (f === "all" || c.dataset.cat === f) ? "" : "none";
+  });
+});
+
+/* 용 */
+$("#dragonTabs").innerHTML = MOTHER.map((d, i) => `
+  <button class="tab ${i===0?"active":""}" data-k="${d.key}" style="--dc:${d.c}">${d.label}</button>`).join("");
+$("#dragonPanels").innerHTML = MOTHER.map((d, i) => `
+  <div class="dragon-panel ${i===0?"active":""}" data-k="${d.key}">
+    <div class="dragon-hero" style="--dc:${d.c}">
+      <div class="dragon-emblem">${d.glyph}<span style="position:absolute;font-size:12px;letter-spacing:.2em;color:#14100a;transform:translateY(46px);font-weight:800">${d.label.toUpperCase()} DRAGON</span></div>
+      <div class="skill-list">
+        <div class="skill"><h5><span class="tag" style="color:${d.c};border-color:${d.c}66">패시브</span>${d.label}의 축복</h5><p>${d.passive}</p></div>
+        <div class="skill"><h5><span class="tag" style="color:${d.c};border-color:${d.c}66">액티브</span>플레이어 공격 스킬</h5><p>${d.active}</p></div>
+      </div>
+    </div>
+    <h4 style="margin:18px 0 10px;color:${d.c}">스킬트리 — ${d.label} 갈래</h4>
+    <div class="skill-list">
+      ${d.nodes.map(([n, ds]) => `<div class="skill"><h5>${n}</h5><p>${ds}</p></div>`).join("")}
+    </div>
+  </div>`).join("");
+$("#dragonTabs").addEventListener("click", e => {
+  const btn = e.target.closest(".tab"); if (!btn) return;
+  document.querySelectorAll("#dragonTabs .tab").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.querySelectorAll(".dragon-panel").forEach(p => p.classList.toggle("active", p.dataset.k === btn.dataset.k));
+});
+$("#babyGrid").innerHTML = BABIES.map(b => `
+  <div class="card reveal">
+    <h4>${b.name} ${elTagHTML(b.tag)}</h4>
+    <div class="meta-line"><span>HP <b>${b.hp}</b></span><span>공격 <b>${b.atk}</b></span></div>
+    <div class="ability">${b.buff}</div>
+    <p class="desc">${b.note}</p>
+  </div>`).join("");
+</script>
+
+<script>
+/* 몬스터 */
+function monCard(m) {
+  const elTag = m.el ? (() => { const [lb, c] = EL_LABEL[m.el]; return `<span class="tag" style="color:${c};border-color:${c}66;background:${c}18">${lb}</span>`; })() : "";
+  const spTag = m.final ? `<span class="tag boss">FINAL</span>` : m.boss ? `<span class="tag boss">BOSS</span>`
+              : m.revived ? `<span class="tag boss">부활</span>` : m.cc ? `<span class="tag special">CC면역</span>` : "";
+  const tgtTxt = m.tgt === "castle" ? "성 직행" : m.tgt === "dragon" ? "용 사냥" : "타워 공격";
+  const tgtColor = m.tgt === "castle" ? "var(--ice)" : m.tgt === "dragon" ? "var(--fire)" : "var(--gold)";
+  return `<div class="card monster-card reveal" data-t="${m.tgt==="dragon" ? "dragon" : m.t}"
+    data-el="${m.el ? "y" : ""}" data-boss="${m.boss ? "y" : ""}" data-elite="${m.elite ? "y" : ""}" data-name="${m.n}">
+    <div class="top"><h4>${m.n}</h4><span class="hp-big">HP <b>${m.hp.toLocaleString()}</b></span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${spTag}${elTag}<span class="tag" style="color:${tgtColor};border-color:${tgtColor}55">${tgtTxt}</span></div>
+    <div>
+      ${statBar("체력", Math.log10(Math.max(10,m.hp)) * 33, 100, "", "var(--danger)")}
+      ${statBar("속도", m.spd, 4, "", "var(--ice)")}
+      ${m.dmg ? statBar("공격력", Math.min(100, m.dmg), 100, "", "var(--fire)") : ""}
+      ${m.sh ? statBar("방어막", m.sh, 50, "", "var(--time)") : ""}
+    </div>
+    <p class="desc">${m.d}</p>
+    ${m.dmg ? `<div class="meta-line"><span>DPS <b>${Math.round(m.dmg/m.ivl*10)/10}</b></span><span>사거리 <b>${m.rng}</b></span>${m.aoe ? `<span>광역 <b>${m.aoe}</b></span>` : ""}</div>` : ""}
+  </div>`;
+}
+const monGridEl = $("#monGrid");
+monGridEl.innerHTML = MONSTERS.map(monCard).join("");
+
+let monFilter = "all";
+function applyMonFilter() {
+  const q = $("#monSearch").value.trim().toLowerCase();
+  let shown = 0;
+  document.querySelectorAll("#monGrid .monster-card").forEach(c => {
+    const okF =
+      monFilter === "all" ? true :
+      monFilter === "ground" ? c.dataset.t === "ground" :
+      monFilter === "air" ? c.dataset.t === "air" :
+      monFilter === "elite" ? c.dataset.elite === "y" :
+      monFilter === "boss" ? c.dataset.boss === "y" :
+      monFilter === "element" ? !!c.dataset.el : false;
+    const okQ = !q || c.dataset.name.toLowerCase().includes(q);
+    const show = okF && okQ;
+    c.style.display = show ? "" : "none";
+    if (show) shown++;
+  });
+  $("#monEmpty").style.display = shown ? "none" : "block";
+}
+$("#monTabs").addEventListener("click", e => {
+  const btn = e.target.closest(".tab"); if (!btn) return;
+  document.querySelectorAll("#monTabs .tab").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  monFilter = btn.dataset.f;
+  applyMonFilter();
+});
+$("#monSearch").addEventListener("input", applyMonFilter);
+
+/* 건물 */
+$("#buildingGrid").innerHTML = BUILDINGS.map(b => `
+  <div class="card reveal">
+    <h4>${b.n} <span class="tag">${b.cat}</span></h4>
+    <div class="meta-line"><span>산출 <b>${b.out}</b></span><span>인구 <b>${b.pop}</b></span></div>
+    <p class="desc">${b.d}</p>
+    <div class="meta-line"><span class="res">건설:</span>${b.cost}</div>
+  </div>`).join("");
+$("#landmarkGrid").innerHTML = LANDMARKS.map(l => `
+  <div class="card reveal">
+    <h4>${l.n} ${l.pop ? `<span class="tag special">인구 +${l.pop}</span>` : `<span class="tag special">새끼용</span>`}</h4>
+    <p class="desc">${l.d}</p>
+  </div>`).join("");
+$("#sealCost").innerHTML = [8,16,32,64].map(t => `<span class="res"><i class="dot" style="background:${RES[t].c}"></i>${RES[t].name} 250</span>`).join("");
+
+/* 연구 */
+$("#researchCols").innerHTML = Object.entries(RESEARCH).map(([k, br]) => `
+  <div class="branch-col reveal">
+    <h4>${br.title}<small>${br.sub} · ${br.nodes.length}노드</small></h4>
+    ${br.nodes.map(([n, rp, ds]) => `
+      <div class="node">
+        <div><span class="nm">${n}</span><span class="ds">${ds}</span></div>
+        ${rp ? `<span class="rp">${rp} RP</span>` : ""}
+      </div>`).join("")}
+  </div>`).join("");
+
+/* 웨이브 */
+$("#waveBoard").innerHTML = CYCLES.map(c => `
+  <div class="wave-cycle-row">
+    <div class="wave-cycle-label">주기 ${c.no}<small>${c.portal}</small></div>
+    <div class="wave-week">
+      ${Array.from({length:c.waves}, (_, i) => `<div class="wave-cell ${i===6?"boss":""}">${i===6?"보스":`D${i+1}`}</div>`).join("")}
+    </div>
+  </div>`).join("") +
+  `<p style="color:var(--muted);font-size:13px;margin-top:16px">* 최종 주기(4)의 보스전에서는 부활한 보스 3종이 함께 등장합니다.
+   주기 종료 시마다 새 포탈이 개방되어 같은 날 여러 방향을 동시에 방어해야 합니다.</p>`;
+
+/* 뮤테이터 */
+$("#mutGrid").innerHTML = MUTATORS.map(mu => `
+  <div class="card mut-card reveal">
+    <h4>${mu.n}</h4>
+    ${mu.tiers.map((t, i) => `<div class="tier-line"><span class="tier-pill">TIER ${i+1}</span>${t}</div>`).join("")}
+  </div>`).join("");
+
+/* 스크롤 리빌 + 스탯 바 애니메이션 */
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  e.target.classList.add("in");
+  e.target.querySelectorAll(".bar i").forEach(i => i.style.width = i.dataset.w + "%");
+  io.unobserve(e.target);
+}), { threshold: .12 });
+document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+
+/* 내비 활성 표시 */
+const sections = [...document.querySelectorAll("section[id]")];
+const navAnchors = [...document.querySelectorAll(".nav-links a")];
+const spy = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  navAnchors.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + e.target.id));
+}), { rootMargin: "-40% 0px -55% 0px" });
+sections.forEach(s => spy.observe(s));
+
+/* 모바일 메뉴 */
+const toggleBtn = $("#navToggle"), linksEl = $("#navLinks");
+toggleBtn.addEventListener("click", () => linksEl.classList.toggle("open"));
+linksEl.addEventListener("click", e => { if (e.target.tagName === "A") linksEl.classList.remove("open"); });
+</script>
+
+</body>
+</html>
