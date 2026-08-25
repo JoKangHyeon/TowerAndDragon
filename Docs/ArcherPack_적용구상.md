@@ -143,7 +143,6 @@ _impactPrefab:   Archer_Explosion_<속성>
 _impactLifetimeSeconds: 0.22
 _rotateImpactToTravelDirection: 1        ← 화살류는 1 (지면 이펙트만 0, 작업노트 3-8)
 _impactPlacement: 1                      ← 0=TargetOrigin / 1=Body / 2=Ground
-_nearTracerPrefab: ...                   ← 근거리 보정, 필요 시
 ```
 
 ### 3-3. 클론 위치

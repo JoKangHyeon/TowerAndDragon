@@ -18,7 +18,6 @@ public class Projectile : MonoBehaviour
     private IAttackTarget _target;
     private AttackSO _attack;
     private AttackContext _context;
-    private Vector3 _launchPosition;
     private Vector3 _lastTargetPosition;
     private float _speed;
     private GameObject _targetObject;
@@ -68,7 +67,6 @@ public class Projectile : MonoBehaviour
         _attack = attack;
         _context = context;
         _speed = speed;
-        _launchPosition = transform.position;
         _lastTargetPosition = _targetTransform.position;
         _isLaunched = true;
 
@@ -92,7 +90,6 @@ public class Projectile : MonoBehaviour
         _attack = null;
         _targetObject = null;
         _targetTransform = null;
-        _launchPosition = Vector3.zero;
         _lastTargetPosition = Vector3.zero;
         _speed = 0f;
         _travelDirection = Vector3.zero;
@@ -132,11 +129,7 @@ public class Projectile : MonoBehaviour
 
         ApplyHit();
 
-        _visual?.OnHit(
-            _launchPosition,
-            transform.position,
-            _travelDirection,
-            _targetObject);
+        _visual?.OnHit(transform.position, _travelDirection, _targetObject);
 
         Release();
     }
