@@ -71,6 +71,9 @@ public static class TutorialTargetMatcher
             case TutorialBuildingKind.SealStone:
                 return building is SealStone;
 
+            case TutorialBuildingKind.AnyBuilding:
+                return building != null;
+
             default:
                 return false;
         }
