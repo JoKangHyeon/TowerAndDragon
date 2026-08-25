@@ -10,6 +10,7 @@ public sealed class ThornTowerData : TowerData
     [SerializeField] private float _thornDamage;
 
     public override TowerCategory Category => TowerCategory.Special;
+    public override int PopulationCapacity => 0;
 
     // 가시 피해는 고정 데미지
     public float ThornDamage => _thornDamage;
