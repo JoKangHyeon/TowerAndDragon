@@ -2997,6 +2997,7 @@ MonoBehaviour:
   - {fileID: 239636598373408673, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   - {fileID: 6607914833914992100, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   - {fileID: -7227978520168459255, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  - {fileID: 5510276413271460181, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
   _disabledActions: []
 --- !u!114 &914589622
 MonoBehaviour:
@@ -3543,7 +3544,7 @@ PrefabInstance:
       objectReference: {fileID: 1712295652}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _exclusiveModeShortcuts.Array.size
-      value: 4
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _exclusiveModeBehaviours.Array.size
@@ -3590,6 +3591,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1961000633486905275, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _exclusiveModeShortcuts.Array.data[4].Action
+      value: 
+      objectReference: {fileID: 5510276413271460181, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: _exclusiveModeShortcuts.Array.data[0].TargetBehaviour
       value: 
       objectReference: {fileID: 802675912}
@@ -3601,6 +3606,10 @@ PrefabInstance:
       propertyPath: _exclusiveModeShortcuts.Array.data[3].TargetBehaviour
       value: 
       objectReference: {fileID: 944163942}
+    - target: {fileID: 449109871165840085, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _exclusiveModeShortcuts.Array.data[4].TargetBehaviour
+      value: 
+      objectReference: {fileID: 944163945}
     - target: {fileID: 491982035179868224, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0

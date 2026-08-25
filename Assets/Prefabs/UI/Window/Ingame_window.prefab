@@ -4203,6 +4203,8 @@ GameObject:
   - component: {fileID: 8775478472126145977}
   - component: {fileID: 2487463240324525273}
   - component: {fileID: 1339206513522195008}
+  - component: {fileID: 5101664083075815225}
+  - component: {fileID: 7785404943658765392}
   m_Layer: 5
   m_Name: Button_Claim
   m_TagString: Untagged
@@ -4339,6 +4341,36 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &5101664083075815225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2284977822685493174}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db80535f840aa3d42b03e4a47604babe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_TooltipTrigger
+  _presenter: {fileID: 3927106142654876311}
+  _titleLocKey: 
+  _bodyLocKey: 
+--- !u!114 &7785404943658765392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2284977822685493174}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c548b82bc2500f4491b076db32ecff1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_ShortcutTooltip
+  _trigger: {fileID: 5101664083075815225}
+  _action: {fileID: -2993815270120332460, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _titleLocKey: tooltip_button_conquest
 --- !u!1 &2368351419622657343
 GameObject:
   m_ObjectHideFlags: 0
@@ -5664,6 +5696,8 @@ GameObject:
   - component: {fileID: 2126303326886991268}
   - component: {fileID: 8300870577253991817}
   - component: {fileID: 1628414964649297761}
+  - component: {fileID: 3847536989742019840}
+  - component: {fileID: 5358022951893703976}
   m_Layer: 5
   m_Name: Button_Dragon
   m_TagString: Untagged
@@ -5813,6 +5847,36 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GuideAnchor
   _id: 19
+--- !u!114 &3847536989742019840
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3495253976557991425}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db80535f840aa3d42b03e4a47604babe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_TooltipTrigger
+  _presenter: {fileID: 3927106142654876311}
+  _titleLocKey: 
+  _bodyLocKey: 
+--- !u!114 &5358022951893703976
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3495253976557991425}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c548b82bc2500f4491b076db32ecff1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_ShortcutTooltip
+  _trigger: {fileID: 3847536989742019840}
+  _action: {fileID: 1961000633486905275, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _titleLocKey: tooltip_button_dragon
 --- !u!1 &3538504284170145767
 GameObject:
   m_ObjectHideFlags: 0
@@ -6022,6 +6086,8 @@ GameObject:
   - component: {fileID: 2186643290406284763}
   - component: {fileID: 3390734094141104450}
   - component: {fileID: 4879418717903902304}
+  - component: {fileID: 8893819990472061280}
+  - component: {fileID: 7378487589487252968}
   m_Layer: 5
   m_Name: Button_Research
   m_TagString: Untagged
@@ -6158,6 +6224,36 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &8893819990472061280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3736212813531365009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db80535f840aa3d42b03e4a47604babe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_TooltipTrigger
+  _presenter: {fileID: 3927106142654876311}
+  _titleLocKey: 
+  _bodyLocKey: 
+--- !u!114 &7378487589487252968
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3736212813531365009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c548b82bc2500f4491b076db32ecff1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_ShortcutTooltip
+  _trigger: {fileID: 8893819990472061280}
+  _action: {fileID: 5510276413271460181, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+  _titleLocKey: tooltip_button_research
 --- !u!1 &3742945928657032327
 GameObject:
   m_ObjectHideFlags: 0

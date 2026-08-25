@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -29,11 +30,24 @@ public class UI_TooltipTrigger : MonoBehaviour,
     private TooltipContent _dynamicContent;
     private bool _hasDynamicContent;
     private bool _isHovered;
+    private Func<TooltipContent> _contentProvider;
 
     /// <summary>소유 창이 표시기를 주입한다(프리팹마다 참조를 손으로 걸지 않아도 되게).</summary>
     public void SetPresenter(UI_TooltipPresenter presenter)
     {
         _presenter = presenter;
+    }
+
+    /// <summary>호버할 때마다 내용을 다시 만든다. 키 표기처럼 언제든 바뀌는 값에 쓴다.
+    /// SetContent(동적 값 밀어넣기)보다 우선한다.</summary>
+    public void SetContentProvider(Func<TooltipContent> provider)
+    {
+        _contentProvider = provider;
+
+        if (_isHovered)
+        {
+            RefreshWhileHovered();
+        }
     }
 
     /// <summary>동적 내용을 설정한다. 표시 중이면 즉시 반영한다.</summary>
@@ -124,6 +138,11 @@ public class UI_TooltipTrigger : MonoBehaviour,
 
     private TooltipContent ResolveContent()
     {
+        if (_contentProvider != null)
+        {
+            return _contentProvider();
+        }
+
         if (_hasDynamicContent)
         {
             return _dynamicContent;

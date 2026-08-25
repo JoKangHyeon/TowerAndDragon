@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -180,6 +182,15 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode, IExclusiveMod
         {
             _cycleManager.OnCycleChanged.AddListener(HandleCycleChanged);
         }
+
+        // 영혼 타워처럼 다른 타워의 정원에 영향을 주는 건물이 새로 지어지거나 철거될 때는
+        // PopulationChanged가 발화하지 않는다(PopulationManager.TryCreateAllocation는 알리지 않고,
+        // TryReleaseAll은 배치 인구가 0이면 조기 반환한다) - 그리드 변화 자체를 구독해 덮는다.
+        if (_gridMap != null)
+        {
+            _gridMap.OnBuildingAdded.AddListener(HandleBuildingChanged);
+            _gridMap.OnBuildingRemoving.AddListener(HandleBuildingChanged);
+        }
     }
 
     private void OnDisable()
@@ -192,6 +203,12 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode, IExclusiveMod
         if (_cycleManager != null)
         {
             _cycleManager.OnCycleChanged.RemoveListener(HandleCycleChanged);
+        }
+
+        if (_gridMap != null)
+        {
+            _gridMap.OnBuildingAdded.RemoveListener(HandleBuildingChanged);
+            _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingChanged);
         }
     }
 
@@ -577,6 +594,33 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode, IExclusiveMod
     {
         if (IsActive)
             RefreshOverlays();
+    }
+
+    // 새로 지은/철거되는 건물이 영혼 타워처럼 다른 타워의 정원(SoulPopulation)에 영향을 줄 수
+    // 있다 - 그 건물 자신이 배치 대상인지와 무관하게 항상 전체를 다시 그린다.
+    //
+    // 한 프레임 미룬다(CLAUDE.md 이벤트 초기화 규칙과 같은 이유) - 이 프레임 안에서는 아직
+    // 두 시점이 어긋나 있다: 건설 직후에는 TowerPopulationCoordinator의 Initialize가
+    // 같은 OnBuildingAdded 호출 안에서 이 리스너보다 나중에 돌 수 있어 방금 지은 타워 자신이
+    // 아직 IsInitialized=false로 보이고, 철거 시에는 OnBuildingRemoving이 그리드에서 실제로
+    // 빠지기 "전"에 발화해 철거되는 타워의 오라가 아직 살아있는 값으로 잡힌다. 다음 프레임이면
+    // 두 경우 모두 정리가 끝나 있다.
+    private void HandleBuildingChanged(Building building)
+    {
+        if (IsActive)
+        {
+            RefreshOverlaysNextFrameAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        }
+    }
+
+    private async UniTaskVoid RefreshOverlaysNextFrameAsync(CancellationToken token)
+    {
+        await UniTask.Yield(token);
+
+        if (IsActive)
+        {
+            RefreshOverlays();
+        }
     }
 
     private static Vector2 PointerScreenPosition() =>
