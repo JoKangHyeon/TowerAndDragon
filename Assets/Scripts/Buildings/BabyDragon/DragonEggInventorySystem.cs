@@ -48,7 +48,7 @@ public class DragonEggInventorySystem : MonoBehaviour
     {
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.AddListener(GrowAll);
+            _cycleManager.OnDayStart.AddListener(HandleDayStart);
         }
     }
 
@@ -56,13 +56,24 @@ public class DragonEggInventorySystem : MonoBehaviour
     {
         if (_cycleManager != null)
         {
-            _cycleManager.OnDayStart.RemoveListener(GrowAll);
+            _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
         }
     }
 
-    private void Start()
+    /// <summary>
+    /// 하루의 시작. 알을 하루치 성장시키고, 새 런의 첫날이면 시작 알을 지급한다.
+    ///
+    /// 시작 지급이 Start가 아니라 이 신호에 붙어 있는 이유: OnDayStart는 StartDay에서만 발화하고
+    /// StartDay는 새 런(GameManager.StartNewRun)에서만 불린다. 이어하기는 SeedRestoredDay +
+    /// ResumeDay로 들어와 OnDayStart를 발화하지 않으므로 여기로 오지 않는다 - Start에 두면
+    /// 불러오기로 씬을 리로드할 때마다 알이 다시 지급되고 획득 알림이 다시 뜬다.
+    /// 로드 실패 폴백도 StartNewRun을 거치므로 그 경로에서는 정상 지급된다.
+    /// </summary>
+    private void HandleDayStart(int dayNumber)
     {
-        if (_grantStartingEgg)
+        GrowAll(dayNumber);
+
+        if (_grantStartingEgg && dayNumber == CycleManager.FIRST_DAY_NUMBER)
         {
             GrantStartingEggAsync().Forget();
         }
@@ -99,7 +110,7 @@ public class DragonEggInventorySystem : MonoBehaviour
         return true;
     }
 
-    // OnDayStart의 일차 인자는 쓰지 않는다 - 부화 속도는 날짜와 무관하다.
+    // 일차 인자는 쓰지 않는다 - 부화 속도는 날짜와 무관하다.
     private void GrowAll(int _)
     {
         if (_gameManager == null || _dataCatalog == null)

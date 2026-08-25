@@ -24,7 +24,11 @@ public class CycleManager : MonoBehaviour
     }
 
     // 게임은 1일차부터 시작한다 - StartDay가 0에서 1로 올린다.
-    private const int FIRST_DAY_NUMBER = 1;
+    //
+    // public인 이유: "이 날이 새 런의 첫날인가"를 밖에서도 판정한다. 이어하기는
+    // SeedRestoredDay + ResumeDay로 들어와 OnDayStart를 발화하지 않으므로, 이 일차의
+    // OnDayStart는 곧 "새 런이 방금 시작됐다"와 같다(DragonEggInventorySystem이 쓴다).
+    public const int FIRST_DAY_NUMBER = 1;
 
     private GameManager _gameManager;
 
