@@ -184,7 +184,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         _health.RestoreCurrentHealth(_health.MaxHealth * ratio);
     }
 
-    public void TakeDamage(DamageInfo damage)
+    public virtual void TakeDamage(DamageInfo damage)
     {
         if (IsDead)
         {

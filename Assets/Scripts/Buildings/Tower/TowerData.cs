@@ -41,8 +41,9 @@ public class TowerData : ScriptableObject
 
 
     public string NameLocKey => _nameLocKey;
+    public virtual TowerCategory Category => TowerCategory.Basic;
     public bool RequiresResearchUnlock => _requiresResearchUnlock;
-    public int PopulationCapacity => _populationCapacity;
+    public virtual int PopulationCapacity => _populationCapacity;
     public IReadOnlyList<ResourceAmount> BuildCost => _buildCost ?? System.Array.Empty<ResourceAmount>();
     public float MaxHealth => _maxHealth;
     public float ReviveDelay => _reviveDelay;

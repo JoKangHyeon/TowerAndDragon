@@ -12,6 +12,8 @@ public sealed class ElementalTowerData : TowerData, ITowerAuraDataProvider, IEle
     [Header("Tower Aura")]
     [SerializeField] private TowerAuraDataSO _towerAura;
 
+    public override TowerCategory Category => TowerCategory.Elemental;
+
     public DragonType DragonType => _dragonType;
 
     public TowerAuraDataSO TowerAura => _towerAura;

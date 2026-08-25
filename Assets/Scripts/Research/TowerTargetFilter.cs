@@ -14,6 +14,7 @@ public struct TowerTargetFilter
         All,             // 종류를 가리지 않는다(필터 도입 전 동작)
         ElementalTowers, // 속성 타워 전부
         MatchingElement, // 지정한 속성의 속성 타워만
+        MatchingCategory, // 지정한 타워 카테고리만
     }
 
     [Tooltip("이 효과를 어떤 타워에 걸지. All이 기본이며 전 타워에 적용한다.")]
@@ -22,8 +23,12 @@ public struct TowerTargetFilter
     [Tooltip("MatchingElement일 때만 쓰인다.")]
     [SerializeField] private DragonType _element;
 
+    [Tooltip("MatchingCategory일 때만 쓰인다.")]
+    [SerializeField] private TowerCategory _category;
+
     public FilterMode Mode => _mode;
     public DragonType Element => _element;
+    public TowerCategory Category => _category;
 
     /// <summary>
     /// 이 타워가 대상인가.
@@ -38,6 +43,11 @@ public struct TowerTargetFilter
         if (_mode == FilterMode.All)
         {
             return true;
+        }
+
+        if (_mode == FilterMode.MatchingCategory)
+        {
+            return towerData != null && towerData.Category == _category;
         }
 
         if (towerData is not ElementalTowerData elemental)
