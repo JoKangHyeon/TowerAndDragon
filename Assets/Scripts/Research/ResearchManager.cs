@@ -288,13 +288,63 @@ public sealed class ResearchManager : MonoBehaviour,
 
         for (int i = 0; i < _activeEffects.Count; i++)
         {
-            if (_activeEffects[i].GetUnlockedTower() == towerData)
+            if (_activeEffects[i].GetUnlockedTower() != towerData)
+            {
+                continue;
+            }
+
+            // 조건을 못 채운 효과에서 바로 false를 돌려주지 않는다 - 같은 타워를 해금하는 효과가
+            // 둘 이상일 수 있고(유적 조건이 붙은 것과 안 붙은 것), 그중 하나만 만족하면 해금이다.
+            // 여기서 끊으면 활성 목록 순서에 따라 결과가 갈린다.
+            if (IsTowerUnlockLandmarkClaimed(_activeEffects[i]))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    // 타워 해금에 걸린 유적 조건. ResearchEffectSO 전체(효과 15종)에 랜드마크 개념을 올리지 않으려고
+    // 타워 해금 효과만 좁혀서 묻는다 - "어떤 효과든 유적으로 잠글 수 있다"는 이 기능이 아니다.
+    private bool IsTowerUnlockLandmarkClaimed(ResearchEffectSO effect)
+    {
+        if (effect is not TowerUnlockEffectSO towerUnlock ||
+            towerUnlock.RequiredLandmark == null)
+        {
+            return true;
+        }
+
+        if (LandmarkOwnershipQuery == null)
+        {
+            // 노드 쪽 판정(IsRequiredLandmarkClaimed)과 달리 로그를 남긴다. 노드는 잠기면 연구 창에
+            // research_state_landmark_locked로 드러나지만, 건설 메뉴는 잠긴 타워의 슬롯을 아예 만들지
+            // 않는 것이 의도된 동작이라(UI_BuildModeWindow) 배선을 빠뜨리면 타워가 조용히 사라진다.
+            LogMissingLandmarkQueryOnce(towerUnlock);
+            return false;
+        }
+
+        return LandmarkOwnershipQuery.IsClaimed(
+            towerUnlock.RequiredLandmark.LandmarkId);
+    }
+
+    // 건설 메뉴를 다시 그릴 때마다 타워마다 한 번씩 지나는 경로라, 배선이 빠졌을 때
+    // 콘솔이 같은 에러로 덮이지 않도록 한 번만 남긴다.
+    private bool _hasLoggedMissingLandmarkQuery;
+
+    private void LogMissingLandmarkQueryOnce(TowerUnlockEffectSO towerUnlock)
+    {
+        if (_hasLoggedMissingLandmarkQuery)
+        {
+            return;
+        }
+
+        _hasLoggedMissingLandmarkQuery = true;
+
+        Debug.LogError(
+            $"[ResearchManager] LandmarkOwnershipQuery가 없어 '{towerUnlock.name}'의 유적 조건을 " +
+            $"판정할 수 없습니다. 유적 조건이 걸린 타워는 건설 메뉴에 나타나지 않습니다 " +
+            $"(LandmarkResearchCoordinator 배선 확인).", this);
     }
 
     // 랜드마크 조건이 없는 노드(대부분)는 항상 통과한다. 조건이 있는데 조회 슬롯이 비어 있으면
