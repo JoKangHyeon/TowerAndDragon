@@ -10,6 +10,10 @@ public static class TitleLocKeys
     public const string CONFIG = "title_config";
     public const string QUIT = "title_quit";
 
+    /// <summary>첫 클리어 이후에만 나타나는 "새 게임 +" 버튼 라벨.
+    /// 창 안쪽 문구는 <see cref="NewGamePlusLocKeys"/>가 갖는다.</summary>
+    public const string NEW_GAME_PLUS = "title_new_game_plus";
+
     public const string TUTORIAL_PROMPT_MESSAGE = "title_tutorial_prompt_message";
     public const string TUTORIAL_PROMPT_PROCEED = "title_tutorial_prompt_proceed";
     public const string TUTORIAL_PROMPT_SKIP = "title_tutorial_prompt_skip";

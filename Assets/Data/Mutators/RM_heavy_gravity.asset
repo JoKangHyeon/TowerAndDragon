@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48b79707613eec244bec238ff7ee0b35, type: 3}
+  m_Name: RM_heavy_gravity
+  m_EditorClassIdentifier: Assembly-CSharp::RunMutatorSO
+  _id: heavy_gravity
+  _nameLocKey: mutator_heavy_gravity_name
+  _exclusiveGroup: 
+  _tiers:
+  - _difficultyScore: 2
+    _descLocKey: mutator_heavy_gravity_tier1_desc
+    _effects:
+    - {fileID: 2140887697765426941}
+--- !u!114 &2140887697765426941
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f3c12b9e1ee8c504aa8d0c96f6136ecd, type: 3}
+  m_Name: RME_heavy_gravity
+  m_EditorClassIdentifier: Assembly-CSharp::RunCounterEffectSO
+  _channel: 0
+  _delta: 1

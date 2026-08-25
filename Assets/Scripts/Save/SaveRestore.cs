@@ -19,6 +19,12 @@ public static class SaveRestore
     /// </summary>
     public static void Apply(SaveGameDto dto, SaveCaptureContext context)
     {
+        // 0. 새 게임 +(뮤테이터). 2번(자원)·10번(랜드마크 인구)·11번(건물)보다 반드시 앞서야 한다 -
+        //    생산 배율·유지비·타워 최대 체력이 전부 이 스냅샷을 전제로 계산되므로, 뒤에 적용하면
+        //    복원된 수치가 표준 모드 기준으로 굳은 뒤 뮤테이터만 켜진 어긋난 상태가 된다.
+        //    미지 id·범위 밖 단계 거부는 SaveService가 여기 오기 전에 이미 끝냈다(롤백 불가 구간).
+        context.RunModifierService?.ApplyRestoredMutators(ToMutatorSelections(dto.Run.Mutators));
+
         // 1. 일차·페이즈 시드. 이후 모든 핸들러가 일관된 일차를 보게 한다.
         context.CycleManager.SeedRestoredDay(dto.Run.CurrentCycle);
 
@@ -209,6 +215,20 @@ public static class SaveRestore
             }
         }
 
+        // 패스 3 - 타워 체력·부활 진행도. 패스 2 뒤인 이유는 부활 게이지의 진행 속도가 배치 인구에
+        // 좌우돼(Tower.ReviveAfterDelayAsync의 StaffingRatio) 인구가 확정된 뒤에 얹는 편이 읽기 쉽기
+        // 때문이다. Tower.RestoreHealth는 Setup 전에 불려도 값을 받아 두므로 프레임 순서에 의존하지 않는다.
+        foreach ((BuildingPlacementDto placement, Building instance) in restored)
+        {
+            if (instance is Tower tower)
+            {
+                tower.RestoreHealth(
+                    placement.CurrentHealth,
+                    placement.IsDisabled,
+                    placement.ReviveProgress);
+            }
+        }
+
         Debug.Log($"[SaveRestore] 건물 복원 - 요청 {placements.Count}개 중 {restored.Count}개 배치");
         WarnOnUnplacedBabyDragons(run, restored);
     }
@@ -330,7 +350,29 @@ public static class SaveRestore
             (DragonType)dto.DragonType,
             babyDragons,
             dragonEggs,
-            bossDragonEggRewards);
+            bossDragonEggRewards,
+            dto.TypeChangeCycleNumber,
+            dto.TypeChangeCountInCycle);
+    }
+
+    /// <summary>세이브의 뮤테이터 목록을 RunModifierService·RunMutatorCatalogSO가 쓰는 (id, 단계) 튜플로 옮긴다.
+    /// SaveService의 복원 전 거부 판정과 여기의 실제 적용이 <b>같은 변환</b>을 쓰게 하려고 공개해 둔다 -
+    /// 둘이 갈라지면 "검사는 통과했는데 적용은 다른 목록"이 된다.</summary>
+    public static List<(string Id, int Tier)> ToMutatorSelections(List<RunMutatorSelectionDto> selections)
+    {
+        var result = new List<(string Id, int Tier)>();
+
+        if (selections == null)
+        {
+            return result;
+        }
+
+        foreach (RunMutatorSelectionDto selection in selections)
+        {
+            result.Add((selection.Id, selection.Tier));
+        }
+
+        return result;
     }
 
     private static List<ConquestExpedition> ToExpeditions(ConquestStateDto dto)

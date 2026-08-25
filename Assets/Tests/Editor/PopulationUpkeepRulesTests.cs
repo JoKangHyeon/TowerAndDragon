@@ -125,4 +125,89 @@ public class PopulationUpkeepRulesTests
 
         Assert.That(preview.PopulationLost, Is.EqualTo(expectedPopulationLost));
     }
+
+    // --- 새 게임 + (big_appetite) 배율 ---
+
+    // 배율이 항등원이면 1명당 값이 기본값 그대로여야 한다(회귀).
+    [TestCase(0, 1f, 0f)]
+    [TestCase(1, 1f, 1f)]
+    [TestCase(3, 1f, 3f)]
+    [TestCase(1, 1.5f, 1.5f)]
+    [TestCase(1, 2f, 2f)]
+    [TestCase(1, 3f, 3f)]
+    [TestCase(2, 1.5f, 3f)]
+    public void GetEffectiveFoodPerPopulation_MultipliesBaseValue(
+        int basePerPopulation,
+        float runMultiplier,
+        float expected
+    )
+    {
+        Assert.That(
+            PopulationUpkeepRules.GetEffectiveFoodPerPopulation(basePerPopulation, runMultiplier),
+            Is.EqualTo(expected)
+        );
+    }
+
+    // 음수 입력은 0으로 눌러야 한다 - 음수 유지비는 정산에서 자원을 늘려 버린다.
+    [TestCase(-3, 2f)]
+    [TestCase(3, -2f)]
+    public void GetEffectiveFoodPerPopulation_NegativeInputs_ClampAtZero(
+        int basePerPopulation,
+        float runMultiplier
+    )
+    {
+        Assert.That(
+            PopulationUpkeepRules.GetEffectiveFoodPerPopulation(basePerPopulation, runMultiplier),
+            Is.Zero
+        );
+    }
+
+    // 소수 1명당 값은 총액에서 한 번만 올림한다 - 1명당으로 먼저 정수화하면 x1.5가 사라진다.
+    [TestCase(50, 1.5f, 75)]
+    [TestCase(1, 1.5f, 2)]
+    [TestCase(3, 1.5f, 5)]
+    [TestCase(0, 1.5f, 0)]
+    [TestCase(50, 0f, 0)]
+    public void GetRequiredFood_FractionalPerPopulation_CeilsTheTotalOnce(
+        int population,
+        float foodPerPopulation,
+        int expectedRequiredFood
+    )
+    {
+        Assert.That(
+            PopulationUpkeepRules.GetRequiredFood(population, foodPerPopulation),
+            Is.EqualTo(expectedRequiredFood)
+        );
+    }
+
+    // 소수 경로도 오버플로에서 음수로 뒤집히지 않아야 한다(정수 경로와 같은 계약).
+    [TestCase(int.MaxValue, 2f)]
+    [TestCase(int.MaxValue, 1.5f)]
+    public void GetRequiredFood_FractionalOverflows_ClampsToIntMaxValue(
+        int population,
+        float foodPerPopulation
+    )
+    {
+        Assert.That(
+            PopulationUpkeepRules.GetRequiredFood(population, foodPerPopulation),
+            Is.EqualTo(int.MaxValue)
+        );
+    }
+
+    // 1명당 값이 소수면 아사 인원 환산의 분모도 소수여야 한다 - 2로 반올림하면
+    // 유지비는 늘었는데 굶어 죽는 인원은 오히려 줄어든다.
+    [TestCase(1.5f, 3, 2)]
+    [TestCase(1.5f, 30, 20)]
+    [TestCase(3f, 62, 21)]
+    public void PopulationLost_FractionalPerPopulation_DividesByTheFractionalValue(
+        float foodPerPopulation,
+        int shortage,
+        int expectedPopulationLost
+    )
+    {
+        var preview = new PopulationUpkeepPreview(shortage, 0, 0, foodPerPopulation);
+
+        Assert.That(preview.FoodShortage, Is.EqualTo(shortage));
+        Assert.That(preview.PopulationLost, Is.EqualTo(expectedPopulationLost));
+    }
 }

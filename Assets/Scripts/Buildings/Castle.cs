@@ -51,8 +51,19 @@ public class Castle : Building, IAttackTarget
 
     private void Start()
     {
+        // 배수의 진(last_stand)의 런 배율. Unity는 "모든 Awake → 모든 Start" 순서만 보장하는데
+        // RunModifierService는 Awake에서 스냅샷을 확정하므로 Start인 여기서 읽는 것이 안전하다
+        // (CLAUDE.md 이벤트 초기화 규칙). 새 [SerializeField]를 두지 않고 GameManager를 경유하는 이유:
+        // Castle은 씬에서 프리팹 인스턴스라 씬 참조를 넣으려면 인스턴스 오버라이드를 손으로 써야 하고,
+        // GameManager 참조는 이미 배선돼 있다.
+        RunModifierService runModifierService =
+            _gameManager != null ? _gameManager.RunModifierService : null;
+        float runMultiplier = RunModifiers
+            .SnapshotOf(runModifierService)
+            .GetMultiplier(RunModifierChannel.CastleMaxHealth);
+
         // Awake가 아닌 Start에서 초기화 → 다른 컴포넌트가 초기 HealthChanged를 받도록.
-        _health.Initialize(_maxHealth);
+        _health.Initialize(_maxHealth * runMultiplier);
         RegisterCenterFootprint();
     }
 

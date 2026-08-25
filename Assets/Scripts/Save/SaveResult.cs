@@ -10,6 +10,9 @@ public enum SaveFailureReason
     CaptureFailed,
     SerializationFailed,
     DiskWriteFailed,
+
+    /// <summary>철인 모드(ironman)에서 이 런에 고정된 슬롯이 아닌 곳에 저장하려 했다.</summary>
+    IronmanSlotLocked,
 }
 
 public enum SaveLoadFailureReason

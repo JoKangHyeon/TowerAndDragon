@@ -106,7 +106,9 @@ public sealed class TutorialObjectiveController : MonoBehaviour, IDayEndBlockQue
     ///
     /// <b>여기 걸리는 목표는 전부 "그날 낮 안에" 달성 가능해야 한다.</b> 한때 이 관문을 열어 둔 적이
     /// 있는데, 그때의 우려는 3일차가 어미용 속성 변경과 연구 완료 뒤에 잠긴다는 것이었다. 확인해 보니
-    /// 둘 다 잠그지 않는다 - Dragon.TryChangeType에는 횟수 제한이 없고 3일차 강제 챕터가 속성 변경을
+    /// 둘 다 잠그지 않는다 - Dragon.TryChangeType의 주기당 횟수 제한은 굳은 맹세(sworn_element)
+    /// 뮤테이터가 켜졌을 때만 생기고 튜토리얼 씬에는 RunModifierService 자체가 없어 항상 무제한이며,
+    /// 3일차 강제 챕터가 속성 변경을
     /// 직접 시키며(TS_311), 연구는 ResearchManager.TryResearch가 구매 즉시 NodeCompleted를 발화하고
     /// 포인트도 2일차 아침에 채워진다. 목표를 새로 걸 때 이 조건이 깨지면 그날 밤이 영영 오지 않는다.
     ///

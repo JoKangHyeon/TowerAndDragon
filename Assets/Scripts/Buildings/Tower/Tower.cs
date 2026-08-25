@@ -15,6 +15,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     private ITowerStaffing _staffing;
     private TowerAuraSystem _auraSystem;
     private ITowerCombatRepairUnlockQuery _combatRepairUnlockQuery;
+    private ITowerReviveGateQuery _reviveGateQuery;
     private CancellationTokenSource _reviveCts;
     private CancellationTokenSource _paralysisCts;
     protected Animator _animator;
@@ -34,11 +35,19 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     private float _disabledAtTime;
     private float _reviveProgress;
 
+    // 세이브 복원이 맡긴 체력·부활 진행도. Setup 이전에 도착하는 경우가 있어 값을 받아 두고
+    // Setup 끝에서 적용한다(RestoreHealth 주석 참고).
+    private HealthRestoreRequest? _pendingHealthRestore;
+
     // 감전 효과
     private bool _isParalyzed;
     private float _paralyzedUntil;
 
     public bool IsDead => _health == null || _health.IsDead;
+
+    /// <summary>세이브 캡처가 읽는 현재 체력. 초기화 전이면 0(= 기록 없음)이다.</summary>
+    public float CurrentHealth => _health != null ? _health.CurrentHealth : 0f;
+
     public TowerAttack Attack => _attack;
     public TowerData Data => _towerData;
     public TowerAuraSystem AuraSystem => _auraSystem;
@@ -151,6 +160,10 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         _attack.Initialize(_towerData, _animator);
         _isInitialized = true;
         RefreshAttackEnabled();
+
+        // Initialize가 만피로 세팅한 체력을 세이브값으로 되돌린다 - Castle이 Start 뒤에
+        // RestoreHealth로 덮어쓰는 것과 같은 순서다.
+        ApplyPendingHealthRestore();
     }
 
     // 용 스킬트리의 최대체력 보너스를 다시 적용한다. 공격력·공속과 달리 매 프레임 pull할 수 없는
@@ -231,6 +244,74 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         RestoreAndReactivate();
     }
 
+    /// <summary>세이브 복원 전용. Setup의 Initialize가 만피·활성으로 세팅한 상태를 저장값으로 되돌린다.
+    /// (<see cref="Castle.RestoreHealth"/>와 같은 자리·같은 역할이다.)
+    ///
+    /// <b>Setup보다 먼저 불릴 수 있다.</b> SaveRestore는 GridMap.RestoreBuilding으로 방금 Instantiate한
+    /// 인스턴스에 쓰는데, 평범한 타워의 Setup은 다음 프레임의 Tower.Start가 스스로 부른다.
+    /// 그래서 값을 받아 두고 Setup 끝에서 적용한다 - 호출부가 프레임 순서를 알 필요가 없다.</summary>
+    /// <param name="currentHealth">저장 당시 현재 체력. isDisabled가 false인데 0 이하면 "기록 없음"으로
+    /// 보고 만피를 유지한다(구버전 세이브·타워가 아닌 건물).</param>
+    /// <param name="isDisabled">저장 당시 비활성 상태였는가.</param>
+    /// <param name="reviveProgress">부활 게이지 진행도(0~1). isDisabled일 때만 쓴다.</param>
+    public void RestoreHealth(float currentHealth, bool isDisabled, float reviveProgress)
+    {
+        _pendingHealthRestore = new HealthRestoreRequest(currentHealth, isDisabled, reviveProgress);
+
+        if (_isInitialized)
+        {
+            ApplyPendingHealthRestore();
+        }
+    }
+
+    // 새 복구·파괴 경로를 만들지 않는다 - 비활성은 기존 사망 경로(Health.Died -> HandleDisabled)를
+    // 그대로 타야 애니메이션·Disabled 이벤트·전투 수리 시작이 빠지지 않는다.
+    private void ApplyPendingHealthRestore()
+    {
+        if (_pendingHealthRestore == null)
+        {
+            return;
+        }
+
+        HealthRestoreRequest request = _pendingHealthRestore.Value;
+        _pendingHealthRestore = null;
+
+        if (request.IsDisabled)
+        {
+            // Health.RestoreCurrentHealth는 1 미만으로 내려가지 않아(로드 직후 게임오버 방지)
+            // 비활성 상태를 만들 수 없다. Died를 발화하는 경로는 Kill뿐이다.
+            _health.Kill();
+
+            // HandleDisabled가 진행도를 0으로 초기화하므로 반드시 그 뒤에 세운다 -
+            // 순서가 바뀌면 밤새 차오른 게이지가 매번 0부터 다시 시작한다.
+            _reviveProgress = Mathf.Clamp01(request.ReviveProgress);
+            return;
+        }
+
+        if (request.CurrentHealth <= 0f)
+        {
+            return;
+        }
+
+        _health.RestoreCurrentHealth(request.CurrentHealth);
+    }
+
+    // 세이브에서 온 체력 3값 묶음. 세 필드를 따로 들면 "적용 대기 중인가"를 판정할 플래그가 하나 더
+    // 필요해지므로 nullable 하나로 묶는다.
+    private readonly struct HealthRestoreRequest
+    {
+        public readonly float CurrentHealth;
+        public readonly bool IsDisabled;
+        public readonly float ReviveProgress;
+
+        public HealthRestoreRequest(float currentHealth, bool isDisabled, float reviveProgress)
+        {
+            CurrentHealth = currentHealth;
+            IsDisabled = isDisabled;
+            ReviveProgress = reviveProgress;
+        }
+    }
+
     public bool TryRestoreDuringCombat()
     {
         if (!_isInitialized || !IsDead || !CanUseCombatRepair)
@@ -248,6 +329,15 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         while (_reviveProgress < 1f)
         {
             await UniTask.Yield(token);
+
+            // 관문이 닫혀 있는 동안에는 진행도를 올리지 않는다(진행도는 보존한다).
+            // no_morning_restore가 켜진 런에서 "낮에는 게이지가 멈춘다"가 여기서 성립한다 -
+            // 아침 복구만 막으면 낮에도 게이지가 차올라 결국 부활해 버려 뮤테이터가 무효가 된다.
+            // 관문이 주입되지 않았으면(미배선·튜토리얼·뮤테이터 없음) 조건이 단락돼 기존 루프와 완전히 같다.
+            if (_reviveGateQuery != null && !_reviveGateQuery.CanAdvanceRevive)
+            {
+                continue;
+            }
 
             float staffingRatio = _staffing != null
                 ? Mathf.Clamp01(_staffing.StaffingRatio)
@@ -278,6 +368,13 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     public void SetAuraSystem(TowerAuraSystem auraSystem)
     {
         _auraSystem = auraSystem;
+    }
+
+    /// <summary>부활 게이지 관문을 주입한다. null을 넣으면 관문 없음(항상 진행)으로 돌아간다 -
+    /// TowerStatMultiplierCoordinator가 오라 시스템을 뗄 때 쓰는 해제 규약과 같다.</summary>
+    public void SetReviveGateQuery(ITowerReviveGateQuery reviveGateQuery)
+    {
+        _reviveGateQuery = reviveGateQuery;
     }
 
     public void SetCombatRepairUnlockQuery(ITowerCombatRepairUnlockQuery combatRepairUnlockQuery)
@@ -313,12 +410,30 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         }
 
         _reviveCts.Cancel();
+        DisposeReviveCts();
+    }
+
+    // 취소는 하지 않고 정리만 한다. ReviveAfterDelayAsync가 자연 완료로 여기에 들어온 경우
+    // 자기 토큰을 취소할 이유가 없기 때문이다(루프는 이미 빠져나왔다).
+    private void DisposeReviveCts()
+    {
+        if (_reviveCts == null)
+        {
+            return;
+        }
+
         _reviveCts.Dispose();
         _reviveCts = null;
     }
 
     private void RestoreAndReactivate()
     {
+        // 자연 완료로 부활한 경우에도 CTS를 반드시 비운다. 남겨 두면 TryStartCombatRevive의
+        // "_reviveCts != null" 가드에 걸려 그 타워는 두 번째 자동 부활을 하지 못하고,
+        // 아침 복구·전투 수리가 CancelRevive로 비워 줄 때까지 부서진 채로 남는다.
+        // RestoreAtMorning / TryRestoreDuringCombat 경로는 이미 CancelRevive가 비운 뒤라 여기서는 아무 일도 없다.
+        DisposeReviveCts();
+
         bool wasDisabled = _isDisabled;
         float disabledDuration = Time.time - _disabledAtTime;
 

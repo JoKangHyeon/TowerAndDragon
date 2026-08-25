@@ -40,6 +40,11 @@ public class ResourceForecast : MonoBehaviour
         "예상치와 실제 차감액이 어긋나지 않는다.")]
     [SerializeField] private EconomyBalanceData _economyBalance;
 
+    [Tooltip("새 게임 +(뮤테이터)의 식량 유지비 배율 출처. 미연결이면 배율 1(표준 모드)로 본다. " +
+        "PopulationUpkeepSystem과 같은 서비스를 연결해야 예상치와 실제 차감액이 어긋나지 않는다.")]
+    [WiringOptional]
+    [SerializeField] private RunModifierService _runModifiers;
+
     /// <summary>예상 증감이 바뀌었을 때 발화. UI가 구독해 표기를 갱신한다.</summary>
     public UnityEvent ForecastChanged;
 
@@ -199,7 +204,7 @@ public class ResourceForecast : MonoBehaviour
         }
     }
 
-    // 식량은 최대 인구 1명당 EconomyBalanceData.FoodUpkeepPerPopulation씩 걷힌다
+    // 식량은 최대 인구 1명당 EconomyBalanceData.FoodUpkeepPerPopulation(× 런 배율)씩 걷힌다
     // (PopulationUpkeepSystem이 실제로 쓰는 값과 같은 출처).
     private void AccumulatePopulationUpkeep()
     {
@@ -209,9 +214,14 @@ public class ResourceForecast : MonoBehaviour
             return;
         }
 
+        // 실제 정산(PopulationUpkeepSystem.TrySettle)과 같은 함수를 같은 순서로 거친다 -
+        // 여기서만 배율을 빼먹으면 예상 소모량과 차감액이 컴파일 에러 없이 어긋난다.
+        float foodPerPopulation = PopulationUpkeepRules.GetEffectiveFoodPerPopulation(
+            _economyBalance.FoodUpkeepPerPopulation,
+            RunModifiers.SnapshotOf(_runModifiers).GetMultiplier(RunModifierChannel.FoodUpkeep));
         int requiredFood = PopulationUpkeepRules.GetRequiredFood(
             _populationManager.MaxPopulation,
-            _economyBalance.FoodUpkeepPerPopulation);
+            foodPerPopulation);
         AddConsumption(ResourceType.Food, ResourceForecastSource.PopulationUpkeep, requiredFood);
     }
 

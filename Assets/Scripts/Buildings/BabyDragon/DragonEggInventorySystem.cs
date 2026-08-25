@@ -22,6 +22,23 @@ public class DragonEggInventorySystem : MonoBehaviour
     // 디버그 GUI가 알의 부화 진행도(며칠째/목표 며칠)를 표시할 때 카탈로그를 다시 참조로 안 받고 이걸 쓴다.
     public BabyDragonDataCatalog DataCatalog => _dataCatalog;
 
+    // 중력 적응(heavy_gravity) 등 런 수정치. GameManager를 경유하므로 새 인스펙터 참조가 필요 없다.
+    private RunModifierSnapshot Snapshot =>
+        RunModifiers.SnapshotOf(_gameManager != null ? _gameManager.RunModifierService : null);
+
+    /// <summary>런 수정치를 반영한 실제 부화 필요 일수. 표시하는 쪽이 부화 판정과 같은 값을 쓰도록
+    /// 계산을 여기서만 한다 - UI가 BabyDragonData.DaysToHatch를 직접 읽으면 표시와 실제가 어긋난다.</summary>
+    public int GetDaysToHatch(BabyDragonData data)
+    {
+        return DragonEggHatchRules.ResolveDaysToHatch(data, Snapshot);
+    }
+
+    /// <summary>부화까지 남은 일수. <see cref="GetDaysToHatch"/>와 같은 출처를 쓴다.</summary>
+    public int GetRemainingDays(DragonEgg egg, BabyDragonData data)
+    {
+        return DragonEggHatchRules.ResolveRemainingDays(egg, data, Snapshot);
+    }
+
     // 알을 새로 얻은/부화한 시점 - 보상·시작 지급·디버그 등 모든 경로가 GrantEgg를 거치므로
     // 여기에 붙이면 향후 점령·랜드마크 보상이 추가돼도 알림이 자동으로 따라온다.
     public UnityEvent<DragonType> OnEggGranted = new();
@@ -117,8 +134,12 @@ public class DragonEggInventorySystem : MonoBehaviour
             return false;
         }
 
+        // 비교가 두 곳이라 유효 일수는 반드시 같은 함수로 구한다 - 한쪽만 런 수정치를 반영하면
+        // 그날 부화해야 할 알이 하루 더 남거나 그 반대가 된다.
+        RunModifierSnapshot snapshot = Snapshot;
+
         // 초기 지급 등으로 FedDayCount가 이미 목표치를 채운 알은 바로 부화시킨다.
-        if (egg.FedDayCount >= data.DaysToHatch)
+        if (DragonEggHatchRules.IsReadyToHatch(egg, data, snapshot))
         {
             Hatch(egg);
             return true;
@@ -126,7 +147,7 @@ public class DragonEggInventorySystem : MonoBehaviour
 
         egg.FedDayCount += 1;
 
-        if (egg.FedDayCount < data.DaysToHatch)
+        if (!DragonEggHatchRules.IsReadyToHatch(egg, data, snapshot))
         {
             // 진행도만 올랐다 - 부화는 아니지만 남은 일수 표시가 바뀌므로 변경으로 취급한다.
             return true;

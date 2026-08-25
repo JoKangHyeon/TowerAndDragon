@@ -51,6 +51,12 @@ public class GameManager : MonoBehaviour
     [WiringOptional]
     private SaveService _saveService;
 
+    [SerializeField]
+    [Tooltip("새 게임 +(뮤테이터) 서비스. 비워 두면 뮤테이터 없는 표준 모드로 동작한다"
+        + " - 튜토리얼·테스트 씬에는 두지 않는다.")]
+    [WiringOptional]
+    private RunModifierService _runModifierService;
+
     [SerializeField] private UnityEvent _victoryOccurred = new();
 
     public RunData CurrentRun => _currentRun;
@@ -61,6 +67,10 @@ public class GameManager : MonoBehaviour
     public ResearchManager ResearchManager => _researchManager;
     public DragonTreeManager DragonTreeManager => _dragonTreeManager;
     public GameSpeedManager GameSpeedManager => _gameSpeedManager;
+
+    /// <summary>새 게임 +(뮤테이터) 서비스. null일 수 있다 - 소비 지점은
+    /// <see cref="RunModifiers.SnapshotOf"/>를 통해 읽어 미배선을 "뮤테이터 없음"으로 처리한다.</summary>
+    public RunModifierService RunModifierService => _runModifierService;
 
     /// <summary>성이 파괴되어 게임오버가 되면 발생. 게임오버 UI 등이 구독한다.</summary>
     // 인라인 초기화가 없으면 씬 YAML에 항목이 없는 씬(테스트 씬 등)에서 null이 되어
@@ -173,6 +183,10 @@ public class GameManager : MonoBehaviour
         {
             return;
         }
+
+        // 새 게임 + 해금과 최고 난이도 점수를 남긴다. 서비스가 없으면(튜토리얼·테스트 씬, 표준 모드)
+        // 0점 클리어다. 중복 호출은 위의 TrySetGameResult가 이미 막는다.
+        MetaProgress.RecordClear(_runModifierService != null ? _runModifierService.DifficultyScore : 0);
 
         _victoryOccurred?.Invoke();
     }

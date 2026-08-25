@@ -107,6 +107,17 @@ public class UI_IngameWindow : MonoBehaviour
         "이 칸이 기호 하나로 요약하고, 자세한 값은 호버 패널에서 보여준다.")]
     [SerializeField] private UI_SlimeSummaryIndicator _slimeSummary;
 
+    [Header("새 게임 + (뮤테이터)")]
+    [Tooltip("뮤테이터 서비스. 식량 유지비 배율과 NG+ 뱃지가 함께 쓴다. " +
+        "미연결이면 배율 1(표준 모드) + 뱃지 숨김으로 퇴화한다 - 튜토리얼 씬이 그렇다.")]
+    [WiringOptional]
+    [SerializeField] private RunModifierService _runModifiers;
+
+    [Tooltip("난이도 점수 뱃지. 프리팹 안쪽 오브젝트라 씬 참조를 스스로 가질 수 없어 " +
+        "이 창이 Construct로 주입한다(_slimeSummary와 같은 이유).")]
+    [WiringOptional]
+    [SerializeField] private UI_NewGamePlusBadge _newGamePlusBadge;
+
     // _resourceSlots와 인덱스가 대응하는 툴팁 트리거 캐시.
     private UI_TooltipTrigger[] _resourceTooltipTriggers;
 
@@ -258,6 +269,13 @@ public class UI_IngameWindow : MonoBehaviour
         if (_slimeSummary != null)
         {
             _slimeSummary.Construct(_resourceManager, _resourceForecast, _tooltipPresenter);
+        }
+
+        // 뱃지도 같은 이유로 여기서 주입한다. RunModifierService는 Awake에서 스냅샷을 확정하고
+        // "모든 Awake → 모든 OnEnable" 순서는 보장되므로, 이 시점의 점수는 이미 유효하다.
+        if (_newGamePlusBadge != null)
+        {
+            _newGamePlusBadge.Construct(_runModifiers, _tooltipPresenter);
         }
 
         // 예측이 바뀌면(건물/인구/버프/지형 변경) 보유량 옆 증감 표기와 툴팁을 다시 그린다.
@@ -538,11 +556,17 @@ public class UI_IngameWindow : MonoBehaviour
             ? _resourceForecast.GetDailyProduction(ResourceType.Food)
             : 0;
 
+        // 실제 정산(PopulationUpkeepSystem)·예측(ResourceForecast)과 같은 함수를 거친다 -
+        // 여기서만 배율을 빼먹으면 "표시 4 / 실제 8"이 된다.
+        float foodPerPopulation = PopulationUpkeepRules.GetEffectiveFoodPerPopulation(
+            _economyBalance.FoodUpkeepPerPopulation,
+            RunModifiers.SnapshotOf(_runModifiers).GetMultiplier(RunModifierChannel.FoodUpkeep));
+
         return PopulationUpkeepRules.Calculate(
             state.MaxPopulation,
             _resourceManager.GetAmount(ResourceType.Food),
             projectedFoodProduction,
-            _economyBalance.FoodUpkeepPerPopulation
+            foodPerPopulation
         );
     }
 

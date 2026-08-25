@@ -22,9 +22,15 @@ public class UI_TitleWindow : MonoBehaviour
     [SerializeField] private Button _configButton;
     [SerializeField] private Button _quitButton;
 
+    [Tooltip("첫 클리어 이후에만 나타나는 \"새 게임 +\" 버튼. 해금 전에는 오브젝트째 꺼진다.")]
+    [SerializeField] private Button _newGamePlusButton;
+
     [Header("창")]
     [SerializeField] private UI_ConfigWindow _configWindow;
     [SerializeField] private UI_LoadGameWindow _loadGameWindow;
+
+    [Tooltip("\"새 게임 +\"를 누르면 여는 뮤테이터 선택 창.")]
+    [SerializeField] private UI_NewGamePlusWindow _newGamePlusWindow;
 
     [Tooltip("새 게임을 누르면 여는 튜토리얼 진행 여부 확인 창.")]
     [SerializeField] private UI_TutorialPromptPanel _tutorialPromptPanel;
@@ -60,6 +66,11 @@ public class UI_TitleWindow : MonoBehaviour
             _quitButton.onClick.AddListener(QuitGame);
         }
 
+        if (_newGamePlusButton != null)
+        {
+            _newGamePlusButton.onClick.AddListener(OpenNewGamePlusWindow);
+        }
+
         if (_loadGameWindow != null)
         {
             _loadGameWindow.Construct(_gameSceneName);
@@ -69,6 +80,23 @@ public class UI_TitleWindow : MonoBehaviour
         {
             _tutorialPromptPanel.Construct(_gameSceneName);
         }
+
+        if (_newGamePlusWindow != null)
+        {
+            _newGamePlusWindow.Construct(_gameSceneName);
+        }
+    }
+
+    // 구독은 OnEnable, 첫 발화는 Start 이후(CLAUDE.md 이벤트 초기화 규칙).
+    // 설정창의 시연용 해금이 여기까지 닿는 길이다 - 그쪽은 MetaProgress만 알고 이 창을 모른다.
+    private void OnEnable()
+    {
+        MetaProgress.Changed += RenderProgressDependentButtons;
+    }
+
+    private void OnDisable()
+    {
+        MetaProgress.Changed -= RenderProgressDependentButtons;
     }
 
     // 세이브 유무 판정과 BGM은 Start에서 한다(CLAUDE.md 이벤트 초기화 규칙 - 첫 발화는 Awake가 아니다).
@@ -76,6 +104,7 @@ public class UI_TitleWindow : MonoBehaviour
     {
         SoundManager.PlayBgm(BgmId.Title);
         RenderSaveDependentButtons();
+        RenderProgressDependentButtons();
     }
 
     private void RenderSaveDependentButtons()
@@ -91,6 +120,18 @@ public class UI_TitleWindow : MonoBehaviour
         if (_loadButton != null)
         {
             _loadButton.interactable = hasAnySave;
+        }
+    }
+
+    /// <summary>해금 상태에 따라 "새 게임 +" 버튼을 공개한다.
+    /// 설정창의 시연용 해금이 <see cref="MetaProgress.Changed"/>로 이 메서드를 다시 부른다.</summary>
+    // 이어하기·불러오기와 다르게 interactable이 아니라 SetActive로 감춘다 - 요구가 "첫 클리어 이후
+    // 공개"이므로, 회색 버튼이 보이면 첫 플레이 때부터 이 모드의 존재가 노출된다.
+    public void RenderProgressDependentButtons()
+    {
+        if (_newGamePlusButton != null)
+        {
+            _newGamePlusButton.gameObject.SetActive(MetaProgress.IsFirstClearDone);
         }
     }
 
@@ -110,6 +151,21 @@ public class UI_TitleWindow : MonoBehaviour
         }
 
         _tutorialPromptPanel.Open();
+    }
+
+    // 여는 소리는 UI_NewGamePlusWindow.Open()이 낸다 - 여기서 또 내면 겹친다.
+    private void OpenNewGamePlusWindow()
+    {
+        // 새 게임과 같은 이유로 먼저 지운다 - 소비되지 않은 이어하기 요청이 남아 있으면
+        // 뮤테이터를 켠 새 런이 아니라 예전 세이브가 열린다.
+        SaveLoadRequest.Clear();
+
+        if (!WiringGuard.Require(_newGamePlusWindow, nameof(_newGamePlusWindow), this))
+        {
+            return;
+        }
+
+        _newGamePlusWindow.Open();
     }
 
     private void ContinueMostRecent()

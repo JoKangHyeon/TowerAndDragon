@@ -113,7 +113,9 @@ public class UI_DragonChangePopup : MonoBehaviour
     }
 
     // 카드 클릭 = 그 속성으로 즉시 변경 + 팝업 닫기. 별도 확인 버튼은 없다(프리팹에 존재하지 않는다).
-    // 낮에는 변경 횟수 제한이 없으므로 실패하는 경우는 같은 속성을 고른 때뿐이고, 그 카드는 애초에 숨겨져 있다.
+    // 실패하는 경우는 (1) 같은 속성을 고른 때 - 그 카드는 애초에 숨겨져 있다 - 와
+    // (2) 굳은 맹세(sworn_element)로 이번 주기의 변경권을 다 쓴 때다. (2)는 UI_DragonWindow가
+    // 팝업을 열기 전에 막고 사유를 표시하므로, 여기 도달하는 것은 다른 경로로 들어온 호출뿐이다.
     // 밤에는 UI_DragonWindow가 이 팝업을 열지도 않고 열려 있으면 닫지만, 실제 변경을 막는 최종 가드는 여기다 -
     // 다른 경로로 들어온 호출이나 밤이 시작된 프레임의 클릭까지 잡는다.
     private void SelectAttribute(DragonType attribute)
@@ -134,7 +136,18 @@ public class UI_DragonChangePopup : MonoBehaviour
             return;
         }
 
-        bool changed = dragon.TryChangeType(attribute);
+        // 굳은 맹세의 주기당 제한. 사유 표시는 팝업을 열기 전 UI_DragonWindow가 맡고
+        // (이 팝업에는 문구를 띄울 요소가 없다), 여기서는 IsDay와 같은 최종 가드로만 쓴다 -
+        // 다른 경로로 열린 팝업이나 열려 있는 동안 주기가 넘어간 경우까지 잡는다.
+        CycleManager cycle = _gameManager != null ? _gameManager.CycleManager : null;
+        RunModifierSnapshot snapshot = RunModifiers
+            .SnapshotOf(_gameManager != null ? _gameManager.RunModifierService : null);
+
+        bool changed = dragon.TryChangeType(
+            attribute,
+            DragonTypeChangeRules.ResolveCycleNumber(cycle),
+            DragonTypeChangeRules.ResolveLimitPerCycle(snapshot),
+            out DragonTypeChangeBlock _);
 
         // DragonTreeManager는 이 알림 없이는 속성 변경을 감지할 수 없다(Dragon.OnDragonTypeChanged가
         // 어디서도 invoke되지 않음) - 변경이 실제로 적용됐을 때만 알린다.

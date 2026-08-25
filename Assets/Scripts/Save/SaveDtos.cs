@@ -17,6 +17,11 @@ public static class SaveSchema
 {
     // v2: 스냅샷 시점이 "낮 시작 정산 직전"에서 "정산 이후 임의 시점"으로 바뀌었다(SaveService 계약 2).
     //     v1 파일은 정산 전 상태를 담고 있어 새 복원 경로로는 하루치 정산이 빠지므로 읽지 않는다.
+    //
+    // 새 게임 +(뮤테이터)와 타워 체력이 들어오면서 RunStateDto.Mutators · SaveMetaDto.DifficultyScore ·
+    // BuildingPlacementDto의 체력 3필드가 추가됐지만 버전은 2로 유지한다 - 규약 2는 "필드를 삭제하거나
+    // 타입을 바꾸면"이고 신규 필드 추가는 해당하지 않는다. 기존 v2 세이브는 그 필드가 null/기본값으로
+    // 읽혀 각 Normalize가 "기록 없음"으로 접는다(GuideQuestStateDto·LandmarkStateDto와 같은 판단).
     public const int CURRENT_VERSION = 2;
 
     /// <summary>읽을 수 있는 가장 낮은 버전. 마이그레이션을 구현하면 이 값을 낮춘다.</summary>
@@ -128,6 +133,14 @@ public sealed class SaveMetaDto
     public int DragonType;
 
     /// <summary>
+    /// 저장 당시의 새 게임 + 난이도 점수 합(RunModifierService.DifficultyScore).
+    /// 복원은 이 값을 읽지 않는다 - 뮤테이터 목록은 본문 RunStateDto.Mutators에 있고 점수는 거기서
+    /// 다시 합산된다. meta.json만 읽는 슬롯 목록이 본문을 열지 않고도 NG+ 뱃지를 그릴 수 있게 하는
+    /// 것이 유일한 목적이다(아래 Resources 사본과 정확히 같은 이유).
+    /// </summary>
+    public int DifficultyScore;
+
+    /// <summary>
     /// 슬롯 목록에 자원 보유량을 띄우기 위한 표시 전용 사본(본문 Resources와 같은 값).
     /// 복원은 항상 save.json의 ResourceStateDto를 쓰므로 이 값은 읽지 않는다 -
     /// meta.json만 읽는 슬롯 목록이 본문을 열지 않고도 자원을 그릴 수 있게 하는 것이 유일한 목적이다.
@@ -156,6 +169,34 @@ public sealed class RunStateDto
     /// </summary>
     public List<BossDragonEggRewardDto> BossDragonEggRewards;
 
+    /// <summary>
+    /// 이 런에 켜진 새 게임 +(뮤테이터) 선택 목록. <b>이것이 빠지면 저장 후 불러오기가 곧 치트다</b> -
+    /// 제약이 사라진 채로 런이 이어진다.
+    ///
+    /// 뮤테이터 id만이 아니라 단계(Tier)까지 담는 이유: 수치 계열은 1~3단계 구조라 id만으로는
+    /// 어느 강도로 켰는지 복원할 수 없다.
+    /// </summary>
+    public List<RunMutatorSelectionDto> Mutators;
+
+    /// <summary>
+    /// 굳은 맹세(sworn_element)의 주기당 속성 변경 카운터 - 마지막으로 센 주기 번호와 그 주기의 변경 횟수.
+    /// <b>이게 빠지면 저장 -> 불러오기만으로 그 주기의 변경권이 한 번 되살아난다</b>
+    /// (BuildingPlacementDto의 체력 3필드와 같은 종류의 구멍이다).
+    ///
+    /// 이름을 런타임 쪽 <see cref="Dragon"/>의 필드명 그대로 쓴다 - 왕복 대응이 한눈에 보인다.
+    /// 위 DragonType과 나란히 두느라 DragonTypeChangeCycleNumber로 늘리면 오히려 읽기 나빠진다.
+    ///
+    /// <b>여기의 주기 번호는 위 CurrentCycle(누적 일차)과 다른 값이다</b> - 웨이브 주기(1~4)다.
+    /// 둘이 어긋난 조합이 들어와도 복원 뒤 첫 변경 시도에서 DragonTypeChangeRules.ResolveCycleNumber가
+    /// 일차에서 주기를 다시 유도하고 Dragon이 주기가 다르면 카운터를 리셋하므로 스스로 교정된다.
+    ///
+    /// 이 필드가 없던 구버전 세이브는 0/0으로 읽혀 "아직 안 씀"이 되고, 이는 기존 동작과 같다.
+    /// </summary>
+    public int TypeChangeCycleNumber;
+
+    /// <summary>이번 주기에 이미 쓴 속성 변경 횟수. <see cref="TypeChangeCycleNumber"/>와 짝이다.</summary>
+    public int TypeChangeCountInCycle;
+
     public void Normalize()
     {
         BabyDragons ??= new List<BabyDragonDto>();
@@ -163,6 +204,12 @@ public sealed class RunStateDto
 
         // 이 필드가 없던 구버전 세이브는 null로 들어온다 - 빈 목록이면 기존 동작 그대로다.
         BossDragonEggRewards ??= new List<BossDragonEggRewardDto>();
+
+        // 뮤테이터 도입 전에 저장된 슬롯도 null로 들어온다 - 빈 목록이 곧 표준 모드다.
+        Mutators ??= new List<RunMutatorSelectionDto>();
+        NormalizeMutators();
+
+        NormalizeTypeChangeCounter();
 
         DragonType = SaveValidation.CoerceDefinedEnum(
             DragonType, typeof(DragonType), SaveValidation.DEFAULT_DRAGON_TYPE);
@@ -185,6 +232,62 @@ public sealed class RunStateDto
             egg.FedDayCount = Mathf.Max(0, egg.FedDayCount);
         }
     }
+
+    /// <summary>
+    /// 속성 변경 카운터의 <b>형태만</b> 정리한다. 카탈로그도 현재 일차도 보지 않는다 -
+    /// 값이 지금 상황과 맞는지는 Dragon이 다음 변경 시도에서 주기 번호를 비교해 스스로 정리한다.
+    ///
+    /// 주기 번호가 0(기록 없음)인데 횟수만 남은 조합은 되살릴 수 없는 형태이므로 함께 0으로 접는다.
+    /// 그대로 두면 "어느 주기인지 모르는데 이미 다 썼다"가 되어, 어느 주기에도 걸리지 않는
+    /// 유령 기록이 세이브에 남는다.
+    /// </summary>
+    private void NormalizeTypeChangeCounter()
+    {
+        TypeChangeCycleNumber = Mathf.Max(0, TypeChangeCycleNumber);
+        TypeChangeCountInCycle = Mathf.Max(0, TypeChangeCountInCycle);
+
+        if (TypeChangeCycleNumber == 0)
+        {
+            TypeChangeCountInCycle = 0;
+        }
+    }
+
+    /// <summary>
+    /// 뮤테이터 목록의 <b>형태만</b> 정리한다 - 되살릴 수 없는 항목(빈 id, 미선택 단계)과
+    /// 같은 뮤테이터를 두 번 켠 기록을 걷어낸다.
+    ///
+    /// <b>여기서 카탈로그와 대조하지 않는다.</b> 대조하려면 DTO가 게임 데이터 에셋(RunMutatorCatalogSO)을
+    /// 알아야 하는데, 그것이 규약 3이 막으려던 결합이다. 미지 id·범위 밖 단계 거부는 SaveService가
+    /// TryNormalize 직후·복원 착수 전에 한다.
+    /// </summary>
+    private void NormalizeMutators()
+    {
+        // 단계는 1-기반이다(0 = 미선택). 0을 "1단계"로 받아 주면 안 켠 뮤테이터가 켜진 것으로 되살아난다.
+        Mutators.RemoveAll(selection =>
+            selection == null ||
+            string.IsNullOrWhiteSpace(selection.Id) ||
+            selection.Tier < RunMutatorSO.FIRST_TIER);
+
+        var seenIds = new HashSet<string>();
+
+        // 같은 id가 두 번 들어오면 뒤쪽이 앞쪽의 단계를 덮을지 합산될지가 소비 지점마다 달라진다.
+        // 첫 항목만 남겨 판정을 하나로 고정한다.
+        Mutators.RemoveAll(selection => !seenIds.Add(selection.Id));
+    }
+}
+
+/// <summary>
+/// 세이브에 기록되는 뮤테이터 선택 하나. 런타임 쪽 짝은 <see cref="RunMutatorSelection"/>이며,
+/// 그쪽은 카탈로그 조회를 끝낸 SO 참조를 든다 - 이름을 갈라 둔 것은 "조회 전인가 후인가"를
+/// 코드에서 보이게 하려는 것이다.
+/// </summary>
+public sealed class RunMutatorSelectionDto
+{
+    /// <summary>RunMutatorSO.Id. 이 값이 곧 세이브 호환의 기준이므로 에셋 쪽에서 절대 바뀌지 않는다.</summary>
+    public string Id;
+
+    /// <summary>켜진 단계. <b>1-기반</b>이다(0 = 미선택).</summary>
+    public int Tier;
 }
 
 public sealed class BabyDragonDto
@@ -494,6 +597,31 @@ public sealed class BuildingPlacementDto
     /// </summary>
     public int BabyDragonIndex = NO_BABY_DRAGON_INDEX;
 
+    /// <summary>
+    /// 타워일 때 저장 당시의 현재 체력. 최대 체력은 프리팹·연구·뮤테이터가 정하므로 저장하지 않고
+    /// 복원 시 살아 있는 최대치로 클램프한다(CastleStateDto와 같은 규약).
+    /// <b><see cref="IsDisabled"/>가 false인데 이 값이 0 이하면 "기록 없음"</b>이므로 만피를 유지한다 -
+    /// 타워가 아닌 건물과 이 필드가 없던 구버전 세이브가 여기로 떨어진다.
+    /// </summary>
+    public float CurrentHealth;
+
+    /// <summary>
+    /// 저장 당시 이 타워가 비활성("파괴 대신 비활성화") 상태였는가.
+    ///
+    /// <b>CastleStateDto처럼 "체력 0 = 기록 없음"만으로는 판정할 수 없어 플래그를 따로 둔다.</b>
+    /// 성은 체력이 0이면 게임오버라 애초에 저장될 수 없지만, 타워의 0은 no_morning_restore(긴 밤)에서
+    /// 정당한 저장 상태다. 두 뜻을 같은 값에 겹쳐 두면 "부서진 타워"가 "기록 없음"으로 읽혀
+    /// 만피로 복원되고, 5점짜리 뮤테이터가 저장→불러오기로 세탁된다.
+    /// 이 필드가 없던 구버전 세이브는 false로 읽혀 기존 동작(만피 복원)과 같다.
+    /// </summary>
+    public bool IsDisabled;
+
+    /// <summary>
+    /// 부활 대기 게이지의 진행도(0~1). <see cref="IsDisabled"/>가 true일 때만 의미가 있다 -
+    /// 이 값이 없으면 밤새 차오른 게이지가 불러오기마다 0으로 돌아간다.
+    /// </summary>
+    public float ReviveProgress;
+
     public void Normalize()
     {
         RotationSteps =
@@ -506,6 +634,20 @@ public sealed class BuildingPlacementDto
         if (BabyDragonIndex < 0)
         {
             BabyDragonIndex = NO_BABY_DRAGON_INDEX;
+        }
+
+        CurrentHealth = Mathf.Max(0f, CurrentHealth);
+        ReviveProgress = Mathf.Clamp01(ReviveProgress);
+
+        // 두 값이 어긋난 파일은 "체력 0인데 활성" 또는 "만피인데 비활성" 같은 모순 상태로 복원된다.
+        // 손으로 고친 세이브가 그런 타워를 만들지 못하도록 여기서 한쪽으로 정리한다.
+        if (IsDisabled)
+        {
+            CurrentHealth = 0f;
+        }
+        else
+        {
+            ReviveProgress = 0f;
         }
     }
 }

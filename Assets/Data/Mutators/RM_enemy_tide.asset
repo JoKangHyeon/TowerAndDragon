@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-7265642687280364726
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a2cc9a5ce934ae46b17a27fbf48d107, type: 3}
+  m_Name: RME_EEP_enemy_tide_tier1
+  m_EditorClassIdentifier: Assembly-CSharp::RunEnemyProfileEffectSO
+  _profile: {fileID: 11400000, guid: 84f66bfd38931874c8b2c25853e5b3b0, type: 2}
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48b79707613eec244bec238ff7ee0b35, type: 3}
+  m_Name: RM_enemy_tide
+  m_EditorClassIdentifier: Assembly-CSharp::RunMutatorSO
+  _id: enemy_tide
+  _nameLocKey: mutator_enemy_tide_name
+  _exclusiveGroup: 
+  _tiers:
+  - _difficultyScore: 3
+    _descLocKey: mutator_enemy_tide_tier1_desc
+    _effects:
+    - {fileID: -7265642687280364726}
+  - _difficultyScore: 6
+    _descLocKey: mutator_enemy_tide_tier2_desc
+    _effects:
+    - {fileID: 8390404334957407877}
+  - _difficultyScore: 9
+    _descLocKey: mutator_enemy_tide_tier3_desc
+    _effects:
+    - {fileID: 4925613988325116943}
+--- !u!114 &4925613988325116943
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a2cc9a5ce934ae46b17a27fbf48d107, type: 3}
+  m_Name: RME_EEP_enemy_tide_tier3
+  m_EditorClassIdentifier: Assembly-CSharp::RunEnemyProfileEffectSO
+  _profile: {fileID: 11400000, guid: 9ca2747a6e6511e458b0e80d1f57693d, type: 2}
+--- !u!114 &8390404334957407877
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a2cc9a5ce934ae46b17a27fbf48d107, type: 3}
+  m_Name: RME_EEP_enemy_tide_tier2
+  m_EditorClassIdentifier: Assembly-CSharp::RunEnemyProfileEffectSO
+  _profile: {fileID: 11400000, guid: 2be7c59208f736b40abad765dbd0ad6d, type: 2}

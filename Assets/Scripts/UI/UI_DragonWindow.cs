@@ -339,7 +339,8 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     {
         if (_changeButton != null)
         {
-            _changeButton.interactable = IsDay;
+            // 주기당 제한을 다 쓴 상태도 회색으로 보여 준다 - 누르기 전에 알 수 있어야 한다.
+            _changeButton.interactable = IsDay && !IsTypeChangeCycleLimitReached;
         }
     }
 
@@ -672,6 +673,21 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             return;
         }
 
+        // 굳은 맹세: 이번 주기의 변경권을 다 썼으면 팝업을 열지 않고 사유만 보여 준다 -
+        // 위의 안내 관문과 같은 판단이다(열어 놓고 카드마다 거절하면 다섯 번 막히는 것으로 읽힌다).
+        // 문구는 다음 RenderMotherDragon()에서 속성 설명으로 되돌아가는 일시 메시지다.
+        // 토스트를 쓰지 않는 이유: UI_NotificationToast는 튜토리얼 오버레이 전용이라 본 게임 씬에 없다.
+        if (IsTypeChangeCycleLimitReached)
+        {
+            if (_motherInfoText != null)
+            {
+                _motherInfoText.text =
+                    StringTable.GetString(Defines.DRAGON_TYPE_CHANGE_CYCLE_LIMIT_LOC_KEY);
+            }
+
+            return;
+        }
+
         _changePopup.Open();
     }
 
@@ -858,6 +874,28 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
+    // 굳은 맹세(sworn_element)로 이번 주기의 속성 변경권을 이미 다 썼는가.
+    // 뮤테이터가 꺼져 있으면 제한값이 0(무제한)이라 항상 false가 되어 기존 동작과 같다.
+    private bool IsTypeChangeCycleLimitReached
+    {
+        get
+        {
+            Dragon dragon = CurrentRun?.CurrentDragon;
+
+            if (dragon == null)
+            {
+                return false;
+            }
+
+            RunModifierSnapshot snapshot = RunModifiers
+                .SnapshotOf(_gameManager != null ? _gameManager.RunModifierService : null);
+
+            return dragon.IsCycleLimitReached(
+                DragonTypeChangeRules.ResolveCycleNumber(Cycle),
+                DragonTypeChangeRules.ResolveLimitPerCycle(snapshot));
+        }
+    }
+
     // 슬롯은 전부 프리팹에서 새로 만들어 컨테이너(Content) 아래에 넣는다.
     // 컨테이너를 프리팹의 부모에서 파생시키면 안 된다 - 프리팹 에셋은 부모가 없어(null)
     // 슬롯이 Content 밖에 생성되고 화면에 나타나지 않는다.
@@ -1006,6 +1044,11 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             return;
         }
 
+        // 남은 일수는 실제 부화 판정과 같은 함수로 구한다 - 여기서 DaysToHatch를 직접 빼면
+        // 중력 적응(heavy_gravity)이 켜졌을 때 "1일 남음"이라 적힌 알이 부화하지 않는다.
+        RunModifierSnapshot snapshot = RunModifiers
+            .SnapshotOf(_gameManager != null ? _gameManager.RunModifierService : null);
+
         int used = 0;
         foreach (DragonEgg egg in run.DragonEggs)
         {
@@ -1014,7 +1057,10 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
                 continue;
             }
 
-            _eggSlotPool.Get(used).Setup(egg, data);
+            _eggSlotPool.Get(used).Setup(
+                egg,
+                data,
+                DragonEggHatchRules.ResolveRemainingDays(egg, data, snapshot));
             used++;
         }
 

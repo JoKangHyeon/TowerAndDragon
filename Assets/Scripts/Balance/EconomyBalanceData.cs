@@ -26,6 +26,14 @@ public sealed class EconomyBalanceData : ScriptableObject
     [Min(0)]
     [SerializeField] private int _foodUpkeepPerPopulation = 1;
 
+    [Header("새 게임 + 조합 안전장치")]
+    [Tooltip("empty_hands(빈손)로 시작 자원이 줄었을 때 보장하는 최소 시작 식량. " +
+        "빈손 3단계 + 흉년 3단계 + 대식가 3단계 조합은 1일차 정산부터 회복 불능이 된다 " +
+        "(기아 → 인구 감소 → 생산 감소 → 기아 확대). 그 악순환의 시작만 막는 하한이다. " +
+        "뮤테이터가 없으면 적용되지 않으므로 표준 모드의 시작 식량에는 영향이 없다.")]
+    [Min(0)]
+    [SerializeField] private int _startingFoodFloorUnderMutators = 150;
+
     [Header("철거 환급")]
     [Tooltip("낮밤 사이클이 한 번도 돌지 않은 당일 철거 시 돌려받는 건설 비용 비율.")]
     [Range(0f, 1f)]
@@ -38,6 +46,10 @@ public sealed class EconomyBalanceData : ScriptableObject
     public int BaselineCellYield => _baselineCellYield;
     public float DiagonalBonusFactor => _diagonalBonusFactor;
     public int FoodUpkeepPerPopulation => _foodUpkeepPerPopulation;
+
+    /// <summary>새 게임 + 조합 안전장치. 뮤테이터로 시작 자원이 줄었을 때만 쓰인다
+    /// (<see cref="StartingResourceRules.ApplyFoodFloor"/>).</summary>
+    public int StartingFoodFloorUnderMutators => _startingFoodFloorUnderMutators;
     public float DemolishRefundRatioSameDay => _demolishRefundRatioSameDay;
     public float DemolishRefundRatioLate => _demolishRefundRatioLate;
 }

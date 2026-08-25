@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48b79707613eec244bec238ff7ee0b35, type: 3}
+  m_Name: RM_last_stand
+  m_EditorClassIdentifier: Assembly-CSharp::RunMutatorSO
+  _id: last_stand
+  _nameLocKey: mutator_last_stand_name
+  _exclusiveGroup: 
+  _tiers:
+  - _difficultyScore: 5
+    _descLocKey: mutator_last_stand_tier1_desc
+    _effects:
+    - {fileID: 8950169317028521787}
+--- !u!114 &8950169317028521787
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fdab90ddca86194b83bfac68634be30, type: 3}
+  m_Name: RME_last_stand
+  m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
+  _channel: 4
+  _multiplier: 0.5

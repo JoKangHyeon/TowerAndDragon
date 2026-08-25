@@ -133,6 +133,26 @@ public class UI_MainCastleWindow : MonoBehaviour
     private Dragon CurrentDragon =>
         _gameManager != null ? _gameManager.CurrentRun?.CurrentDragon : null;
 
+    // 굳은 맹세(sworn_element)의 주기당 변경 제한. 0이면 제한 없음이라 뮤테이터 이전과 같다.
+    private int TypeChangeLimitPerCycle =>
+        DragonTypeChangeRules.ResolveLimitPerCycle(
+            RunModifiers.SnapshotOf(_gameManager != null ? _gameManager.RunModifierService : null));
+
+    private int CurrentTypeChangeCycleNumber =>
+        DragonTypeChangeRules.ResolveCycleNumber(_cycleManager);
+
+    // 이번 주기의 변경권을 이미 다 썼는가. 버튼 비활성화와 상태 줄이 같은 판정을 쓴다.
+    private bool IsTypeChangeCycleLimitReached
+    {
+        get
+        {
+            Dragon dragon = CurrentDragon;
+
+            return dragon != null &&
+                   dragon.IsCycleLimitReached(CurrentTypeChangeCycleNumber, TypeChangeLimitPerCycle);
+        }
+    }
+
     private void Awake()
     {
         _panelRect = _windowRoot.GetComponent<RectTransform>();
@@ -285,7 +305,18 @@ public class UI_MainCastleWindow : MonoBehaviour
             return;
         }
 
-        bool changed = dragon.TryChangeType(_currentSelectedType);
+        bool changed = dragon.TryChangeType(
+            _currentSelectedType,
+            CurrentTypeChangeCycleNumber,
+            TypeChangeLimitPerCycle,
+            out DragonTypeChangeBlock block);
+
+        // 제한에 걸렸으면 조용히 넘기지 않는다 - Render가 상태 줄에 사유를 쓰고 버튼을 잠근다.
+        if (block == DragonTypeChangeBlock.CycleLimitReached)
+        {
+            Render();
+            return;
+        }
 
         // DragonTreeManager는 이 알림 없이는 속성 변경을 감지할 수 없다(Dragon.OnDragonTypeChanged가
         // 어디서도 invoke되지 않음 - DragonTreeManager.cs 주석 참고). 변경이 실제로 적용됐을 때만
@@ -459,11 +490,14 @@ public class UI_MainCastleWindow : MonoBehaviour
         bool hasSelection = _currentSelectedType != (DragonType)(-1);
         bool isDifferentFromCurrent = !hasSelection || _currentSelectedType != dragon.CurrentType;
 
-        // 변경 횟수 제한은 없다 - 낮인지, 그리고 현재와 다른 속성을 골랐는지만 본다.
+        // 낮인지, 현재와 다른 속성을 골랐는지, 그리고 이번 주기의 변경권이 남았는지를 본다.
+        // 마지막 조건은 굳은 맹세(sworn_element)가 꺼져 있으면 항상 참이다.
+        bool isCycleLimitReached = IsTypeChangeCycleLimitReached;
         bool canChange =
             IsDay &&
             hasSelection &&
-            isDifferentFromCurrent;
+            isDifferentFromCurrent &&
+            !isCycleLimitReached;
 
         if (_dragonTypeChangeButton != null)
         {
@@ -472,7 +506,10 @@ public class UI_MainCastleWindow : MonoBehaviour
 
         if (_changeStatusText != null)
         {
-            _changeStatusText.text = StringTable.GetString(CHANGE_AVAILABLE_LOC_KEY);
+            _changeStatusText.text = StringTable.GetString(
+                isCycleLimitReached
+                    ? Defines.DRAGON_TYPE_CHANGE_CYCLE_LIMIT_LOC_KEY
+                    : CHANGE_AVAILABLE_LOC_KEY);
         }
     }
 

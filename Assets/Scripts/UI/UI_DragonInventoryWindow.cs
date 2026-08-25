@@ -291,6 +291,11 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
 
     private void BuildEggSlots(RunData run)
     {
+        // 필요 일수는 실제 부화 판정과 같은 함수로 구한다 - 여기서 DaysToHatch를 직접 읽으면
+        // 중력 적응(heavy_gravity)이 켜졌을 때 표시와 실제 부화 시점이 어긋난다.
+        RunModifierSnapshot snapshot = RunModifiers
+            .SnapshotOf(_gameManager != null ? _gameManager.RunModifierService : null);
+
         foreach (DragonEgg egg in run.DragonEggs)
         {
             if (!_dataCatalog.TryResolve(egg.DragonType, out BabyDragonData data))
@@ -299,7 +304,12 @@ public class UI_DragonInventoryWindow : MonoBehaviour, IExclusiveMode
             }
 
             UI_DragonInventorySlot slot = Instantiate(_slotPrefab, _slotContainer);
-            slot.SetupEgg(egg, data, _eggSprite, ColorForType(egg.DragonType));
+            slot.SetupEgg(
+                egg,
+                data,
+                _eggSprite,
+                ColorForType(egg.DragonType),
+                DragonEggHatchRules.ResolveDaysToHatch(data, snapshot));
             _spawnedSlots.Add(slot);
         }
     }

@@ -10,12 +10,60 @@ public class UI_GameOverWindow : MonoBehaviour
 {
     [SerializeField] private Button _restartButton;
 
+    [Tooltip("철인 모드에서 세이브가 삭제됐음을 알리는 줄. 없으면 안내만 생략된다.")]
+    [SerializeField]
+    [WiringOptional]
+    private LocalizedText _ironmanDeletedLabel;
+
+    [Tooltip("철인 모드 세이브 삭제 여부를 묻는 대상. 없으면 안내를 띄우지 않는다.")]
+    [SerializeField]
+    [WiringOptional]
+    private SaveService _saveService;
+
     private void Awake()
     {
         if (_restartButton != null)
         {
             _restartButton.onClick.AddListener(RestartScene);
         }
+    }
+
+    private void OnEnable()
+    {
+        if (_saveService != null)
+        {
+            _saveService.IronmanSaveDeleted.AddListener(RenderIronmanNotice);
+        }
+
+        // 이 창은 비활성으로 저장돼 있어 삭제 시점에는 OnEnable이 아직 돌지 않는다 -
+        // 이벤트만 기다리면 매번 놓친다. 구독 직후 현재 값을 한 번 반영한다(CLAUDE.md 이벤트 규칙).
+        RenderIronmanNotice();
+    }
+
+    private void OnDisable()
+    {
+        if (_saveService != null)
+        {
+            _saveService.IronmanSaveDeleted.RemoveListener(RenderIronmanNotice);
+        }
+    }
+
+    private void RenderIronmanNotice()
+    {
+        if (_ironmanDeletedLabel == null)
+        {
+            return;
+        }
+
+        bool wasDeleted = _saveService != null && _saveService.WasIronmanSaveDeleted;
+
+        // key를 씬에 박아 두지 않고 코드에서 넣는다 - 오타가 컴파일 시점에 드러난다.
+        if (wasDeleted)
+        {
+            _ironmanDeletedLabel.SetKey(SaveLocKeys.IRONMAN_SAVE_DELETED);
+        }
+
+        _ironmanDeletedLabel.gameObject.SetActive(wasDeleted);
     }
 
     // 현재 씬을 다시 로드해 게임을 재시작한다(현재 씬이 Build Settings에 등록돼 있어야 함).

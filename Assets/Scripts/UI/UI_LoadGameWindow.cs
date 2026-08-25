@@ -278,6 +278,16 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
             locKey = SaveLocKeys.ResolveSaveFailureLocKey(SaveFailureReason.NotSaveablePhase);
         }
 
+        // 철인 모드에서 잠긴 줄은 누를 수 없으므로 실패 문구가 뜰 기회가 없다 - 왜 한 줄만 열려 있는지
+        // 먼저 알려 준다(위의 밤 안내와 같은 이유).
+        if (locKey == null &&
+            _mode == WindowMode.Save &&
+            _saveService != null &&
+            _saveService.IronmanSlotIndex != SaveService.INVALID_SLOT_INDEX)
+        {
+            locKey = SaveLocKeys.ResolveSaveFailureLocKey(SaveFailureReason.IronmanSlotLocked);
+        }
+
         _statusText.text = locKey == null ? string.Empty : StringTable.GetString(locKey);
     }
 
@@ -287,7 +297,20 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
         {
             // 빈 슬롯도 손상된 슬롯도 저장 대상이다(손상 슬롯을 덮어쓰는 것이 곧 복구다).
             // 자동저장 슬롯만 뺀다 - 다음 낮에 자동저장이 덮어써 수동 세이브가 사라진다.
-            return info.SlotIndex != SaveService.AUTO_SAVE_SLOT_INDEX && CanSaveNow && !_isSavingSlot;
+            //
+            // 철인 모드에서는 그 배제 이유가 성립하지 않는다(자동저장이 덮어쓰는 것이 곧 이 모드의
+            // 요점이고, 고정 슬롯이 자동저장 슬롯일 수도 있다). 그래서 슬롯 판정을 SaveService에
+            // 맡긴다 - CanSaveToSlot이 철인 잠금과 국면을 함께 본다.
+            if (_saveService == null)
+            {
+                return false;
+            }
+
+            bool isAutoSlotBlocked =
+                info.SlotIndex == SaveService.AUTO_SAVE_SLOT_INDEX &&
+                _saveService.IronmanSlotIndex != info.SlotIndex;
+
+            return !isAutoSlotBlocked && !_isSavingSlot && _saveService.CanSaveToSlot(info.SlotIndex);
         }
 
         return !info.IsEmpty && !info.IsCorrupted;

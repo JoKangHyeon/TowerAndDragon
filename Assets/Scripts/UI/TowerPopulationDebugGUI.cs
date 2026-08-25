@@ -226,7 +226,8 @@ public class TowerPopulationDebugGUI : MonoBehaviour
             return $"{egg.FedDayCount}일째 (카탈로그 없음)";
         }
 
-        return $"{egg.FedDayCount}/{data.DaysToHatch}일";
+        // 런 수정치(heavy_gravity)를 반영한 값이어야 실제 부화 시점과 일치한다.
+        return $"{egg.FedDayCount}/{_eggInventorySystem.GetDaysToHatch(data)}일";
     }
 
     private void DrawPlacementButtons()

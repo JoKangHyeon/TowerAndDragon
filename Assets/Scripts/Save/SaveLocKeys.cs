@@ -25,10 +25,19 @@ public static class SaveLocKeys
     public const string SAVE_FAIL_SERIALIZE = "save_fail_serialize";
     public const string SAVE_FAIL_DISK = "save_fail_disk";
 
+    /// <summary>철인 모드에서 고정 슬롯 외에 저장할 수 없다는 안내.</summary>
+    public const string SAVE_FAIL_IRONMAN_SLOT = "save_fail_ironman_slot";
+
     public const string LOAD_FAIL_GENERIC = "load_fail_generic";
     public const string LOAD_FAIL_NOT_FOUND = "load_fail_not_found";
     public const string LOAD_FAIL_PARSE = "load_fail_parse";
     public const string LOAD_FAIL_SCHEMA = "load_fail_schema";
+
+    /// <summary>내용 검증에 걸려 복원을 거부했을 때. 주로 이 빌드가 모르는 뮤테이터가 담긴 세이브다.</summary>
+    public const string LOAD_FAIL_VALIDATION = "load_fail_validation";
+
+    /// <summary>철인 모드에서 게임오버로 세이브를 지웠다는 안내. 조용히 사라지면 버그로 읽힌다.</summary>
+    public const string IRONMAN_SAVE_DELETED = "save_ironman_deleted";
 
     // 실패 사유를 문자열 조합으로 만들지 않고 명시적으로 매핑한다 -
     // 오타와 미등록 키를 컴파일 시점에 드러내기 위해서다(ResearchLocKeys와 같은 이유).
@@ -39,6 +48,7 @@ public static class SaveLocKeys
             SaveFailureReason.NotSaveablePhase => SAVE_FAIL_PHASE,
             SaveFailureReason.SerializationFailed => SAVE_FAIL_SERIALIZE,
             SaveFailureReason.DiskWriteFailed => SAVE_FAIL_DISK,
+            SaveFailureReason.IronmanSlotLocked => SAVE_FAIL_IRONMAN_SLOT,
             _ => SAVE_FAIL_GENERIC,
         };
     }
@@ -52,6 +62,7 @@ public static class SaveLocKeys
             SaveLoadFailureReason.FileReadFailed => LOAD_FAIL_PARSE,
             SaveLoadFailureReason.SchemaTooNew => LOAD_FAIL_SCHEMA,
             SaveLoadFailureReason.SchemaTooOld => LOAD_FAIL_SCHEMA,
+            SaveLoadFailureReason.ValidationFailed => LOAD_FAIL_VALIDATION,
             _ => LOAD_FAIL_GENERIC,
         };
     }

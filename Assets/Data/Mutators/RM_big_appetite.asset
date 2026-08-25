@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-3530500038175999281
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fdab90ddca86194b83bfac68634be30, type: 3}
+  m_Name: RME_big_appetite_tier3
+  m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
+  _channel: 1
+  _multiplier: 3
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48b79707613eec244bec238ff7ee0b35, type: 3}
+  m_Name: RM_big_appetite
+  m_EditorClassIdentifier: Assembly-CSharp::RunMutatorSO
+  _id: big_appetite
+  _nameLocKey: mutator_big_appetite_name
+  _exclusiveGroup: 
+  _tiers:
+  - _difficultyScore: 2
+    _descLocKey: mutator_big_appetite_tier1_desc
+    _effects:
+    - {fileID: 9045868944742813256}
+  - _difficultyScore: 4
+    _descLocKey: mutator_big_appetite_tier2_desc
+    _effects:
+    - {fileID: 3862966434779943941}
+  - _difficultyScore: 6
+    _descLocKey: mutator_big_appetite_tier3_desc
+    _effects:
+    - {fileID: -3530500038175999281}
+--- !u!114 &3862966434779943941
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fdab90ddca86194b83bfac68634be30, type: 3}
+  m_Name: RME_big_appetite_tier2
+  m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
+  _channel: 1
+  _multiplier: 2
+--- !u!114 &9045868944742813256
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fdab90ddca86194b83bfac68634be30, type: 3}
+  m_Name: RME_big_appetite_tier1
+  m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
+  _channel: 1
+  _multiplier: 1.5

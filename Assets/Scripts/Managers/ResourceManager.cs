@@ -17,6 +17,11 @@ public class ResourceManager : MonoBehaviour
     [Tooltip("게임 시작 시 지급할 초기 자원.")]
     [SerializeField] private List<ResourceAmount> _initialResources;
 
+    [Tooltip("새 게임 + 시작 식량 하한(조합 안전장치)의 출처. 미연결이면 하한 보정을 건너뛴다 " +
+        "- 뮤테이터가 없는 씬(튜토리얼 등)에서는 쓰이지 않으므로 비워 둬도 된다.")]
+    [WiringOptional]
+    [SerializeField] private EconomyBalanceData _economyBalance;
+
     private readonly Dictionary<ResourceType, int> _amounts = new();
 
     /// <summary>자원 보유량 변경 시 (종류, 변경 후 보유량). UI가 구독한다.</summary>
@@ -24,13 +29,53 @@ public class ResourceManager : MonoBehaviour
 
     public ResourceCatalog Catalog => _catalog;
 
+    /// <summary>
+    /// 카탈로그를 시드하고 초기 자원을 지급한다.
+    ///
+    /// 새 게임 +(empty_hands) 배율은 GameManager가 들고 있는 서비스에서 읽는다 - 이 클래스에
+    /// RunModifierService를 따로 [SerializeField]로 두면 세 씬에 배선이 하나씩 더 늘어나는데,
+    /// Construct는 이미 gameManager를 받고 있어서 그럴 필요가 없다.
+    /// </summary>
     public void Construct(GameManager gameManager)
     {
         SeedCatalog();
 
+        float startingMultiplier = RunModifiers
+            .SnapshotOf(gameManager != null ? gameManager.RunModifierService : null)
+            .GetMultiplier(RunModifierChannel.StartingResource);
+
         foreach (ResourceAmount initial in _initialResources)
         {
-            AddInitial(initial.Type, initial.Amount);
+            AddInitial(initial.Type, StartingResourceRules.Scale(initial.Amount, startingMultiplier));
+        }
+
+        ApplyStartingFoodFloor(startingMultiplier);
+    }
+
+    // 조합 안전장치. 배율이 항등원이면 StartingResourceRules가 그대로 되돌려주므로
+    // 표준 모드에서는 이 메서드가 보유량을 건드리지 않는다(회귀 보호).
+    private void ApplyStartingFoodFloor(float startingMultiplier)
+    {
+        if (StartingResourceRules.IsNeutral(startingMultiplier))
+        {
+            return;
+        }
+
+        // 배율이 걸린 런에서만 배선을 요구한다 - 뮤테이터가 없는 씬에서 경고를 내지 않기 위함.
+        if (!WiringGuard.Optional(_economyBalance, nameof(_economyBalance), this))
+        {
+            return;
+        }
+
+        int currentFood = GetAmount(ResourceType.Food);
+        int flooredFood = StartingResourceRules.ApplyFoodFloor(
+            currentFood,
+            _economyBalance.StartingFoodFloorUnderMutators,
+            startingMultiplier);
+
+        if (flooredFood > currentFood)
+        {
+            Add(ResourceType.Food, flooredFood - currentFood);
         }
     }
 

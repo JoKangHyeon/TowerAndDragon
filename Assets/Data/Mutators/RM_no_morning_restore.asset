@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-537987090777356428
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41f30e23a74712c4889912ef7c5b113d, type: 3}
+  m_Name: RME_no_morning_restore
+  m_EditorClassIdentifier: Assembly-CSharp::RunRuleEffectSO
+  _rules: 1
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 48b79707613eec244bec238ff7ee0b35, type: 3}
+  m_Name: RM_no_morning_restore
+  m_EditorClassIdentifier: Assembly-CSharp::RunMutatorSO
+  _id: no_morning_restore
+  _nameLocKey: mutator_no_morning_restore_name
+  _exclusiveGroup: 
+  _tiers:
+  - _difficultyScore: 5
+    _descLocKey: mutator_no_morning_restore_tier1_desc
+    _effects:
+    - {fileID: -537987090777356428}

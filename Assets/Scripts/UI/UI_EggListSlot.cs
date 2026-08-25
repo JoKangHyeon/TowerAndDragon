@@ -23,7 +23,10 @@ public class UI_EggListSlot : MonoBehaviour
     // 알 스프라이트는 속성별로 BabyDragonData(Egg Growth)가 들고 있다 - 부화 일수와 같은 출처다.
     // 속성마다 이미지가 다르므로 색 틴트로 구분하지 않는다.
     // EggSprite가 비어 있으면 프리팹에 지정된 스프라이트를 그대로 둔다.
-    public void Setup(DragonEgg egg, BabyDragonData data)
+    // remainingDays를 인자로 받는 이유: 남은 일수는 런 수정치(heavy_gravity)에 따라 달라지는데,
+    // 이 뷰가 BabyDragonData.DaysToHatch를 직접 빼면 실제 부화 판정과 갈라진다.
+    // 계산은 DragonEggInventorySystem 한 곳에서만 한다(UI_BabyDragonListSlot과 같은 값-주입 패턴).
+    public void Setup(DragonEgg egg, BabyDragonData data, int remainingDays)
     {
         if (_icon != null)
         {
@@ -37,10 +40,8 @@ public class UI_EggListSlot : MonoBehaviour
 
         if (_hatchProgressText != null)
         {
-            // 초기 지급 알처럼 FedDayCount가 이미 목표치를 넘긴 경우 음수가 나오지 않도록 0에서 멈춘다.
-            int daysLeft = Mathf.Max(0, data.DaysToHatch - egg.FedDayCount);
             _hatchProgressText.text = string.Format(
-                StringTable.GetString(HATCH_TIME_LEFT_LOC_KEY), daysLeft);
+                StringTable.GetString(HATCH_TIME_LEFT_LOC_KEY), remainingDays);
         }
     }
 }

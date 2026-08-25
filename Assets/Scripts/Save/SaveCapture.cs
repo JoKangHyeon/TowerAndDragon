@@ -17,7 +17,7 @@ public static class SaveCapture
 
         var dto = new SaveGameDto
         {
-            Run = CaptureRun(run, context.CycleManager),
+            Run = CaptureRun(run, context.CycleManager, context.RunModifierService),
             Resources = CaptureResources(context.ResourceManager),
             Population = CapturePopulation(context.PopulationManager),
             Research = CaptureResearch(context.ResearchManager),
@@ -61,13 +61,21 @@ public static class SaveCapture
                 : 0,
             DragonType = run.DragonType,
 
+            // 서비스가 없는 씬(튜토리얼·테스트)에서는 0점 = 표준 모드로 기록된다.
+            DifficultyScore = context.RunModifierService != null
+                ? context.RunModifierService.DifficultyScore
+                : 0,
+
             // 본문에서 이미 만든 목록을 그대로 참조한다 - 다시 순회하지 않고, 본문과 메타가
             // 서로 다른 값을 담을 여지도 없앤다.
             Resources = resources.Amounts,
         };
     }
 
-    private static RunStateDto CaptureRun(RunData run, CycleManager cycleManager)
+    private static RunStateDto CaptureRun(
+        RunData run,
+        CycleManager cycleManager,
+        RunModifierService runModifierService)
     {
         var dto = new RunStateDto
         {
@@ -77,6 +85,14 @@ public static class SaveCapture
             BabyDragons = new List<BabyDragonDto>(),
             DragonEggs = new List<DragonEggDto>(),
             BossDragonEggRewards = new List<BossDragonEggRewardDto>(),
+            Mutators = CaptureMutators(runModifierService),
+
+            // 굳은 맹세(sworn_element)의 주기당 변경 카운터. 뮤테이터가 꺼진 런에서는 늘 0/0이라
+            // 이 필드가 없던 시절의 세이브와 바이트가 같다.
+            TypeChangeCycleNumber =
+                run.CurrentDragon != null ? run.CurrentDragon.TypeChangeCycleNumber : 0,
+            TypeChangeCountInCycle =
+                run.CurrentDragon != null ? run.CurrentDragon.TypeChangeCountInCycle : 0,
         };
 
         foreach (BabyDragon babyDragon in run.BabyDragons)
@@ -110,6 +126,35 @@ public static class SaveCapture
         }
 
         return dto;
+    }
+
+    // 서비스가 없는 씬(튜토리얼·테스트)에서는 빈 목록으로 캡처된다 - 복원 쪽이 그것을 표준 모드로 읽는다.
+    private static List<RunMutatorSelectionDto> CaptureMutators(RunModifierService runModifierService)
+    {
+        var selections = new List<RunMutatorSelectionDto>();
+
+        if (runModifierService == null)
+        {
+            return selections;
+        }
+
+        foreach (RunMutatorSelection selection in runModifierService.ActiveSelections)
+        {
+            if (selection.Mutator == null)
+            {
+                continue;
+            }
+
+            selections.Add(new RunMutatorSelectionDto
+            {
+                Id = selection.Mutator.Id,
+                Tier = selection.Tier,
+            });
+        }
+
+        // ToSortedList와 같은 이유로 정렬한다 - 같은 상태면 같은 바이트가 나오게.
+        selections.Sort((left, right) => string.CompareOrdinal(left.Id, right.Id));
+        return selections;
     }
 
     private static ResourceStateDto CaptureResources(ResourceManager resourceManager)
@@ -269,7 +314,7 @@ public static class SaveCapture
                 continue;
             }
 
-            placements.Add(new BuildingPlacementDto
+            var placement = new BuildingPlacementDto
             {
                 PrefabId = building.PrefabId,
                 Anchor = Vector3IntDto.From(building.PlacementAnchor),
@@ -278,7 +323,22 @@ public static class SaveCapture
                     building.GetComponent<IPopulationAllocationTarget>()?.AssignedPopulation ?? 0,
                 ConstructedCycle = building.ConstructedCycle,
                 BabyDragonIndex = babyDragonIndex,
-            });
+            };
+
+            // 타워가 아닌 건물은 체력 3필드를 기본값(0/false/0)으로 남긴다 - 복원이 "기록 없음"으로
+            // 읽으므로 이 필드가 없던 시절의 세이브와 바이트가 같다.
+            //
+            // 평소에는 타워도 만피로 캡처된다(저장은 낮에만 되고 아침에 전 타워가 복구되므로).
+            // no_morning_restore(긴 밤)를 켠 런에서만 부서진 상태가 낮까지 남는데, 그것을 기록하지
+            // 않으면 저장 -> 불러오기만으로 전 타워가 만피로 돌아와 5점짜리 뮤테이터가 세탁된다.
+            if (building is Tower tower)
+            {
+                placement.CurrentHealth = tower.CurrentHealth;
+                placement.IsDisabled = tower.IsReviving;
+                placement.ReviveProgress = tower.ReviveProgress;
+            }
+
+            placements.Add(placement);
         }
 
         // ToSortedList와 같은 이유로 정렬한다 - 같은 상태면 같은 바이트가 나오게.
@@ -400,6 +460,12 @@ public readonly struct SaveCaptureContext
     /// <summary>새끼용이 없는 씬에서는 null일 수 있다. 그 경우 새끼용 타워만 복원되지 않는다.</summary>
     public BabyDragonPlacementCoordinator BabyDragonPlacementCoordinator { get; }
 
+    /// <summary>
+    /// 새 게임 +(뮤테이터) 서비스. 튜토리얼·테스트 씬에는 없으므로 null일 수 있고, 그때는
+    /// 빈 목록 / 0점으로 캡처된다(= 표준 모드). 복원 쪽에서는 이 서비스가 뮤테이터를 되살린다.
+    /// </summary>
+    public RunModifierService RunModifierService { get; }
+
     public SaveCaptureContext(
         GameManager gameManager,
         CycleManager cycleManager,
@@ -413,7 +479,8 @@ public readonly struct SaveCaptureContext
         Castle castle,
         LandmarkManager landmarkManager,
         BuildingCatalog buildingCatalog,
-        BabyDragonPlacementCoordinator babyDragonPlacementCoordinator)
+        BabyDragonPlacementCoordinator babyDragonPlacementCoordinator,
+        RunModifierService runModifierService)
     {
         GameManager = gameManager;
         CycleManager = cycleManager;
@@ -428,6 +495,7 @@ public readonly struct SaveCaptureContext
         LandmarkManager = landmarkManager;
         BuildingCatalog = buildingCatalog;
         BabyDragonPlacementCoordinator = babyDragonPlacementCoordinator;
+        RunModifierService = runModifierService;
     }
 
     public bool IsValid => GameManager != null && CycleManager != null && GameManager.CurrentRun != null;

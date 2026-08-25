@@ -17,6 +17,12 @@ public sealed class TowerMaxHealthApplier : MonoBehaviour
     [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private GridMap _gridMap;
 
+    [Tooltip("새 게임 +(뮤테이터) 서비스. 비워 두면 뮤테이터 없는 표준 모드로 동작한다"
+        + " - 튜토리얼·테스트 씬에는 두지 않는다.")]
+    [SerializeField]
+    [WiringOptional]
+    private RunModifierService _runModifierService;
+
     private void OnEnable()
     {
         if (_cycleManager != null)
@@ -46,6 +52,14 @@ public sealed class TowerMaxHealthApplier : MonoBehaviour
             return;
         }
 
+        // 약한 지반(weak_ground)의 런 배율. 타워 종류와 무관한 런 전역 값이라 루프 밖에서 한 번만 읽는다.
+        // 새 곱셈 지점을 만들지 않고 기존 배율 옆에 곱하는 이유: Tower.ApplyMaxHealthMultiplier가
+        // 기저값(TowerData.MaxHealth)에 곱하고 현재/최대 비율을 보존하므로,
+        // "밤 시작에 그날의 최대체력이 확정된다"는 위 규칙이 그대로 유지된다.
+        float runMultiplier = RunModifiers
+            .SnapshotOf(_runModifierService)
+            .GetMultiplier(RunModifierChannel.TowerMaxHealth);
+
         foreach (Building building in _gridMap.Buildings)
         {
             if (building is not Tower tower || tower.Data == null)
@@ -53,7 +67,8 @@ public sealed class TowerMaxHealthApplier : MonoBehaviour
                 continue;
             }
 
-            tower.ApplyMaxHealthMultiplier(_maxHealthComposite.GetMaxHealthMultiplier(tower.Data));
+            tower.ApplyMaxHealthMultiplier(
+                _maxHealthComposite.GetMaxHealthMultiplier(tower.Data) * runMultiplier);
         }
     }
 }

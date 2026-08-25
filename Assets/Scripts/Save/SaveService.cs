@@ -57,6 +57,12 @@ public sealed class SaveService : MonoBehaviour
     [Tooltip("슬롯 목록에 띄울 점령 현황 썸네일을 찍는다. 비워 두면 썸네일 없이 저장한다.")]
     [SerializeField] private SaveThumbnailCapturer _thumbnailCapturer;
 
+    [Tooltip("새 게임 +(뮤테이터) 서비스. 비워 두면 뮤테이터 없는 표준 모드로 동작한다"
+        + " - 튜토리얼·테스트 씬에는 두지 않는다.")]
+    [SerializeField]
+    [WiringOptional]
+    private RunModifierService _runModifierService;
+
     [Tooltip("2일차부터 낮이 시작될 때마다 자동으로 저장할지 여부. 1일차는 항상 저장하지 않는다.")]
     [SerializeField] private bool _isAutoSaveEnabled = true;
 
@@ -72,6 +78,9 @@ public sealed class SaveService : MonoBehaviour
     // 복원 후 1회 발화. UI가 이걸 구독해 전체를 다시 그리면 개별 이벤트 누락에도 견딘다.
     [SerializeField] private UnityEvent _loadCompleted = new();
 
+    // 철인 모드에서 세이브를 지운 직후 1회 발화. 조용히 사라지면 버그로 읽힌다.
+    [SerializeField] private UnityEvent _ironmanSaveDeleted = new();
+
     private int _pendingLoadSlotIndex = SavePaths.INVALID_SLOT_INDEX;
     private int _consecutiveAutoSaveFailures;
     private bool _isSaving;
@@ -80,11 +89,40 @@ public sealed class SaveService : MonoBehaviour
     // 없어도 자동저장이 돌지 않지만, 복원 도중 다른 경로로 저장이 시작되는 것을 막는 이중 방어로 남긴다.
     private bool _isRestoring;
 
+    // 철인 모드에서 이 런이 묶인 슬롯. RunData나 세이브 DTO가 아니라 여기 두는 이유:
+    // 이것은 런의 시뮬레이션 상태가 아니라 "이 세션이 어떤 파일을 쓰는가"이고, 그 값은 이미
+    // 로드 요청(_pendingLoadSlotIndex)이 들고 있다. DTO에 넣으면 SaveSlotInfo.FromMeta 주석이
+    // 경고하는 함정과 같아진다 - 세이브 폴더를 다른 슬롯으로 복사하면 파일 안의 번호와 실제 폴더가
+    // 어긋나 잠금이 엉뚱한 슬롯을 가리킨다.
+    private int _ironmanSlotIndex = SavePaths.INVALID_SLOT_INDEX;
+
     public UnityEvent<SaveSlotInfo> SaveCompleted => _saveCompleted;
     public UnityEvent<SaveResult> SaveFailed => _saveFailed;
     public UnityEvent LoadCompleted => _loadCompleted;
+    public UnityEvent IronmanSaveDeleted => _ironmanSaveDeleted;
+
+    /// <summary>철인 모드 게임오버로 세이브를 지웠는가.
+    /// 게임오버 창은 비활성으로 저장돼 있어 삭제 시점에 OnEnable이 아직 돌지 않는다 -
+    /// 이벤트만으로는 놓치므로, 늦게 열리는 구독자가 현재 값을 한 번 읽을 수 있게 플래그도 남긴다
+    /// (CLAUDE.md "구독 직후 현재 값을 한 번 수동 반영" 규칙).</summary>
+    public bool WasIronmanSaveDeleted { get; private set; }
 
     public bool HasPendingLoad => _pendingLoadSlotIndex != SavePaths.INVALID_SLOT_INDEX;
+
+    /// <summary>철인 모드에서 이 런이 고정된 슬롯. 철인이 아니거나 아직 고정되지 않았으면
+    /// <see cref="INVALID_SLOT_INDEX"/>다. 슬롯 목록 UI가 자동저장 슬롯 배제 규칙의 예외를
+    /// 판정하는 데 쓴다 - 고정 슬롯이 자동저장 슬롯일 수 있기 때문이다.</summary>
+    public int IronmanSlotIndex => IsIronman ? _ironmanSlotIndex : SavePaths.INVALID_SLOT_INDEX;
+
+    /// <summary>철인 모드(ironman)가 켜져 있는가. 서비스가 없으면 항상 false라 기존 동작과 같다.</summary>
+    private bool IsIronman =>
+        RunModifiers.SnapshotOf(_runModifierService).HasRule(RunRuleFlag.Ironman);
+
+    /// <summary>철인 모드에서 자동저장·삭제가 향하는 슬롯.
+    /// 아직 고정되지 않았으면 자동저장 슬롯이다 - 새 런의 첫 기록은 낮 정산 자동저장이므로,
+    /// 수동 저장을 한 번도 하지 않은 런은 이어하기 슬롯 하나만 쓴다.</summary>
+    private int EffectiveIronmanSlotIndex =>
+        _ironmanSlotIndex != SavePaths.INVALID_SLOT_INDEX ? _ironmanSlotIndex : AUTO_SAVE_SLOT_INDEX;
 
     private void Awake()
     {
@@ -93,6 +131,10 @@ public sealed class SaveService : MonoBehaviour
         if (SaveLoadRequest.TryConsume(out int slotIndex))
         {
             _pendingLoadSlotIndex = slotIndex;
+
+            // 불러오기로 이어간 런은 같은 파일을 계속 쓴다 - 철인 모드에서 슬롯을 갈아타
+            // 잠금을 우회하는 길을 막는다. 철인이 아니면 이 값은 아무 곳에서도 읽히지 않는다.
+            _ironmanSlotIndex = slotIndex;
             return;
         }
 
@@ -100,6 +142,7 @@ public sealed class SaveService : MonoBehaviour
         if (_debugForceContinue && SavePaths.IsValidSlotIndex(_debugSlotIndex))
         {
             _pendingLoadSlotIndex = _debugSlotIndex;
+            _ironmanSlotIndex = _debugSlotIndex;
         }
 #endif
     }
@@ -110,6 +153,16 @@ public sealed class SaveService : MonoBehaviour
         if (_cycleManager != null)
         {
             _cycleManager.OnDaySettled.AddListener(HandleDaySettled);
+
+            // OnDayEnd는 OnDaySettled와 달리 인라인 초기화가 없어 씬 YAML에 항목이 없으면 null이다
+            // (OnDayStart·OnNightStart와 같은 사정). SoundManager의 ?.AddListener 관용구를 따른다.
+            _cycleManager.OnDayEnd?.AddListener(HandleDayEnd);
+        }
+
+        if (_gameManager != null)
+        {
+            // 승리(VictoryOccurred)에는 구독하지 않는다 - 철인 모드는 패배만 되돌릴 수 없게 만든다.
+            _gameManager.GameOverOccurred?.AddListener(HandleGameOver);
         }
     }
 
@@ -118,6 +171,12 @@ public sealed class SaveService : MonoBehaviour
         if (_cycleManager != null)
         {
             _cycleManager.OnDaySettled.RemoveListener(HandleDaySettled);
+            _cycleManager.OnDayEnd?.RemoveListener(HandleDayEnd);
+        }
+
+        if (_gameManager != null)
+        {
+            _gameManager.GameOverOccurred?.RemoveListener(HandleGameOver);
         }
     }
 
@@ -158,6 +217,21 @@ public sealed class SaveService : MonoBehaviour
 
     public bool CanSave => IsSaveablePhase && !_isSaving;
 
+    /// <summary>
+    /// 이 슬롯에 지금 저장할 수 있는지. <see cref="CanSave"/>는 슬롯을 모르는 판정이라 그대로 두고
+    /// (창을 열 때 한 번 보는 IsSaveablePhase와의 역할 구분을 깨지 않기 위해) 슬롯 조건만 여기 얹는다.
+    /// 슬롯 목록 UI가 줄마다 이 값으로 선택 가능 여부를 가른다.
+    /// </summary>
+    public bool CanSaveToSlot(int slotIndex) => CanSave && IsSlotAllowedForSave(slotIndex);
+
+    /// <summary>철인 모드에서 고정 슬롯 외 저장을 막는다. 철인이 아니면 항상 참이다.
+    /// 아직 고정되지 않았다면(수동 저장을 한 번도 안 한 런) 어느 슬롯이든 허용하고,
+    /// 그 첫 저장이 슬롯을 고정한다.</summary>
+    private bool IsSlotAllowedForSave(int slotIndex) =>
+        !IsIronman ||
+        _ironmanSlotIndex == SavePaths.INVALID_SLOT_INDEX ||
+        _ironmanSlotIndex == slotIndex;
+
     public async UniTask<SaveResult> SaveAsync(
         int slotIndex,
         bool isAutoSave = false,
@@ -176,6 +250,13 @@ public sealed class SaveService : MonoBehaviour
         if (!CanSave)
         {
             return Fail(SaveFailureReason.NotSaveablePhase, slotIndex);
+        }
+
+        // 국면 검사 뒤에 둔다 - 밤에 잠긴 슬롯을 눌렀을 때 "낮에만 저장할 수 있습니다"가 먼저 보여야
+        // 한다(철인 잠금은 낮이 되면 풀리는 것이 아니라 그 슬롯이 아니라는 뜻이므로 더 좁은 사유다).
+        if (!IsSlotAllowedForSave(slotIndex))
+        {
+            return Fail(SaveFailureReason.IronmanSlotLocked, slotIndex);
         }
 
         var context = BuildContext();
@@ -238,6 +319,15 @@ public sealed class SaveService : MonoBehaviour
             }
 
             _consecutiveAutoSaveFailures = 0;
+
+            // 철인 모드의 슬롯 고정은 첫 수동 저장이 정한다. 자동저장으로 고정하지 않는 이유:
+            // 새 런의 첫 기록은 2일차 낮 정산 자동저장(0번)이라, 그것으로 고정하면 플레이어가
+            // 고를 여지 없이 항상 이어하기 슬롯에 묶인다.
+            if (!isAutoSave && IsIronman && _ironmanSlotIndex == SavePaths.INVALID_SLOT_INDEX)
+            {
+                _ironmanSlotIndex = slotIndex;
+                Debug.Log($"[SaveService] 철인 모드 - 이 런의 세이브 슬롯을 {slotIndex}번으로 고정합니다.");
+            }
 
             SaveSlotInfo info = SaveSlotInfo.FromMeta(dto.Meta, slotIndex, false, thumbnailPng != null);
             _saveCompleted.Invoke(info);
@@ -327,6 +417,11 @@ public sealed class SaveService : MonoBehaviour
             return SaveLoadResult.Failure(reason);
         }
 
+        if (!CanRestoreMutators(dto.Run.Mutators))
+        {
+            return SaveLoadResult.Failure(SaveLoadFailureReason.ValidationFailed);
+        }
+
         var context = BuildContext();
         if (!context.IsValid)
         {
@@ -351,6 +446,49 @@ public sealed class SaveService : MonoBehaviour
         return SaveLoadResult.Success();
     }
 
+    /// <summary>
+    /// 세이브에 담긴 뮤테이터를 이 빌드가 전부 되살릴 수 있는지. <b>복원 착수 전에 부른다</b> -
+    /// TryNormalize는 형태만 보고 카탈로그를 모르므로(DTO 계층이 게임 데이터 에셋을 알면 안 된다)
+    /// 대조는 여기서 한다. "한 번 복원을 시작하면 롤백이 불가능하므로 그 전에 전부 막는다"는
+    /// TryNormalize의 기존 계약을 그대로 이어받는 자리다.
+    ///
+    /// 이 경로는 <b>빌드 다운그레이드(구 빌드로 신 세이브 열기)에서만</b> 발생하고,
+    /// <b>안전한 쪽으로 실패한다</b> - 통과시키면 제약이 조용히 빠져 난이도가 낮아지고,
+    /// 저장된 난이도 점수와 실제 난이도가 어긋난 런이 된다.
+    /// </summary>
+    private bool CanRestoreMutators(List<RunMutatorSelectionDto> mutators)
+    {
+        List<(string Id, int Tier)> selections = SaveRestore.ToMutatorSelections(mutators);
+
+        if (selections.Count == 0)
+        {
+            return true;
+        }
+
+        // 뮤테이터가 담긴 세이브인데 서비스가 없는 씬이면 적용할 방법이 없다.
+        // 제약 없이 이어가는 것보다 열지 않는 편이 안전하다.
+        if (_runModifierService == null)
+        {
+            Debug.LogError(
+                $"[SaveService] 이 세이브에는 뮤테이터 {selections.Count}개가 담겨 있지만 "
+                + $"{nameof(_runModifierService)}가 연결되지 않아 적용할 수 없습니다 - 불러오기를 거부합니다.",
+                this);
+
+            return false;
+        }
+
+        if (!_runModifierService.CanApplyRestoredMutators(selections))
+        {
+            Debug.LogError(
+                "[SaveService] 세이브에 이 빌드가 모르는 뮤테이터 id 또는 범위 밖 단계가 있습니다 - 불러오기를 거부합니다.",
+                this);
+
+            return false;
+        }
+
+        return true;
+    }
+
     // --- 내부 헬퍼 ---
 
     private void HandleDaySettled(int dayNumber)
@@ -368,12 +506,69 @@ public sealed class SaveService : MonoBehaviour
             return;
         }
 
-        AutoSaveAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        // 철인 모드에서 슬롯이 고정된 뒤에는 자동저장도 그 슬롯으로 간다 - 0번에 따로 쌓이면
+        // "세이브 하나"라는 규칙이 무의미해진다.
+        AutoSaveAsync(EffectiveIronmanSlotIndexOrAutoSlot, this.GetCancellationTokenOnDestroy()).Forget();
     }
 
-    private async UniTaskVoid AutoSaveAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// 밤 진입 직전 자동저장(철인 모드 전용). 낮에 한 건설·배치·연구를 되돌릴 수 없게 만드는 것이
+    /// 이 모드의 요점이다.
+    ///
+    /// <b>OnNightStart가 아니라 OnDayEnd에 걸어야 한다.</b> CycleManager.StartNight가 CurrentCycle을
+    /// Night로 바꾼 뒤 OnNightStart를 쏘므로, 그쪽에 걸면 CanSave가 거짓이 되거나 밤 스냅샷이 만들어져
+    /// TryNormalize가 거부하는 파일이 된다. OnDayEnd는 StartNight 바로 앞이라 아직 Day다.
+    /// SaveAsync의 캡처·직렬화는 동기라 밤이 시작되기 전에 스냅샷이 확정된다(디스크 쓰기만 await).
+    ///
+    /// HandleDaySettled의 1일차 제외(계약 2-1)는 여기 옮기지 않는다. 그 제외는 게임오버 후 Restart가
+    /// 직전 런의 이어하기를 덮어쓰는 것을 막으려는 것인데, 철인 모드는 게임오버 시 그 세이브를 이미
+    /// 지운다. 반대로 1일차의 밤 진입은 되돌릴 수 없게 만들 대상 그 자체다.
+    /// 일차 인자는 쓰지 않는다 - 저장 시점은 날짜와 무관하다(TowerMorningRestoreSystem.RestoreAll과 같은 표기).
+    /// </summary>
+    private void HandleDayEnd(int _)
     {
-        SaveResult result = await SaveAsync(AUTO_SAVE_SLOT_INDEX, true, cancellationToken);
+        if (!_isAutoSaveEnabled || _isRestoring || !IsIronman)
+        {
+            return;
+        }
+
+        AutoSaveAsync(EffectiveIronmanSlotIndex, this.GetCancellationTokenOnDestroy()).Forget();
+    }
+
+    /// <summary>
+    /// 철인 모드에서 게임오버가 나면 그 런의 세이브를 지운다. 승리에는 지우지 않는다.
+    /// 삭제 사실을 이벤트와 플래그로 함께 알린다 - 조용히 사라지면 버그로 읽힌다.
+    ///
+    /// 지우는 것은 "유효 슬롯" 하나뿐이다. 고정 전 자동저장이 0번에 남아 있고 이후 다른 슬롯으로
+    /// 고정된 런이라면 0번 파일이 남는데, 요청받지 않은 슬롯까지 지우는 것이 더 나쁘다.
+    /// </summary>
+    private void HandleGameOver()
+    {
+        if (!IsIronman)
+        {
+            return;
+        }
+
+        int slotIndex = EffectiveIronmanSlotIndex;
+
+        if (!TryDelete(slotIndex))
+        {
+            Debug.LogWarning($"[SaveService] 철인 모드 - 슬롯 {slotIndex} 삭제에 실패했습니다.");
+            return;
+        }
+
+        Debug.Log($"[SaveService] 철인 모드 - 게임오버로 슬롯 {slotIndex}의 세이브를 삭제했습니다.");
+        WasIronmanSaveDeleted = true;
+        _ironmanSaveDeleted.Invoke();
+    }
+
+    // 철인 모드가 아니면 언제나 자동저장 슬롯이다. 철인이면 고정 슬롯(미고정 시 자동저장 슬롯).
+    private int EffectiveIronmanSlotIndexOrAutoSlot =>
+        IsIronman ? EffectiveIronmanSlotIndex : AUTO_SAVE_SLOT_INDEX;
+
+    private async UniTaskVoid AutoSaveAsync(int slotIndex, CancellationToken cancellationToken)
+    {
+        SaveResult result = await SaveAsync(slotIndex, true, cancellationToken);
 
         if (result.IsSuccess)
         {
@@ -438,5 +633,6 @@ public sealed class SaveService : MonoBehaviour
         _castle,
         _landmarkManager,
         _buildingCatalog,
-        _babyDragonPlacementCoordinator);
+        _babyDragonPlacementCoordinator,
+        _runModifierService);
 }

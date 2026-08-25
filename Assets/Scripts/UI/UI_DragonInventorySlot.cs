@@ -29,7 +29,14 @@ public class UI_DragonInventorySlot : MonoBehaviour
     [Tooltip("먹이 슬라임 아이콘 조회용.")]
     [SerializeField] private ResourceCatalog _resourceCatalog;
 
-    public void SetupEgg(DragonEgg egg, BabyDragonData data, Sprite eggSprite, Color attributeColor)
+    // daysToHatch를 인자로 받는 이유: 필요 일수는 런 수정치(heavy_gravity)에 따라 달라지는데,
+    // 이 뷰가 BabyDragonData.DaysToHatch를 직접 읽으면 실제 부화 판정과 갈라진다.
+    public void SetupEgg(
+        DragonEgg egg,
+        BabyDragonData data,
+        Sprite eggSprite,
+        Color attributeColor,
+        int daysToHatch)
     {
         _icon.sprite = eggSprite;
         _icon.color = attributeColor; // 공용 알 스프라이트라 틴트로 속성을 구분한다.
@@ -39,7 +46,7 @@ public class UI_DragonInventorySlot : MonoBehaviour
         _hatchProgressText.text = string.Format(
             StringTable.GetString(EGG_PROGRESS_LOC_KEY),
             egg.FedDayCount,
-            data.DaysToHatch);
+            daysToHatch);
 
         Button button = GetComponent<Button>();
         button.onClick.RemoveAllListeners();
