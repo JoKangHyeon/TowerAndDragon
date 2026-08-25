@@ -304,6 +304,13 @@ public sealed class BabyDragonDto
 
     public int Mode;
     public bool IsModeInitialized;
+
+    /// <summary>
+    /// 먹이 미결제 상태(RunData.BabyDragon.IsFed). 이게 빠지면 굶주린 채로 저장→불러오기만 해도
+    /// 그날의 먹이 비용이 세탁된다(다시 가동 상태로 복원됨).
+    /// 이 필드가 없던 구버전 세이브는 true로 읽혀 기존 동작(가동 중으로 복원)과 같다.
+    /// </summary>
+    public bool IsFed = true;
 }
 
 public sealed class DragonEggDto

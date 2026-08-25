@@ -321,6 +321,7 @@ public static class SaveRestore
 
                 Mode = (BabyDragonMode)entry.Mode,
                 IsModeInitialized = entry.IsModeInitialized,
+                IsFed = entry.IsFed,
             });
         }
 

@@ -314,6 +314,11 @@ public class BabyDragon
     // BabyDragonTower.BindRecord가 데이터 기반 기본값(공격 불가면 Buff)으로 한 번 채운다.
     public BabyDragonMode Mode;
     public bool IsModeInitialized;
+
+    // 먹이 미결제 상태. false면 그날 슬라임을 못 받아 가동이 멈춘다.
+    // 인스턴스가 아니라 레코드에 두는 이유: 철거 후 재설치로 굶주림이 리셋되면
+    // "그날 굶은 용"을 철거·재설치만으로 되살릴 수 있다(세이브/로드와 같은 종류의 구멍).
+    public bool IsFed = true;
 }
 
 [Serializable]

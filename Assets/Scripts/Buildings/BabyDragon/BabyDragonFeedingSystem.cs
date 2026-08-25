@@ -8,12 +8,18 @@ using UnityEngine;
 /// GridMap.OnBuildingAdded/Removing을 구독해 새끼용을 등록한다.
 /// 지불은 CycleManager.OnDayStartUpkeep(생산 정산 다음 단계)에서 이루어지므로,
 /// Factory의 당일 생산분이 이미 반영된 재고를 기준으로 판정한다.
+///
+/// 굶주림은 슬라임 비용의 후불 미결제 상태다 - 설치된 새끼용을 전부 먹인 뒤 슬라임이
+/// 남으면 그 여분으로 인벤토리에 있는 미결제(굶주린) 새끼용을 마저 갚는다(SettleUnpaidInventoryFeed).
+/// 설치된 새끼용이 우선이므로 순서를 바꾸지 않는다.
 /// </summary>
 public class BabyDragonFeedingSystem : MonoBehaviour
 {
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private ResourceManager _resourceManager;
+    [SerializeField] private GameManager _gameManager;
+    [SerializeField] private BabyDragonDataCatalog _dataCatalog;
 
     private readonly List<BabyDragonTower> _babyDragons = new();
 
@@ -93,6 +99,8 @@ public class BabyDragonFeedingSystem : MonoBehaviour
         {
             Feed(babyDragon);
         }
+
+        SettleUnpaidInventoryFeed();
     }
 
     // 집계는 예상치(ResourceForecast)와 공유한다 - 마릿수 세는 기준이 갈리면 표시값과
@@ -146,5 +154,65 @@ public class BabyDragonFeedingSystem : MonoBehaviour
             $" + 전체 {_installedTotalCount} 추가분 {data.AdditionalFeedPerTotal})" +
             $" / 지불 {isFed}, 잔량 {_resourceManager.GetAmount(slimeType)}",
             babyDragon);
+    }
+
+    // 설치된 새끼용을 전부 먹인 뒤 남은 슬라임으로, 인벤토리에서 미결제(굶주린) 상태인 새끼용을
+    // 마저 갚는다. 비용은 UI_DragonInventoryWindow가 슬롯에 보여주는 미리보기와 같은 식이다
+    // (BabyDragonFeedFormula의 계약상 "이 용까지 포함해서 설치됐다고 가정했을 때"의 마릿수를 쓴다) -
+    // 표시값과 실제 차감액이 갈리면 안 되기 때문이다.
+    // GameManager·BabyDragonDataCatalog가 미연결인 씬(테스트 등)에서는 이 단계만 건너뛴다.
+    private void SettleUnpaidInventoryFeed()
+    {
+        if (!WiringGuard.Require(_gameManager, nameof(_gameManager), this) ||
+            !WiringGuard.Require(_dataCatalog, nameof(_dataCatalog), this))
+        {
+            return;
+        }
+
+        bool anySettled = false;
+
+        foreach (BabyDragon record in _gameManager.CurrentRun.BabyDragons)
+        {
+            if (record.IsInTower || record.IsFed)
+            {
+                continue;
+            }
+
+            if (!_dataCatalog.TryResolve(record.DragonType, out BabyDragonData data))
+            {
+                continue;
+            }
+
+            _installedCountByDragonType.TryGetValue(record.DragonType, out int sameTypeCount);
+            int requiredFeed = BabyDragonFeedFormula.ResolveDailyFeed(
+                data, sameTypeCount + 1, _installedTotalCount + 1);
+
+            if (requiredFeed <= 0)
+            {
+                record.IsFed = true;
+                anySettled = true;
+                continue;
+            }
+
+            if (!DragonSlimeTable.TryGetFeedSlime(record.DragonType, out ResourceType slimeType))
+            {
+                continue;
+            }
+
+            if (_resourceManager.TrySpend(slimeType, requiredFeed))
+            {
+                record.IsFed = true;
+                anySettled = true;
+
+                Debug.Log(
+                    $"[BabyDragonFeedingSystem] 인벤토리 {record.DragonType} 미결제 {requiredFeed} 정산 완료" +
+                    $" / 잔량 {_resourceManager.GetAmount(slimeType)}");
+            }
+        }
+
+        if (anySettled)
+        {
+            _gameManager.CurrentRun.OnInventoryChanged.Invoke();
+        }
     }
 }

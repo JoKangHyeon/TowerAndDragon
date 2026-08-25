@@ -104,6 +104,7 @@ public static class SaveCapture
                 IsInTower = babyDragon.IsInTower,
                 Mode = (int)babyDragon.Mode,
                 IsModeInitialized = babyDragon.IsModeInitialized,
+                IsFed = babyDragon.IsFed,
             });
         }
 
