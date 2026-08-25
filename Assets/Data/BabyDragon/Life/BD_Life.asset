@@ -13,12 +13,14 @@ MonoBehaviour:
   m_Name: BD_Life
   m_EditorClassIdentifier: Assembly-CSharp::BabyDragonData
   _nameLocKey: baby_dragon_name_life
+  _requiresResearchUnlock: 0
   _populationCapacity: 1
   _buildCost: []
   _maxHealth: 120
   _reviveDelay: 30
   _attack: {fileID: 11400000, guid: 153bf4818137ee642842ee5be2ec5424, type: 2}
-  _projectilePrefab: {fileID: 2874056009116883397, guid: c13a7b1d583d7cf46bbf1358248fe5e1, type: 3}
+  _targetMovementFilter: 0
+  _projectilePrefab: {fileID: 3603080668245526547, guid: fb584c6fa28fdb04e93a3b9d773acd1b, type: 3}
   _projectileSpeed: 10
   _dragonType: 4
   _sprite: {fileID: 21300000, guid: 28e74cd38bcf34b4daa471e409623285, type: 3}
@@ -30,4 +32,8 @@ MonoBehaviour:
   _buffRadius: 3
   _buffYieldMultiplier: 2
   _buffTargetResources: 3
+  _constructionUnlockTerrains: 
+  _penaltyMitigationTerrains: 
+  _attackRangeVfxPrefab: {fileID: 3519966011143039586, guid: 01c97cd719be83545b908ca0001030f6, type: 3}
+  _buffRangeVfxPrefab: {fileID: 7337534079502825848, guid: 967c72cf85efa384ab6a63f189c92b21, type: 3}
   _towerAura: {fileID: 0}

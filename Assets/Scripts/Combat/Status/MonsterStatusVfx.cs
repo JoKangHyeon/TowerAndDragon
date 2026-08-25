@@ -114,6 +114,7 @@ public sealed class MonsterStatusVfx
             if (effect != null)
             {
                 _activeByPrefab.Add(prefab, effect);
+                BindBodyFit(effect);
             }
         }
 
@@ -180,6 +181,18 @@ public sealed class MonsterStatusVfx
 
         body = new Vector3(bounds.center.x, bounds.center.y, z);
         feet = new Vector3(bounds.center.x, bounds.min.y, z);
+    }
+
+    // 대상 크기에 맞춰야 하는 연출(StatusVfxBodyFit)에만 몸통 렌더러를 물린다. 대여 시점에 한 번만
+    // 하므로 탐색 비용은 문제가 되지 않는다 - 매 프레임 도는 Follow에서는 찾지 않는다.
+    private void BindBodyFit(Transform effect)
+    {
+        StatusVfxBodyFit fit = effect.GetComponentInChildren<StatusVfxBodyFit>(true);
+
+        if (fit != null)
+        {
+            fit.Bind(_bodyRenderer);
+        }
     }
 
     // 붙이지 않은 프리팹은 Body다 - 기존 연출의 자리를 바꾸지 않기 위해서다.

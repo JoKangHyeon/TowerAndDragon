@@ -48,6 +48,15 @@ public class BabyDragonData : TowerData, ITowerAuraDataProvider, IElementalAttac
 
     public IReadOnlyList<TerrainType> PenaltyMitigationTerrains => _penaltyMitigationTerrains;
 
+    [Header("Range VFX")]
+    [WiringOptional]
+    [Tooltip("공격 모드에서 선택했을 때 표시할 새끼용 전용 범위 프리팹. 루트 스케일 1이 반경 1이어야 한다.")]
+    [SerializeField] private GameObject _attackRangeVfxPrefab;
+
+    [WiringOptional]
+    [Tooltip("버프 모드에서 선택했을 때 표시할 새끼용 전용 범위 프리팹. 루트 스케일 1이 반경 1이어야 한다.")]
+    [SerializeField] private GameObject _buffRangeVfxPrefab;
+
 
     [Header("Tower Aura")]
     [SerializeField] private TowerAuraDataSO _towerAura;
@@ -62,6 +71,8 @@ public class BabyDragonData : TowerData, ITowerAuraDataProvider, IElementalAttac
     public float BuffRadius => _buffRadius;
     public float BuffYieldMultiplier => _buffYieldMultiplier;
     public ResourceType BuffTargetResources => _buffTargetResources;
+    public GameObject AttackRangeVfxPrefab => _attackRangeVfxPrefab;
+    public GameObject BuffRangeVfxPrefab => _buffRangeVfxPrefab;
 
     public TowerAuraDataSO TowerAura => _towerAura;
 

@@ -13,12 +13,14 @@ MonoBehaviour:
   m_Name: BD_Fire
   m_EditorClassIdentifier: Assembly-CSharp::BabyDragonData
   _nameLocKey: baby_dragon_name_fire
+  _requiresResearchUnlock: 0
   _populationCapacity: 1
   _buildCost: []
   _maxHealth: 100
   _reviveDelay: 30
   _attack: {fileID: 11400000, guid: 3e40d7de092a60649982257897ac066c, type: 2}
-  _projectilePrefab: {fileID: 2874056009116883397, guid: d3eea20d7a6e549c58ec4aba57e8ac30, type: 3}
+  _targetMovementFilter: 0
+  _projectilePrefab: {fileID: 8268647919280445800, guid: 3acc86e434484af409af1a22475dac6c, type: 3}
   _projectileSpeed: 10
   _dragonType: 1
   _sprite: {fileID: 21300000, guid: e62ad1269c24042c5a134758159c49ed, type: 3}
@@ -32,4 +34,6 @@ MonoBehaviour:
   _buffTargetResources: 0
   _constructionUnlockTerrains: 
   _penaltyMitigationTerrains: 04000000
+  _attackRangeVfxPrefab: {fileID: 2122236049010454206, guid: 191b0581cb730d24eaf7e4ad113ef5c1, type: 3}
+  _buffRangeVfxPrefab: {fileID: 5632677175760660932, guid: 9aa931a0f191b53499bd2740f45de597, type: 3}
   _towerAura: {fileID: 0}

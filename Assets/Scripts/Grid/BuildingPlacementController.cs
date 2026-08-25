@@ -919,6 +919,15 @@ public class BuildingPlacementController : MonoBehaviour
             return;
         }
 
+        // 새끼용은 현재 모드의 선 하나만 표시한다. 선이 정확한 판정 경계를 맡고,
+        // 전용 파티클은 그 안쪽의 연출만 담당한다.
+        if (building is BabyDragonTower babyDragon &&
+            babyDragon.Mode != BabyDragonMode.Attack)
+        {
+            _rangeIndicator.Hide();
+            return;
+        }
+
         if (!(building is Tower tower) ||
             tower.Data == null ||
             !tower.Data.CanAttack ||
@@ -932,7 +941,7 @@ public class BuildingPlacementController : MonoBehaviour
         _rangeIndicator.Show(tower.Attack.EffectiveRange, tower.Attack.EffectiveRange * IsometricMath.RADIUS_Y_RATIO);
     }
 
-    // 오라 타워는 현재 유효 반경을, 기존 새끼용은 BabyDragonBuffSystem과 같은 BuffRadius를 표시한다.
+    // 일반 오라 타워와 버프 모드 새끼용의 현재 유효 반경을 표시한다.
     private void ShowBuffRangeIndicatorFor(Building building)
     {
         if (!WiringGuard.Require(_buffRangeIndicator, nameof(_buffRangeIndicator), this))
@@ -940,16 +949,24 @@ public class BuildingPlacementController : MonoBehaviour
             return;
         }
 
-        if (building is Tower tower &&
-            tower.Data is ITowerAuraDataProvider provider &&
-            provider.HasTowerAura)
+        if (building is BabyDragonTower babyDragon)
         {
-            if (TowerAuraSystem.TryGetActiveAura(
-                tower,
-                out _,
-                out float auraRadius))
+            if (babyDragon.Mode != BabyDragonMode.Buff ||
+                babyDragon.DragonData == null)
             {
-                ShowBuffRange(tower.transform.position, auraRadius);
+                _buffRangeIndicator.Hide();
+                return;
+            }
+
+            _babyDragonBuffSystem ??=
+                Object.FindFirstObjectByType<BabyDragonBuffSystem>();
+            float radius = _babyDragonBuffSystem != null
+                ? _babyDragonBuffSystem.GetEffectiveBuffRadius(babyDragon)
+                : babyDragon.DragonData.BuffRadius;
+
+            if (radius > 0f)
+            {
+                ShowBuffRange(babyDragon.transform.position, radius);
             }
             else
             {
@@ -959,23 +976,25 @@ public class BuildingPlacementController : MonoBehaviour
             return;
         }
 
-        if (building is BabyDragonTower babyDragon &&
-            babyDragon.DragonData != null)
+        if (building is Tower tower &&
+            tower.Data is ITowerAuraDataProvider provider &&
+            provider.HasTowerAura)
         {
-            _babyDragonBuffSystem ??= Object.FindFirstObjectByType<BabyDragonBuffSystem>();
-            float radius = _babyDragonBuffSystem != null
-                ? _babyDragonBuffSystem.GetEffectiveBuffRadius(babyDragon)
-                : babyDragon.DragonData.BuffRadius;
-
-            if (radius <= 0f)
+            // 범위 마커(FX_Aura_*)를 꽂아 둔 오라는 선을 그리지 않는다 - 마커와 같은 자리라
+            // 두 겹으로 보인다. 그 표시는 TowerBuffOrbCoordinator가 맡는다.
+            if (TowerAuraSystem.TryGetActiveAura(
+                    tower,
+                    out TowerAuraDataSO aura,
+                    out float auraRadius) &&
+                !aura.HasRangeMarker)
+            {
+                ShowBuffRange(tower.transform.position, auraRadius);
+            }
+            else
             {
                 _buffRangeIndicator.Hide();
-                return;
             }
 
-            ShowBuffRange(
-                babyDragon.transform.position,
-                radius);
             return;
         }
 
