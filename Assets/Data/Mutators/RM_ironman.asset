@@ -10,17 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 48b79707613eec244bec238ff7ee0b35, type: 3}
-  m_Name: RM_no_morning_restore
+  m_Name: RM_ironman
   m_EditorClassIdentifier: Assembly-CSharp::RunMutatorSO
-  _id: no_morning_restore
-  _nameLocKey: mutator_no_morning_restore_name
+  _id: ironman
+  _nameLocKey: mutator_ironman_name
   _exclusiveGroup: 
   _tiers:
   - _difficultyScore: 5
-    _descLocKey: mutator_no_morning_restore_tier1_desc
+    _descLocKey: mutator_ironman_tier1_desc
     _effects:
-    - {fileID: 1314078077300620606}
---- !u!114 &1314078077300620606
+    - {fileID: 7821000587870190257}
+--- !u!114 &7821000587870190257
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -30,6 +30,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 41f30e23a74712c4889912ef7c5b113d, type: 3}
-  m_Name: RME_no_morning_restore
+  m_Name: RME_ironman
   m_EditorClassIdentifier: Assembly-CSharp::RunRuleEffectSO
-  _rules: 1
+  _rules: 2

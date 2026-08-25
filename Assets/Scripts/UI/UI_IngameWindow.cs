@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -271,11 +272,12 @@ public class UI_IngameWindow : MonoBehaviour
             _slimeSummary.Construct(_resourceManager, _resourceForecast, _tooltipPresenter);
         }
 
-        // 뱃지도 같은 이유로 여기서 주입한다. RunModifierService는 Awake에서 스냅샷을 확정하고
-        // "모든 Awake → 모든 OnEnable" 순서는 보장되므로, 이 시점의 점수는 이미 유효하다.
+        // 뱃지도 같은 이유로 여기서 주입한다. RunModifierService.Awake와의 순서 역전이 실측되어
+        // (SampleScene을 동기 LoadScene으로 다시 불러오는 경로에서 이 OnEnable이 먼저 돈다),
+        // 한 프레임 지연시켜 모든 Awake가 끝난 뒤 Construct한다 - CLAUDE.md 이벤트 규칙의 UniTask.Yield() 처방.
         if (_newGamePlusBadge != null)
         {
-            _newGamePlusBadge.Construct(_runModifiers, _tooltipPresenter);
+            DeferredConstructBadge().Forget();
         }
 
         // 예측이 바뀌면(건물/인구/버프/지형 변경) 보유량 옆 증감 표기와 툴팁을 다시 그린다.
@@ -308,6 +310,14 @@ public class UI_IngameWindow : MonoBehaviour
 
         // 언어가 바뀌면 이 창의 로컬라이즈된 텍스트를 다시 그린다.
         StringTable.OnLanguageChanged += RefreshLocalizedTexts;
+    }
+
+    // OnEnable에서 곧장 Construct하면 RunModifierService.Awake가 아직 안 끝났을 때 잡힐 수 있다
+    // (실측됨 - §OnEnable 주석 참조). 한 프레임 넘겨 모든 Awake가 끝난 뒤에 부른다.
+    private async UniTaskVoid DeferredConstructBadge()
+    {
+        await UniTask.Yield(this.GetCancellationTokenOnDestroy());
+        _newGamePlusBadge.Construct(_runModifiers, _tooltipPresenter);
     }
 
     // 클릭음을 붙이기 위한 래퍼. WorkerModeController는 단축키 경로에서도 호출되므로

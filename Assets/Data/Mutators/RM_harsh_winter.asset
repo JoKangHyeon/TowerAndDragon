@@ -1,5 +1,35 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8921656301273131052
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b1c0db70b3c2ff47ada96b18e68a50a, type: 3}
+  m_Name: RME_harsh_winter_tier3
+  m_EditorClassIdentifier: Assembly-CSharp::RunTerrainPenaltyEffectSO
+  _terrain: 4
+  _kind: 2
+  _penaltyScale: 5
+--- !u!114 &-4018975359365474826
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b1c0db70b3c2ff47ada96b18e68a50a, type: 3}
+  m_Name: RME_harsh_winter_tier2
+  m_EditorClassIdentifier: Assembly-CSharp::RunTerrainPenaltyEffectSO
+  _terrain: 4
+  _kind: 2
+  _penaltyScale: 3
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19,46 +49,16 @@ MonoBehaviour:
   - _difficultyScore: 1
     _descLocKey: mutator_harsh_winter_tier1_desc
     _effects:
-    - {fileID: 8423685555938784371}
+    - {fileID: 6300114249637296824}
   - _difficultyScore: 2
     _descLocKey: mutator_harsh_winter_tier2_desc
     _effects:
-    - {fileID: 3457143670813477344}
+    - {fileID: -4018975359365474826}
   - _difficultyScore: 3
     _descLocKey: mutator_harsh_winter_tier3_desc
     _effects:
-    - {fileID: 1917542070849849017}
---- !u!114 &1917542070849849017
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6b1c0db70b3c2ff47ada96b18e68a50a, type: 3}
-  m_Name: RME_harsh_winter_tier3
-  m_EditorClassIdentifier: Assembly-CSharp::RunTerrainPenaltyEffectSO
-  _terrain: 4
-  _kind: 2
-  _penaltyScale: 5
---- !u!114 &3457143670813477344
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6b1c0db70b3c2ff47ada96b18e68a50a, type: 3}
-  m_Name: RME_harsh_winter_tier2
-  m_EditorClassIdentifier: Assembly-CSharp::RunTerrainPenaltyEffectSO
-  _terrain: 4
-  _kind: 2
-  _penaltyScale: 3
---- !u!114 &8423685555938784371
+    - {fileID: -8921656301273131052}
+--- !u!114 &6300114249637296824
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
