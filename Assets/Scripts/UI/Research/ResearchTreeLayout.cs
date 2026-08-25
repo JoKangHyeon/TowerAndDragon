@@ -23,11 +23,20 @@ public static class ResearchTreeLayout
 
     /// <summary>
     /// 가장 위 행의 중심 Y. 행은 원점 기준 상하 대칭이라 뻗는 방향과 무관하게 같은 값이다 -
-    /// 갈래 이름표처럼 "트리 꼭대기"에 붙는 것은 티어 번호 대신 이것을 기준으로 놓는다.
+    /// "트리 꼭대기"에 붙는 것은 티어 번호 대신 이것을 기준으로 놓는다.
     /// </summary>
     public static float TopRowCenterY(int tierCount, float rowHeight)
     {
         return (tierCount - 1) * HALF * rowHeight;
+    }
+
+    /// <summary>
+    /// 가장 아래 행의 중심 Y. <see cref="TopRowCenterY"/>와 같은 이유로 방향과 무관하다 -
+    /// 갈래 이름표처럼 "트리 밑동"에 붙는 것은 이것을 기준으로 놓는다.
+    /// </summary>
+    public static float BottomRowCenterY(int tierCount, float rowHeight)
+    {
+        return -TopRowCenterY(tierCount, rowHeight);
     }
 
     /// <summary>

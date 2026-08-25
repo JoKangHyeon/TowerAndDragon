@@ -30,6 +30,15 @@ public static class ResearchTreeAssetGenerator
         public string AssetName;
         public ResearchBranch Branch;
         public int Tier;
+
+        // 노드 카드에 별로 찍히는 단계(I=1, II=2, III=3). 단계가 없는 연구는 0이다.
+        // 주기 해금을 정하는 Tier와는 다른 값이다.
+        //
+        // 이름 끝의 로마 숫자에서 뽑지 않고 여기에 박는다 - 표시 이름은 스트링테이블 쪽에서
+        // 손으로 고쳐지며 이 파일의 값과 어긋난 전례가 있다
+        // (여기는 "기본 훈련 I"인데 ko_kr.csv는 "기본 훈련"이라 별이 잘못 떴다).
+        public int Rank;
+
         public int ResearchPointCost;
         public ResourceAmount[] ResourceCost;
         public string[] PrerequisiteIds;
@@ -94,7 +103,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "tower_range_1", AssetName = "RN_TowerRange1",
-            Branch = ResearchBranch.Tower, Tier = 1, ResearchPointCost = 10,
+            Branch = ResearchBranch.Tower, Tier = 1, Rank = 1, ResearchPointCost = 10,
             ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_TowerRangeIncrease",
@@ -104,7 +113,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "tower_firerate_1", AssetName = "RN_TowerFireRate1",
-            Branch = ResearchBranch.Tower, Tier = 1, ResearchPointCost = 10,
+            Branch = ResearchBranch.Tower, Tier = 1, Rank = 1, ResearchPointCost = 10,
             ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_TowerFireRateIncrease",
@@ -159,7 +168,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "tower_manpower_1", AssetName = "RN_TowerManpower1",
-            Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 25,
+            Branch = ResearchBranch.Tower, Tier = 2, Rank = 1, ResearchPointCost = 25,
             ResourceCost = Cost(Amount(ResourceType.Stone, 30)),
             PrerequisiteIds = After("tower_damage"),
             EffectAssetName = "RE_TowerManpowerReduction",
@@ -266,7 +275,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "production_food_1", AssetName = "RN_ProductionFood1",
-            Branch = ResearchBranch.Production, Tier = 2, ResearchPointCost = 25,
+            Branch = ResearchBranch.Production, Tier = 2, Rank = 1, ResearchPointCost = 25,
             ResourceCost = Cost(Amount(ResourceType.Food, 20)),
             PrerequisiteIds = After("grass_cultivation"),
             EffectAssetName = "RE_FoodManpowerReduction",
@@ -277,7 +286,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "production_wood_1", AssetName = "RN_ProductionWood1",
-            Branch = ResearchBranch.Production, Tier = 2, ResearchPointCost = 25,
+            Branch = ResearchBranch.Production, Tier = 2, Rank = 1, ResearchPointCost = 25,
             ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
             PrerequisiteIds = After("grass_cultivation"),
             EffectAssetName = "RE_WoodManpowerReduction",
@@ -288,7 +297,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "production_stone_1", AssetName = "RN_ProductionStone1",
-            Branch = ResearchBranch.Production, Tier = 2, ResearchPointCost = 25,
+            Branch = ResearchBranch.Production, Tier = 2, Rank = 1, ResearchPointCost = 25,
             ResourceCost = Cost(Amount(ResourceType.Stone, 20)),
             PrerequisiteIds = After("grass_cultivation"),
             EffectAssetName = "RE_StoneManpowerReduction",
@@ -301,7 +310,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "production_food_2", AssetName = "RN_ProductionFood2",
-            Branch = ResearchBranch.Production, Tier = 3, ResearchPointCost = 50,
+            Branch = ResearchBranch.Production, Tier = 3, Rank = 2, ResearchPointCost = 50,
             ResourceCost = Cost(Amount(ResourceType.Food, 40)),
             PrerequisiteIds = After("production_food_1"),
             EffectAssetName = "RE_FoodYieldMultiplier",
@@ -311,7 +320,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "production_wood_2", AssetName = "RN_ProductionWood2",
-            Branch = ResearchBranch.Production, Tier = 3, ResearchPointCost = 50,
+            Branch = ResearchBranch.Production, Tier = 3, Rank = 2, ResearchPointCost = 50,
             ResourceCost = Cost(Amount(ResourceType.Wood, 40)),
             PrerequisiteIds = After("production_wood_1"),
             EffectAssetName = "RE_WoodYieldMultiplier",
@@ -321,7 +330,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "production_stone_2", AssetName = "RN_ProductionStone2",
-            Branch = ResearchBranch.Production, Tier = 3, ResearchPointCost = 50,
+            Branch = ResearchBranch.Production, Tier = 3, Rank = 2, ResearchPointCost = 50,
             ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("production_stone_1"),
             EffectAssetName = "RE_StoneYieldMultiplier",
@@ -344,7 +353,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "production_resource_mastery", AssetName = "RN_ProductionResourceMastery",
-            Branch = ResearchBranch.Production, Tier = 4, ResearchPointCost = 90,
+            Branch = ResearchBranch.Production, Tier = 4, Rank = 1, ResearchPointCost = 90,
             ResourceCost = Cost(Amount(ResourceType.Wood, 30), Amount(ResourceType.Stone, 30)),
             PrerequisiteIds = After("production_wood_2", "production_stone_2"),
             EffectAssetName = "RE_WoodStoneYieldMultiplier",
@@ -368,7 +377,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "production_resource_mastery_2", AssetName = "RN_ProductionResourceMastery2",
-            Branch = ResearchBranch.Production, Tier = 5, ResearchPointCost = 150,
+            Branch = ResearchBranch.Production, Tier = 5, Rank = 2, ResearchPointCost = 150,
             ResourceCost = Array.Empty<ResourceAmount>(),
             PrerequisiteIds = After("production_food_2", "production_resource_mastery"),
             EffectAssetName = "RE_SpecializedYieldMultiplier2",
@@ -394,7 +403,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_scout_1", AssetName = "RN_ConvenienceScout1",
-            Branch = ResearchBranch.Convenience, Tier = 1, ResearchPointCost = 10,
+            Branch = ResearchBranch.Convenience, Tier = 1, Rank = 1, ResearchPointCost = 10,
             ResourceCost = Cost(Amount(ResourceType.Wood, 15)),
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_ScoutRadius1",
@@ -421,7 +430,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_lab_expand_1", AssetName = "RN_ConvenienceLabExpand1",
-            Branch = ResearchBranch.Convenience, Tier = 2, ResearchPointCost = 25,
+            Branch = ResearchBranch.Convenience, Tier = 2, Rank = 1, ResearchPointCost = 25,
             ResourceCost = Cost(Amount(ResourceType.Wood, 20), Amount(ResourceType.Stone, 20)),
             PrerequisiteIds = After("convenience_scout_1"),
             EffectAssetName = "RE_LabCapacityExpand1",
@@ -443,7 +452,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_castle_regen_1", AssetName = "RN_ConvenienceCastleRegen1",
-            Branch = ResearchBranch.Convenience, Tier = 2, ResearchPointCost = 25,
+            Branch = ResearchBranch.Convenience, Tier = 2, Rank = 1, ResearchPointCost = 25,
             ResourceCost = Cost(Amount(ResourceType.Stone, 20)),
             PrerequisiteIds = After("convenience_tower_regeneration_unlock"),
             EffectAssetName = "RE_CastleDailyRegen",
@@ -456,7 +465,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_lab_expand_2", AssetName = "RN_ConvenienceLabExpand2",
-            Branch = ResearchBranch.Convenience, Tier = 3, ResearchPointCost = 50,
+            Branch = ResearchBranch.Convenience, Tier = 3, Rank = 2, ResearchPointCost = 50,
             ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("convenience_lab_expand_1"),
             EffectAssetName = "RE_LabBuildLimitExpand",
@@ -493,7 +502,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_castle_regen_2", AssetName = "RN_ConvenienceCastleRegen2",
-            Branch = ResearchBranch.Convenience, Tier = 4, ResearchPointCost = 90,
+            Branch = ResearchBranch.Convenience, Tier = 4, Rank = 2, ResearchPointCost = 90,
             ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("convenience_seal_stone"),
             EffectAssetName = "RE_CastleDailyRegen2",
@@ -504,7 +513,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_lab_expand_3", AssetName = "RN_ConvenienceLabExpand3",
-            Branch = ResearchBranch.Convenience, Tier = 4, ResearchPointCost = 90,
+            Branch = ResearchBranch.Convenience, Tier = 4, Rank = 3, ResearchPointCost = 90,
             ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("convenience_lab_expand_2"),
             EffectAssetName = "RE_LabCapacityExpand3",
@@ -515,7 +524,7 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_scout_2", AssetName = "RN_ConvenienceScout2",
-            Branch = ResearchBranch.Convenience, Tier = 4, ResearchPointCost = 90,
+            Branch = ResearchBranch.Convenience, Tier = 4, Rank = 2, ResearchPointCost = 90,
             ResourceCost = Array.Empty<ResourceAmount>(), // 鑛30 - 대응 자원 없음
             PrerequisiteIds = After("convenience_expedition_logistics"),
             EffectAssetName = "RE_ScoutRadius2",
@@ -627,6 +636,7 @@ public static class ResearchTreeAssetGenerator
             so.FindProperty("_descriptionLocKey").stringValue = descLocKey;
             so.FindProperty("_branch").enumValueIndex = (int)spec.Branch;
             so.FindProperty("_tier").intValue = spec.Tier;
+            so.FindProperty("_rank").intValue = spec.Rank;
             so.FindProperty("_researchPointCost").intValue = spec.ResearchPointCost;
 
             AssignObjectArray(so.FindProperty("_effects"), effects);

@@ -16,10 +16,6 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 {
     private const float EDGE_REACHABLE_TINT_RATIO = 0.55f;
 
-    // 노드 테두리에서 선을 시작·끝내기 위한 절반 크기(ResearchNode 프리팹 220×130).
-    // 중심끼리 이으면 선이 노드 밑을 지나 아무 데서나 튀어나온 것처럼 보인다.
-    private static readonly Vector2 NODE_HALF_SIZE = new Vector2(110f, 65f);
-
     // 같은 티어(같은 행) 판정 여유. 같은 행이면 옆면끼리 잇는다.
     private const float SAME_ROW_EPSILON = 1f;
 
@@ -88,7 +84,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private float _tierLabelOffsetX = 300f;
     [Tooltip("티어 번호와 캡션을 행 중심에서 위아래로 벌리는 거리.")]
     [SerializeField] private float _tierLabelOffsetY = 16f;
-    [Tooltip("가장 위 티어 행 중심에서 갈래 헤더까지의 거리.")]
+    [Tooltip("가장 아래 티어 행 중심에서 갈래 헤더까지의 거리.")]
     [SerializeField] private float _branchHeaderOffsetY = 84f;
     [Tooltip("트리를 감싼 Content 여백. 스크롤 영역이 트리에 꼭 맞게 잡히도록 쓴다.")]
     [SerializeField] private Vector2 _contentPadding = new Vector2(80f, 80f);
@@ -128,12 +124,21 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     private readonly List<float> _branchWidths = new();
     private readonly List<float> _branchCenters = new();
 
+    // 노드 규격은 전부 프리팹에서 읽는다 - 코드에 크기를 박아 두면 프리팹 레이아웃을 바꿔도
+    // 열 폭과 연결선이 따라오지 않는다(실측 - 카드를 220×130에서 100×190으로 바꿨더니
+    // 선이 카드 밖 허공에서 끊겼다).
+    private Vector2 _nodeSize;
+
+    // 연결선이 붙는 자리(프리팹의 슬롯). 카드가 세로로 길어 카드 중심과 슬롯 중심이 어긋난다.
+    private Vector2 _nodeEdgeOffset;
+    private Vector2 _nodeEdgeHalfSize;
+
     private bool _built;
     private bool _isOpen;
 
     private struct EdgeView
     {
-        public RectTransform Transform;
+        public UI_ResearchEdge View;
         public string PrerequisiteNodeId;
         public string DependentNodeId;
         public ResearchBranch Branch;
@@ -375,6 +380,10 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             return;
         }
 
+        // 열 폭 계산이 노드 크기를 쓰므로 무엇보다 먼저 잡는다.
+        // 루트 앵커가 점(0.5, 0.5)이라 프리팹 에셋에서도 rect가 그대로 나온다.
+        _nodeSize = ((RectTransform)_nodePrefab.transform).rect.size;
+
         // (갈래, 티어) 칸별로 노드를 모은다. 트리 에셋의 순서를 그대로 유지해
         // 로드맵 표와 같은 좌우 순서로 놓이게 한다.
         var byCell = new Dictionary<ResearchBranch, Dictionary<int, List<ResearchNodeData>>>();
@@ -449,6 +458,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         // (선은 노드 좌표에서 유도되므로 좌표 보정이 끝난 뒤에 만들어야 한다)
         CenterTreeInContent();
 
+        ResolveNodeEdgeAnchor();
         BuildEdges();
         PlaceCanvasBackground();
 
@@ -527,7 +537,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             }
 
             _branchWidths.Add(ResearchTreeLayout.BranchWidth(
-                busiest, NODE_HALF_SIZE.x * 2f, _nodeSpacing, _minBranchWidth));
+                busiest, _nodeSize.x, _nodeSpacing, _minBranchWidth));
         }
 
         ResearchTreeLayout.ResolveBranchCenters(_branchWidths, _branchGap, _branchCenters);
@@ -564,11 +574,11 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         header.text = StringTable.GetString(ResearchLocKeys.BranchLocKey(branch));
         header.color = ColorForBranch(branch);
-        // 갈래 이름표는 트리 꼭대기에 붙는다. 티어 1은 맨 아래이므로 RowCenterY(0)이 아니라
-        // 가장 위 행을 기준으로 잡아야 한다.
+        // 갈래 이름표는 트리 밑동에 붙는다 - 트리가 아래에서 위로 자라므로
+        // 갈래 이름 → T1 → ... 순으로 읽히는 자리가 여기다.
         header.rectTransform.anchoredPosition = new Vector2(
             _branchCenters[branchIndex],
-            ResearchTreeLayout.TopRowCenterY(tierCount, _rowHeight) + _branchHeaderOffsetY);
+            ResearchTreeLayout.BottomRowCenterY(tierCount, _rowHeight) - _branchHeaderOffsetY);
     }
 
     // 티어 행마다 번호 라벨과 해금 시점 캡션을 왼쪽에 세운다.
@@ -659,7 +669,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         float left = TreeLeftEdge();
         float right = TreeRightEdge();
 
-        // 행과 행 사이에만 긋는다 - 트리 바깥(맨 위)에 그으면 갈래 이름표와 겹친다.
+        // 행과 행 사이에만 긋는다 - 트리 바깥까지 그으면 갈래 이름표와 겹친다.
         for (int tierIndex = 1; tierIndex < tierCount; tierIndex++)
         {
             float y = ResearchTreeLayout.RowBoundaryY(tierIndex, tierCount, _rowHeight);
@@ -679,6 +689,32 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
                 image.type = Image.Type.Tiled;
                 image.color = _tierSeparatorColor;
             }
+        }
+    }
+
+    // 연결선이 붙는 자리를 프리팹에서 잰다. 노드는 전부 같은 프리팹이라 하나만 재면 된다.
+    //
+    // 슬롯의 자리는 프리팹에 직렬화된 값이 아니라 노드 루트의 VerticalLayoutGroup이 정하므로,
+    // 인스턴스를 하나 잡아 레이아웃을 강제로 돌린 뒤에 읽는다.
+    private void ResolveNodeEdgeAnchor()
+    {
+        // 카드 전체를 기본값으로 둔다 - 슬롯을 못 찾아도 선이 노드 중심에서 튀어나오진 않는다.
+        _nodeEdgeOffset = Vector2.zero;
+        _nodeEdgeHalfSize = _nodeSize * 0.5f;
+
+        foreach (UI_ResearchNode view in _nodeViews.Values)
+        {
+            if (view == null)
+            {
+                continue;
+            }
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)view.transform);
+
+            Rect anchor = view.ResolveEdgeAnchorRect();
+            _nodeEdgeOffset = anchor.center;
+            _nodeEdgeHalfSize = anchor.size * 0.5f;
+            return;
         }
     }
 
@@ -702,7 +738,10 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
                     continue;
                 }
 
-                CreateEdge(from, to, prerequisite.NodeId, node.NodeId, node.Branch);
+                // 카드 중심이 아니라 슬롯 중심끼리 잇는다.
+                CreateEdge(
+                    from + _nodeEdgeOffset, to + _nodeEdgeOffset,
+                    prerequisite.NodeId, node.NodeId, node.Branch);
             }
         }
     }
@@ -716,7 +755,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     {
         BuildCurvePoints(from, to);
 
-        var curveObject = new GameObject("EdgeCurve", typeof(RectTransform), typeof(CanvasRenderer), typeof(UI_CurvedEdge));
+        var curveObject = new GameObject("EdgeCurve", typeof(RectTransform), typeof(CanvasRenderer), typeof(UI_ResearchEdge));
         var rect = (RectTransform)curveObject.transform;
         rect.SetParent(_content, false);
 
@@ -728,15 +767,14 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         rect.sizeDelta = Vector2.zero;
         rect.SetAsFirstSibling(); // 노드 아래로 - 선이 클릭을 가로채거나 위에 그려지지 않게 한다
 
-        var curve = curveObject.GetComponent<UI_CurvedEdge>();
-        curve.raycastTarget = false;
-        curve.SetCurve(
+        var edge = curveObject.GetComponent<UI_ResearchEdge>();
+        edge.SetCurve(
             _curvePointBuffer, _edgeThickness,
             ResearchTreeSprites.DashTexture, ResearchTreeSprites.DashPeriod);
 
         _edgeViews.Add(new EdgeView
         {
-            Transform = rect,
+            View = edge,
             PrerequisiteNodeId = prerequisiteNodeId,
             DependentNodeId = dependentNodeId,
             Branch = branch,
@@ -758,8 +796,8 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         {
             // 같은 티어끼리는 옆면에서 나가 옆면으로 들어간다.
             float direction = Mathf.Sign(to.x - from.x);
-            start = new Vector2(from.x + direction * NODE_HALF_SIZE.x, from.y);
-            end = new Vector2(to.x - direction * NODE_HALF_SIZE.x, to.y);
+            start = new Vector2(from.x + direction * _nodeEdgeHalfSize.x, from.y);
+            end = new Vector2(to.x - direction * _nodeEdgeHalfSize.x, to.y);
 
             float reach = Mathf.Max(Mathf.Abs(end.x - start.x) * CURVE_CONTROL_RATIO, MIN_CURVE_CONTROL);
             startControl = start + new Vector2(direction * reach, 0f);
@@ -770,8 +808,8 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             // 다음 티어로 넘어가는 선은 선행 노드의 "다음 티어 쪽 변"에서 나가 반대 변으로 들어간다.
             // 방향을 부호로 유도하므로 티어가 위로 쌓이든 아래로 쌓이든 선이 카드를 뚫지 않는다.
             float direction = Mathf.Sign(to.y - from.y);
-            start = new Vector2(from.x, from.y + direction * NODE_HALF_SIZE.y);
-            end = new Vector2(to.x, to.y - direction * NODE_HALF_SIZE.y);
+            start = new Vector2(from.x, from.y + direction * _nodeEdgeHalfSize.y);
+            end = new Vector2(to.x, to.y - direction * _nodeEdgeHalfSize.y);
 
             float reach = Mathf.Max(Mathf.Abs(end.y - start.y) * CURVE_CONTROL_RATIO, MIN_CURVE_CONTROL);
             startControl = start + new Vector2(0f, direction * reach);
@@ -841,8 +879,8 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
-    // 선행이 끝난 선은 은은하게, 대상 노드까지 완료된 선은 갈래 색으로 꽉 채워
-    // 어디까지 진행됐는지 한눈에 보이게 한다.
+    // 대상 노드까지 완료된 선은 갈래 색 실선으로 차오르고, 아직인 선은 점선 바탕만 남는다.
+    // 그 바탕도 선행이 끝났으면 은은하게 물들여, 다음에 갈 수 있는 길이 어디인지 보이게 한다.
     private void RefreshEdgeViews()
     {
         if (!WiringGuard.Require(_researchManager, nameof(_researchManager), this))
@@ -852,32 +890,18 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         foreach (EdgeView edge in _edgeViews)
         {
-            if (edge.Transform == null)
-            {
-                continue;
-            }
-
-            // 곡선(UI_CurvedEdge)과 직선 Image를 모두 다루려면 Graphic으로 잡아야 한다.
-            var graphic = edge.Transform.GetComponent<Graphic>();
-            if (graphic == null)
+            if (edge.View == null)
             {
                 continue;
             }
 
             Color branchColor = ColorForBranch(edge.Branch);
+            Color backgroundColor = _researchManager.IsCompleted(edge.PrerequisiteNodeId)
+                ? Color.Lerp(_edgeLockedColor, branchColor, EDGE_REACHABLE_TINT_RATIO)
+                : _edgeLockedColor;
 
-            if (_researchManager.IsCompleted(edge.DependentNodeId))
-            {
-                graphic.color = branchColor;
-            }
-            else if (_researchManager.IsCompleted(edge.PrerequisiteNodeId))
-            {
-                graphic.color = Color.Lerp(_edgeLockedColor, branchColor, EDGE_REACHABLE_TINT_RATIO);
-            }
-            else
-            {
-                graphic.color = _edgeLockedColor;
-            }
+            edge.View.Bind(
+                _researchManager.IsCompleted(edge.DependentNodeId), branchColor, backgroundColor);
         }
     }
 
