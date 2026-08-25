@@ -21,7 +21,7 @@ public sealed class ConditionalDamageEffectSO : AttackEffectSO
         }
 
         float amount = Mathf.Max(0f, context.AttackPowerModifier.Apply(_bonusAmount));
-        target.TakeDamage(new DamageInfo(amount, context.AttackElement));
+        target.TakeDamage(new DamageInfo(amount, context.AttackElement, context.Source));
     }
 
 }

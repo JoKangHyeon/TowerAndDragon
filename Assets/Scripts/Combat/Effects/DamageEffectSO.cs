@@ -16,6 +16,6 @@ public class DamageEffectSO : AttackEffectSO
         float amount = Mathf.Max(
             0f,
             context.AttackPowerModifier.Apply(_amount));
-        target.TakeDamage(new DamageInfo(amount, context.AttackElement));
+        target.TakeDamage(new DamageInfo(amount, context.AttackElement, context.Source));
     }
 }
