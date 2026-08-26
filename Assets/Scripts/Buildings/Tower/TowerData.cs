@@ -44,6 +44,16 @@ public class TowerData : ScriptableObject
     [SerializeField] private GameObject _projectilePrefab;
     [SerializeField] private float _projectileSpeed;
 
+    // 오라 타워는 TowerAuraDataSO가 자기 범위 마커를 들고 있다. 오라가 없는 타워도 클릭했을 때
+    // 같은 언어로 범위를 보여 주고 싶을 때가 있어(생명 타워) 이쪽에 자리를 하나 둔다.
+    // 반경은 이 데이터가 아니라 실제 유효 사거리(TowerAttack.EffectiveRange)를 쓴다 -
+    // 선(RangeIndicator)과 파티클이 어긋나면 플레이어가 버그로 읽는다.
+    // 비워 두는 것이 기본이다 - 안 꽂으면 아무것도 뜨지 않는다.
+    [Header("VFX")]
+    [WiringOptional]
+    [Tooltip("이 타워를 클릭했을 때 발밑에 깔 사거리 마커 프리팹. 비우면 표시하지 않는다.")]
+    [SerializeField] private GameObject _attackRangeMarkerPrefab;
+
 
     public string NameLocKey => _nameLocKey;
     public virtual TowerCategory Category => TowerCategory.Basic;
@@ -60,4 +70,7 @@ public class TowerData : ScriptableObject
     public GameObject ProjectilePrefab => _projectilePrefab;
     public float ProjectileSpeed => _projectileSpeed;
     public bool HasProjectile => _projectilePrefab != null && _projectileSpeed > 0;
+
+    public GameObject AttackRangeMarkerPrefab => _attackRangeMarkerPrefab;
+    public bool HasAttackRangeMarker => _attackRangeMarkerPrefab != null;
 }

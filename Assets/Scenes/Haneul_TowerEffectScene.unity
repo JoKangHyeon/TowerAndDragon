@@ -1941,7 +1941,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4429832511105182359, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.000030517578
+      value: 0.0007324219
       objectReference: {fileID: 0}
     - target: {fileID: 4439690152447319859, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -4406,6 +4406,7 @@ GameObject:
   - component: {fileID: 517617264}
   - component: {fileID: 517617266}
   - component: {fileID: 517617282}
+  - component: {fileID: 517617283}
   m_Layer: 0
   m_Name: Composites
   m_TagString: Untagged
@@ -4684,6 +4685,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerBuffOrbCoordinator
   _towerAuraSystem: {fileID: 1231218535}
+--- !u!114 &517617283
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 517617263}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99b88146be3664c1c9484b571902c4c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerStealthFadeCoordinator
 --- !u!1 &551811318
 GameObject:
   m_ObjectHideFlags: 0
