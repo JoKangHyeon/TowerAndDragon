@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// 씬의 모든 생산시설·타워에 지역 페널티 조회원을 주입한다.
+// 씬의 모든 생산시설·연구소·타워에 지역 페널티 조회원을 주입한다.
 // 신규 건설(GridMap.OnBuildingAdded)뿐 아니라 OnEnable 시점에 GridMap.Buildings를 1회 순회해
 // 씬에 이미 배치된 건물에도 소급 주입한다 - TowerStatMultiplierCoordinator와 동일한 관용구로,
 // 그렇지 않으면 사전 배치 건물은 OnBuildingAdded가 호출되지 않아 페널티를 영구히 못 받는다.
@@ -52,6 +52,12 @@ public sealed class TerrainPenaltyCoordinator : MonoBehaviour
         if (building is Factory factory)
         {
             factory.SetTerrainPenaltyQuery(query);
+            return;
+        }
+
+        if (building is ResearchLab lab)
+        {
+            lab.SetTerrainPenaltyQuery(query);
             return;
         }
 

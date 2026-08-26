@@ -878,6 +878,7 @@ public sealed class ResearchManager : MonoBehaviour,
 
     // 정산 시 이 연구소가 받게 될 RP. 등록되지 않은 연구소면 인구를 배치해도 0이다
     // (UI가 그 사실을 그대로 보여줄 수 있게 public).
+    // 지형 페널티(사막 등)는 lab.TerrainYieldMultiplier로 곱해진다 - Factory.CalculateYield와 같은 자리.
     public int PreviewResearchPointsPerDay(ResearchLab lab, int assignedPopulation)
     {
         if (lab == null || !_activeLabs.Contains(lab))
@@ -890,7 +891,10 @@ public sealed class ResearchManager : MonoBehaviour,
             return 0;
         }
 
-        return assignedPopulation * _balance.ResearchPointsPerPopulation;
+        return ResearchPointRules.Compute(
+            assignedPopulation,
+            _balance.ResearchPointsPerPopulation,
+            lab.TerrainYieldMultiplier);
     }
 
     /// <summary>

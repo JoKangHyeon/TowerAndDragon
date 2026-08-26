@@ -4,7 +4,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// 인구를 배치하는 건물(생산시설·타워)마다 지역 효과 표식(UI_BuildingEffectBadge)을 런타임으로
+/// 인구를 배치하는 건물(생산시설·연구소·타워)마다 지역 효과 표식(UI_BuildingEffectBadge)을 런타임으로
 /// 부착하고 갱신한다. 프리팹은 건드리지 않는다 - 이후 추가되는 프리팹에도 자동 적용된다(HealthBarSystem과 동일).
 ///
 /// 타워도 대상인 이유: TerrainUpkeepSystem이 건물 종류를 가리지 않고 IPopulationAllocationTarget만
@@ -153,13 +153,14 @@ public class BuildingEffectBadgeSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// 표식과 그 설명 툴팁의 대상인지. 대상은 인구를 배치하는 건물(생산시설·타워)이다 -
-    /// 성·연구소처럼 지역 페널티를 받지 않는 건물까지 훑으면 빈 표식만 잔뜩 만든다.
+    /// 표식과 그 설명 툴팁의 대상인지. 대상은 인구를 배치하는 건물(생산시설·연구소·타워)이다 -
+    /// 성처럼 지역 페널티를 받지 않는 건물까지 훑으면 빈 표식만 잔뜩 만든다.
+    /// 연구소도 산출(RP) 감소와 자재 유지비를 둘 다 받으므로 대상이다.
     ///
     /// 툴팁(BuildingEffectHoverTooltip)도 이 판정을 함께 쓴다. 표식만 걸러내면 표식이 없는 건물에
     /// 툴팁만 뜨고, 이름 출처가 없어(BuildingEffectTooltipBuilder.ResolveTitle) 제목 없는 툴팁이 된다.
     /// </summary>
-    public static bool IsEffectDisplayTarget(Building building) => building is Factory or Tower;
+    public static bool IsEffectDisplayTarget(Building building) => building is Factory or Tower or ResearchLab;
 
     private void Attach(Building building)
     {

@@ -59,8 +59,9 @@ public static class BuildingEffectResolver
         // 지형 페널티는 건물 종류를 가리지 않고 계산된다 - 사막 테이블 하나가 생산량과 공격속도를
         // 함께 깎으므로, 걸러내지 않으면 타워에 "생산량 -30%", 생산시설에 "공격속도 -30%"가 뜬다.
         // 그래서 각 배율을 실제로 소비하는 쪽에만 표식을 붙인다
-        // (YieldMultiplier -> Factory.CalculateYield, AttackSpeedMultiplier -> TowerAttack).
-        if (building is Factory && IsReduced(modifiers.YieldMultiplier))
+        // (YieldMultiplier -> Factory.CalculateYield·ResearchManager.PreviewResearchPointsPerDay,
+        // AttackSpeedMultiplier -> TowerAttack).
+        if (building is Factory or ResearchLab && IsReduced(modifiers.YieldMultiplier))
         {
             into.Add(BuildingEffectDescriptor.Reduction(
                 BuildingEffectKind.YieldDown,

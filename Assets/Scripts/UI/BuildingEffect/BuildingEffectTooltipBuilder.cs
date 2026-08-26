@@ -115,7 +115,7 @@ public static class BuildingEffectTooltipBuilder
         }
     }
 
-    // 건물 이름은 각자의 Data 에셋이 단일 출처다(ResourceProductionData / TowerData).
+    // 건물 이름은 각자의 Data 에셋이 단일 출처다(ResourceProductionData / TowerData / ResearchLabData).
     private static string ResolveTitle(Building building)
     {
         if (building is Factory factory && factory.Data != null)
@@ -126,6 +126,11 @@ public static class BuildingEffectTooltipBuilder
         if (building is Tower tower && tower.Data != null)
         {
             return StringTable.GetString(tower.Data.NameLocKey);
+        }
+
+        if (building is ResearchLab lab && lab.Data != null)
+        {
+            return StringTable.GetString(lab.Data.NameLocKey);
         }
 
         return string.Empty;
