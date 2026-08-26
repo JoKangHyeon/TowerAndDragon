@@ -137,7 +137,11 @@ public sealed class LandmarkManager : MonoBehaviour, ILandmarkOwnershipQuery
 
         var landmarkObject = new GameObject(data.name);
         landmarkObject.transform.SetParent(root, false);
-        landmarkObject.transform.position = _gridMap.GetChunkCenterWorld(chunkCoord);
+        // 청크 중심은 셀 무게중심이라 늘 좋은 자리가 아니다 - 맵 외곽의 얇은 청크에서는
+        // 무게중심이 해안선 쪽으로 치우쳐 시각물이 물에 걸친다(사막 쪽 타워 유적이 그 경우).
+        // 그래서 랜드마크별 오프셋으로 안쪽으로 당길 수 있게 한다.
+        landmarkObject.transform.position =
+            _gridMap.GetChunkCenterWorld(chunkCoord) + (Vector3)data.WorldOffset;
 
         Landmark landmark = landmarkObject.AddComponent<Landmark>();
         landmark.Initialize(data, chunkCoord);
