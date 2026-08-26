@@ -97,7 +97,15 @@ public class CameraController : MonoBehaviour
     private bool    _isDragging;
     private Vector3 _dragWorldOrigin;
 
-    private bool _isDragEndInEdge;
+    // 엣지 스크롤 억제 래치. 포인터가 가장자리 영역을 "벗어날 때까지" 엣지 스크롤을 접는다.
+    // 두 곳에서 세운다 - 가장자리에서 드래그를 놓았을 때(기존), 그리고 창이 카메라를 막고 있는 동안.
+    // 미니맵도 창 닫기 버튼도 화면 구석에 있어서, 손을 떼거나 창이 닫히는 순간 화면이 튄다.
+    private bool _isEdgeScrollSuppressed;
+
+    // UI 위에서 시작한 좌클릭이 눌려 있는 동안 참. 미니맵을 끄는 내내 카메라가 같이 움직이던 원인이다.
+    // 포인터가 UI 위에 "있기만" 한 경우는 세우지 않는다 - 자원 바·건설 바 위를 지나며 하는
+    // 평범한 엣지 스크롤은 그대로 살아 있어야 한다.
+    private bool _isPointerPressedOverUI;
 
     // 씬 로드 직후 Input System의 마우스 위치는 첫 마우스 이벤트가 오기 전까지 (0,0)이다.
     // (0,0)은 좌·하단 임계값을 동시에 만족해 엣지 스크롤을 남서쪽으로 폭주시킨다.
@@ -188,13 +196,46 @@ public class CameraController : MonoBehaviour
 
     private void Update()
     {
-        HandleWASD();
-        HandleEdgeScroll();
-        HandleMouseLeftButtonDrag();
-        HandleZoom();
+        UpdateMouseMovedLatch();
+
+        // 창이 떠 있는 동안에는 입력을 통째로 접되, 클램프와 SmoothDamp는 계속 돌린다 -
+        // 여기서 같이 멈추면 진행 중이던 관성 이동이 화면 한가운데서 얼어붙는다.
+        if (CameraInputBlockRegistry.IsBlocked)
+        {
+            CancelInputWhileBlocked();
+        }
+        else
+        {
+            // 드래그 판정이 먼저다 - 엣지 스크롤이 이번 프레임의 _isDragging /
+            // _isPointerPressedOverUI를 보고 판단해야 누른 첫 프레임이 새어 나가지 않는다.
+            HandleMouseLeftButtonDrag();
+            HandleWASD();
+            HandleEdgeScroll();
+            HandleZoom();
+        }
 
         ClampTargetPosition();
         ApplyMovement();
+    }
+
+    /// 마우스를 한 번이라도 움직이기 전에는 위치를 신뢰할 수 없다(스폰 직후의 (0,0)).
+    /// 입력이 막혀 있는 동안에도 갱신해야, 창이 닫힌 다음 첫 프레임부터 정상 판정이 된다.
+    private void UpdateMouseMovedLatch()
+    {
+        if (Mouse.current != null && Mouse.current.delta.ReadValue() != Vector2.zero)
+        {
+            _hasMouseMoved = true;
+        }
+    }
+
+    /// 창이 카메라를 막는 동안의 뒷정리. 진행 중이던 드래그를 끊고, 창이 닫히는 순간
+    /// 포인터가 구석(닫기 버튼·미니맵)에 있다는 이유로 화면이 튀지 않도록 미리 막아 둔다.
+    /// 억제는 포인터가 가장자리를 벗어나는 즉시 HandleEdgeScroll이 스스로 푼다.
+    private void CancelInputWhileBlocked()
+    {
+        _isDragging = false;
+        _isPointerPressedOverUI = false;
+        _isEdgeScrollSuppressed = true;
     }
 
     // ─────────────────────────────────────────────
@@ -219,37 +260,43 @@ public class CameraController : MonoBehaviour
         if (!_edgeScrollEnabled)    return;
         if (!Application.isFocused) return;
         if (_isDragging) return;
-        if (Mouse.current == null) return;
 
-        // 마우스를 한 번이라도 움직이기 전에는 위치를 신뢰할 수 없다. (스폰 직후의 (0,0))
-        if (Mouse.current.delta.ReadValue() != Vector2.zero) _hasMouseMoved = true;
+        // UI 위에서 시작한 드래그(미니맵 끌기 등)가 진행 중이면 화면까지 같이 움직이면 안 된다.
+        if (_isPointerPressedOverUI) return;
+
+        if (Mouse.current == null) return;
         if (!_hasMouseMoved) return;
 
         Vector2 mousePos = Mouse.current.position.ReadValue();
         // 화면 밖 좌표(에디터 툴바 위 등)는 아래 임계값 비교를 항상 통과해 버린다.
         if (!IsInsideScreen(mousePos)) return;
 
-        Vector3 dir = Vector3.zero;
+        Vector3 dir = GetEdgeScrollDirection(mousePos);
 
-        if (mousePos.x < _edgeScrollThreshold)                 dir.x -= 1f;
-        if (mousePos.x > Screen.width  - _edgeScrollThreshold) dir.x += 1f;
-        if (mousePos.y < _edgeScrollThreshold)                 dir.y -= 1f;
-        if (mousePos.y > Screen.height - _edgeScrollThreshold) dir.y += 1f;
-
-        if (_isDragEndInEdge)
+        if (_isEdgeScrollSuppressed)
         {
-            if(dir == Vector3.zero)
-            {
-                _isDragEndInEdge = false;
-            }
-            else
-            {
-                return;
-            }
+            // 가장자리를 벗어나야 억제가 풀린다.
+            if (dir != Vector3.zero) return;
+
+            _isEdgeScrollSuppressed = false;
         }
+
         if (dir == Vector3.zero) return;
 
         _targetPos += dir.normalized * _edgeScrollSpeed * InputDeltaTime;
+    }
+
+    /// 포인터가 닿아 있는 가장자리들의 합. 어느 가장자리에도 닿지 않으면 Vector3.zero.
+    private Vector3 GetEdgeScrollDirection(Vector2 screenPos)
+    {
+        Vector3 dir = Vector3.zero;
+
+        if (screenPos.x < _edgeScrollThreshold)                 dir.x -= 1f;
+        if (screenPos.x > Screen.width  - _edgeScrollThreshold) dir.x += 1f;
+        if (screenPos.y < _edgeScrollThreshold)                 dir.y -= 1f;
+        if (screenPos.y > Screen.height - _edgeScrollThreshold) dir.y += 1f;
+
+        return dir;
     }
 
     /// 마우스 좌클릭 드래그로 카메라 이동
@@ -257,11 +304,18 @@ public class CameraController : MonoBehaviour
     {
         if (Mouse.current == null) return;
 
-        // 드래그 시작 - UI 위에서 시작한 드래그는 무시한다 (UI 위에서 끝나는 것은 허용)
-        if (Mouse.current.leftButton.wasPressedThisFrame && !IsPointerOverUI())
+        // 드래그 시작 - UI 위에서 시작한 드래그는 카메라 이동으로 치지 않는다 (UI 위에서 끝나는 것은 허용).
+        // 그 사실을 래치에 남겨야 한다 - 여기서 그냥 무시만 하면, 미니맵을 끄는 내내
+        // 엣지 스크롤이 대신 돌아 미니맵 조작과 카메라가 서로 싸운다.
+        if (Mouse.current.leftButton.wasPressedThisFrame)
         {
-            _dragWorldOrigin = ScreenToWorld(Mouse.current.position.ReadValue());
-            _isDragging      = true;
+            _isPointerPressedOverUI = IsPointerOverUI();
+
+            if (!_isPointerPressedOverUI)
+            {
+                _dragWorldOrigin = ScreenToWorld(Mouse.current.position.ReadValue());
+                _isDragging      = true;
+            }
         }
 
         // 드래그 중 — 월드 좌표 차이만큼 targetPos 이동
@@ -279,13 +333,10 @@ public class CameraController : MonoBehaviour
         if (Mouse.current.leftButton.wasReleasedThisFrame)
         {
             _isDragging = false;
-            Vector2 mousePos = Mouse.current.position.ReadValue();
+            _isPointerPressedOverUI = false;
 
-            if (mousePos.x < _edgeScrollThreshold
-                || mousePos.x > Screen.width - _edgeScrollThreshold
-                || mousePos.y < _edgeScrollThreshold
-                || mousePos.y > Screen.height - _edgeScrollThreshold)
-                _isDragEndInEdge = true;
+            if (GetEdgeScrollDirection(Mouse.current.position.ReadValue()) != Vector3.zero)
+                _isEdgeScrollSuppressed = true;
         }
     }
 
@@ -346,6 +397,10 @@ public class CameraController : MonoBehaviour
     /// 설정에서 키를 바꿔도(1~5 → 다른 키) 슬롯 대응이 그대로 유지된다.
     private void OnBookmarkPerformed(InputAction.CallbackContext context)
     {
+        // 창이 떠 있는 동안에는 북마크 저장·복귀도 막는다 - Update의 입력 차단과 같은 기준이다.
+        // (InputAction 콜백이라 Update의 관문을 지나지 않는다.)
+        if (CameraInputBlockRegistry.IsBlocked) return;
+
         int slot = context.action.GetBindingIndexForControl(context.control);
         if (slot < 0 || slot >= BOOKMARK_COUNT) return;
 

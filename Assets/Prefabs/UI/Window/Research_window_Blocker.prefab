@@ -1566,6 +1566,7 @@ GameObject:
   - component: {fileID: 1720417139467780172}
   - component: {fileID: 4218151068400949135}
   - component: {fileID: 3961152451140838830}
+  - component: {fileID: 7063687079067465027}
   m_Layer: 5
   m_Name: Research_window_Blocker
   m_TagString: Untagged
@@ -1705,9 +1706,14 @@ MonoBehaviour:
   _branchGap: 90
   _rowHeight: 275
   _nodeSpacing: 270
+  _edgeThickness: 4
+  _tierSeparatorThickness: 2
+  _tierSeparatorColor: {r: 1, g: 1, b: 1, a: 0.1}
+  _columnSpacingWidth: 500
   _tierLabelOffsetX: 360
   _tierLabelOffsetY: 16
   _branchHeaderOffsetY: 120
+  _contentPadding: {x: 80, y: 80}
   _branchColors:
   - {r: 1, g: 0.42, b: 0.42, a: 1}
   - {r: 0.306, g: 0.804, b: 0.769, a: 1}
@@ -1715,6 +1721,19 @@ MonoBehaviour:
   _edgeLockedColor: {r: 0.4, g: 0.4, b: 0.4, a: 1}
   _tierLabelUnlockedColor: {r: 0.788, g: 0.8, b: 0.827, a: 1}
   _tierLabelLockedColor: {r: 0.482, g: 0.506, b: 0.557, a: 0.6}
+  _closeAction: {fileID: 0}
+--- !u!114 &7063687079067465027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4166452812030862852}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe26d0d044327a848a8e95954064cf94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_CameraInputBlocker
 --- !u!1 &4380751573263654897
 GameObject:
   m_ObjectHideFlags: 0

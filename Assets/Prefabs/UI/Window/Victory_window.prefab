@@ -343,6 +343,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3845530423276724415}
   - component: {fileID: 6956317613498654257}
+  - component: {fileID: 2105021271557731091}
   m_Layer: 5
   m_Name: Victory_window
   m_TagString: Untagged
@@ -385,6 +386,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI_GameOverWindow
   _restartButton: {fileID: 2610584453741256138}
+  _ironmanDeletedLabel: {fileID: 0}
+  _saveService: {fileID: 0}
+--- !u!114 &2105021271557731091
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7387102534991584718}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe26d0d044327a848a8e95954064cf94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_CameraInputBlocker
 --- !u!1 &7890155522217166793
 GameObject:
   m_ObjectHideFlags: 0

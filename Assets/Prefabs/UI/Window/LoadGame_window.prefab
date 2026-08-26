@@ -364,6 +364,7 @@ GameObject:
   - component: {fileID: 5001204830988733047}
   - component: {fileID: 5242469795187704536}
   - component: {fileID: 4951419645037387197}
+  - component: {fileID: 4138742713451909911}
   m_Layer: 5
   m_Name: LoadGame_window
   m_TagString: Untagged
@@ -497,6 +498,18 @@ MonoBehaviour:
   _closeButton: {fileID: 2995765489493312301}
   _blockerButton: {fileID: 5242469795187704536}
   _closeAction: {fileID: 7727032971491509709, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
+--- !u!114 &4138742713451909911
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5464306154838811651}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe26d0d044327a848a8e95954064cf94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_CameraInputBlocker
 --- !u!1 &5484963776053372554
 GameObject:
   m_ObjectHideFlags: 0

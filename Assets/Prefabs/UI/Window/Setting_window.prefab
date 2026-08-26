@@ -4134,6 +4134,7 @@ GameObject:
   - component: {fileID: 4446954914506241421}
   - component: {fileID: 3316708651911631585}
   - component: {fileID: 4006608423821811777}
+  - component: {fileID: 7985388148011558985}
   m_Layer: 5
   m_Name: Popup_SystemConfirm
   m_TagString: Untagged
@@ -4215,6 +4216,18 @@ MonoBehaviour:
   _yesButton: {fileID: 7031043571162935152}
   _noButton: {fileID: 2330776785306241574}
   _box: {fileID: 2377893561296993134}
+--- !u!114 &7985388148011558985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2421599510852520373}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe26d0d044327a848a8e95954064cf94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_CameraInputBlocker
 --- !u!1 &2464258676969675755
 GameObject:
   m_ObjectHideFlags: 0
@@ -12210,6 +12223,7 @@ GameObject:
   - component: {fileID: 1089235721086359847}
   - component: {fileID: 4758795153725532802}
   - component: {fileID: 5306992249165339976}
+  - component: {fileID: 7590269779723996784}
   m_Layer: 5
   m_Name: Setting_window
   m_TagString: Untagged
@@ -12362,6 +12376,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7590269779723996784
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7979360776337912482}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe26d0d044327a848a8e95954064cf94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_CameraInputBlocker
 --- !u!1 &8121078099236263564
 GameObject:
   m_ObjectHideFlags: 0
