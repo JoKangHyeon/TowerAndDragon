@@ -50,7 +50,7 @@ GameObject:
   - component: {fileID: 2540885970289428884}
   - component: {fileID: 1544196201583943407}
   m_Layer: 5
-  m_Name: BabyDragonEggToast
+  m_Name: ProgressionNotificationToast
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -87,9 +87,12 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e4a0d98b7cdb494f8becb40efdea2d1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BabyDragonEggNotifier
+  m_EditorClassIdentifier: Assembly-CSharp::ProgressionNotificationPresenter
   _eggInventorySystem: {fileID: 0}
   _toast: {fileID: 1544196201583943407}
+  _landmarkManager: {fileID: 0}
+  _researchManager: {fileID: 0}
+  _cycleManager: {fileID: 0}
 --- !u!114 &1544196201583943407
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -107,6 +110,7 @@ MonoBehaviour:
   _confirmButton: {fileID: 3966104616852745932}
   _claimListRect: {fileID: 0}
   _extraFollowerRects: []
+  _headerRects: []
   _hiddenOffset: {x: 510, y: 0}
   _slideInDuration: 0.25
   _slideOutDuration: 0.2

@@ -7,7 +7,7 @@ using UnityEngine;
 /// 토스트가 새끼용 도메인을 몰라도 되게 하는 얇은 연결 계층 - GrantEgg 관문 하나에만 이벤트를 붙였으므로
 /// 향후 점령·랜드마크 등 알 획득 경로가 늘어나도 이 브리지를 거쳐 알림이 자동으로 따라온다.
 /// </summary>
-public class BabyDragonEggNotifier : MonoBehaviour
+public class ProgressionNotificationPresenter : MonoBehaviour
 {
     private const string EGG_GRANTED_LOC_KEY = "baby_dragon_toast_egg_granted";
     private const string EGG_HATCHED_LOC_KEY = "baby_dragon_toast_egg_hatched";
