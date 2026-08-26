@@ -150,13 +150,15 @@ public class UI_ResearchNode : MonoBehaviour
 
         if (_icon != null)
         {
-            // 노드별 아이콘은 아직 데이터(ResearchNodeData)에 없다 - 프리팹에 꽂아 둔 스프라이트를
-            // 그대로 쓰고, 비어 있으면 흰 사각형이 슬롯을 덮지 않도록 끈다.
-            bool hasIcon = _icon.sprite != null;
+            // 아이콘은 노드 데이터가 들고 있다. 지정하지 않은 노드는 자리를 통째로 끈다 -
+            // 스프라이트 없는 Image는 흰 사각형이 되어 슬롯을 덮는다.
+            bool hasIcon = node.Icon != null;
             _icon.gameObject.SetActive(hasIcon);
 
             if (hasIcon)
             {
+                _icon.sprite = node.Icon;
+
                 // 아이콘은 그림이라 색을 입히지 않고 밝기만 글자와 같은 폭으로 낮춘다.
                 _icon.color = Scaled(Color.white, textBrightness, OPAQUE);
             }

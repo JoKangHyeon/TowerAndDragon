@@ -637,6 +637,10 @@ public static class ResearchTreeAssetGenerator
             so.FindProperty("_branch").enumValueIndex = (int)spec.Branch;
             so.FindProperty("_tier").intValue = spec.Tier;
             so.FindProperty("_rank").intValue = spec.Rank;
+
+            // _icon은 일부러 건드리지 않는다 - 아이콘은 인스펙터에서 손으로 고르는 값이라,
+            // 여기서 덮으면 재생성할 때마다 전부 날아간다.
+            // 코드로 재현하고 싶어지면 NodeSpec에 아이콘 에셋 이름을 넣고 여기서 채운다.
             so.FindProperty("_researchPointCost").intValue = spec.ResearchPointCost;
 
             AssignObjectArray(so.FindProperty("_effects"), effects);

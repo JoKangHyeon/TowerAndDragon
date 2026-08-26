@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,7 +11,18 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
 {
     private const string PREREQUISITE_SEPARATOR = ", ";
 
+    // 열고 닫을 때의 스케일 연출. 0이 아니라 살짝 작은 값에서 시작해 "튀어나온다"는 느낌만 준다 -
+    // 0에서 키우면 창이 한 점에서 자라나 다른 창처럼 보인다.
+    private const float POP_SCALE = 0.85f;
+    private const float OPEN_DURATION = 0.18f;
+    private const float CLOSE_DURATION = 0.12f;
+
     [SerializeField] private GameObject _root;
+
+    [Tooltip("선택한 노드의 아이콘. 아이콘을 지정하지 않은 노드에서는 통째로 끈다 - " +
+        "스프라이트 없는 Image는 흰 사각형이 되어 슬롯을 덮는다.")]
+    [SerializeField] private Image _icon;
+
     [SerializeField] private TextMeshProUGUI _nameText;
     [SerializeField] private TextMeshProUGUI _descriptionText;
     [SerializeField] private TextMeshProUGUI _statusText;
@@ -41,11 +53,17 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
 
     private bool _isRefreshing;
 
+    private Tween _scaleTween;
+
+    // 닫는 연출이 도는 동안에는 아직 켜져 있지만 이미 닫힌 것으로 친다 - 그러지 않으면
+    // Esc를 연달아 눌렀을 때 두 번째 Esc가 창을 닫지 않고 닫는 중인 패널을 또 닫는다.
+    private bool _isClosing;
+
     /// <summary>
     /// 지금 화면에 떠 있는지. 연구 창이 Esc를 창 닫기에 쓸지 이 패널 닫기에 쓸지 정하는 데 본다
     /// (<see cref="UI_ResearchWindow.OnCloseActionPerformed"/>).
     /// </summary>
-    public bool IsShown => _root != null && _root.activeSelf;
+    public bool IsShown => _root != null && _root.activeSelf && !_isClosing;
 
     public void Construct(
         ResearchManager researchManager,
@@ -56,27 +74,58 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
         _resourceManager = resourceManager;
         _onChanged = onChanged;
 
-        if (_researchButtonText != null)
-        {
-            _researchButtonText.text = StringTable.GetString(ResearchLocKeys.RESEARCH_BUTTON);
-        }
+        ApplyLocalizedTexts();
 
         if (_researchButton != null)
         {
             _researchButton.onClick.AddListener(HandleResearchClicked);
         }
 
-        Clear();
+        // 시작 시 숨기는 것은 연출 대상이 아니다 - 뜬 적도 없는 패널이 줄어들며 사라진다.
+        Clear(animate: false);
     }
 
-    public void Clear()
+    /// <summary>
+    /// 한 번 써 놓고 마는 글자를 현재 언어로 다시 칠한다. 나머지 글자(이름·설명·상태·코스트)는
+    /// <see cref="Refresh"/>가 매번 다시 읽으므로 언어를 저절로 따라간다.
+    /// 언어 변경 구독은 연구 창이 맡는다(UI_ResearchWindow.ApplyLocalizedTexts).
+    /// </summary>
+    public void ApplyLocalizedTexts()
+    {
+        if (_researchButtonText != null)
+        {
+            _researchButtonText.text = StringTable.GetString(ResearchLocKeys.RESEARCH_BUTTON);
+        }
+    }
+
+    /// <summary>
+    /// 패널을 닫는다. <paramref name="animate"/>가 false면 즉시 끈다 -
+    /// 창 전체가 함께 닫히는 경로에서는 연출이 끝나기 전에 오브젝트가 꺼져
+    /// 스케일이 줄어든 채로 남는다.
+    /// </summary>
+    public void Clear(bool animate = true)
     {
         _selectedNode = null;
 
-        if (_root != null)
+        if (_root == null)
         {
-            _root.SetActive(false);
+            return;
         }
+
+        _scaleTween?.Kill();
+
+        if (!animate || !_root.activeSelf)
+        {
+            HideImmediately();
+            return;
+        }
+
+        _isClosing = true;
+        _scaleTween = _root.transform
+            .DOScale(POP_SCALE, CLOSE_DURATION)
+            .SetEase(Ease.InBack)
+            .SetLink(_root)
+            .OnComplete(HideImmediately);
     }
 
     public void Show(ResearchNodeData node)
@@ -85,10 +134,28 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
 
         if (_root != null)
         {
+            // 닫는 중이었다면 그 연출을 버리고 다시 띄운다.
+            _scaleTween?.Kill();
+            _isClosing = false;
+
             _root.SetActive(true);
+            _root.transform.localScale = Vector3.one * POP_SCALE;
+
+            _scaleTween = _root.transform
+                .DOScale(1f, OPEN_DURATION)
+                .SetEase(Ease.OutBack)
+                .SetLink(_root);
         }
 
         Refresh();
+    }
+
+    // 다음에 열 때 제 크기로 뜨도록 스케일까지 되돌린다.
+    private void HideImmediately()
+    {
+        _isClosing = false;
+        _root.transform.localScale = Vector3.one;
+        _root.SetActive(false);
     }
 
     public void Refresh()
@@ -119,6 +186,17 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
 
     private void RefreshContents()
     {
+        if (_icon != null)
+        {
+            bool hasIcon = _selectedNode.Icon != null;
+            _icon.gameObject.SetActive(hasIcon);
+
+            if (hasIcon)
+            {
+                _icon.sprite = _selectedNode.Icon;
+            }
+        }
+
         if (_nameText != null)
         {
             _nameText.text = StringTable.GetString(_selectedNode.NameLocKey);

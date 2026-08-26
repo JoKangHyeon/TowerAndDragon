@@ -9,6 +9,10 @@ public sealed class ResearchNodeData : ScriptableObject
     [SerializeField] private string _nodeId;
     [SerializeField] private string _nameLocKey;
     [SerializeField] private string _descriptionLocKey;
+    [Tooltip("노드 카드 슬롯 가운데에 뜨는 아이콘. 비워 두면 아이콘 자리를 통째로 끈다. " +
+        "트리 생성기가 건드리지 않으므로 인스펙터에서 지정한 값이 재생성 후에도 남는다.")]
+    [SerializeField] private Sprite _icon;
+
     [SerializeField] private ResearchBranch _branch;
     [Min(1)]
     [SerializeField] private int _tier = 1;
@@ -30,6 +34,9 @@ public sealed class ResearchNodeData : ScriptableObject
     public string NodeId => _nodeId;
     public string NameLocKey => _nameLocKey;
     public string DescriptionLocKey => _descriptionLocKey;
+
+    /// <summary>노드 카드 아이콘. 지정하지 않은 노드는 null이다.</summary>
+    public Sprite Icon => _icon;
     public ResearchBranch Branch => _branch;
     public int Tier => _tier;
 
