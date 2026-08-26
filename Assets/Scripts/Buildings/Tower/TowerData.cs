@@ -54,6 +54,13 @@ public class TowerData : ScriptableObject
     [Tooltip("이 타워를 클릭했을 때 발밑에 깔 사거리 마커 프리팹. 비우면 표시하지 않는다.")]
     [SerializeField] private GameObject _attackRangeMarkerPrefab;
 
+    // 오라 타워의 수혜자 구체(TowerAuraDataSO.RecipientOrbPrefab)와 같은 자리다. 아군을 회복하는
+    // 타워는 오라가 아니라 TowerAllyHealer로 대상을 잡으므로 오라 데이터에 실을 곳이 없다.
+    [WiringOptional]
+    [Tooltip("아군을 회복하는 타워를 클릭했을 때, 사거리 안 타워 머리 위에 띄울 구체 프리팹. " +
+             "비우면 표시하지 않는다.")]
+    [SerializeField] private GameObject _allyHealOrbPrefab;
+
 
     public string NameLocKey => _nameLocKey;
     public virtual TowerCategory Category => TowerCategory.Basic;
@@ -73,4 +80,7 @@ public class TowerData : ScriptableObject
 
     public GameObject AttackRangeMarkerPrefab => _attackRangeMarkerPrefab;
     public bool HasAttackRangeMarker => _attackRangeMarkerPrefab != null;
+
+    public GameObject AllyHealOrbPrefab => _allyHealOrbPrefab;
+    public bool HasAllyHealOrb => _allyHealOrbPrefab != null;
 }

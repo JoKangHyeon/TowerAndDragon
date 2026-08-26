@@ -38,6 +38,9 @@ public sealed class MonsterStatusVfx
     // 몸통 위치의 기준. 몬스터마다 크기가 달라 고정 오프셋으로는 어느 한쪽이 반드시 어긋난다.
     private SpriteRenderer _bodyRenderer;
 
+    // 발밑의 기준. 스프라이트 경계의 밑변으로는 못 구한다 - 아래 ResolveAnchors 주석 참고.
+    private MonsterMovement _movement;
+
     /// <summary>소유 몬스터를 물린다. 렌더러 탐색이 들어 있으므로 Awake에서 한 번만 부른다.</summary>
     public void Bind(Transform owner)
     {
@@ -46,8 +49,11 @@ public sealed class MonsterStatusVfx
         if (owner == null)
         {
             _bodyRenderer = null;
+            _movement = null;
             return;
         }
+
+        _movement = owner.GetComponent<MonsterMovement>();
 
         // 종류를 SpriteRenderer로 좁힌다 - Renderer로 두면 방어막·오버레이처럼 몸통이 아닌
         // 렌더러가 먼저 잡혀, 손으로 확인하지 않은 몬스터에서만 연출이 엉뚱한 자리에 뜬다.
@@ -163,13 +169,23 @@ public sealed class MonsterStatusVfx
         _anchorByPrefab.Clear();
     }
 
-    // 스프라이트 경계(월드 AABB)에서 몸통 중앙과 발밑을 구한다. 경계를 쓰므로 루트 스케일이
-    // 0.1~1.5로 갈려도 같은 코드로 두 자리를 찾는다 - 고정 오프셋이면 어느 크기에서 반드시 어긋난다.
+    // 몸통 중앙은 스프라이트 경계(월드 AABB)에서 구한다. 경계를 쓰므로 루트 스케일이
+    // 0.1~1.5로 갈려도 같은 코드로 찾는다 - 고정 오프셋이면 어느 크기에서 반드시 어긋난다.
+    //
+    // 발밑은 경계로 구하면 안 된다. `bounds.min.y`는 스프라이트 사각형의 밑변이고, PixelWorld
+    // 시트는 발 위치에 커스텀 피벗을 두기 때문에 그 아래로 셀 높이의 18~25%가 남는다.
+    // 보스 1(GolemGian_194, 셀 194 / PPU 32 / 피벗 0.18)은 사각형 밑변이 피벗선보다 1.09 아래고,
+    // 실측한 시각 오차는 0.82 월드 유닛이었다.
+    // 이동 컴포넌트의 지면 좌표가 이 프로젝트의 발밑 기준이며 지형 고저차 보정도 들어 있다.
     private void ResolveAnchors(out Vector3 body, out Vector3 feet)
     {
+        float groundY = _movement != null
+            ? _movement.GroundPlanePosition.y
+            : _owner.position.y;
+
         if (_bodyRenderer == null)
         {
-            feet = _owner.position;
+            feet = new Vector3(_owner.position.x, groundY, _owner.position.z);
             body = feet + new Vector3(0f, FALLBACK_BODY_HEIGHT, 0f);
             return;
         }
@@ -180,7 +196,7 @@ public sealed class MonsterStatusVfx
         float z = _owner.position.z;
 
         body = new Vector3(bounds.center.x, bounds.center.y, z);
-        feet = new Vector3(bounds.center.x, bounds.min.y, z);
+        feet = new Vector3(bounds.center.x, groundY, z);
     }
 
     // 대상 크기에 맞춰야 하는 연출(StatusVfxBodyFit)에만 몸통 렌더러를 물린다. 대여 시점에 한 번만

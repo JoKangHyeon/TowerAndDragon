@@ -937,6 +937,15 @@ public class BuildingPlacementController : MonoBehaviour
             return;
         }
 
+        // 발밑 마커를 꽂아 둔 타워는 선을 그리지 않는다 - 마커가 같은 자리를 이미 그려 두 겹으로
+        // 보인다. 오라 타워에서 aura.HasRangeMarker로 하는 것과 같은 판단이다.
+        // (배치·이동 미리보기 쪽은 마커가 뜨지 않으므로 MouseSelectController는 그대로 둔다.)
+        if (tower.Data.HasAttackRangeMarker)
+        {
+            _rangeIndicator.Hide();
+            return;
+        }
+
         _rangeIndicator.SetCenter(tower.transform.position);
         _rangeIndicator.Show(tower.Attack.EffectiveRange, tower.Attack.EffectiveRange * IsometricMath.RADIUS_Y_RATIO);
     }

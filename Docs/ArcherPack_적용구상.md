@@ -229,3 +229,18 @@ World 공간 파티클이 한 점에 겹쳐 궤적을 볼 수 없다.
 - 원본 기울기는 건드리지 말 것 (작업노트 2-2)
 - `HorizontalBillboard` 자식이 있으면 이 카메라에서 안 그려진다 (작업노트 2-1)
 - 자식 이름으로 후보를 거르지 말 것 — 이름과 실제 그림이 자주 다르다 (작업노트 3-1)
+
+---
+
+## 2026-08-26 변경 — 석궁 발사체를 시간 새끼용에게 넘김
+
+- `Projectile_Tower_CrossBow_AP`(화살 메시 + `Glow`·`Sparks`·`Trail`·`Fire 2`)는 이제
+  **시간 새끼용 발사체의 원본**이다. `TimeBabyDragonAssetVfxComposer`가 이 프리팹을 읽어
+  `Projectile_BD_Time`을 굽는다. **이 프리팹에서 레이어를 빼지 말 것** — 새끼용까지 같이 단순해진다.
+- 석궁 타워는 `Projectile_Tower_CrossBow_Simple`(작은 무광 화살 메시만 유지)을 쓴다.
+  `TD_CrossBow._projectilePrefab`이 여기로 배선돼 있다.
+  생성기는 `CoplayScripts/BuildSimpleCrossbowProjectile.cs`이며 같은 경로로 재실행할 수 있다.
+- 시간 새끼용과 구분되도록 석궁 쪽의 `Glow`·`Sparks`·`Trail`·`Fire 2`를 모두 제거하고,
+  전용 비발광 머티리얼과 0.45 루트 스케일을 적용했다.
+- 이 문서 §(1)(2)(3)의 실측 결론(화살 메시용 URP Unlit 머티리얼, 진행 방향 Z+180 보정,
+  `MeshRenderer`까지 정렬 레이어 지정)은 두 프리팹 모두에 그대로 적용된다.

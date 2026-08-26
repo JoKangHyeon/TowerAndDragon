@@ -68,9 +68,10 @@ public sealed class TowerBuffOrbCoordinator : MonoBehaviour
             return;
         }
 
-        // 오라가 없는 타워는 마커만 그린다 - 줄 버프가 없으니 수혜자도 없다(생명 타워).
-        _orbDisplay.ReleaseAll();
+        // 오라가 없는 타워는 발밑 마커만이 기본이다. 다만 아군을 회복하는 타워는 사거리 안
+        // 타워가 곧 회복 대상이라, 오라와 같은 언어로 그 위에 구체를 얹는다(생명 타워).
         UpdateAttackRangeMarker(selected);
+        UpdateHealRecipientOrbs(selected);
     }
 
     private void ResolveDependencies()
@@ -106,9 +107,8 @@ public sealed class TowerBuffOrbCoordinator : MonoBehaviour
     // 오라가 없는 타워의 사거리 마커. 반경은 TowerData가 아니라 실제 유효 사거리를 쓴다 -
     // ShowAttackRangeIndicatorFor가 그리는 선과 같은 값이라야 선과 파티클이 겹쳐 맞는다.
     //
-    // 선은 숨기지 않는다. 새끼용 공격 범위가 이미 "선이 판정 경계를 맡고 전용 파티클은
-    // 그 안쪽 연출만 담당한다"로 되어 있어(BuildingPlacementController) 같은 방식에 맞춘다.
-    // 오라 타워에서 선을 숨긴 것은 마커가 선과 같은 자리라 두 겹으로 보였기 때문이다.
+    // 선(RangeIndicator)은 BuildingPlacementController가 Data.HasAttackRangeMarker를 보고
+    // 숨긴다 - 마커가 선과 같은 자리라 두 겹으로 보인다. 오라 타워와 같은 판단이다.
     private void UpdateAttackRangeMarker(Tower selected)
     {
         if (selected.Data == null ||
@@ -157,6 +157,48 @@ public sealed class TowerBuffOrbCoordinator : MonoBehaviour
         _rangeMarker.position = source.transform.position;
         _rangeMarker.rotation = Quaternion.identity;
         _rangeMarker.localScale = Vector3.one * effectiveRadius;
+    }
+
+    // 반경은 UpdateAttackRangeMarker가 쓴 것과 같은 유효 사거리다 - 마커 원과 구체 목록이
+    // 다른 값을 읽으면 원 안인데 구체가 없는 타워가 생긴다.
+    //
+    // 구체 프리팹만이 아니라 TowerAllyHealer까지 함께 본다 - 회복하지 않는 타워에 구체 프리팹을
+    // 잘못 꽂으면 "이 타워가 뭔가 해 주고 있다"는 거짓 신호가 되기 때문이다.
+    private void UpdateHealRecipientOrbs(Tower selected)
+    {
+        if (_towerAuraSystem == null ||
+            selected.Data == null ||
+            !selected.Data.HasAllyHealOrb ||
+            selected.Attack == null ||
+            selected.GetComponent<TowerAllyHealer>() == null ||
+            !CanHeal(selected))
+        {
+            _orbDisplay.ReleaseAll();
+            return;
+        }
+
+        _towerAuraSystem.CollectHealRecipients(
+            selected,
+            selected.Attack.EffectiveRange,
+            _recipientBuffer);
+
+        _orbDisplay.Sync(selected.Data.AllyHealOrbPrefab, _recipientBuffer);
+    }
+
+    // 구체가 떠 있다는 것은 "이 타워가 저 타워를 회복해 주고 있다"는 뜻이라, 실제로 회복을
+    // 쏠 수 있는 상태가 아니면 거짓 신호가 된다. TowerAllyHealer.Update가 발사를 접는 조건과
+    // 같은 것을 본다 - 인구 미배치(CanOperate false)가 가장 흔한 경우다.
+    // (오라 타워는 TryGetActiveAura가 같은 CanOperate를 봐서 이미 이렇게 동작한다.)
+    private static bool CanHeal(Tower tower)
+    {
+        if (tower.IsDead || tower.IsParalyzed || tower.IsReviving)
+        {
+            return false;
+        }
+
+        ITowerStaffing staffing = tower.GetComponent<ITowerStaffing>();
+
+        return staffing != null && staffing.CanOperate;
     }
 
     private void UpdateRecipientOrbs(
