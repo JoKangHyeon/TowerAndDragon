@@ -305,6 +305,35 @@ public sealed class ResearchManager : MonoBehaviour,
         return false;
     }
 
+    /// <summary>
+    /// 연구 완료와 랜드마크 수령을 모두 만족해 현재 건설 가능한 타워를 수집한다.
+    /// 알림처럼 이벤트 시점에만 호출하는 소비자를 위해 제공하며, 건설 메뉴의 판정은
+    /// 기존 IsTowerUnlocked를 계속 사용한다.
+    /// </summary>
+    public void CollectUnlockedLandmarkTowers(List<TowerData> results)
+    {
+        if (results == null)
+        {
+            return;
+        }
+
+        results.Clear();
+        RebuildActiveEffectsIfDirty();
+
+        for (int i = 0; i < _activeEffects.Count; i++)
+        {
+            if (!(_activeEffects[i] is TowerUnlockEffectSO towerUnlock) ||
+                towerUnlock.Tower == null ||
+                !IsTowerUnlockLandmarkClaimed(towerUnlock) ||
+                results.Contains(towerUnlock.Tower))
+            {
+                continue;
+            }
+
+            results.Add(towerUnlock.Tower);
+        }
+    }
+
     // 타워 해금에 걸린 유적 조건. ResearchEffectSO 전체(효과 15종)에 랜드마크 개념을 올리지 않으려고
     // 타워 해금 효과만 좁혀서 묻는다 - "어떤 효과든 유적으로 잠글 수 있다"는 이 기능이 아니다.
     private bool IsTowerUnlockLandmarkClaimed(ResearchEffectSO effect)
