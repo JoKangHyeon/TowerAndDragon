@@ -911,6 +911,13 @@ public class BuildingPlacementController : MonoBehaviour
         ShowBuffRangeIndicatorFor(building);
     }
 
+    // 마커를 꽂아 뒀다고 곧바로 선·원을 지우면 안 된다 - 마커를 실제로 그리는 쪽은
+    // TowerBuffOrbCoordinator이고, 그 컴포넌트가 없는 씬에서는 표시가 통째로 사라져
+    // 범위가 아무것도 안 보이는 상태가 된다. 마커가 대신 서 줄 때만 숨긴다.
+    // 공격 사거리 선과 오라 범위 원이 같은 판단을 쓴다.
+    private static bool IsMarkerDrawnInsteadOfIndicator(bool hasMarkerPrefab) =>
+        hasMarkerPrefab && TowerBuffOrbCoordinator.IsDrawingMarkers;
+
     // 선택한 건물이 공격 가능한 타워면 실제 판정(TowerAttack.IsWithinAttackRange)과 같은 타원으로 사거리를 표시한다.
     private void ShowAttackRangeIndicatorFor(Building building)
     {
@@ -940,7 +947,7 @@ public class BuildingPlacementController : MonoBehaviour
         // 발밑 마커를 꽂아 둔 타워는 선을 그리지 않는다 - 마커가 같은 자리를 이미 그려 두 겹으로
         // 보인다. 오라 타워에서 aura.HasRangeMarker로 하는 것과 같은 판단이다.
         // (배치·이동 미리보기 쪽은 마커가 뜨지 않으므로 MouseSelectController는 그대로 둔다.)
-        if (tower.Data.HasAttackRangeMarker)
+        if (IsMarkerDrawnInsteadOfIndicator(tower.Data.HasAttackRangeMarker))
         {
             _rangeIndicator.Hide();
             return;
@@ -989,13 +996,13 @@ public class BuildingPlacementController : MonoBehaviour
             tower.Data is ITowerAuraDataProvider provider &&
             provider.HasTowerAura)
         {
-            // 범위 마커(FX_Aura_*)를 꽂아 둔 오라는 선을 그리지 않는다 - 마커와 같은 자리라
+            // 범위 마커(FX_Aura_*)를 꽂아 둔 오라는 원을 그리지 않는다 - 마커와 같은 자리라
             // 두 겹으로 보인다. 그 표시는 TowerBuffOrbCoordinator가 맡는다.
             if (TowerAuraSystem.TryGetActiveAura(
                     tower,
                     out TowerAuraDataSO aura,
                     out float auraRadius) &&
-                !aura.HasRangeMarker)
+                !IsMarkerDrawnInsteadOfIndicator(aura.HasRangeMarker))
             {
                 ShowBuffRange(tower.transform.position, auraRadius);
             }

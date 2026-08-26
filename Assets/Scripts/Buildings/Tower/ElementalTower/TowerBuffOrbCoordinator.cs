@@ -28,14 +28,38 @@ public sealed class TowerBuffOrbCoordinator : MonoBehaviour
     private Transform _rangeMarker;
     private GameObject _rangeMarkerPrefab;
 
+    // 마커를 그리는 쪽이 살아 있는지 선을 숨기는 쪽(BuildingPlacementController)이 알아야 한다.
+    // 이 컴포넌트가 없는 씬에서 선까지 숨기면 사거리가 아무것도 안 보인다.
+    private static TowerBuffOrbCoordinator _current;
+
+    // 플레이모드 재진입 시 Reload Domain이 꺼져 있으면 이전 세션의 참조가 정적 필드에 그대로 남는다.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics()
+    {
+        _current = null;
+    }
+
+    /// <summary>
+    /// 이 씬에서 발밑 마커를 그려 줄 코디네이터가 살아 있는지.
+    /// 마커가 대신 그려 줄 때만 사거리 선을 숨겨야 하므로 선을 그리는 쪽이 이 값을 본다.
+    /// (새끼용은 여기서 제외되고 BabyDragonRangeVfxDisplay가 따로 맡는다.)
+    /// </summary>
+    public static bool IsDrawingMarkers => _current != null;
+
     private void OnEnable()
     {
+        _current = this;
         WiringGuard.Require(_towerAuraSystem, nameof(_towerAuraSystem), this);
         ResolveDependencies();
     }
 
     private void OnDisable()
     {
+        if (_current == this)
+        {
+            _current = null;
+        }
+
         ReleaseAll();
     }
 
@@ -185,10 +209,16 @@ public sealed class TowerBuffOrbCoordinator : MonoBehaviour
         _orbDisplay.Sync(selected.Data.AllyHealOrbPrefab, _recipientBuffer);
     }
 
-    // 구체가 떠 있다는 것은 "이 타워가 저 타워를 회복해 주고 있다"는 뜻이라, 실제로 회복을
-    // 쏠 수 있는 상태가 아니면 거짓 신호가 된다. TowerAllyHealer.Update가 발사를 접는 조건과
-    // 같은 것을 본다 - 인구 미배치(CanOperate false)가 가장 흔한 경우다.
-    // (오라 타워는 TryGetActiveAura가 같은 CanOperate를 봐서 이미 이렇게 동작한다.)
+    // 구체는 "지금 회복해 주고 있다"가 아니라 **"이 타워는 생명 타워 범위 안이라 회복을 받을 수
+    // 있다"**는 표시다 - 오라 수혜자 구체와 같은 언어다. 그래서 체력이 깎였는지로 거르지 않는다
+    // (CollectHealRecipients도 범위와 생사만 본다). 이 문장을 "회복 중"으로 읽고 고치지 말 것.
+    //
+    // 다만 소스가 회복을 못 쏘는 상태면 범위 안이어도 받을 수 있는 것이 없으므로 전부 걷는다.
+    // "쏠 수 있는가"의 근거는 TowerAllyHealer.Update다 - 거기는 `_staffing != null &&
+    // !CanOperate`일 때만 발사를 접으므로 ITowerStaffing이 없는 타워는 그냥 쏜다.
+    // 여기서 없는 것을 "못 한다"로 읽으면 회복은 도는데 구체만 안 뜨는 타워가 생긴다.
+    // (오라 타워는 TowerAuraSystem이 반대로 - 없으면 오라 없음 - 읽는다. 거기는 같은 함수가
+    //  효과와 표시를 동시에 정해 어긋날 수 없지만, 여기는 효과가 healer에 있어 그쪽을 따라간다.)
     private static bool CanHeal(Tower tower)
     {
         if (tower.IsDead || tower.IsParalyzed || tower.IsReviving)
@@ -198,7 +228,7 @@ public sealed class TowerBuffOrbCoordinator : MonoBehaviour
 
         ITowerStaffing staffing = tower.GetComponent<ITowerStaffing>();
 
-        return staffing != null && staffing.CanOperate;
+        return staffing == null || staffing.CanOperate;
     }
 
     private void UpdateRecipientOrbs(

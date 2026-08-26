@@ -48,10 +48,14 @@ public sealed class VfxFlashLight : MonoBehaviour
 
     // 풀에서 꺼내질 때마다 처음부터 다시 시작한다. 지난번에 다 타고 0으로 남은 밝기를
     // 여기서 되돌리지 않으면 두 번째 발사부터 빛이 아예 보이지 않는다.
+    //
+    // 켜는 판단에 IsFinished를 거치는 이유: 지속시간 0은 [Min(0f)]이라 인스펙터에서 넣을 수 있고,
+    // 그 경우 IsFinished가 처음부터 참이라 Update가 이른 반환에 걸려 거기 있는
+    // _light.enabled = false에 영영 닿지 못한다 - 밝기 0인 빛이 반납될 때까지 켜진 채로 남는다.
     private void OnEnable()
     {
         _elapsedSeconds = 0f;
-        _light.enabled = true;
+        _light.enabled = !IsFinished;
         ApplyIntensity();
     }
 
