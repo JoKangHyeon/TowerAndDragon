@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 /// 새끼용 가이드(획득 → 인벤토리 → 부화 → 배치)의 단계 판정. 표시는 UI_GuideOverlay가 맡고
 /// 여기서는 "지금 어느 단계인지"와 "어디를 가리킬지"만 정한다.
 /// 진행도는 RunData.EnteredGuideSteps에 남겨 같은 런에서 같은 안내가 두 번 뜨지 않게 한다.
-/// 획득 알림(BabyDragonEggNotifier)은 이 컨트롤러와 무관하게 매번 뜬다 - 안내는 1회성,
+/// 획득 알림(ProgressionNotificationPresenter)은 이 컨트롤러와 무관하게 매번 뜬다 - 안내는 1회성,
 /// 알림은 상시라는 구분이다.
 /// </summary>
 public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShortcutBlockQuery,
@@ -36,7 +36,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
 
     [Tooltip("부화 알림을 실제로 확인한 뒤 배치 안내를 시작하는 데 쓴다. 비우면 장면에서 찾는다.")]
     [WiringOptional]
-    [SerializeField] private BabyDragonEggNotifier _eggNotifier;
+    [SerializeField] private ProgressionNotificationPresenter _eggNotifier;
 
     [Tooltip("알·새끼용 목록이 있는 용 창. 통합 전에는 별도 창(UI_DragonInventoryWindow)이었다.")]
     [SerializeField] private UI_DragonWindow _inventoryWindow;
@@ -445,7 +445,7 @@ public class BabyDragonGuideController : MonoBehaviour, IDayEndBlockQuery, IShor
     {
         if (_eggNotifier == null)
         {
-            _eggNotifier = FindFirstObjectByType<BabyDragonEggNotifier>();
+            _eggNotifier = FindFirstObjectByType<ProgressionNotificationPresenter>();
         }
     }
 

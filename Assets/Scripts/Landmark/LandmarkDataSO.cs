@@ -24,6 +24,11 @@ public sealed class LandmarkDataSO : ScriptableObject
     [Tooltip("청크 중심에 세울 시각물. 비워두면 마커만 표시된다.")]
     [SerializeField] private GameObject _worldPrefab;
 
+    [Tooltip("청크 중심에서 밀어 세울 거리(월드 유닛). 0이면 청크 중심 그대로.\n" +
+        "맵 외곽의 얇은 청크는 셀 무게중심이 해안선 쪽으로 치우쳐 시각물이 물에 걸치는데, " +
+        "그럴 때 안쪽으로 당기는 용도다.")]
+    [SerializeField] private Vector2 _worldOffset;
+
     [Tooltip("투입 가능한 인구 정원. 0이면 가동할 수 없는(보상 전용) 랜드마크다.")]
     [Min(0)]
     [SerializeField] private int _populationCapacity;
@@ -42,6 +47,7 @@ public sealed class LandmarkDataSO : ScriptableObject
     public string DescriptionLocKey => _descriptionLocKey;
     public Sprite Icon => _icon;
     public GameObject WorldPrefab => _worldPrefab;
+    public Vector2 WorldOffset => _worldOffset;
     public int PopulationCapacity => _populationCapacity;
 
     // ResearchNodeData와 동일한 null-가드 게터 관례.

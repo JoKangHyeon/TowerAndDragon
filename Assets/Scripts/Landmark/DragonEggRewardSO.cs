@@ -1,7 +1,7 @@
 using UnityEngine;
 
 // 용알 둥지 보상. RunData.DragonEggs를 직접 건드리지 않고 반드시 GrantEgg를 거친다 -
-// 직접 추가하면 토스트 알림(BabyDragonEggNotifier)과 인벤토리 갱신 이벤트를 우회하게 된다.
+// 직접 추가하면 토스트 알림(ProgressionNotificationPresenter)과 인벤토리 갱신 이벤트를 우회하게 된다.
 [CreateAssetMenu(
     menuName = "TowerAndDragon/Landmark/Rewards/Dragon Egg",
     fileName = "LandmarkDragonEggReward")]
