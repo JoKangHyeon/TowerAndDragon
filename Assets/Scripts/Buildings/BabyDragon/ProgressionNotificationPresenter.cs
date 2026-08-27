@@ -79,7 +79,18 @@ public class ProgressionNotificationPresenter : MonoBehaviour
         }
     }
 
-    private void HandleEggGranted(DragonType type) => ShowToast(EGG_GRANTED_LOC_KEY, type);
+    private void HandleEggGranted(DragonType type)
+    {
+        if (_toast == null)
+        {
+            return;
+        }
+
+        _toast.ShowWithLocalizedArgument(
+            EGG_GRANTED_LOC_KEY,
+            ResolveEggSprite(type),
+            DragonLocKeys.AttributeLocKey(type));
+    }
 
     private void HandleEggHatched(DragonType type)
     {
@@ -91,18 +102,29 @@ public class ProgressionNotificationPresenter : MonoBehaviour
 
         _toast.ShowWithLocalizedArgument(
             EGG_HATCHED_LOC_KEY,
+            ResolveBabyDragonSprite(type),
             () => HatchNotificationDismissed?.Invoke(type),
             DragonLocKeys.AttributeLocKey(type));
     }
 
-    private void ShowToast(string locKey, DragonType type)
+    // 알 알림에는 알 그림, 부화 알림에는 그 속성 새끼용 그림을 붙인다. 둘 다 BabyDragonData가 들고 있다.
+    private Sprite ResolveEggSprite(DragonType type) =>
+        TryResolveBabyDragonData(type, out BabyDragonData data) ? data.EggSprite : null;
+
+    private Sprite ResolveBabyDragonSprite(DragonType type) =>
+        TryResolveBabyDragonData(type, out BabyDragonData data) ? data.Sprite : null;
+
+    private bool TryResolveBabyDragonData(DragonType type, out BabyDragonData data)
     {
-        if (_toast == null)
+        BabyDragonDataCatalog catalog = _eggInventorySystem?.DataCatalog;
+
+        if (catalog == null)
         {
-            return;
+            data = null;
+            return false;
         }
 
-        _toast.ShowWithLocalizedArgument(locKey, DragonLocKeys.AttributeLocKey(type));
+        return catalog.TryResolve(type, out data);
     }
 
     private void HandleLandmarkClaimed(LandmarkDataSO landmark)
@@ -147,6 +169,7 @@ public class ProgressionNotificationPresenter : MonoBehaviour
         {
             _toast.ShowWithLocalizedArgument(
                 ARTIFACT_ACQUIRED_LOC_KEY,
+                landmark.Icon,
                 landmark.NameLocKey);
         }
 
@@ -171,7 +194,7 @@ public class ProgressionNotificationPresenter : MonoBehaviour
                 continue;
             }
 
-            _toast.ShowWithLocalizedArgument(TOWER_UNLOCKED_LOC_KEY, tower.NameLocKey);
+            _toast.ShowWithLocalizedArgument(TOWER_UNLOCKED_LOC_KEY, tower.Icon, tower.NameLocKey);
         }
     }
 

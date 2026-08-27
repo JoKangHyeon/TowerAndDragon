@@ -62,6 +62,9 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
     [SerializeField] private TMP_Text _messageText;
     [SerializeField] private Button _confirmButton;
 
+    [Tooltip("문구 왼쪽에 띄우는 알림 이미지. 이미지를 넘기지 않은 알림에서는 꺼진다.")]
+    [SerializeField] private Image _iconImage;
+
     [Tooltip("점령 목록. 비어 있으면 같은 Canvas의 자식에서 자동으로 찾는다.")]
     [SerializeField] private RectTransform _claimListRect;
 
@@ -97,16 +100,23 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
         public readonly Action Dismissed;
         public readonly IReadOnlyList<ChoiceOption> Choices;
 
-        public Message(string locKey, object[] args, Action dismissed, IReadOnlyList<ChoiceOption> choices)
+        // 이 토스트는 어떤 도메인도 모른다 - 알·새끼용·유물·특수 타워를 구분하지 않고 그림 한 장만 받는다.
+        public readonly Sprite Icon;
+
+        public Message(
+            string locKey, object[] args, Action dismissed, IReadOnlyList<ChoiceOption> choices, Sprite icon)
         {
             LocKey = locKey;
             Args = args;
             Dismissed = dismissed;
             Choices = choices;
+            Icon = icon;
         }
 
         /// <summary>선택지가 있는 카드인가. 없으면 프리팹의 확인 버튼을 문구까지 그대로 쓴다.</summary>
         public bool HasChoices => Choices != null && Choices.Count > 0;
+
+        public bool HasIcon => Icon != null;
 
         public int ButtonCount => HasChoices ? Choices.Count : 1;
 
@@ -188,7 +198,12 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
     private Vector2 _stackOrigin;
     private string _messageTextPath;
     private string _confirmButtonPath;
+    private string _iconImagePath;
     private float _choiceButtonHeight;
+
+    // 프리팹이 아이콘에 내준 가로 자리. 본문을 이만큼 들여쓴다 - 폭을 코드에 새로 정하면
+    // 프리팹에서 이미지 크기를 손볼 때마다 숫자가 어긋난다(선택지 버튼 여백과 같은 이유).
+    private float _iconWidth;
 
     // 마지막으로 반영한 고정 창 높이. 목록이 늘거나 줄면 카드가 그만큼 따라 내려가야 한다.
     private float _lastHeaderHeight = -1f;
@@ -226,7 +241,9 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
 
         _messageTextPath = GetRelativePath(_messageRoot.transform, _messageText);
         _confirmButtonPath = GetRelativePath(_messageRoot.transform, _confirmButton);
+        _iconImagePath = GetRelativePath(_messageRoot.transform, _iconImage);
         MeasureTemplateButton();
+        MeasureTemplateIcon();
         BuildFollowerList();
         _messageRoot.SetActive(false);
         RepositionFollowers(false);
@@ -318,18 +335,42 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
             return;
         }
 
-        _pendingMessages.AddLast(new Message(locKey, args, onDismissed, null));
+        _pendingMessages.AddLast(new Message(locKey, args, onDismissed, null, null));
         TryFillVisibleCards();
     }
 
+    // 인자 셋 중 하나만 빼먹은 호출은 아래 4인자 형태로 모아 보낸다. null 두 개를 그대로 넘기지 않고
+    // 인자 수를 채워 부르는 이유: (locKey, null, argumentLocKey)는 Action인지 Sprite인지 정할 수 없다.
     public void ShowWithLocalizedArgument(string locKey, string argumentLocKey)
     {
-        ShowWithLocalizedArgument(locKey, null, argumentLocKey);
+        ShowWithLocalizedArgument(locKey, null, null, argumentLocKey);
     }
 
     public void ShowWithLocalizedArgument(string locKey, Action onDismissed, string argumentLocKey)
     {
-        Show(locKey, onDismissed, new LocalizedArgument(argumentLocKey));
+        ShowWithLocalizedArgument(locKey, null, onDismissed, argumentLocKey);
+    }
+
+    public void ShowWithLocalizedArgument(string locKey, Sprite icon, string argumentLocKey)
+    {
+        ShowWithLocalizedArgument(locKey, icon, null, argumentLocKey);
+    }
+
+    /// <summary>
+    /// 문구 왼쪽에 그림을 함께 띄운다. <paramref name="icon"/>이 null이면 그림 없는 카드와 똑같이 나간다 -
+    /// 부르는 쪽이 아직 이미지가 채워지지 않은 데이터를 따로 걸러내지 않아도 된다.
+    /// </summary>
+    public void ShowWithLocalizedArgument(string locKey, Sprite icon, Action onDismissed, string argumentLocKey)
+    {
+        if (!isActiveAndEnabled || !HasRequiredReferences())
+        {
+            onDismissed?.Invoke();
+            return;
+        }
+
+        _pendingMessages.AddLast(new Message(
+            locKey, new object[] { new LocalizedArgument(argumentLocKey) }, onDismissed, null, icon));
+        TryFillVisibleCards();
     }
 
     /// <summary>
@@ -346,7 +387,7 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
             return;
         }
 
-        _pendingMessages.AddLast(new Message(locKey, args, null, choices));
+        _pendingMessages.AddLast(new Message(locKey, args, null, choices, null));
         TryFillVisibleCards();
     }
 
@@ -535,6 +576,7 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
 
         TMP_Text messageText = ResolveCloneComponent<TMP_Text>(root, _messageTextPath);
         Button confirmButton = ResolveCloneComponent<Button>(root, _confirmButtonPath);
+        Image iconImage = ResolveCloneIcon(root);
         CanvasGroup canvasGroup = root.GetComponent<CanvasGroup>() ?? root.AddComponent<CanvasGroup>();
 
         // 자기 자신은 아직 목록에 없으므로, 지금 있는 카드들 바로 아래가 곧 제자리다.
@@ -553,6 +595,10 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
 
         BuildCardButtons(card, confirmButton);
         LayoutChoiceBody(card, messageText);
+
+        // 선택지 배치가 세로만 건드리고 이쪽이 가로만 건드리므로, 그림과 선택지가 함께 온 카드도 둘 다 반영된다.
+        ApplyIcon(card, iconImage);
+        LayoutIconBody(card, messageText);
 
         _activeCards.Add(card);
         root.SetActive(true);
@@ -660,6 +706,59 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
         textRect.sizeDelta = new Vector2(
             -HorizontalMargin * 2f,
             MeasureBodyHeight(card.Message));
+    }
+
+    private static void ApplyIcon(ActiveCard card, Image iconImage)
+    {
+        if (iconImage == null)
+        {
+            return;
+        }
+
+        iconImage.sprite = card.Message.Icon;
+        iconImage.gameObject.SetActive(card.Message.HasIcon);
+    }
+
+    /// <summary>
+    /// 그림이 있는 카드의 본문을 그림 오른쪽으로 들여쓴다.
+    ///
+    /// <b>가로만</b> 건드린다 - 프리팹 본문은 세로 중앙에 앵커돼 있고, 그 세로 배치는
+    /// <see cref="LayoutChoiceBody"/>가 필요할 때만 손대는 몫이다. 여기서 같이 바꾸면 두 함수가
+    /// 같은 값을 서로 덮어쓴다.
+    ///
+    /// 그림이 없는 카드는 이 분기에 오지 않으므로 기존 알림(조언자 대사·퀘스트 안내·선택지)의 본문은 그대로다.
+    /// </summary>
+    private void LayoutIconBody(ActiveCard card, TMP_Text messageText)
+    {
+        if (messageText == null || !card.Message.HasIcon)
+        {
+            return;
+        }
+
+        var textRect = messageText.transform as RectTransform;
+
+        if (textRect == null)
+        {
+            return;
+        }
+
+        // 글상자 폭을 그림이 차지한 만큼 줄이고(sizeDelta), 줄어든 폭의 중심을 오른쪽으로 옮긴다.
+        // 줄이는 값은 MeasureBodyHeight가 높이를 잴 때 쓰는 폭과 같아야 한다(BodyWidth) -
+        // 재는 폭과 그리는 폭이 어긋나면 글이 글상자를 넘거나, 안 넘는 카드가 확장 경로를 탄다.
+        Vector2 sizeDelta = textRect.sizeDelta;
+        Vector2 anchoredPosition = textRect.anchoredPosition;
+
+        textRect.sizeDelta = new Vector2(sizeDelta.x - IconColumnWidth, sizeDelta.y);
+        textRect.anchoredPosition = new Vector2(anchoredPosition.x + IconColumnWidth / 2f, anchoredPosition.y);
+    }
+
+    private Image ResolveCloneIcon(GameObject root)
+    {
+        // 경로를 모르면(인스펙터 미배선) 찾지 않는다 - ResolveCloneComponent는 빈 경로를 카드 루트로 보므로
+        // 여기서 걸러내지 않으면 배경이나 버튼의 Image를 아이콘으로 잡는다.
+        return _iconImage == null || string.IsNullOrEmpty(_iconImagePath)
+            ? null
+            : ResolveCloneComponent<Image>(root, _iconImagePath);
     }
 
     private void RegisterCardButton(ActiveCard card, Button button)
@@ -962,6 +1061,12 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
     private float VerticalMargin => Mathf.Abs(_choiceButtonBasePosition.y);
     private float ChoiceBodyWidth => _cardWidth - HorizontalMargin * 2f;
 
+    // 그림이 본문에서 빼앗는 가로 자리. 그림 폭 + 그림과 글 사이 간격이고, 간격은 좌우 여백과 같은 값을 쓴다.
+    private float IconColumnWidth => _iconWidth + HorizontalMargin;
+
+    private float BodyWidth(Message message) =>
+        message.HasIcon ? ChoiceBodyWidth - IconColumnWidth : ChoiceBodyWidth;
+
     /// <summary>
     /// 내용이 들어가는 카드 높이. <b>본문 글 높이에서 역산하되 프리팹 높이 아래로는 줄이지 않는다.</b>
     ///
@@ -1010,7 +1115,7 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
             return _cardHeight;
         }
 
-        return _messageText.GetPreferredValues(message.Resolve(), ChoiceBodyWidth, 0f).y;
+        return _messageText.GetPreferredValues(message.Resolve(), BodyWidth(message), 0f).y;
     }
 
     private void MeasureTemplateButton()
@@ -1024,6 +1129,19 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
 
         _choiceButtonHeight = buttonRect.rect.height;
         _choiceButtonBasePosition = buttonRect.anchoredPosition;
+    }
+
+    // 그림 자리도 프리팹이 정한다. 미배선이면 0으로 남아 본문 폭이 그대로이므로 기존 동작과 같아진다.
+    private void MeasureTemplateIcon()
+    {
+        var iconRect = _iconImage == null ? null : _iconImage.transform as RectTransform;
+
+        if (iconRect == null)
+        {
+            return;
+        }
+
+        _iconWidth = iconRect.rect.width;
     }
 
     private void HandleClaimListLayoutChanged()
