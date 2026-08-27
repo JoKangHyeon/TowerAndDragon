@@ -1,0 +1,21 @@
+# 커밋 작성자 신원 통합
+#
+# 이 저장소는 팀원 4명이 1115개 커밋을 남겼지만, git 상의 (이름, 이메일) 조합은 10가지다.
+# 원인은 세 가지이고 모두 커밋 객체에 이미 박혀 있어 되돌릴 수 없다.
+#
+#   1. 기기별 git 설정 차이      — Sangwook Na / 나상욱 / SangMacBook, KJH / 김지해
+#   2. 커밋에 저장된 이름 깨짐   — 조강현이 "ì¡JoKangHyeon"으로 기록됨 (UTF-8 3바이트 중 1바이트 유실)
+#   3. 한글 유니코드 정규화 차이 — 이하늘이 NFD(자모 분리)와 NFC 두 형태로 존재 (macOS ↔ Windows)
+#      + GitHub 웹에서 남긴 커밋의 noreply 이메일
+#
+# 아래 매핑은 이메일만으로 키를 잡으므로, 깨진 이름이나 NFD 문자열을 이 파일에 적을 필요가 없다.
+# 매핑 후 합계는 413 + 295 + 240 + 167 = 1115 로 전체 커밋 수와 일치한다. (잔여 0건)
+#
+# 확인:  git shortlog -sne --all
+# 이 파일이 적용되면 shortlog / blame / log 가 모두 아래 이름으로 통일된다.
+
+나상욱 <garidana@gmail.com>
+조강현 <jokh980324@naver.com>
+김지해 <bmj1644035@gmail.com>
+이하늘 <skyee46@gmail.com>
+이하늘 <skyee46@gmail.com> <150312623+smflsmfqh@users.noreply.github.com>

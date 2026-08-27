@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File .claude/skills/contribution-report/contribution-facts.ps1:*)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File .claude/skills/stringtable-diff/stringtable-diff.ps1:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git shortlog:*)",
+      "Bash(git rev-list:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git blame:*)",
+      "Bash(git branch:*)",
+      "Bash(git ls-files:*)"
+    ]
+  }
+}
