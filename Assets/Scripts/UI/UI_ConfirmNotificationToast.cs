@@ -684,8 +684,7 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
     /// </summary>
     private void LayoutChoiceBody(ActiveCard card, TMP_Text messageText)
     {
-        // 프리팹 자리에 들어간 짧은 알림은 손대지 않는다 - 기존 알림의 글 위치가 바뀌면 안 된다.
-        if (messageText == null || !NeedsExpansion(card.Message))
+        if (messageText == null)
         {
             return;
         }
@@ -693,6 +692,17 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
         var textRect = messageText.transform as RectTransform;
 
         if (textRect == null)
+        {
+            return;
+        }
+
+        // 짧은 알림도 텍스트 폭에는 프리팹의 기본 좌우 여백을 반영한다. 이 값을 먼저
+        // 설정해야 LayoutIconBody가 같은 측정 기준에서 아이콘 영역을 추가로 차감한다.
+        Vector2 sizeDelta = textRect.sizeDelta;
+        textRect.sizeDelta = new Vector2(-HorizontalMargin * 2f, sizeDelta.y);
+
+        // 짧은 알림은 세로 배치를 프리팹에 맡긴다 - 기존 알림의 높이와 위치를 바꾸지 않는다.
+        if (!NeedsExpansion(card.Message))
         {
             return;
         }
