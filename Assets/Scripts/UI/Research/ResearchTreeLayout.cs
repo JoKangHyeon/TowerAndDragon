@@ -12,10 +12,41 @@ public static class ResearchTreeLayout
 {
     private const float HALF = 0.5f;
 
-    /// <summary>티어 행의 중심 Y. 티어 1이 맨 위에 오도록 아래로 내려간다(시각화 HTML과 동일).</summary>
+    /// <summary>
+    /// 티어 행의 중심 Y. <b>티어 1이 맨 아래</b>에 오고 티어가 오를수록 위로 뻗는다 -
+    /// 나무가 자라는 방향과 같아, 아래에서 위로 읽으면 그대로 진행 순서가 된다.
+    /// </summary>
     public static float RowCenterY(int tierIndex, int tierCount, float rowHeight)
     {
-        return ((tierCount - 1) * HALF - tierIndex) * rowHeight;
+        return (tierIndex - (tierCount - 1) * HALF) * rowHeight;
+    }
+
+    /// <summary>
+    /// 가장 위 행의 중심 Y. 행은 원점 기준 상하 대칭이라 뻗는 방향과 무관하게 같은 값이다 -
+    /// "트리 꼭대기"에 붙는 것은 티어 번호 대신 이것을 기준으로 놓는다.
+    /// </summary>
+    public static float TopRowCenterY(int tierCount, float rowHeight)
+    {
+        return (tierCount - 1) * HALF * rowHeight;
+    }
+
+    /// <summary>
+    /// 가장 아래 행의 중심 Y. <see cref="TopRowCenterY"/>와 같은 이유로 방향과 무관하다 -
+    /// 갈래 이름표처럼 "트리 밑동"에 붙는 것은 이것을 기준으로 놓는다.
+    /// </summary>
+    public static float BottomRowCenterY(int tierCount, float rowHeight)
+    {
+        return -TopRowCenterY(tierCount, rowHeight);
+    }
+
+    /// <summary>
+    /// <paramref name="tierIndex"/> 행과 그 앞 행 사이의 경계 Y(두 행 중심의 중간).
+    /// 두 중심에서 유도하므로 행이 어느 방향으로 쌓이든 항상 행과 행 사이를 가리킨다.
+    /// </summary>
+    public static float RowBoundaryY(int tierIndex, int tierCount, float rowHeight)
+    {
+        return (RowCenterY(tierIndex - 1, tierCount, rowHeight) +
+                RowCenterY(tierIndex, tierCount, rowHeight)) * HALF;
     }
 
     /// <summary>같은 갈래·티어 칸에 여러 노드가 있을 때 칸 중심 기준 가로 오프셋.</summary>

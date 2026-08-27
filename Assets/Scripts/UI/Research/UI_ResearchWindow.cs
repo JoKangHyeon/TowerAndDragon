@@ -14,11 +14,9 @@ using UnityEngine.UI;
 // 연구 가능 여부·완료 규칙은 여기서 재구현하지 않는다 - 전부 ResearchManager에 위임.
 public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 {
-    private const float EDGE_REACHABLE_TINT_RATIO = 0.55f;
-
-    // 노드 테두리에서 선을 시작·끝내기 위한 절반 크기(ResearchNode 프리팹 220×130).
-    // 중심끼리 이으면 선이 노드 밑을 지나 아무 데서나 튀어나온 것처럼 보인다.
-    private static readonly Vector2 NODE_HALF_SIZE = new Vector2(110f, 65f);
+    // 아직 안 찬 연결선 바탕에 갈래 색을 섞는 비율. 용 스킬트리(DragonSkillNodePalette의
+    // EDGE_LOCKED_TINT_RATIO)와 같은 값이라 두 트리의 선이 같은 밝기로 깔린다.
+    private const float EDGE_BACKGROUND_TINT_RATIO = 0.4f;
 
     // 같은 티어(같은 행) 판정 여유. 같은 행이면 옆면끼리 잇는다.
     private const float SAME_ROW_EPSILON = 1f;
@@ -57,13 +55,18 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private RectTransform _content;
     [SerializeField] private UI_ResearchNode _nodePrefab;
     [SerializeField] private RectTransform _edgePrefab;
-    [Tooltip("갈래 헤더·티어 라벨 공용 텍스트 프리팹.")]
-    [SerializeField] private TextMeshProUGUI _labelPrefab;
+    [Tooltip("갈래 헤더·티어 라벨 공용 글자표 프리팹. 반드시 루트(UI_ResearchLabel)를 물린다 - " +
+        "안쪽 글자를 물리면 배경 같은 장식이 복제에서 빠진다.")]
+    [SerializeField] private UI_ResearchLabel _labelPrefab;
     [SerializeField] private UI_ResearchDetailsPanel _detailsPanel;
     [SerializeField] private TextMeshProUGUI _headerText;
     [SerializeField] private TextMeshProUGUI _researchPointsText;
     [SerializeField] private Button _exitButton;
     [SerializeField] private Button _blockerButton;
+
+    [Tooltip("창 안쪽 빈 곳 클릭. 상세 패널만 닫는다 - 창 자체는 ExitButton과 바깥 클릭으로 닫는다. " +
+        "노드·버튼은 각자 클릭을 처리하므로 여기까지 올라오지 않는다.")]
+    [SerializeField] private Button _windowBackgroundButton;
 
     // 간격은 "선이 지날 길"을 남기는 값이다. 좁히면 ㄱ자 연결선이 노드에 붙어
     // 어느 선이 어느 노드로 들어가는지 다시 안 보이게 된다(노드는 220×110).
@@ -82,13 +85,20 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("티어 행 사이 구분선. 블랙보드의 주기 구분선을 가로로 돌린 것.")]
     [SerializeField] private float _tierSeparatorThickness = 2f;
     [SerializeField] private Color _tierSeparatorColor = new Color(1f, 1f, 1f, 0.10f);
+
+    [Header("티어 행 배경")]
+    [Tooltip("해금된 티어 행의 배경. 트리 배경 위에 옅게 깔려 '여기까지 열렸다'를 보여준다.")]
+    [SerializeField] private Color _tierBackgroundUnlockedColor = new Color(1f, 1f, 1f, 0.06f);
+
+    [Tooltip("아직 안 열린 티어 행의 배경. 어둡게 눌러 두면 열린 행이 상대적으로 떠오른다.")]
+    [SerializeField] private Color _tierBackgroundLockedColor = new Color(0f, 0f, 0f, 0.20f);
     [Header("우측 여백(UI 겹침 해소)")]
     [SerializeField] private float _columnSpacingWidth = 500f;
     [Tooltip("가장 왼쪽 갈래 열 중심에서 티어 라벨까지의 거리.")]
     [SerializeField] private float _tierLabelOffsetX = 300f;
     [Tooltip("티어 번호와 캡션을 행 중심에서 위아래로 벌리는 거리.")]
     [SerializeField] private float _tierLabelOffsetY = 16f;
-    [Tooltip("가장 위 티어 행 중심에서 갈래 헤더까지의 거리.")]
+    [Tooltip("가장 아래 티어 행 중심에서 갈래 헤더까지의 거리.")]
     [SerializeField] private float _branchHeaderOffsetY = 84f;
     [Tooltip("트리를 감싼 Content 여백. 스크롤 영역이 트리에 꼭 맞게 잡히도록 쓴다.")]
     [SerializeField] private Vector2 _contentPadding = new Vector2(80f, 80f);
@@ -105,6 +115,22 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
     // 잠긴 선도 배경과 확실히 구분돼야 선행 관계가 읽힌다 - 블랙보드의 회색 점선(#666)에 맞춘 밝기다.
     [SerializeField] private Color _edgeLockedColor = new Color(0.40f, 0.40f, 0.40f, 1f);
+
+    [Tooltip("아직 차지 않은 연결선 바탕의 밝기. 낮출수록 어두워진다.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _edgeBackgroundBrightness = 0.55f;
+
+    [Tooltip("아직 차지 않은 연결선 바탕의 불투명도. 낮출수록 배경에 묻힌다.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _edgeBackgroundAlpha = 0.35f;
+
+    [Tooltip("선행만 끝난 선(다음에 갈 수 있는 길)의 밝기. 완료한 선보다 어두워야 둘이 갈린다.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _edgeReachableBrightness = 0.6f;
+
+    [Tooltip("선행만 끝난 선의 불투명도.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _edgeReachableAlpha = 0.8f;
     [SerializeField] private Color _tierLabelUnlockedColor = new Color(0.788f, 0.800f, 0.827f);
     [SerializeField] private Color _tierLabelLockedColor = new Color(0.482f, 0.506f, 0.557f, 0.6f);
 
@@ -117,7 +143,13 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     private readonly Dictionary<string, ResearchNodeData> _nodeLookup = new();
     private readonly Dictionary<string, UI_ResearchNode> _nodeViews = new();
     private readonly Dictionary<string, Vector2> _nodePositions = new();
-    private readonly Dictionary<int, List<TextMeshProUGUI>> _tierLabels = new();
+    private readonly Dictionary<int, List<UI_ResearchLabel>> _tierLabels = new();
+
+    // 갈래 이름표는 트리를 만들 때 한 번만 놓이므로, 언어가 바뀌면 다시 칠할 수 있게 들고 있는다.
+    private readonly Dictionary<ResearchBranch, UI_ResearchLabel> _branchHeaders = new();
+
+    // 티어 행 배경 띠. 주기가 진행되면 해금된 행부터 밝아진다.
+    private readonly Dictionary<int, Image> _tierBackgrounds = new();
     private readonly List<EdgeView> _edgeViews = new();
 
     // 곡선 점을 담아 넘기는 재사용 버퍼(선마다 새 리스트를 만들지 않는다).
@@ -128,12 +160,21 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     private readonly List<float> _branchWidths = new();
     private readonly List<float> _branchCenters = new();
 
+    // 노드 규격은 전부 프리팹에서 읽는다 - 코드에 크기를 박아 두면 프리팹 레이아웃을 바꿔도
+    // 열 폭과 연결선이 따라오지 않는다(실측 - 카드를 220×130에서 100×190으로 바꿨더니
+    // 선이 카드 밖 허공에서 끊겼다).
+    private Vector2 _nodeSize;
+
+    // 연결선이 붙는 자리(프리팹의 슬롯). 카드가 세로로 길어 카드 중심과 슬롯 중심이 어긋난다.
+    private Vector2 _nodeEdgeOffset;
+    private Vector2 _nodeEdgeHalfSize;
+
     private bool _built;
     private bool _isOpen;
 
     private struct EdgeView
     {
-        public RectTransform Transform;
+        public UI_ResearchEdge View;
         public string PrerequisiteNodeId;
         public string DependentNodeId;
         public ResearchBranch Branch;
@@ -151,9 +192,9 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             _blockerButton.onClick.AddListener(Close);
         }
 
-        if (_headerText != null)
+        if (_windowBackgroundButton != null)
         {
-            _headerText.text = StringTable.GetString(ResearchLocKeys.WINDOW_HEADER);
+            _windowBackgroundButton.onClick.AddListener(CloseDetailsPanel);
         }
 
         if (_detailsPanel != null)
@@ -190,6 +231,11 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         {
             _closeAction.action.performed += OnCloseActionPerformed;
         }
+
+        // 구독 직후 현재 언어로 한 번 반영한다 - 창이 닫혀 있는 동안 바뀐 언어를 놓치지 않는다
+        // (LocalizedText와 같은 방식).
+        StringTable.OnLanguageChanged += ApplyLocalizedTexts;
+        ApplyLocalizedTexts();
     }
 
     private void OnDisable()
@@ -219,6 +265,55 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         if (_closeAction != null)
         {
             _closeAction.action.performed -= OnCloseActionPerformed;
+        }
+
+        StringTable.OnLanguageChanged -= ApplyLocalizedTexts;
+    }
+
+    /// <summary>
+    /// 한 번 써 놓고 마는 글자들을 현재 언어로 다시 칠한다.
+    ///
+    /// 노드 카드는 갱신마다 <see cref="UI_ResearchNode.Bind"/>가 다시 읽어 언어를 저절로 따라가지만,
+    /// 갈래 이름표·티어 라벨은 트리를 만들 때 한 번만 놓이므로(<see cref="_built"/> 가드)
+    /// 처음 만들어진 시점의 언어에 굳는다. 이 메서드가 그 차이를 메운다.
+    /// </summary>
+    private void ApplyLocalizedTexts()
+    {
+        if (_headerText != null)
+        {
+            _headerText.text = StringTable.GetString(ResearchLocKeys.WINDOW_HEADER);
+        }
+
+        foreach (KeyValuePair<ResearchBranch, UI_ResearchLabel> entry in _branchHeaders)
+        {
+            if (entry.Value != null)
+            {
+                entry.Value.Text.text =
+                    StringTable.GetString(ResearchLocKeys.BranchLocKey(entry.Key));
+            }
+        }
+
+        foreach (KeyValuePair<int, List<UI_ResearchLabel>> entry in _tierLabels)
+        {
+            ApplyTierLabelTexts(entry.Key, entry.Value);
+        }
+
+        _detailsPanel?.ApplyLocalizedTexts();
+    }
+
+    // 0번은 티어 번호 워터마크, 1번은 해금 시점 캡션이다(PlaceTierLabels가 그 순서로 담는다).
+    private void ApplyTierLabelTexts(int tier, List<UI_ResearchLabel> labels)
+    {
+        if (labels.Count > 0 && labels[0] != null)
+        {
+            labels[0].Text.text = string.Format(
+                StringTable.GetString(ResearchLocKeys.TIER_LABEL), tier);
+        }
+
+        if (labels.Count > 1 && labels[1] != null)
+        {
+            labels[1].Text.text =
+                StringTable.GetString(ResearchLocKeys.TierCaptionLocKey(tier));
         }
     }
 
@@ -264,7 +359,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     //
     // 전체를 한 화면에 우겨넣어 봤더니 배율이 0.56까지 떨어져 카드 글씨를 못 읽었다(실측).
     // 블랙보드도 5000px 캔버스를 1:1로 열고 패닝하는 방식이므로 같게 맞춘다 - 배율 1로 열고
-    // 트리의 왼쪽 위(T1·타워)부터 보여준 뒤, 전체 조망은 휠 축소(하한 0.4)에 맡긴다.
+    // 트리의 왼쪽 아래(T1·타워)부터 보여준 뒤, 전체 조망은 휠 축소(하한 0.4)에 맡긴다.
     private void ResetView()
     {
         if (!WiringGuard.Require(_content, nameof(_content), this))
@@ -296,7 +391,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         _content.anchoredPosition = ResolveInitialPosition(INITIAL_SCALE);
     }
 
-    // 뷰포트를 넘치는 만큼은 왼쪽 위로 밀어 T1부터 보이게 한다.
+    // 뷰포트를 넘치는 만큼은 왼쪽 아래로 밀어 T1부터 보이게 한다(티어 1이 트리의 맨 아래다).
     private Vector2 ResolveInitialPosition(float scale)
     {
         var spacing = new Vector2(_columnSpacingWidth, 0f);
@@ -311,7 +406,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             Mathf.Max(0f, scaled.x - viewSize.x),
             Mathf.Max(0f, scaled.y - viewSize.y));
 
-        return spacing / 2f + new Vector2(overflow.x, -overflow.y) * 0.5f;
+        return spacing / 2f + new Vector2(overflow.x, overflow.y) * 0.5f;
     }
 
     private bool TryGetViewportSize(out Vector2 size)
@@ -336,12 +431,23 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         return true;
     }
 
+    // 창 안쪽 빈 곳 클릭 - 상세 패널만 닫는다.
+    // 상세 패널은 닫기 버튼이 없고 트리의 오른쪽을 덮으므로, 그 아래 노드를 고르려면
+    // 패널을 물릴 방법이 필요하다(Esc 말고 마우스로도).
+    private void CloseDetailsPanel()
+    {
+        _detailsPanel?.Clear();
+    }
+
     public void Close()
     {
         SoundManager.Play(SoundId.UiWindowClose);
 
         _isOpen = false;
-        _detailsPanel?.Clear();
+
+        // 창이 통째로 꺼지므로 연출을 돌리지 않는다 - 연출 중에 오브젝트가 꺼지면
+        // 패널이 줄어든 스케일 그대로 남는다.
+        _detailsPanel?.Clear(animate: false);
         gameObject.SetActive(false);
     }
 
@@ -374,6 +480,10 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         {
             return;
         }
+
+        // 열 폭 계산이 노드 크기를 쓰므로 무엇보다 먼저 잡는다.
+        // 루트 앵커가 점(0.5, 0.5)이라 프리팹 에셋에서도 rect가 그대로 나온다.
+        _nodeSize = ((RectTransform)_nodePrefab.transform).rect.size;
 
         // (갈래, 티어) 칸별로 노드를 모은다. 트리 에셋의 순서를 그대로 유지해
         // 로드맵 표와 같은 좌우 순서로 놓이게 한다.
@@ -415,6 +525,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         ResolveBranchBands(byCell, branchCount, tierCount);
 
+        PlaceTierBackgrounds(tierCount);
         PlaceTierLabels(tierCount);
         PlaceTierSeparators(tierCount);
 
@@ -449,10 +560,18 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         // (선은 노드 좌표에서 유도되므로 좌표 보정이 끝난 뒤에 만들어야 한다)
         CenterTreeInContent();
 
+        ResolveNodeEdgeAnchor();
         BuildEdges();
+
+        // 티어 띠는 연결선·노드보다 뒤에 깔려야 한다. 나중에 SetAsFirstSibling한 것이
+        // 더 뒤에 그려지므로, 선을 다 만든 뒤에 밀어 넣는다.
+        PushTierBackgroundsBehind();
         PlaceCanvasBackground();
 
         _built = true;
+
+        // 방금 만든 이름표·티어 라벨에 글자를 채운다.
+        ApplyLocalizedTexts();
     }
 
     // 노드·라벨을 감싸는 최소 사각형을 구해 트리를 Content 원점에 맞추고,
@@ -527,7 +646,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             }
 
             _branchWidths.Add(ResearchTreeLayout.BranchWidth(
-                busiest, NODE_HALF_SIZE.x * 2f, _nodeSpacing, _minBranchWidth));
+                busiest, _nodeSize.x, _nodeSpacing, _minBranchWidth));
         }
 
         ResearchTreeLayout.ResolveBranchCenters(_branchWidths, _branchGap, _branchCenters);
@@ -555,18 +674,24 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
     private void PlaceBranchHeader(int branchIndex, int tierCount, ResearchBranch branch)
     {
-        TextMeshProUGUI header = CreateLabel();
+        UI_ResearchLabel header = CreateLabel();
 
         if (header == null)
         {
             return;
         }
 
-        header.text = StringTable.GetString(ResearchLocKeys.BranchLocKey(branch));
-        header.color = ColorForBranch(branch);
-        header.rectTransform.anchoredPosition = new Vector2(
+        _branchHeaders[branch] = header;
+
+        // 글자는 ApplyLocalizedTexts가 채운다 - 언어가 바뀔 때 다시 칠하는 곳과 한 군데로 모은다.
+        header.Text.color = ColorForBranch(branch);
+        header.SetBackgroundVisible(true);
+
+        // 갈래 이름표는 트리 밑동에 붙는다 - 트리가 아래에서 위로 자라므로
+        // 갈래 이름 → T1 → ... 순으로 읽히는 자리가 여기다.
+        header.Rect.anchoredPosition = new Vector2(
             _branchCenters[branchIndex],
-            ResearchTreeLayout.RowCenterY(0, tierCount, _rowHeight) + _branchHeaderOffsetY);
+            ResearchTreeLayout.BottomRowCenterY(tierCount, _rowHeight) - _branchHeaderOffsetY);
     }
 
     // 티어 행마다 번호 라벨과 해금 시점 캡션을 왼쪽에 세운다.
@@ -581,31 +706,32 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             int tier = tierIndex + ResearchTierRules.FIRST_TIER;
             float rowY = ResearchTreeLayout.RowCenterY(tierIndex, tierCount, _rowHeight);
 
-            TextMeshProUGUI numberLabel = CreateLabel();
-            TextMeshProUGUI captionLabel = CreateLabel();
+            UI_ResearchLabel numberLabel = CreateLabel();
+            UI_ResearchLabel captionLabel = CreateLabel();
 
             if (numberLabel == null || captionLabel == null)
             {
                 return;
             }
 
+            // 티어 라벨은 배경 없이 글자만 깐다 - 배경판을 두면 워터마크가 배경 위의
+            // 이름표처럼 보여 "뒤에 깔린 큰 글자"라는 성격이 사라진다.
+            numberLabel.SetBackgroundVisible(false);
+            captionLabel.SetBackgroundVisible(false);
+
             // 티어 번호는 블랙보드의 .tier-label처럼 크고 옅게 깐다(워터마크).
-            // 캡션만 평소 크기로 그 아래에 둔다.
-            numberLabel.text = string.Format(
-                StringTable.GetString(ResearchLocKeys.TIER_LABEL), tier);
-            numberLabel.fontSize = TIER_WATERMARK_FONT_SIZE;
-            numberLabel.fontStyle = FontStyles.Bold;
-            numberLabel.rectTransform.sizeDelta = new Vector2(
-                numberLabel.rectTransform.sizeDelta.x, TIER_WATERMARK_FONT_SIZE * 1.2f);
-            numberLabel.rectTransform.anchoredPosition =
+            // 캡션만 평소 크기로 그 아래에 둔다. 글자는 ApplyLocalizedTexts가 채운다.
+            numberLabel.Text.fontSize = TIER_WATERMARK_FONT_SIZE;
+            numberLabel.Text.fontStyle = FontStyles.Bold;
+            numberLabel.Rect.sizeDelta = new Vector2(
+                numberLabel.Rect.sizeDelta.x, TIER_WATERMARK_FONT_SIZE * 1.2f);
+            numberLabel.Rect.anchoredPosition =
                 new Vector2(labelX, rowY + _tierLabelOffsetY);
 
-            captionLabel.text =
-                StringTable.GetString(ResearchLocKeys.TierCaptionLocKey(tier));
-            captionLabel.rectTransform.anchoredPosition =
+            captionLabel.Rect.anchoredPosition =
                 new Vector2(labelX, rowY - TIER_WATERMARK_FONT_SIZE * 0.55f - _tierLabelOffsetY);
 
-            _tierLabels[tier] = new List<TextMeshProUGUI> { numberLabel, captionLabel };
+            _tierLabels[tier] = new List<UI_ResearchLabel> { numberLabel, captionLabel };
         }
     }
 
@@ -617,7 +743,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             ? _branchCenters[_branchCenters.Count - 1] + _branchWidths[_branchWidths.Count - 1] * 0.5f
             : 0f;
 
-    private TextMeshProUGUI CreateLabel()
+    private UI_ResearchLabel CreateLabel()
     {
         return _labelPrefab != null ? Instantiate(_labelPrefab, _content) : null;
     }
@@ -644,6 +770,57 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         image.raycastTarget = false;
     }
 
+    /// <summary>
+    /// 티어 행마다 배경 띠를 깐다. 위아래 경계는 티어 구분선(점선)과 같은 자리다 -
+    /// 띠 중심이 행 중심이고 높이가 <see cref="_rowHeight"/>이므로, 띠의 위아래 변이
+    /// <see cref="ResearchTreeLayout.RowBoundaryY"/>와 정확히 맞물린다.
+    ///
+    /// 좌우 폭도 구분선과 같게 트리 열 전체로 잡는다. 티어 라벨은 그 바깥에 있으므로 띠에 안 걸린다.
+    /// </summary>
+    private void PlaceTierBackgrounds(int tierCount)
+    {
+        float left = TreeLeftEdge();
+        float right = TreeRightEdge();
+
+        for (int tierIndex = 0; tierIndex < tierCount; tierIndex++)
+        {
+            var bandObject = new GameObject(
+                "TierBackground", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var rect = (RectTransform)bandObject.transform;
+            rect.SetParent(_content, false);
+
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(right - left, _rowHeight);
+            rect.anchoredPosition = new Vector2(
+                (left + right) * 0.5f,
+                ResearchTreeLayout.RowCenterY(tierIndex, tierCount, _rowHeight));
+
+            var image = bandObject.GetComponent<Image>();
+            image.raycastTarget = false;
+
+            // 만들자마자 칠한다. 새 Image의 기본색은 불투명 흰색이라, 갱신 전까지 한 프레임이라도
+            // 하얀 판이 트리를 덮는다(실측 - 알파를 0으로 둬도 하얗게 보인다는 신고의 원인).
+            image.color = _tierBackgroundLockedColor;
+
+            _tierBackgrounds[tierIndex + ResearchTierRules.FIRST_TIER] = image;
+        }
+
+        RefreshTierBackgrounds();
+    }
+
+    private void PushTierBackgroundsBehind()
+    {
+        foreach (KeyValuePair<int, Image> entry in _tierBackgrounds)
+        {
+            if (entry.Value != null)
+            {
+                entry.Value.rectTransform.SetAsFirstSibling();
+            }
+        }
+    }
+
     // 티어 행 사이에 옅은 구분선을 깐다. 블랙보드의 주기 구분선을 가로로 돌린 것으로,
     // 어느 노드가 같은 티어인지 선 없이도 읽히게 하는 역할이다.
     // 연결선 프리팹을 재사용하지만 _edgeViews에 넣지 않으므로 상태에 따라 색이 변하지 않는다.
@@ -657,11 +834,10 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         float left = TreeLeftEdge();
         float right = TreeRightEdge();
 
-        // 첫 행 위에는 긋지 않는다(갈래 이름표와 겹친다).
+        // 행과 행 사이에만 긋는다 - 트리 바깥까지 그으면 갈래 이름표와 겹친다.
         for (int tierIndex = 1; tierIndex < tierCount; tierIndex++)
         {
-            float y =
-                ResearchTreeLayout.RowCenterY(tierIndex, tierCount, _rowHeight) + _rowHeight * 0.5f;
+            float y = ResearchTreeLayout.RowBoundaryY(tierIndex, tierCount, _rowHeight);
 
             RectTransform line = Instantiate(_edgePrefab, _content);
             line.SetAsFirstSibling();
@@ -678,6 +854,32 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
                 image.type = Image.Type.Tiled;
                 image.color = _tierSeparatorColor;
             }
+        }
+    }
+
+    // 연결선이 붙는 자리를 프리팹에서 잰다. 노드는 전부 같은 프리팹이라 하나만 재면 된다.
+    //
+    // 슬롯의 자리는 프리팹에 직렬화된 값이 아니라 노드 루트의 VerticalLayoutGroup이 정하므로,
+    // 인스턴스를 하나 잡아 레이아웃을 강제로 돌린 뒤에 읽는다.
+    private void ResolveNodeEdgeAnchor()
+    {
+        // 카드 전체를 기본값으로 둔다 - 슬롯을 못 찾아도 선이 노드 중심에서 튀어나오진 않는다.
+        _nodeEdgeOffset = Vector2.zero;
+        _nodeEdgeHalfSize = _nodeSize * 0.5f;
+
+        foreach (UI_ResearchNode view in _nodeViews.Values)
+        {
+            if (view == null)
+            {
+                continue;
+            }
+
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)view.transform);
+
+            Rect anchor = view.ResolveEdgeAnchorRect();
+            _nodeEdgeOffset = anchor.center;
+            _nodeEdgeHalfSize = anchor.size * 0.5f;
+            return;
         }
     }
 
@@ -701,7 +903,10 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
                     continue;
                 }
 
-                CreateEdge(from, to, prerequisite.NodeId, node.NodeId, node.Branch);
+                // 카드 중심이 아니라 슬롯 중심끼리 잇는다.
+                CreateEdge(
+                    from + _nodeEdgeOffset, to + _nodeEdgeOffset,
+                    prerequisite.NodeId, node.NodeId, node.Branch);
             }
         }
     }
@@ -715,7 +920,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     {
         BuildCurvePoints(from, to);
 
-        var curveObject = new GameObject("EdgeCurve", typeof(RectTransform), typeof(CanvasRenderer), typeof(UI_CurvedEdge));
+        var curveObject = new GameObject("EdgeCurve", typeof(RectTransform), typeof(CanvasRenderer), typeof(UI_ResearchEdge));
         var rect = (RectTransform)curveObject.transform;
         rect.SetParent(_content, false);
 
@@ -727,15 +932,12 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         rect.sizeDelta = Vector2.zero;
         rect.SetAsFirstSibling(); // 노드 아래로 - 선이 클릭을 가로채거나 위에 그려지지 않게 한다
 
-        var curve = curveObject.GetComponent<UI_CurvedEdge>();
-        curve.raycastTarget = false;
-        curve.SetCurve(
-            _curvePointBuffer, _edgeThickness,
-            ResearchTreeSprites.DashTexture, ResearchTreeSprites.DashPeriod);
+        var edge = curveObject.GetComponent<UI_ResearchEdge>();
+        edge.SetCurve(_curvePointBuffer, _edgeThickness);
 
         _edgeViews.Add(new EdgeView
         {
-            Transform = rect,
+            View = edge,
             PrerequisiteNodeId = prerequisiteNodeId,
             DependentNodeId = dependentNodeId,
             Branch = branch,
@@ -757,8 +959,8 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         {
             // 같은 티어끼리는 옆면에서 나가 옆면으로 들어간다.
             float direction = Mathf.Sign(to.x - from.x);
-            start = new Vector2(from.x + direction * NODE_HALF_SIZE.x, from.y);
-            end = new Vector2(to.x - direction * NODE_HALF_SIZE.x, to.y);
+            start = new Vector2(from.x + direction * _nodeEdgeHalfSize.x, from.y);
+            end = new Vector2(to.x - direction * _nodeEdgeHalfSize.x, to.y);
 
             float reach = Mathf.Max(Mathf.Abs(end.x - start.x) * CURVE_CONTROL_RATIO, MIN_CURVE_CONTROL);
             startControl = start + new Vector2(direction * reach, 0f);
@@ -766,13 +968,15 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         }
         else
         {
-            // 아래 티어로 내려가는 선은 아래 변에서 나가 위 변으로 들어간다.
-            start = new Vector2(from.x, from.y - NODE_HALF_SIZE.y);
-            end = new Vector2(to.x, to.y + NODE_HALF_SIZE.y);
+            // 다음 티어로 넘어가는 선은 선행 노드의 "다음 티어 쪽 변"에서 나가 반대 변으로 들어간다.
+            // 방향을 부호로 유도하므로 티어가 위로 쌓이든 아래로 쌓이든 선이 카드를 뚫지 않는다.
+            float direction = Mathf.Sign(to.y - from.y);
+            start = new Vector2(from.x, from.y + direction * _nodeEdgeHalfSize.y);
+            end = new Vector2(to.x, to.y - direction * _nodeEdgeHalfSize.y);
 
             float reach = Mathf.Max(Mathf.Abs(end.y - start.y) * CURVE_CONTROL_RATIO, MIN_CURVE_CONTROL);
-            startControl = start - new Vector2(0f, reach);
-            endControl = end + new Vector2(0f, reach);
+            startControl = start + new Vector2(0f, direction * reach);
+            endControl = end - new Vector2(0f, direction * reach);
         }
 
         for (int i = 0; i <= CURVE_SEGMENTS; i++)
@@ -803,6 +1007,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         RefreshResearchPoints();
         RefreshNodeViews();
         RefreshEdgeViews();
+        RefreshTierBackgrounds();
         RefreshTierLabels();
         _detailsPanel?.Refresh();
     }
@@ -838,8 +1043,19 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
-    // 선행이 끝난 선은 은은하게, 대상 노드까지 완료된 선은 갈래 색으로 꽉 채워
-    // 어디까지 진행됐는지 한눈에 보이게 한다.
+    /// <summary>
+    /// 연결선은 세 단계로 읽힌다.
+    ///  - 선행 미완료: 바탕만 (어둡고 반투명)
+    ///  - 선행 완료: 선이 <b>차오르고</b> 흐린 갈래 색이 된다 - "다음에 갈 수 있는 길"
+    ///  - 대상 완료: 이미 찬 선이 진한 갈래 색으로 물든다
+    ///
+    /// 선행 완료 단계가 중요하다. T1은 전부 선행이 없어 첫 주기에는 "대상 완료"로 차는 선이
+    /// 하나도 없다 - 이 단계가 빠지면 T1을 아무리 연구해도 트리에 아무 변화가 없다.
+    ///
+    /// 바탕색은 상태를 따라가지 않는다. 예전에는 바탕을 물들여 이 표시를 냈는데, 색이 한 프레임에
+    /// 튀어서 정작 보여줘야 할 "차오름"보다 먼저 눈에 들어왔다. 표시는 그대로 두고 수단만
+    /// 바탕색 → 채움으로 옮긴 것이다.
+    /// </summary>
     private void RefreshEdgeViews()
     {
         if (!WiringGuard.Require(_researchManager, nameof(_researchManager), this))
@@ -849,32 +1065,47 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         foreach (EdgeView edge in _edgeViews)
         {
-            if (edge.Transform == null)
-            {
-                continue;
-            }
-
-            // 곡선(UI_CurvedEdge)과 직선 Image를 모두 다루려면 Graphic으로 잡아야 한다.
-            var graphic = edge.Transform.GetComponent<Graphic>();
-            if (graphic == null)
+            if (edge.View == null)
             {
                 continue;
             }
 
             Color branchColor = ColorForBranch(edge.Branch);
+            bool dependentDone = _researchManager.IsCompleted(edge.DependentNodeId);
+            bool prerequisiteDone = _researchManager.IsCompleted(edge.PrerequisiteNodeId);
 
-            if (_researchManager.IsCompleted(edge.DependentNodeId))
+            Color fillColor = dependentDone
+                ? branchColor
+                : Faded(branchColor, _edgeReachableBrightness, _edgeReachableAlpha);
+
+            edge.View.Bind(
+                dependentDone || prerequisiteDone,
+                fillColor,
+                ResolveEdgeBackgroundColor(branchColor));
+        }
+    }
+
+    // 주기가 진행되면 해금된 행부터 밝아진다. 판정은 티어 라벨과 같은 규칙(ResearchTierRules)이다.
+    // 별도 가드를 두지 않는다 - 매니저가 없으면 RefreshNodeViews가 이미 신고한다.
+    private void RefreshTierBackgrounds()
+    {
+        if (_researchManager == null)
+        {
+            return;
+        }
+
+        int currentCycle = _researchManager.CurrentCycleNumber;
+
+        foreach (KeyValuePair<int, Image> entry in _tierBackgrounds)
+        {
+            if (entry.Value == null)
             {
-                graphic.color = branchColor;
+                continue;
             }
-            else if (_researchManager.IsCompleted(edge.PrerequisiteNodeId))
-            {
-                graphic.color = Color.Lerp(_edgeLockedColor, branchColor, EDGE_REACHABLE_TINT_RATIO);
-            }
-            else
-            {
-                graphic.color = _edgeLockedColor;
-            }
+
+            entry.Value.color = ResearchTierRules.IsTierUnlocked(entry.Key, currentCycle)
+                ? _tierBackgroundUnlockedColor
+                : _tierBackgroundLockedColor;
         }
     }
 
@@ -887,14 +1118,14 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         int currentCycle = _researchManager.CurrentCycleNumber;
 
-        foreach (KeyValuePair<int, List<TextMeshProUGUI>> entry in _tierLabels)
+        foreach (KeyValuePair<int, List<UI_ResearchLabel>> entry in _tierLabels)
         {
             bool unlocked = ResearchTierRules.IsTierUnlocked(entry.Key, currentCycle);
             Color color = unlocked ? _tierLabelUnlockedColor : _tierLabelLockedColor;
 
             for (int i = 0; i < entry.Value.Count; i++)
             {
-                TextMeshProUGUI label = entry.Value[i];
+                UI_ResearchLabel label = entry.Value[i];
 
                 if (label == null)
                 {
@@ -907,13 +1138,29 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
                 {
                     Color watermark = TIER_WATERMARK_COLOR;
                     watermark.a *= unlocked ? 1f : 0.5f;
-                    label.color = watermark;
+                    label.Text.color = watermark;
                     continue;
                 }
 
-                label.color = color;
+                label.Text.color = color;
             }
         }
+    }
+
+    // 아직 차지 않은 선의 바탕. 갈래 색을 옅게 섞어 어느 갈래인지는 남기되,
+    // 어둡고 투명하게 깔아 채워진 선과 확실히 갈리게 한다.
+    private Color ResolveEdgeBackgroundColor(Color branchColor)
+    {
+        Color tinted = Color.Lerp(_edgeLockedColor, branchColor, EDGE_BACKGROUND_TINT_RATIO);
+
+        return Faded(tinted, _edgeBackgroundBrightness, _edgeBackgroundAlpha);
+    }
+
+    // 알파는 곱하지 않고 대입한다 - 밝기와 투명도를 따로 조절할 수 있어야 한다.
+    private static Color Faded(Color color, float brightness, float alpha)
+    {
+        return new Color(
+            color.r * brightness, color.g * brightness, color.b * brightness, alpha);
     }
 
     private void HandleNodeClicked(ResearchNodeData node)
