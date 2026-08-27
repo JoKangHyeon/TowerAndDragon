@@ -129,7 +129,7 @@ public class Projectile : MonoBehaviour
 
         ApplyHit();
 
-        _visual?.OnHit(transform.position, _travelDirection);
+        _visual?.OnHit(transform.position, _travelDirection, _targetObject);
 
         Release();
     }

@@ -482,9 +482,15 @@ public class MouseSelectController : MonoBehaviour
             return;
 
         if (!(_selectedBuildingRef is Tower tower) ||
-            tower is BabyDragonTower ||
             tower.Data == null ||
             !tower.Data.CanAttack)
+        {
+            _rangeIndicator.Hide();
+            return;
+        }
+
+        if (tower is BabyDragonTower babyDragon &&
+            babyDragon.Mode != BabyDragonMode.Attack)
         {
             _rangeIndicator.Hide();
             return;
@@ -499,11 +505,38 @@ public class MouseSelectController : MonoBehaviour
         _rangeIndicator.Show(radiusX, radiusY);
     }
 
-    // 오라 타워는 공용 오라 반경을, 기존 새끼용은 BabyDragonBuffSystem과 같은 BuffRadius를 표시한다.
+    // 일반 오라 타워와 버프 모드 새끼용의 현재 유효 반경을 표시한다.
     private void DrawBuffRangeIndicator(Vector3 center)
     {
         if (_buffRangeIndicator == null)
             return;
+
+        if (_selectedBuildingRef is BabyDragonTower babyDragon)
+        {
+            if (babyDragon.Mode != BabyDragonMode.Buff ||
+                babyDragon.DragonData == null)
+            {
+                _buffRangeIndicator.Hide();
+                return;
+            }
+
+            _babyDragonBuffSystem ??=
+                Object.FindFirstObjectByType<BabyDragonBuffSystem>();
+            float radius = _babyDragonBuffSystem != null
+                ? _babyDragonBuffSystem.GetEffectiveBuffRadius(babyDragon)
+                : babyDragon.DragonData.BuffRadius;
+
+            if (radius > 0f)
+            {
+                ShowBuffRange(center, radius);
+            }
+            else
+            {
+                _buffRangeIndicator.Hide();
+            }
+
+            return;
+        }
 
         if (_selectedBuildingRef is Tower tower &&
             tower.Data is ITowerAuraDataProvider provider &&
@@ -528,26 +561,6 @@ public class MouseSelectController : MonoBehaviour
                 _buffRangeIndicator.Hide();
             }
 
-            return;
-        }
-
-        if (_selectedBuildingRef is BabyDragonTower babyDragon &&
-            babyDragon.DragonData != null)
-        {
-            _babyDragonBuffSystem ??= Object.FindFirstObjectByType<BabyDragonBuffSystem>();
-            float radius = _babyDragonBuffSystem != null
-                ? _babyDragonBuffSystem.GetEffectiveBuffRadius(babyDragon)
-                : babyDragon.DragonData.BuffRadius;
-
-            if (radius <= 0f)
-            {
-                _buffRangeIndicator.Hide();
-                return;
-            }
-
-            ShowBuffRange(
-                center,
-                radius);
             return;
         }
 

@@ -117,6 +117,9 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
         if (_animator != null)
         {
             _animator.SetBool(_animKeyMove, moveSpeed > 0);
+
+            // 빙결은 애니메이션까지 멈춰야 "얼어붙었다"로 읽힌다 - Move를 꺼도 대기 동작은 계속 돈다.
+            _animator.speed = IsActionBlocked ? 0f : 1f;
         }
     }
 

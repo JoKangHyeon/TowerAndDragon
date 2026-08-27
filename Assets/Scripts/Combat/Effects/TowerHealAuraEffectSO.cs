@@ -8,12 +8,24 @@ using UnityEngine;
     fileName = "TowerHealAuraEffect")]
 public sealed class TowerHealAuraEffectSO : AttackEffectSO
 {
+    private const float DEFAULT_HEAL_VFX_LIFETIME_SECONDS = 1f;
+
     [Min(0f)] [SerializeField] private float _radius;
     [Min(0f)] [SerializeField] private float _healAmount;
     [SerializeField] private LayerMask _towerLayers = Physics2D.DefaultRaycastLayers;
 
     [Tooltip("시전자 자신도 회복 대상에 포함할지.")]
     [SerializeField] private bool _healsSelf = true;
+
+    [Header("VFX")]
+    [WiringOptional]
+    [Tooltip("공격 명중 이펙트와 별개로 시전자 위치에 재생할 회복 파동. 비우면 생략한다.")]
+    [SerializeField] private GameObject _healVfxPrefab;
+
+    [Min(0f)]
+    [SerializeField]
+    private float _healVfxLifetimeSeconds =
+        DEFAULT_HEAL_VFX_LIFETIME_SECONDS;
 
     // target(피격 몬스터)은 쓰지 않는다 - 이 효과는 "공격이 발생했다"는 신호만 이용해
     // 시전자 주변 아군 타워를 회복시킨다.
@@ -27,6 +39,15 @@ public sealed class TowerHealAuraEffectSO : AttackEffectSO
 
         Tower owner = context.Source.GetComponent<Tower>();
         Vector3 center = context.Source.transform.position;
+
+        if (_healVfxPrefab != null)
+        {
+            ProjectilePool.PlayForSeconds(
+                _healVfxPrefab,
+                center,
+                Quaternion.identity,
+                _healVfxLifetimeSeconds);
+        }
 
         float radiusY = _radius * IsometricMath.RADIUS_Y_RATIO;
 

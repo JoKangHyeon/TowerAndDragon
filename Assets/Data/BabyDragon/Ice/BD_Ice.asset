@@ -13,13 +13,16 @@ MonoBehaviour:
   m_Name: BD_Ice
   m_EditorClassIdentifier: Assembly-CSharp::BabyDragonData
   _nameLocKey: baby_dragon_name_ice
+  _requiresResearchUnlock: 0
   _populationCapacity: 1
   _buildCost: []
   _maxHealth: 100
   _reviveDelay: 30
   _attack: {fileID: 11400000, guid: d9986a43fb0d73342a3c28319b2968f1, type: 2}
-  _projectilePrefab: {fileID: 2874056009116883397, guid: 38af852f1edcb409b86dc0c03eddafad, type: 3}
+  _targetMovementFilter: 0
+  _projectilePrefab: {fileID: 8583756517732715021, guid: 07b967b7af62cab4990aaabd1e8d5c57, type: 3}
   _projectileSpeed: 10
+  _attackRangeMarkerPrefab: {fileID: 0}
   _dragonType: 0
   _sprite: {fileID: 21300000, guid: 8d89e8834c8c148b0823f19bce9d1cbf, type: 3}
   _baseFeed: 2
@@ -31,4 +34,7 @@ MonoBehaviour:
   _buffYieldMultiplier: 1
   _buffTargetResources: 0
   _constructionUnlockTerrains: 02000000
+  _penaltyMitigationTerrains: 
+  _attackRangeVfxPrefab: {fileID: 2948606218480594291, guid: 0805018af9107c647a808a9d801cf79a, type: 3}
+  _buffRangeVfxPrefab: {fileID: 2552695468363082118, guid: f8f3622324db66f43b2701a4093bb9fd, type: 3}
   _towerAura: {fileID: 0}

@@ -13,13 +13,17 @@ MonoBehaviour:
   m_Name: BD_Time
   m_EditorClassIdentifier: Assembly-CSharp::BabyDragonData
   _nameLocKey: baby_dragon_name_time
+  _requiresResearchUnlock: 0
   _populationCapacity: 1
   _buildCost: []
   _maxHealth: 100
   _reviveDelay: 30
   _attack: {fileID: 11400000, guid: f082ad72b8aae06448c94ba84225cf4a, type: 2}
-  _projectilePrefab: {fileID: 2874056009116883397, guid: 0e986a88d98732a44b1b05aeec3686bb, type: 3}
+  _targetMovementFilter: 0
+  _projectilePrefab: {fileID: 6302583890803786071, guid: 6d4b4d65b3f4b45a78b3cf4f811975e8, type: 3}
   _projectileSpeed: 10
+  _attackRangeMarkerPrefab: {fileID: 0}
+  _allyHealOrbPrefab: {fileID: 0}
   _dragonType: 2
   _sprite: {fileID: 21300000, guid: 97ef1a22ac5404ef4a45a32dfcc7f982, type: 3}
   _baseFeed: 2
@@ -32,4 +36,6 @@ MonoBehaviour:
   _buffTargetResources: 0
   _constructionUnlockTerrains: 
   _penaltyMitigationTerrains: 03000000
+  _attackRangeVfxPrefab: {fileID: 6424746762206910224, guid: 4415099618d4e1947be8599af508018f, type: 3}
+  _buffRangeVfxPrefab: {fileID: 8420765617768561896, guid: 9c7fd43577ba50744b597a4ecc72d28a, type: 3}
   _towerAura: {fileID: 0}
