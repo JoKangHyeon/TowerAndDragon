@@ -488,7 +488,6 @@ public class MeteorBarricadeSkill : Skill
     private GameObject _previewInstance;
     private GridMap _gridMap;
     private Building _buildingPrefab;
-    private static readonly int ENEMY_LAYER_MASK = LayerMask.GetMask(Defines.ENEMY_LAYER_NAME);
 
     private void EnsureCached()
     {
@@ -602,7 +601,7 @@ public class MeteorBarricadeSkill : Skill
         // 2. [데미지 파트] 설치가 확실시되었으므로 데미지를 먼저 줍니다.
         float radiusX = AreaRadius;
         float radiusY = AreaRadius * IsometricMath.RADIUS_Y_RATIO;
-        LayerMask layers = TargetLayers != 0 ? TargetLayers : ENEMY_LAYER_MASK;
+        LayerMask layers = TargetLayers != 0 ? TargetLayers : LayerMasks.Enemy;
 
         Collider2D[] hitColliders = Physics2D.OverlapCircleAll(context.TargetPoint, radiusX, layers);
         HashSet<BaseMonster> targets = new HashSet<BaseMonster>();

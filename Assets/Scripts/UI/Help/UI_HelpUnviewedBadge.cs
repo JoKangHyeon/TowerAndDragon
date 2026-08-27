@@ -12,11 +12,17 @@ using UnityEngine;
 /// 프리팹 안에서 배선이 닫힌다(UI_Canvas 오버라이드도, 씬 수정도 필요 없다).
 ///
 /// HelpDiscoveryController가 없는 튜토리얼 씬에서도 UnlockedFromStart 항목 몫으로 동작한다.
+///
+/// 적 정보 탭이 생긴 뒤로는 두 카탈로그(도움말·적 정보) 중 어느 한쪽에라도 미확인 항목이 있으면
+/// 켠다 - HUD 점은 "도감에 볼 게 남았다"는 사실 하나만 전하고, 어느 탭인지는 창을 열어야 안다.
 /// </summary>
 public sealed class UI_HelpUnviewedBadge : MonoBehaviour
 {
-    [Tooltip("도감 항목 전체 목록. UI_HelpWindow와 반드시 같은 에셋을 지정한다.")]
+    [Tooltip("도움말 항목 전체 목록. UI_HelpWindow와 반드시 같은 에셋을 지정한다.")]
     [SerializeField] private HelpCatalogSO _catalog;
+
+    [Tooltip("적 정보 항목 전체 목록. UI_HelpWindow와 반드시 같은 에셋을 지정한다.")]
+    [SerializeField] private MonsterCodexCatalogSO _monsterCatalog;
 
     [Tooltip("버튼 우상단의 붉은 점(Dot_Unviewed).")]
     [SerializeField] private GameObject _dot;
@@ -24,6 +30,7 @@ public sealed class UI_HelpUnviewedBadge : MonoBehaviour
     private void Awake()
     {
         WiringGuard.Require(_catalog, nameof(_catalog), this);
+        WiringGuard.Require(_monsterCatalog, nameof(_monsterCatalog), this);
         WiringGuard.Require(_dot, nameof(_dot), this);
     }
 
@@ -45,11 +52,14 @@ public sealed class UI_HelpUnviewedBadge : MonoBehaviour
 
     private void Render()
     {
-        if (_dot == null || _catalog == null)
+        if (_dot == null)
         {
             return;
         }
 
-        _dot.SetActive(_catalog.HasUnviewedVisibleEntry());
+        bool hasUnviewedHelp = _catalog != null && _catalog.HasUnviewedVisibleEntry();
+        bool hasUnviewedMonster = _monsterCatalog != null && _monsterCatalog.HasUnviewedVisibleEntry();
+
+        _dot.SetActive(hasUnviewedHelp || hasUnviewedMonster);
     }
 }

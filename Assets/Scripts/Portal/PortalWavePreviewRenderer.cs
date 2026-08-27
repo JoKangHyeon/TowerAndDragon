@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.Splines;
 
 /// <summary>
@@ -49,6 +50,12 @@ public class PortalWavePreviewRenderer : MonoBehaviour
 
     [Tooltip("경로 지면 기준 카드 미세 조정 오프셋.")]
     [SerializeField] private Vector3 _cardOffset = Vector3.zero;
+
+    [Tooltip("예고 카드에 실제로 뜬 적 종류. 적 도감 해금(MonsterCodexDiscoveryController)이 이것을 듣는다. " +
+             "안개에 덮여 카드가 뜨지 않은 적은 여기서 발화하지 않는다 - 정찰한 만큼만 해금되게 하기 위함이다.")]
+    [SerializeField] private UnityEvent<MonsterData> _monsterPreviewShown = new();
+
+    public UnityEvent<MonsterData> MonsterPreviewShown => _monsterPreviewShown;
 
     // 칸 순서를 루트 인덱스로 고정해, 편성 작성 순서가 바뀌어도 날마다 아이콘 순서가 뒤바뀌지 않게 한다.
     private static readonly Comparison<RouteSpawnPlan> ROUTE_ORDER =
@@ -246,6 +253,13 @@ public class PortalWavePreviewRenderer : MonoBehaviour
             UI_PortalWavePreviewCard card = _cardPool.Get(usedCardCount);
             card.transform.position = anchor + _cardOffset;
             card.Setup(_entryBuffer, _tooltipPresenter);
+
+            // 안개 판정(TryResolveAnchor)을 통과해 카드가 실제로 뜬 뒤에만 알린다 -
+            // 정찰하지 않은 포탈의 적까지 해금되면 "정찰한 만큼 안다"는 예고 카드의 전제가 깨진다.
+            for (int i = 0; i < _entryBuffer.Count; i++)
+            {
+                _monsterPreviewShown.Invoke(_entryBuffer[i].Data);
+            }
 
             usedCardCount++;
         }

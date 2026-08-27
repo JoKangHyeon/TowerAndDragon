@@ -27,9 +27,6 @@ public sealed class HoverOutlineDriver : MonoBehaviour
     private static readonly Color DEFAULT_BUILDING_OUTLINE_COLOR = new(0.016616056f, 0.7956049f, 1.0592737f, 1f);
     private static readonly Color DEFAULT_ENEMY_OUTLINE_COLOR = Color.red;
 
-    // Skill.cs의 MeteorBarricadeSkill과 같은 선례 - 씬마다 흩어진 인스펙터 값 대신 여기서 한 번만 계산한다.
-    private static readonly int ENEMY_LAYER_MASK = LayerMask.GetMask(Defines.ENEMY_LAYER_NAME);
-
     [Tooltip("포인터의 월드 좌표를 얻을 컨트롤러. 건물·적 판정이 이 좌표 하나만 공유해야 서로 다른 것을 가리키지 않는다.")]
     [SerializeField] private MouseSelectController _mouseSelectController;
 
@@ -133,7 +130,7 @@ public sealed class HoverOutlineDriver : MonoBehaviour
     private static BaseMonster ResolveHoveredMonster(Vector3 pointerWorldPoint) =>
         BaseMonster.ActiveMonsters.Count == 0
             ? null
-            : MonsterPicker.FindUnderPointer(pointerWorldPoint, ENEMY_LAYER_MASK);
+            : MonsterPicker.FindUnderPointer(pointerWorldPoint, LayerMasks.Enemy);
 
     // 클릭 후보(BuildingClickCycle)와 같은 집합·같은 비교자를 쓴다 - "눌리는 것"과 "아웃라인이 뜨는
     // 것"이 갈라지지 않는다.

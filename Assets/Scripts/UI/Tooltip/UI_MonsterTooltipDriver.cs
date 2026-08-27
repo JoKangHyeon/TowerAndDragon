@@ -22,11 +22,6 @@ public class UI_MonsterTooltipDriver : MonoBehaviour
     // 상태이상의 남은 시간이 계속 줄어들므로 갱신 주기가 실제로 일을 한다(건물 툴팁과 같은 값).
     private const float DEFAULT_REFRESH_INTERVAL = 0.25f;
 
-    // 적 레이어는 씬마다 흩어진 인스펙터 값 대신 여기서 한 번만 계산한다 - Skill.cs의
-    // MeteorBarricadeSkill과 같은 선례. WiringChecker는 LayerMask가 Nothing으로 남아도
-    // "값이 있다"고 보므로 씬 간 값 어긋남을 도구로 잡을 수 없다.
-    private static readonly int ENEMY_LAYER_MASK = LayerMask.GetMask(Defines.ENEMY_LAYER_NAME);
-
     [SerializeField] private UI_TooltipPresenter _presenter;
 
     [Tooltip("스킬 타겟팅 중에는 툴팁을 띄우지 않는다(타겟 인디케이터와 겹친다). 비우면 그 판정을 건너뛴다.")]
@@ -129,7 +124,7 @@ public class UI_MonsterTooltipDriver : MonoBehaviour
 
         monster = MonsterPicker.FindUnderPointer(
             MonsterPicker.GetMouseWorldPoint(_camera),
-            ENEMY_LAYER_MASK);
+            LayerMasks.Enemy);
 
         return monster != null;
     }

@@ -68,6 +68,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8313005818197465626}
   - component: {fileID: 1524292489982518287}
+  - component: {fileID: 1883520824767675445}
   m_Layer: 0
   m_Name: PortalWavePreviewRenderer
   m_TagString: Untagged
@@ -112,9 +113,27 @@ MonoBehaviour:
   _gridMap: {fileID: 0}
   _cycleManager: {fileID: 0}
   _cardPrefab: {fileID: 9072625321882642297, guid: 55bda92baec117b4d883981bc154cbdb, type: 3}
+  _tooltipPresenter: {fileID: 0}
   _corridorRouteIndex: 1
   _corridorSampleStep: 0.5
   _cardOffset: {x: 0, y: 0, z: 0}
+  _monsterPreviewShown:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &1883520824767675445
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1349891631276929082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c26d5d1327b9b0840960e40744840655, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterCodexDiscoveryController
+  _catalog: {fileID: 11400000, guid: 0f91af79a0eb2b045b41560685312ea5, type: 2}
+  _previewRenderer: {fileID: 1524292489982518287}
 --- !u!1 &4304613168157574619
 GameObject:
   m_ObjectHideFlags: 0
@@ -580,6 +599,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac9add762445ff643b9ee93be055861b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyEnhancementManager
+  _runModifierService: {fileID: 0}
 --- !u!114 &8359693986921846839
 MonoBehaviour:
   m_ObjectHideFlags: 0
