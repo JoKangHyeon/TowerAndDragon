@@ -23,10 +23,14 @@ using UnityEngine.UI;
 /// 불리므로 <see cref="EnsureResolved"/>로 그 자리에서 계산한다 - 프레임당 한 번만 돈다.
 /// </summary>
 public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IDayEndConfirmBlockQuery,
-    IPointerClickHandler, ICameraInputTransparent
+    IPointerClickHandler, IScrollHandler, ICameraInputTransparent
 {
     private const int DIM_PANEL_COUNT = 4;
     private const int RECT_CORNER_COUNT = 4;
+
+    // RectTransform.GetWorldCorners의 순서: 0 좌하 · 1 좌상 · 2 우상 · 3 우하.
+    private const int BOTTOM_LEFT_CORNER = 0;
+    private const int TOP_LEFT_CORNER = 1;
     private const string DIM_PANEL_NAME = "GuideDim";
     private const string HOLE_BLOCKER_NAME = "GuideHoleBlocker";
     private const float DEFAULT_DIM_ALPHA = 0.85f;
@@ -224,6 +228,49 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IDayEndConfirmB
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 딤 위에서 굴린 휠을 지금 가리키는 대상이 든 목록으로 넘긴다.
+    ///
+    /// 구멍 위에서는 대상이 직접 휠을 받아 목록까지 올라간다. 문제는 그 목록을 굴려 대상이 커서 밑에서
+    /// 벗어나는 순간인데, 그때부터는 커서 아래가 전부 딤이라 되돌려 굴릴 방법이 없어진다
+    /// (건설 목록에서 가리킨 슬롯을 밀어내면 다시 찾아올 수 없었다).
+    ///
+    /// 딤 조각마다 스크립트를 붙이지 않는 이유는 <see cref="IPointerClickHandler"/>와 같다 -
+    /// 이벤트가 부모로 거슬러 올라오므로 루트의 이 컴포넌트가 대신 받는다.
+    /// </summary>
+    void IScrollHandler.OnScroll(PointerEventData eventData)
+    {
+        if (!_visualsActive || !_blocksInput || eventData == null)
+        {
+            return;
+        }
+
+        // 말풍선의 확인 버튼 위에서 굴린 것까지 목록으로 보내지는 않는다 - 막은 곳의 휠만 되살린다.
+        if (!IsDimPart(eventData.pointerCurrentRaycast.gameObject))
+        {
+            return;
+        }
+
+        ScrollRect targetScroll = TargetScrollRect;
+        if (targetScroll != null)
+        {
+            targetScroll.OnScroll(eventData);
+        }
+    }
+
+    /// <summary>
+    /// 지금 가리키는 대상이 들어 있는 목록. 대상이 목록 밖(HUD 버튼 등)이면 null이고, 그때는 딤 위의
+    /// 휠이 아무 데도 가지 않는다 - 굴릴 목록이 없는데 뒤쪽을 움직이면 안내가 가리킨 것이 사라진다.
+    /// </summary>
+    private ScrollRect TargetScrollRect
+    {
+        get
+        {
+            EnsureResolved();
+            return _target == null ? null : _target.GetComponentInParent<ScrollRect>();
+        }
     }
 
     // Overlay 모드에서는 카메라를 넘기면 좌표가 어긋나므로 null이어야 한다.
@@ -972,11 +1019,66 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IDayEndConfirmB
 
     private void Layout()
     {
+        KeepTargetInsideMask(_target);
+
         Rect hole = ResolveLocalRect(_target);
         SetSpotlightActive(true);
         LayoutDim(hole);
         LayoutHighlight(hole);
         LayoutHoleBlocker(hole);
+    }
+
+    /// <summary>
+    /// 가리키는 대상이 목록 밖으로 밀려나지 않게 스크롤을 최소한으로 되돌린다.
+    ///
+    /// 딤 구멍은 "여기를 눌러라"라는 뜻이라 대상이 보이지 않는 순간을 만들면 안 된다. 구멍을 목록 전체로
+    /// 넓혀 봤더니 "이 목록 아무거나"로 읽혔고, 가장자리로 옮겨 붙이면 그 자리엔 다른 슬롯이 있어
+    /// 누르면 엉뚱한 것이 눌린다. 그래서 <b>구멍을 손보는 대신 대상이 나가지 못하게 붙잡는다</b> -
+    /// 하이라이트는 언제나 진짜 대상 위에 있고, 목록은 대상이 다 보이는 범위 안에서 자유롭게 굴러간다.
+    ///
+    /// 단계에 들어서는 순간의 자리 맞춤은 여기가 아니라 창이 한다
+    /// (<see cref="UI_BuildModeWindow.ScrollSlotIntoView"/>). 이쪽은 그 뒤로 벗어나지 않게만 지킨다.
+    /// </summary>
+    private void KeepTargetInsideMask(RectTransform target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        ScrollRect scroll = target.GetComponentInParent<ScrollRect>();
+        if (scroll == null || !scroll.vertical || scroll.content == null || scroll.viewport == null)
+        {
+            return;
+        }
+
+        float viewHeight = scroll.viewport.rect.height;
+        float scrollableHeight = scroll.content.rect.height - viewHeight;
+        if (scrollableHeight <= 0f)
+        {
+            return;
+        }
+
+        // 거리는 전부 내용의 위 끝에서 아래로 잰다 - 스크롤 값(1이 맨 위)과 방향이 반대라 섞으면 헷갈린다.
+        target.GetWorldCorners(_cornerBuffer);
+        float contentTop = scroll.content.rect.yMax;
+        float targetTop = contentTop - scroll.content.InverseTransformPoint(_cornerBuffer[TOP_LEFT_CORNER]).y;
+        float targetBottom =
+            contentTop - scroll.content.InverseTransformPoint(_cornerBuffer[BOTTOM_LEFT_CORNER]).y;
+
+        // 대상이 다 보이려면 보이는 창의 위 끝이 [대상 아래끝 - 창 높이, 대상 위끝] 안에 있어야 한다.
+        float viewTop = (1f - scroll.verticalNormalizedPosition) * scrollableHeight;
+        float clampedTop = Mathf.Clamp(viewTop, targetBottom - viewHeight, targetTop);
+        clampedTop = Mathf.Clamp(clampedTop, 0f, scrollableHeight);
+
+        if (Mathf.Approximately(clampedTop, viewTop))
+        {
+            return;
+        }
+
+        // 관성이 남아 있으면 다음 프레임에 다시 밀고 들어와 벽에 부딪히며 떤다.
+        scroll.velocity = Vector2.zero;
+        scroll.verticalNormalizedPosition = 1f - clampedTop / scrollableHeight;
     }
 
     private void LayoutWorldTarget()
@@ -1064,7 +1166,82 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IDayEndConfirmB
     // 대상의 화면 사각형을 오버레이 로컬 좌표(피벗 기준)로 옮긴다.
     private Rect ResolveLocalRect(RectTransform target)
     {
-        target.GetWorldCorners(_cornerBuffer);
+        if (!TryProjectToOverlayLocal(target, out Rect targetRect))
+        {
+            return Rect.zero;
+        }
+
+        var padding = new Vector2(_holePadding, _holePadding);
+        Vector2 min = targetRect.min - padding;
+        Vector2 max = targetRect.max + padding;
+
+        return ClipToMask(target, new Rect(min, max - min));
+    }
+
+    /// <summary>
+    /// 구멍을 대상이 잘리는 영역(스크롤 뷰포트 등) 안으로 자른다. 대상의 RectTransform은 목록을 굴려도
+    /// 제자리에 그대로 있고 <b>그려질 때만</b> 마스크에 잘리므로, 자르지 않으면 화면에서 이미 사라진
+    /// 슬롯을 따라 구멍만 패널 밖으로 빠져나간다.
+    ///
+    /// 겹치는 데가 없으면 구멍을 내지 않는다. 굴릴 수 있는 목록이면 <see cref="KeepTargetInsideMask"/>가
+    /// 그 전에 붙잡으므로 여기까지 오지 않고, 굴릴 수 없는 마스크라면 가리킬 것이 정말로 화면에 없다 -
+    /// 그때 영역 전체를 뚫으면 "이 안에서 아무거나"로 읽혀 무엇을 누르라는 안내인지가 사라진다.
+    /// </summary>
+    private Rect ClipToMask(RectTransform target, Rect hole)
+    {
+        if (!TryResolveMaskLocalRect(target, out Rect maskRect))
+        {
+            return hole;
+        }
+
+        float xMin = Mathf.Max(hole.xMin, maskRect.xMin);
+        float xMax = Mathf.Min(hole.xMax, maskRect.xMax);
+        float yMin = Mathf.Max(hole.yMin, maskRect.yMin);
+        float yMax = Mathf.Min(hole.yMax, maskRect.yMax);
+
+        if (xMin >= xMax || yMin >= yMax)
+        {
+            return Rect.zero;
+        }
+
+        return new Rect(xMin, yMin, xMax - xMin, yMax - yMin);
+    }
+
+    /// <summary>
+    /// 대상을 잘라내는 가장 가까운 마스크의 사각형. 마스크 밑이 아니면 false다.
+    /// RectMask2D와 Mask 중 어느 쪽이 먼저 나오는지는 알 수 없으므로 부모를 거슬러 올라가며 둘 다 본다 -
+    /// 한쪽만 찾으면 더 가까운 다른 쪽을 지나쳐 엉뚱하게 넓은 영역으로 자르게 된다.
+    /// </summary>
+    private bool TryResolveMaskLocalRect(RectTransform target, out Rect maskRect)
+    {
+        maskRect = Rect.zero;
+
+        for (Transform current = target; current != null; current = current.parent)
+        {
+            var rect = current as RectTransform;
+            if (rect == null)
+            {
+                continue;
+            }
+
+            bool clips = (current.TryGetComponent(out RectMask2D rectMask) && rectMask.enabled) ||
+                         (current.TryGetComponent(out Mask mask) && mask.MaskEnabled());
+
+            if (clips)
+            {
+                return TryProjectToOverlayLocal(rect, out maskRect);
+            }
+        }
+
+        return false;
+    }
+
+    // 어떤 RectTransform이든 _overlayRoot의 로컬 좌표계에서 차지하는 사각형으로 옮긴다.
+    // 구멍도 마스크 영역도 같은 계로 맞춰야 서로 자를 수 있다.
+    private bool TryProjectToOverlayLocal(RectTransform rect, out Rect localRect)
+    {
+        localRect = Rect.zero;
+        rect.GetWorldCorners(_cornerBuffer);
 
         Camera uiCamera = UiCamera;
         var min = new Vector2(float.MaxValue, float.MaxValue);
@@ -1085,13 +1262,11 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IDayEndConfirmB
 
         if (min.x > max.x || min.y > max.y)
         {
-            return Rect.zero;
+            return false;
         }
 
-        var padding = new Vector2(_holePadding, _holePadding);
-        min -= padding;
-        max += padding;
-        return new Rect(min, max - min);
+        localRect = new Rect(min, max - min);
+        return true;
     }
 
     private bool TryResolveWorldLocalRect(Renderer target, out Rect localRect)
