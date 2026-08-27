@@ -12,6 +12,11 @@ public class TowerData : ScriptableObject
     [Tooltip("켜면 연구로 해금하기 전까지 건설 메뉴에 나오지 않는다. 기본 타워는 꺼 둔다.")]
     [SerializeField] private bool _requiresResearchUnlock;
 
+    // 건설 메뉴 슬롯은 프리팹의 SpriteRenderer에서 아이콘을 직접 꺼내 쓰므로(UI_BuildingSlot.ResolveIcon)
+    // 이 필드가 없어도 동작한다. 알림 카드처럼 프리팹이 아니라 TowerData만 들고 있는 쪽을 위한 값이다.
+    [Tooltip("알림 카드 등 프리팹 없이 이 타워를 가리키는 UI에 띄울 이미지. 비워두면 이미지 없이 표시된다.")]
+    [SerializeField] private Sprite _icon;
+
     [Header("Population")]
     [SerializeField]
     [Min(1)]
@@ -43,6 +48,7 @@ public class TowerData : ScriptableObject
     public string NameLocKey => _nameLocKey;
     public virtual TowerCategory Category => TowerCategory.Basic;
     public bool RequiresResearchUnlock => _requiresResearchUnlock;
+    public Sprite Icon => _icon;
     public virtual int PopulationCapacity => _populationCapacity;
     public IReadOnlyList<ResourceAmount> BuildCost => _buildCost ?? System.Array.Empty<ResourceAmount>();
     public float MaxHealth => _maxHealth;
