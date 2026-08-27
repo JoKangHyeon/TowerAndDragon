@@ -12,6 +12,11 @@ public class SoundCatalog : ScriptableObject
 
     [Header("타워 효과음 화면 기준 재생")]
 
+    [Tooltip("타워·새끼용 전투음 전체에 곱하는 배수. 항목별 Volume의 상대 밸런스는 유지한 채 전투음만 한꺼번에 올리고 내린다. " +
+        "UI·건설·몬스터·BGM에는 영향이 없다.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _seTowerVolumeScale = 1f;
+
     [Tooltip("화면 중심에서 이 거리까지는 볼륨을 줄이지 않는다. 화면 가장자리가 1이다.")]
     [Min(0f)]
     [SerializeField] private float _seFullVolumeViewportRatio = 1f;
@@ -32,6 +37,7 @@ public class SoundCatalog : ScriptableObject
     [Range(0f, 1f)]
     [SerializeField] private float _seMinZoomVolumeScale = 0.4f;
 
+    public float SeTowerVolumeScale => _seTowerVolumeScale;
     public float SeFullVolumeViewportRatio => _seFullVolumeViewportRatio;
     public float SeCutoffViewportRatio => _seCutoffViewportRatio;
     public float SePanAmount => _sePanAmount;

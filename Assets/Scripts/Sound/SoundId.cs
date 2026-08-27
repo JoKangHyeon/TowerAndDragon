@@ -39,4 +39,16 @@ public enum SoundId
     TowerLifeLaunch,
     TowerLifeResolve,
     TowerAuraOn,
+
+    // 새끼용 공격 모드 효과음. 새끼용도 TowerData를 상속하므로 같은 Launch/Resolve 구조를 쓴다.
+    BabyDragonFireLaunch,
+    BabyDragonFireResolve,
+    BabyDragonIceLaunch,
+    BabyDragonIceResolve,
+    BabyDragonTimeLaunch,
+    BabyDragonTimeResolve,
+    BabyDragonStoneLaunch,
+    BabyDragonStoneResolve,
+    BabyDragonLifeLaunch,
+    BabyDragonLifeResolve,
 }

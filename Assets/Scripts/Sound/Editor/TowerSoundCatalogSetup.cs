@@ -21,12 +21,14 @@ public static class TowerSoundCatalogSetup
     private const string PITCH_RANGE_PROPERTY = "_pitchRange";
     private const string MIN_INTERVAL_PROPERTY = "_minInterval";
 
+    private const string TOWER_VOLUME_SCALE_PROPERTY = "_seTowerVolumeScale";
     private const string FULL_VOLUME_RATIO_PROPERTY = "_seFullVolumeViewportRatio";
     private const string CUTOFF_RATIO_PROPERTY = "_seCutoffViewportRatio";
     private const string PAN_AMOUNT_PROPERTY = "_sePanAmount";
     private const string ZOOM_REFERENCE_SIZE_PROPERTY = "_seZoomReferenceSize";
     private const string MIN_ZOOM_VOLUME_PROPERTY = "_seMinZoomVolumeScale";
 
+    private const float TOWER_VOLUME_SCALE = 1f;
     private const float FULL_VOLUME_RATIO = 1f;
     private const float CUTOFF_RATIO = 1.8f;
     private const float PAN_AMOUNT = 0.6f;
@@ -70,6 +72,18 @@ public static class TowerSoundCatalogSetup
         new(SoundId.TowerLifeLaunch, "Magic_Spells/casting_charge_matter_fast_01.wav", 0.32f, 1.10f, 1.16f, 0.25f),
         new(SoundId.TowerLifeResolve, "Magic_Spells/healing_magic_spell_02.wav", 0.42f, 0.97f, 1.03f, 0.25f),
         new(SoundId.TowerAuraOn, "Magic_Spells/light_in_dark_spell_01.wav", 0.45f, 0.98f, 1.02f, 0.50f),
+
+        // 새끼용 공격 모드. 클립을 타워와 공유하는 항목은 피치 대역을 겹치지 않게 잡는다(§7-2).
+        new(SoundId.BabyDragonFireLaunch, "Magic_Spells/fireball_blast_projectile_spell_06.wav", 0.40f, 0.94f, 1.06f, 0.20f),
+        new(SoundId.BabyDragonFireResolve, "Magic_Spells/fireball_impact_burn_01.wav", 0.45f, 1.10f, 1.16f, 0.20f),
+        new(SoundId.BabyDragonIceLaunch, "Magic_Spells/ice_spell_forming_shards_04.wav", 0.40f, 1.08f, 1.14f, 0.20f),
+        new(SoundId.BabyDragonIceResolve, "Magic_Spells/ice_spell_freeze_frost_01.wav", 0.50f, 0.94f, 1.06f, 0.20f),
+        new(SoundId.BabyDragonTimeLaunch, "Magic_Spells/energy_blast_large_01.wav", 0.38f, 0.94f, 1.06f, 0.25f),
+        new(SoundId.BabyDragonTimeResolve, "Magic_Spells/electric_surge_blast_02.wav", 0.45f, 0.94f, 1.06f, 0.25f),
+        new(SoundId.BabyDragonStoneLaunch, "Magic_Spells/whoosh_magic_spell_01.wav", 0.45f, 0.96f, 1.04f, 0.35f),
+        new(SoundId.BabyDragonStoneResolve, "Impacts_Smashable/rock_impact_heavy_slam_02.wav", 0.65f, 0.96f, 1.04f, 0.35f),
+        new(SoundId.BabyDragonLifeLaunch, "Magic_Spells/casting_charge_matter_fast_01.wav", 0.32f, 1.20f, 1.26f, 0.25f),
+        new(SoundId.BabyDragonLifeResolve, "Magic_Spells/nature_spell_bush_tree_whip_03.wav", 0.45f, 0.97f, 1.03f, 0.25f),
     };
 
     [MenuItem("TowerAndDragon/Sound/타워 효과음 카탈로그 채우기")]
@@ -118,6 +132,7 @@ public static class TowerSoundCatalogSetup
             entry.FindPropertyRelative(MIN_INTERVAL_PROPERTY).floatValue = spec.MinInterval;
         }
 
+        SetFloat(serialized, TOWER_VOLUME_SCALE_PROPERTY, TOWER_VOLUME_SCALE);
         SetFloat(serialized, FULL_VOLUME_RATIO_PROPERTY, FULL_VOLUME_RATIO);
         SetFloat(serialized, CUTOFF_RATIO_PROPERTY, CUTOFF_RATIO);
         SetFloat(serialized, PAN_AMOUNT_PROPERTY, PAN_AMOUNT);
@@ -128,7 +143,12 @@ public static class TowerSoundCatalogSetup
         EditorUtility.SetDirty(catalog);
         AssetDatabase.SaveAssets();
 
-        Debug.Log($"[TowerSoundCatalogSetup] 추가 {added} · 갱신 {updated} · 클립 누락 {missingClips}", catalog);
+        // 파라미터도 함께 찍는다 - 인스펙터에서 조정한 값을 이 도구가 되돌렸을 때 콘솔만 봐도 알아채도록.
+        Debug.Log(
+            $"[TowerSoundCatalogSetup] 추가 {added} · 갱신 {updated} · 클립 누락 {missingClips}. " +
+            $"파라미터: 마스터 {TOWER_VOLUME_SCALE} · 감쇠 {FULL_VOLUME_RATIO}/{CUTOFF_RATIO} · " +
+            $"정위 {PAN_AMOUNT} · 줌 {ZOOM_REFERENCE_SIZE}/{MIN_ZOOM_VOLUME_SCALE}",
+            catalog);
     }
 
     private static SerializedProperty FindEntry(SerializedProperty sounds, SoundId id)

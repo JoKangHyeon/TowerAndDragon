@@ -356,10 +356,19 @@ public class SoundManager : MonoBehaviour
         volumeScale = FULL_VOLUME_SCALE;
         pan = CENTER_PAN;
 
-        Camera camera = Camera.main;
-        if (camera == null || _catalog == null)
+        if (_catalog == null)
         {
-            // 카메라 없는 테스트 씬에서는 기존 2D 재생과 똑같이 둔다.
+            return true;
+        }
+
+        // 타워 전투음 전체를 한 손잡이로 올리고 내린다. 항목별 Volume의 상대 밸런스는 그대로 유지된다.
+        float masterScale = _catalog.SeTowerVolumeScale;
+
+        Camera camera = Camera.main;
+        if (camera == null)
+        {
+            // 카메라 없는 테스트 씬에서는 화면 감쇠 없이 마스터 배수만 적용한다.
+            volumeScale = masterScale;
             return true;
         }
 
@@ -379,7 +388,7 @@ public class SoundManager : MonoBehaviour
             ? FULL_VOLUME_SCALE
             : Mathf.InverseLerp(cutoffRatio, fullVolumeRatio, screenDistance);
 
-        volumeScale *= GetZoomVolumeScale(camera);
+        volumeScale *= GetZoomVolumeScale(camera) * masterScale;
 
         if (volumeScale < MIN_AUDIBLE_VOLUME_SCALE)
         {

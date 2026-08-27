@@ -58,12 +58,12 @@ public static class TowerSoundDataWiring
         // 가시 타워는 투사체도 오라도 없다. 명시적으로 전부 끈다.
         new(TOWER_ROOT, "TD_ThornTower", null, null, null),
 
-        // 새끼용은 신규 클립을 받지 않는다. TowerAttack의 공용 발사음이 사라진 자리를 메우는 마이그레이션이다.
-        new(BABY_DRAGON_ROOT + "Fire/", "BD_Fire", SoundId.TowerFire, null, null),
-        new(BABY_DRAGON_ROOT + "Ice/", "BD_Ice", SoundId.TowerFire, null, null),
-        new(BABY_DRAGON_ROOT + "Time/", "BD_Time", SoundId.TowerFire, null, null),
-        new(BABY_DRAGON_ROOT + "Stone/", "BD_Stone", SoundId.TowerFire, null, null),
-        new(BABY_DRAGON_ROOT + "Life/", "BD_Life", SoundId.TowerFire, null, null),
+        // 새끼용 5종. 공용 TowerFire 마이그레이션을 거쳐 속성별 전용 Launch/Resolve로 확정됐다.
+        new(BABY_DRAGON_ROOT + "Fire/", "BD_Fire", SoundId.BabyDragonFireLaunch, SoundId.BabyDragonFireResolve, null),
+        new(BABY_DRAGON_ROOT + "Ice/", "BD_Ice", SoundId.BabyDragonIceLaunch, SoundId.BabyDragonIceResolve, null),
+        new(BABY_DRAGON_ROOT + "Time/", "BD_Time", SoundId.BabyDragonTimeLaunch, SoundId.BabyDragonTimeResolve, null),
+        new(BABY_DRAGON_ROOT + "Stone/", "BD_Stone", SoundId.BabyDragonStoneLaunch, SoundId.BabyDragonStoneResolve, null),
+        new(BABY_DRAGON_ROOT + "Life/", "BD_Life", SoundId.BabyDragonLifeLaunch, SoundId.BabyDragonLifeResolve, null),
     };
 
     [MenuItem("TowerAndDragon/Sound/타워 효과음 데이터 배선")]
