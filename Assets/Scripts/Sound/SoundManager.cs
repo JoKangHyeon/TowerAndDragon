@@ -19,6 +19,18 @@ public class SoundManager : MonoBehaviour
     // 크로스페이드하려면 이전 곡과 다음 곡을 동시에 물고 있어야 하므로 BGM 소스는 2개다.
     private const int BGM_SOURCE_COUNT = 2;
 
+    // 뷰포트 좌표는 화면 중앙이 0.5, 양 끝이 0과 1이다. 중앙에서의 거리를 화면 가장자리가 1이 되도록 정규화한다.
+    private const float VIEWPORT_CENTER = 0.5f;
+    private const float VIEWPORT_EDGE_SCALE = 2f;
+
+    private const float FULL_VOLUME_SCALE = 1f;
+    private const float CENTER_PAN = 0f;
+    private const float PAN_LIMIT = 1f;
+
+    // 이보다 작아진 소리는 아예 재생하지 않는다. 볼륨 0에 가까워도 AudioSource는 클립 길이만큼 잡혀 있어
+    // 들리지도 않는 화면 밖 소리가 화면 안 소리의 자리를 뺏는다.
+    private const float MIN_AUDIBLE_VOLUME_SCALE = 0.05f;
+
     private static SoundManager _current;
 
     // 로딩 화면이 이전 씬의 BGM을 넘겨받아 트는 동안에는 새 씬의 매니저가 자기 곡을 시작하지 않는다.
@@ -92,6 +104,19 @@ public class SoundManager : MonoBehaviour
         if (TryGetCurrent(out SoundManager current))
         {
             current.PlaySe(id);
+        }
+    }
+
+    /// <summary>
+    /// 위치가 있는 효과음을 재생한다. 화면 밖이면 재생하지 않고, 화면 가장자리 쪽일수록 작아지며 좌우로 정위된다.
+    /// 월드 거리가 아니라 화면 좌표로 판정하는 이유: 카메라가 오르소그래픽이고 줌이 카메라를 움직이지 않고
+    /// orthographicSize만 바꾸므로, 월드 거리로 자르면 줌아웃해서 화면에 보이는 타워가 들리지 않는다.
+    /// </summary>
+    public static void Play(SoundId id, Vector3 worldPosition)
+    {
+        if (TryGetCurrent(out SoundManager current))
+        {
+            current.PlaySeAt(id, worldPosition);
         }
     }
 
@@ -252,6 +277,24 @@ public class SoundManager : MonoBehaviour
 
     private void PlaySe(SoundId id)
     {
+        // 소스를 풀에서 돌려 쓰므로 정위를 되돌린다 - 안 그러면 직전 타워음의 좌우 치우침이 UI음에 남는다.
+        PlaySe(id, FULL_VOLUME_SCALE, CENTER_PAN);
+    }
+
+    private void PlaySeAt(SoundId id, Vector3 worldPosition)
+    {
+        if (!TryGetScreenPlacement(worldPosition, out float volumeScale, out float pan))
+        {
+            // 화면 밖이라 들리지 않는다. 재생하지 않았으므로 MinInterval도 소비하지 않는다 -
+            // 들리지도 않은 소리가 곧이어 화면 안에서 날 소리를 막으면 안 된다.
+            return;
+        }
+
+        PlaySe(id, volumeScale, pan);
+    }
+
+    private void PlaySe(SoundId id, float volumeScale, float pan)
+    {
         if (_catalog == null || !_catalog.TryGet(id, out SoundEntry entry))
         {
             return;
@@ -267,7 +310,68 @@ public class SoundManager : MonoBehaviour
 
         AudioSource source = TakeSeSource();
         source.pitch = entry.NextPitch;
-        source.PlayOneShot(entry.Clip, entry.Volume);
+        source.panStereo = pan;
+        source.PlayOneShot(entry.Clip, entry.Volume * volumeScale);
+    }
+
+    /// <summary>
+    /// 화면 좌표로 볼륨 배수와 좌우 정위를 구한다. 화면 밖으로 컷오프 비율만큼 벗어났으면 false다.
+    /// spatialBlend는 0으로 두고 여기서 직접 계산한다 - AudioListener가 카메라에 붙어 있는데
+    /// 줌이 카메라를 움직이지 않아 Unity의 3D 감쇠는 줌에 반응하지 못한다.
+    /// </summary>
+    private bool TryGetScreenPlacement(Vector3 worldPosition, out float volumeScale, out float pan)
+    {
+        volumeScale = FULL_VOLUME_SCALE;
+        pan = CENTER_PAN;
+
+        Camera camera = Camera.main;
+        if (camera == null || _catalog == null)
+        {
+            // 카메라 없는 테스트 씬에서는 기존 2D 재생과 똑같이 둔다.
+            return true;
+        }
+
+        Vector3 viewportPoint = camera.WorldToViewportPoint(worldPosition);
+        float offsetX = (viewportPoint.x - VIEWPORT_CENTER) * VIEWPORT_EDGE_SCALE;
+        float offsetY = (viewportPoint.y - VIEWPORT_CENTER) * VIEWPORT_EDGE_SCALE;
+        float screenDistance = Mathf.Max(Mathf.Abs(offsetX), Mathf.Abs(offsetY));
+
+        float cutoffRatio = _catalog.SeCutoffViewportRatio;
+        if (screenDistance >= cutoffRatio)
+        {
+            return false;
+        }
+
+        float fullVolumeRatio = _catalog.SeFullVolumeViewportRatio;
+        volumeScale = screenDistance <= fullVolumeRatio
+            ? FULL_VOLUME_SCALE
+            : Mathf.InverseLerp(cutoffRatio, fullVolumeRatio, screenDistance);
+
+        volumeScale *= GetZoomVolumeScale(camera);
+
+        if (volumeScale < MIN_AUDIBLE_VOLUME_SCALE)
+        {
+            return false;
+        }
+
+        pan = Mathf.Clamp(offsetX, -PAN_LIMIT, PAN_LIMIT) * _catalog.SePanAmount;
+        return true;
+    }
+
+    // 줌아웃할수록 멀어진 느낌이 나도록 볼륨을 낮춘다. 화면 위 위치와는 별개라 화면 중앙에 있는 타워도
+    // 줌 배율만으로 소리가 변한다. CameraController의 줌 범위를 참조하지 않는 이유는 사운드가 카메라
+    // 스크립트에 의존하지 않게 하려는 것 - 줌 범위를 바꿔도 여기는 그대로 둔다.
+    private float GetZoomVolumeScale(Camera camera)
+    {
+        if (!camera.orthographic || camera.orthographicSize <= 0f)
+        {
+            return FULL_VOLUME_SCALE;
+        }
+
+        return Mathf.Clamp(
+            _catalog.SeZoomReferenceSize / camera.orthographicSize,
+            _catalog.SeMinZoomVolumeScale,
+            FULL_VOLUME_SCALE);
     }
 
     private bool IsOnCooldown(SoundId id, SoundEntry entry)

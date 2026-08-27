@@ -170,9 +170,15 @@ public class TowerAllyHealer : MonoBehaviour
         return _ownerTower.Data.Attack.Interval / staffingRatio / AttackSpeedMultiplier;
     }
 
+    // 발사음과 투사체 생성 위치는 같은 기준을 쓴다 - TowerAttack.LaunchPosition과 같은 규칙이다.
+    private Vector3 LaunchPosition => _firePoint != null ? _firePoint.position : transform.position;
+
     private void Fire()
     {
-        SoundManager.Play(SoundId.TowerFire); // 타워 발사음 공용 사용
+        if (_ownerTower.Data.LaunchSound is SoundId launchSound)
+        {
+            SoundManager.Play(launchSound, LaunchPosition);
+        }
 
         float damageMultiplier = _statMultiplierQuery != null
             ? _statMultiplierQuery.GetDamageMultiplier(_ownerTower.Data)
@@ -210,7 +216,7 @@ public class TowerAllyHealer : MonoBehaviour
 
     private void LaunchProjectile(Tower target, in AttackContext context)
     {
-        Vector3 spawnPosition = _firePoint != null ? _firePoint.position : transform.position;
+        Vector3 spawnPosition = LaunchPosition;
         GameObject projectileObject = Instantiate(_ownerTower.Data.ProjectilePrefab, spawnPosition, Quaternion.identity);
 
         Projectile projectile = projectileObject.GetComponent<Projectile>();
@@ -221,6 +227,11 @@ public class TowerAllyHealer : MonoBehaviour
             return;
         }
 
-        projectile.Launch(target, _ownerTower.Data.Attack, in context, _ownerTower.Data.ProjectileSpeed);
+        projectile.Launch(
+            target,
+            _ownerTower.Data.Attack,
+            in context,
+            _ownerTower.Data.ProjectileSpeed,
+            _ownerTower.Data.ResolveSound);
     }
 }
