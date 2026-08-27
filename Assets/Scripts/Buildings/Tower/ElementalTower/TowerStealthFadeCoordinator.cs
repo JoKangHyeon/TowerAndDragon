@@ -20,7 +20,7 @@ public sealed class TowerStealthFadeCoordinator : MonoBehaviour
     // 실제로 놓고 정한 값이다. 낮출수록 "숨어 있다"가 분명해지지만 눈으로 찾기 어려워진다.
     // 클릭 판정은 알파와 무관하다 - 건물 선택은 그리드 셀 기준이고 SpriteHitTest도
     // 텍스처 알파가 아니라 실루엣 폴리곤을 쓴다. 즉 여기서 막히는 것은 조작이 아니라 시야다.
-    private const float STEALTH_ALPHA = 0.35f;
+    private const float STEALTH_ALPHA = 0.5f;
 
     private GridMap _gridMap;
 

@@ -248,14 +248,15 @@ public class MonsterAttack : MonoBehaviour
             _attackPowerModifier,
             _targetLayers);
 
+        if (_animator != null)
+            _animator.SetTrigger(_animKeyEnemyAttack);
+
         if (!_data.HasProjectile)
         {
             _attack.Execute(target, in context);
             return;
         }
 
-        if (_animator != null)
-            _animator.SetTrigger(_animKeyEnemyAttack);
         LaunchProjectile(target, in context);
     }
     private void LaunchProjectile(IAttackTarget target, in AttackContext context)
