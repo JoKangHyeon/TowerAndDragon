@@ -7200,7 +7200,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BuildingHoverOutlineDriver
   _mouseSelectController: {fileID: 250167905}
+  _gridMap: {fileID: 313449541}
   _placementController: {fileID: 1692054028}
+  _skillTargetingController: {fileID: 914589615}
+  _towerOutlineColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  _buildingOutlineColor: {r: 0.016616056, g: 0.7956049, b: 1.0592737, a: 1}
+  _enemyOutlineColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!1 &1698710668
 GameObject:
   m_ObjectHideFlags: 0
@@ -7441,9 +7446,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI_MonsterTooltipDriver
   _presenter: {fileID: 944163940}
-  _enemyLayers:
-    serializedVersion: 2
-    m_Bits: 128
   _skillTargetingController: {fileID: 914589615}
   _hoverDelay: 0.3
   _refreshInterval: 0.25

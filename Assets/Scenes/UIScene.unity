@@ -2309,26 +2309,31 @@ MonoBehaviour:
       IsInTower: 0
       Mode: 0
       IsModeInitialized: 0
+      IsFed: 1
     - DragonName: 
       DragonType: 4
       IsInTower: 0
       Mode: 0
       IsModeInitialized: 0
+      IsFed: 1
     - DragonName: 
       DragonType: 1
       IsInTower: 0
       Mode: 0
       IsModeInitialized: 0
+      IsFed: 1
     - DragonName: 
       DragonType: 0
       IsInTower: 0
       Mode: 0
       IsModeInitialized: 0
+      IsFed: 1
     - DragonName: 
       DragonType: 2
       IsInTower: 0
       Mode: 0
       IsModeInitialized: 0
+      IsFed: 1
     DragonEggs: []
     BossDragonEggRewards: []
     EnteredGuideSteps: 
@@ -2733,6 +2738,8 @@ MonoBehaviour:
   _gridMap: {fileID: 313449541}
   _cycleManager: {fileID: 914589611}
   _resourceManager: {fileID: 914589613}
+  _gameManager: {fileID: 0}
+  _dataCatalog: {fileID: 0}
 --- !u!114 &936144409
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3312,6 +3319,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 651399394745931218, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 651399394745931218, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.x
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 651399394745931218, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -6063,6 +6074,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4028529850848927417, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4028529850848927417, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -7276,6 +7291,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5669120966225515351, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5669120966225515351, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.x
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5669120966225515351, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -9719,6 +9738,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9143618131327661635, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9143618131327661635, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.x
       value: 0
       objectReference: {fileID: 0}
@@ -11137,7 +11160,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BuildingHoverOutlineDriver
   _mouseSelectController: {fileID: 250167905}
+  _gridMap: {fileID: 313449541}
   _placementController: {fileID: 1692054028}
+  _skillTargetingController: {fileID: 914589615}
+  _towerOutlineColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  _buildingOutlineColor: {r: 0.016616056, g: 0.7956049, b: 1.0592737, a: 1}
+  _enemyOutlineColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!1 &1699494003
 GameObject:
   m_ObjectHideFlags: 0

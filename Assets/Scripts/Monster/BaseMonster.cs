@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Splines;
 
@@ -16,6 +17,21 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
 {
     [SerializeField] private MonsterData _data;
 
+    private static readonly List<BaseMonster> ACTIVE_MONSTERS = new();
+
+    // 씬에 살아 있는(파괴되지 않은) 적 전체. MonsterPicker의 몸통 우선 판정이 이 목록만 인덱서로
+    // 훑는다 - WaveManager.SpawnedMonsters는 웨이브가 끝나야 정리되고(AreAllMonstersDefeated 안),
+    // 디버그 스포너가 만든 개체는 아예 들어가지 않아 "지금 살아 있는 적"의 목록으로 쓸 수 없다.
+    public static IReadOnlyList<BaseMonster> ActiveMonsters => ACTIVE_MONSTERS;
+
+    // 플레이모드 재진입 시 Reload Domain이 꺼져 있으면 이전 세션의 파괴된 항목이 목록에 남는다.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStatics() => ACTIVE_MONSTERS.Clear();
+
+    // 안개 판정에 쓰는 GridMap - 씬당 하나뿐이므로 정적으로 공유한다. 없는 씬(팀원 테스트 씬 등)에서는
+    // null로 남아 IsFogHidden이 항상 false를 돌려준다.
+    private static GridMap _gridMap;
+
     private Health _health;
     private MonsterShield _shield;
     private MonsterMovement _movement;
@@ -23,12 +39,49 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
     private MonsterStatusReceiver _statusReceiver;
     private Castle _mainCastle;
     private Animator _animator;
+    private SpriteRenderer _spriteRenderer;
     private EnemyEnhancementSnapshot _enhancement;
     private float _baseMoveSpeed;
     private readonly SpecialBehaviorRunner _specialBehaviorRunner = new();
 
     public MonsterData Data => _data;
     public bool IsDead => _health == null || _health.IsDead;
+
+    // 이 적에 마지막으로 적용된 화면 정렬 순서(IsometricDepthSorter가 매 프레임 쓴 실제 값).
+    // 건물의 Building.DepthSortOrder와 같은 눈금(IsometricMath.ComputeDepthSortOrder)이라,
+    // 호버 판정이 적과 건물을 이 값 하나로 비교해 화면 앞쪽을 고를 수 있다.
+    public int DepthSortOrder => _spriteRenderer != null ? _spriteRenderer.sortingOrder : 0;
+
+    /// <summary>월드 좌표가 이 적의 스프라이트 몸통 안인지. 건물의 Building.ContainsWorldPoint와
+    /// 같은 판정(SpriteHitTest)을 쓴다 - 콜라이더가 발밑에 작게 있어 큰 스프라이트(보스 등)는
+    /// 콜라이더만으로 커서로 집기 어렵다.</summary>
+    public bool ContainsWorldPoint(Vector3 worldPoint) =>
+        SpriteHitTest.Contains(_spriteRenderer, worldPoint);
+
+    /// <summary>안개(Hidden 청크) 위에 서 있는가. 호버 판정에서 걸러내는 데 쓴다 - 호버 아웃라인은
+    /// 전체화면 패스(EPO Outliner, AfterTransparents)로 안개 구름(Fog 정렬 레이어) 위에 그려지므로,
+    /// 걸러내지 않으면 정찰하지 않은 적의 실루엣이 구름을 뚫고 그대로 드러난다.</summary>
+    public bool IsFogHidden
+    {
+        get
+        {
+            if (_gridMap == null)
+            {
+                _gridMap = FindFirstObjectByType<GridMap>();
+            }
+
+            if (_gridMap == null)
+            {
+                return false;
+            }
+
+            Vector3Int coord = _movement != null
+                ? _gridMap.ConvertWorldToGrid(_movement.GroundPlanePosition)
+                : _gridMap.PickCellAtWorldPoint(transform.position);
+
+            return _gridMap.GetCellState(coord) == ChunkState.Hidden;
+        }
+    }
 
     // 공중/지상 판정의 기준은 붙어 있는 이동 컴포넌트가 아니라 데이터다 - TakeDamage의 속성 면역
     // 판정(_data.AcceptsElement)과 같은 방침이며, 인스턴스화 전에도 읽을 수 있다.
@@ -86,7 +139,13 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
         _attack = GetComponent<MonsterAttack>();
         _statusReceiver = GetComponent<MonsterStatusReceiver>();
         _animator = GetComponent<Animator>();
+        _spriteRenderer = GetComponent<SpriteRenderer>();
     }
+
+    // 등록은 OnEnable에서 한다 - MonsterPicker의 몸통 우선 판정이 이 목록을 인덱서로 훑는다.
+    private void OnEnable() => ACTIVE_MONSTERS.Add(this);
+
+    private void OnDisable() => ACTIVE_MONSTERS.Remove(this);
 
     public void ApplyStatus(StatusEffectSO status)
     {

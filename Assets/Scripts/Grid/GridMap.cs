@@ -642,8 +642,11 @@ public class GridMap : MonoBehaviour
     public Building GetBuildingAt(Vector3Int coord) =>
         _cells.TryGetValue(coord, out var cell) ? cell.OccupantBuilding : null;
 
-    // 현재 그리드에 등록된 모든 건물(읽기 전용). 생산량 예측 등 건물 전체 순회에 쓴다.
-    public IEnumerable<Building> Buildings => _buildingFootprintCells.Keys;
+    // 현재 그리드에 등록된 모든 건물(읽기 전용). 생산량 예측·호버 아웃라인 등 건물 전체 순회에 쓴다.
+    // IEnumerable<Building>이 아니라 실제 반환 타입(KeyCollection)을 그대로 노출한다 - IEnumerable로
+    // 좁히면 foreach가 인터페이스 열거자를 매번 박싱하므로, 매 프레임 도는 호출부(HoverOutlineDriver)
+    // 에서 프레임마다 힙 할당이 생긴다. KeyCollection의 구조체 열거자에 직접 바인딩되면 박싱이 없다.
+    public Dictionary<Building, List<GridCell>>.KeyCollection Buildings => _buildingFootprintCells.Keys;
 
     public List<Vector3Int> GetAllOccupiedCoords()
     {
