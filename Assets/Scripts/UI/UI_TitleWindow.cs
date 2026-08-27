@@ -22,8 +22,12 @@ public class UI_TitleWindow : MonoBehaviour
     [SerializeField] private Button _configButton;
     [SerializeField] private Button _quitButton;
 
-    [Tooltip("첫 클리어 이후에만 나타나는 \"새 게임 +\" 버튼. 해금 전에는 오브젝트째 꺼진다.")]
+    [Tooltip("첫 클리어 이후에만 나타나는 \"새 게임 +\" 버튼.")]
     [SerializeField] private Button _newGamePlusButton;
+
+    [Tooltip("해금 전에 꺼야 할 대상. 레이아웃 그룹의 직계 자식(버튼의 부모)이어야 한다 - " +
+        "버튼 자신을 끄면 부모 슬롯이 활성 상태로 남아 레이아웃에 빈 칸이 생긴다.")]
+    [SerializeField] private GameObject _newGamePlusSlot;
 
     [Header("창")]
     [SerializeField] private UI_ConfigWindow _configWindow;
@@ -127,11 +131,13 @@ public class UI_TitleWindow : MonoBehaviour
     /// 설정창의 시연용 해금이 <see cref="MetaProgress.Changed"/>로 이 메서드를 다시 부른다.</summary>
     // 이어하기·불러오기와 다르게 interactable이 아니라 SetActive로 감춘다 - 요구가 "첫 클리어 이후
     // 공개"이므로, 회색 버튼이 보이면 첫 플레이 때부터 이 모드의 존재가 노출된다.
+    // 반드시 _newGamePlusSlot(레이아웃 그룹의 직계 자식)을 꺼야 한다 - 버튼 자신(_newGamePlusButton)을
+    // 끄면 VerticalLayoutGroup이 여전히 부모 슬롯을 활성으로 보고 자리를 계속 차지한다.
     public void RenderProgressDependentButtons()
     {
-        if (_newGamePlusButton != null)
+        if (_newGamePlusSlot != null)
         {
-            _newGamePlusButton.gameObject.SetActive(MetaProgress.IsFirstClearDone);
+            _newGamePlusSlot.SetActive(MetaProgress.IsFirstClearDone);
         }
     }
 
