@@ -6,6 +6,15 @@ public static class EnemyEnhancementResolver
         IReadOnlyList<EnemyEnhancementProfileSO> profiles,
         MonsterData targetMonster)
     {
+        // 속성 전용형은 특정 속성의 공격을 강제해 초반부터 대응 선택지를 잠근다.
+        // 웨이브에서 제외하는 정책과 함께, 기존/추가 점령 프로필이 실수로 이 형을
+        // 강화하지 않도록 방어한다.
+        if (targetMonster != null &&
+            targetMonster.ElementRule == MonsterElementRule.OnlyMatchingElement)
+        {
+            return EnemyEnhancementSnapshot.Neutral;
+        }
+
         int spawnCountBonus = 0;
 
         ResolvedEnemyStatModifier maxHealth =

@@ -129,6 +129,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
 
     private int _animKeyMove = Animator.StringToHash("Move");
     private int _animKeyTakeDamage = Animator.StringToHash("TakeDamage");
+    private int _animKeyDied = Animator.StringToHash("Died");
 
 
     private void Awake()
@@ -363,7 +364,24 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
     {
         // 사망 시 효과(슬라임/자원 드랍, 이펙트)를 연결하는 지점.
         // 오브젝트 풀링은 보류 상태이므로 지금은 파괴로 정리한다.
-        Destroy(gameObject);
+        HaltMovement(); // 사망 시 이동 즉시 정지
+
+        if (_animator != null)
+        {
+            _animator.speed = 1f; // 빙결 등 상태이상으로 멈춰있을 수 있으므로 정상 속도로 복구
+            _animator.SetBool(_animKeyDied, true);
+            
+            // 시체가 타겟팅되거나 충돌하지 않도록 콜라이더 비활성화
+            Collider2D col = GetComponent<Collider2D>();
+            if (col != null) col.enabled = false;
+
+            // 2D 스프라이트 애니메이션이므로 애니메이션 재생 시간 대기 후 파괴
+            Destroy(gameObject, 1.0f); 
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     private void OnDestroy()
