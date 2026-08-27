@@ -7,8 +7,7 @@ using UnityEngine.UI;
 // uGUI에는 선을 그리는 기본 요소가 없다. Image를 잘게 쪼개 회전시켜 이으면 이음매가 각지고
 // 개수도 폭발하므로(선 하나에 십수 개), 곡선 하나를 Graphic 하나로 직접 메시로 만든다.
 //
-// 점선은 UV로 낸다 - u를 "누적 길이 / 점선 주기"로 깔면 곡률에 상관없이 점 간격이 일정해진다.
-// (세그먼트 길이로 UV를 매기면 곡선이 급한 구간에서 점이 뭉친다)
+// UV는 u를 "누적 길이 / 전체 길이"(0~1)로 깐다 - 곡률이 변해도 곡선을 따라 고르게 흐른다.
 //
 // <see cref="Progress"/>로 곡선의 앞부분만 그릴 수 있다. 스킬트리 연결선처럼 "해금하면 선이
 // 차오르는" 표현에 쓴다 - 곡선이라 앵커를 늘려서는 만들 수 없고, 메시를 호 길이로 잘라야 한다.
@@ -22,11 +21,10 @@ public sealed class UI_CurvedEdge : MaskableGraphic
     private readonly List<float> _cumulativeLength = new();
 
     private float _thickness = 4f;
-    private float _dashPeriod = 12f;
-    private Texture _dashTexture;
     private float _progress = FULL_PROGRESS;
 
-    public override Texture mainTexture => _dashTexture != null ? _dashTexture : base.mainTexture;
+    private float TotalLength =>
+        _cumulativeLength.Count > 0 ? _cumulativeLength[_cumulativeLength.Count - 1] : 0f;
 
     /// <summary>
     /// 곡선을 앞에서부터 얼마나 그릴지(0~1). 호 길이 기준이라 곡률이 변해도 속도가 일정하다.
@@ -52,7 +50,7 @@ public sealed class UI_CurvedEdge : MaskableGraphic
     /// <summary>
     /// 곡선을 다시 잡는다. 점은 이 RectTransform의 로컬 좌표(= 트리 Content 좌표)로 준다.
     /// </summary>
-    public void SetCurve(IReadOnlyList<Vector2> points, float thickness, Texture dashTexture, float dashPeriod)
+    public void SetCurve(IReadOnlyList<Vector2> points, float thickness)
     {
         _points.Clear();
         _cumulativeLength.Clear();
@@ -83,8 +81,6 @@ public sealed class UI_CurvedEdge : MaskableGraphic
         }
 
         _thickness = Mathf.Max(MIN_THICKNESS, thickness);
-        _dashTexture = dashTexture;
-        _dashPeriod = Mathf.Max(1f, dashPeriod);
 
         SetVerticesDirty();
         SetMaterialDirty();
@@ -101,7 +97,7 @@ public sealed class UI_CurvedEdge : MaskableGraphic
 
         float half = _thickness * 0.5f;
         Color32 vertexColor = color;
-        float limit = _cumulativeLength[_cumulativeLength.Count - 1] * _progress;
+        float limit = TotalLength * _progress;
 
         int ribCount = 0;
         while (ribCount < _points.Count && _cumulativeLength[ribCount] <= limit)
@@ -135,7 +131,10 @@ public sealed class UI_CurvedEdge : MaskableGraphic
     private void AddRib(
         VertexHelper vh, Vector2 point, Vector2 normal, float length, float half, Color32 vertexColor)
     {
-        float u = length / _dashPeriod;
+        // 전체 길이로 나눠 0~1로 깐다. 흰 텍스처라 실제 그림에는 영향이 없지만,
+        // 머티리얼을 갈아 끼울 때 곡선을 따라 흐르는 좌표가 필요하다.
+        float total = TotalLength;
+        float u = total > 0f ? length / total : 0f;
 
         vh.AddVert((Vector3)(point + normal * half), vertexColor, new Vector2(u, 0f));
         vh.AddVert((Vector3)(point - normal * half), vertexColor, new Vector2(u, 1f));

@@ -14,7 +14,9 @@ using UnityEngine.UI;
 // 연구 가능 여부·완료 규칙은 여기서 재구현하지 않는다 - 전부 ResearchManager에 위임.
 public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 {
-    private const float EDGE_REACHABLE_TINT_RATIO = 0.55f;
+    // 아직 안 찬 연결선 바탕에 갈래 색을 섞는 비율. 용 스킬트리(DragonSkillNodePalette의
+    // EDGE_LOCKED_TINT_RATIO)와 같은 값이라 두 트리의 선이 같은 밝기로 깔린다.
+    private const float EDGE_BACKGROUND_TINT_RATIO = 0.4f;
 
     // 같은 티어(같은 행) 판정 여유. 같은 행이면 옆면끼리 잇는다.
     private const float SAME_ROW_EPSILON = 1f;
@@ -83,6 +85,13 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     [Tooltip("티어 행 사이 구분선. 블랙보드의 주기 구분선을 가로로 돌린 것.")]
     [SerializeField] private float _tierSeparatorThickness = 2f;
     [SerializeField] private Color _tierSeparatorColor = new Color(1f, 1f, 1f, 0.10f);
+
+    [Header("티어 행 배경")]
+    [Tooltip("해금된 티어 행의 배경. 트리 배경 위에 옅게 깔려 '여기까지 열렸다'를 보여준다.")]
+    [SerializeField] private Color _tierBackgroundUnlockedColor = new Color(1f, 1f, 1f, 0.06f);
+
+    [Tooltip("아직 안 열린 티어 행의 배경. 어둡게 눌러 두면 열린 행이 상대적으로 떠오른다.")]
+    [SerializeField] private Color _tierBackgroundLockedColor = new Color(0f, 0f, 0f, 0.20f);
     [Header("우측 여백(UI 겹침 해소)")]
     [SerializeField] private float _columnSpacingWidth = 500f;
     [Tooltip("가장 왼쪽 갈래 열 중심에서 티어 라벨까지의 거리.")]
@@ -106,6 +115,22 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
     // 잠긴 선도 배경과 확실히 구분돼야 선행 관계가 읽힌다 - 블랙보드의 회색 점선(#666)에 맞춘 밝기다.
     [SerializeField] private Color _edgeLockedColor = new Color(0.40f, 0.40f, 0.40f, 1f);
+
+    [Tooltip("아직 차지 않은 연결선 바탕의 밝기. 낮출수록 어두워진다.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _edgeBackgroundBrightness = 0.55f;
+
+    [Tooltip("아직 차지 않은 연결선 바탕의 불투명도. 낮출수록 배경에 묻힌다.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _edgeBackgroundAlpha = 0.35f;
+
+    [Tooltip("선행만 끝난 선(다음에 갈 수 있는 길)의 밝기. 완료한 선보다 어두워야 둘이 갈린다.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _edgeReachableBrightness = 0.6f;
+
+    [Tooltip("선행만 끝난 선의 불투명도.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _edgeReachableAlpha = 0.8f;
     [SerializeField] private Color _tierLabelUnlockedColor = new Color(0.788f, 0.800f, 0.827f);
     [SerializeField] private Color _tierLabelLockedColor = new Color(0.482f, 0.506f, 0.557f, 0.6f);
 
@@ -122,6 +147,9 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
     // 갈래 이름표는 트리를 만들 때 한 번만 놓이므로, 언어가 바뀌면 다시 칠할 수 있게 들고 있는다.
     private readonly Dictionary<ResearchBranch, UI_ResearchLabel> _branchHeaders = new();
+
+    // 티어 행 배경 띠. 주기가 진행되면 해금된 행부터 밝아진다.
+    private readonly Dictionary<int, Image> _tierBackgrounds = new();
     private readonly List<EdgeView> _edgeViews = new();
 
     // 곡선 점을 담아 넘기는 재사용 버퍼(선마다 새 리스트를 만들지 않는다).
@@ -497,6 +525,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         ResolveBranchBands(byCell, branchCount, tierCount);
 
+        PlaceTierBackgrounds(tierCount);
         PlaceTierLabels(tierCount);
         PlaceTierSeparators(tierCount);
 
@@ -533,6 +562,10 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         ResolveNodeEdgeAnchor();
         BuildEdges();
+
+        // 티어 띠는 연결선·노드보다 뒤에 깔려야 한다. 나중에 SetAsFirstSibling한 것이
+        // 더 뒤에 그려지므로, 선을 다 만든 뒤에 밀어 넣는다.
+        PushTierBackgroundsBehind();
         PlaceCanvasBackground();
 
         _built = true;
@@ -737,6 +770,57 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         image.raycastTarget = false;
     }
 
+    /// <summary>
+    /// 티어 행마다 배경 띠를 깐다. 위아래 경계는 티어 구분선(점선)과 같은 자리다 -
+    /// 띠 중심이 행 중심이고 높이가 <see cref="_rowHeight"/>이므로, 띠의 위아래 변이
+    /// <see cref="ResearchTreeLayout.RowBoundaryY"/>와 정확히 맞물린다.
+    ///
+    /// 좌우 폭도 구분선과 같게 트리 열 전체로 잡는다. 티어 라벨은 그 바깥에 있으므로 띠에 안 걸린다.
+    /// </summary>
+    private void PlaceTierBackgrounds(int tierCount)
+    {
+        float left = TreeLeftEdge();
+        float right = TreeRightEdge();
+
+        for (int tierIndex = 0; tierIndex < tierCount; tierIndex++)
+        {
+            var bandObject = new GameObject(
+                "TierBackground", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var rect = (RectTransform)bandObject.transform;
+            rect.SetParent(_content, false);
+
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(right - left, _rowHeight);
+            rect.anchoredPosition = new Vector2(
+                (left + right) * 0.5f,
+                ResearchTreeLayout.RowCenterY(tierIndex, tierCount, _rowHeight));
+
+            var image = bandObject.GetComponent<Image>();
+            image.raycastTarget = false;
+
+            // 만들자마자 칠한다. 새 Image의 기본색은 불투명 흰색이라, 갱신 전까지 한 프레임이라도
+            // 하얀 판이 트리를 덮는다(실측 - 알파를 0으로 둬도 하얗게 보인다는 신고의 원인).
+            image.color = _tierBackgroundLockedColor;
+
+            _tierBackgrounds[tierIndex + ResearchTierRules.FIRST_TIER] = image;
+        }
+
+        RefreshTierBackgrounds();
+    }
+
+    private void PushTierBackgroundsBehind()
+    {
+        foreach (KeyValuePair<int, Image> entry in _tierBackgrounds)
+        {
+            if (entry.Value != null)
+            {
+                entry.Value.rectTransform.SetAsFirstSibling();
+            }
+        }
+    }
+
     // 티어 행 사이에 옅은 구분선을 깐다. 블랙보드의 주기 구분선을 가로로 돌린 것으로,
     // 어느 노드가 같은 티어인지 선 없이도 읽히게 하는 역할이다.
     // 연결선 프리팹을 재사용하지만 _edgeViews에 넣지 않으므로 상태에 따라 색이 변하지 않는다.
@@ -849,9 +933,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         rect.SetAsFirstSibling(); // 노드 아래로 - 선이 클릭을 가로채거나 위에 그려지지 않게 한다
 
         var edge = curveObject.GetComponent<UI_ResearchEdge>();
-        edge.SetCurve(
-            _curvePointBuffer, _edgeThickness,
-            ResearchTreeSprites.DashTexture, ResearchTreeSprites.DashPeriod);
+        edge.SetCurve(_curvePointBuffer, _edgeThickness);
 
         _edgeViews.Add(new EdgeView
         {
@@ -925,6 +1007,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         RefreshResearchPoints();
         RefreshNodeViews();
         RefreshEdgeViews();
+        RefreshTierBackgrounds();
         RefreshTierLabels();
         _detailsPanel?.Refresh();
     }
@@ -960,8 +1043,19 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
-    // 대상 노드까지 완료된 선은 갈래 색 실선으로 차오르고, 아직인 선은 점선 바탕만 남는다.
-    // 그 바탕도 선행이 끝났으면 은은하게 물들여, 다음에 갈 수 있는 길이 어디인지 보이게 한다.
+    /// <summary>
+    /// 연결선은 세 단계로 읽힌다.
+    ///  - 선행 미완료: 바탕만 (어둡고 반투명)
+    ///  - 선행 완료: 선이 <b>차오르고</b> 흐린 갈래 색이 된다 - "다음에 갈 수 있는 길"
+    ///  - 대상 완료: 이미 찬 선이 진한 갈래 색으로 물든다
+    ///
+    /// 선행 완료 단계가 중요하다. T1은 전부 선행이 없어 첫 주기에는 "대상 완료"로 차는 선이
+    /// 하나도 없다 - 이 단계가 빠지면 T1을 아무리 연구해도 트리에 아무 변화가 없다.
+    ///
+    /// 바탕색은 상태를 따라가지 않는다. 예전에는 바탕을 물들여 이 표시를 냈는데, 색이 한 프레임에
+    /// 튀어서 정작 보여줘야 할 "차오름"보다 먼저 눈에 들어왔다. 표시는 그대로 두고 수단만
+    /// 바탕색 → 채움으로 옮긴 것이다.
+    /// </summary>
     private void RefreshEdgeViews()
     {
         if (!WiringGuard.Require(_researchManager, nameof(_researchManager), this))
@@ -977,12 +1071,41 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
             }
 
             Color branchColor = ColorForBranch(edge.Branch);
-            Color backgroundColor = _researchManager.IsCompleted(edge.PrerequisiteNodeId)
-                ? Color.Lerp(_edgeLockedColor, branchColor, EDGE_REACHABLE_TINT_RATIO)
-                : _edgeLockedColor;
+            bool dependentDone = _researchManager.IsCompleted(edge.DependentNodeId);
+            bool prerequisiteDone = _researchManager.IsCompleted(edge.PrerequisiteNodeId);
+
+            Color fillColor = dependentDone
+                ? branchColor
+                : Faded(branchColor, _edgeReachableBrightness, _edgeReachableAlpha);
 
             edge.View.Bind(
-                _researchManager.IsCompleted(edge.DependentNodeId), branchColor, backgroundColor);
+                dependentDone || prerequisiteDone,
+                fillColor,
+                ResolveEdgeBackgroundColor(branchColor));
+        }
+    }
+
+    // 주기가 진행되면 해금된 행부터 밝아진다. 판정은 티어 라벨과 같은 규칙(ResearchTierRules)이다.
+    // 별도 가드를 두지 않는다 - 매니저가 없으면 RefreshNodeViews가 이미 신고한다.
+    private void RefreshTierBackgrounds()
+    {
+        if (_researchManager == null)
+        {
+            return;
+        }
+
+        int currentCycle = _researchManager.CurrentCycleNumber;
+
+        foreach (KeyValuePair<int, Image> entry in _tierBackgrounds)
+        {
+            if (entry.Value == null)
+            {
+                continue;
+            }
+
+            entry.Value.color = ResearchTierRules.IsTierUnlocked(entry.Key, currentCycle)
+                ? _tierBackgroundUnlockedColor
+                : _tierBackgroundLockedColor;
         }
     }
 
@@ -1022,6 +1145,22 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
                 label.Text.color = color;
             }
         }
+    }
+
+    // 아직 차지 않은 선의 바탕. 갈래 색을 옅게 섞어 어느 갈래인지는 남기되,
+    // 어둡고 투명하게 깔아 채워진 선과 확실히 갈리게 한다.
+    private Color ResolveEdgeBackgroundColor(Color branchColor)
+    {
+        Color tinted = Color.Lerp(_edgeLockedColor, branchColor, EDGE_BACKGROUND_TINT_RATIO);
+
+        return Faded(tinted, _edgeBackgroundBrightness, _edgeBackgroundAlpha);
+    }
+
+    // 알파는 곱하지 않고 대입한다 - 밝기와 투명도를 따로 조절할 수 있어야 한다.
+    private static Color Faded(Color color, float brightness, float alpha)
+    {
+        return new Color(
+            color.r * brightness, color.g * brightness, color.b * brightness, alpha);
     }
 
     private void HandleNodeClicked(ResearchNodeData node)
