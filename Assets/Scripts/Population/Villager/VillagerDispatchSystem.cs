@@ -31,6 +31,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private const int CREW_SIZE_HASH_SALT = 7919;   // 인원 수와 산개 위치가 같은 해시를 쓰지 않도록 섞는 값
 
     private const float DEFAULT_MOVE_SPEED = 2.5f;
+    private const float DEFAULT_GROUP_SPAWN_INTERVAL_SECONDS = 0.12f;
     private const float DEFAULT_CHEER_SECONDS = 1.5f;
     private const float DEFAULT_FADE_OUT_SECONDS = 0.4f;
     private const float DEFAULT_ATTACK_INTERVAL_SECONDS = 1f;
@@ -41,6 +42,7 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private const float DEFAULT_EJECT_SECONDS = 0.6f;
     private const float DEFAULT_EJECT_LINGER_SECONDS = 1f;
     private const float DEFAULT_SPREAD_RADIUS = 0.45f;
+    private const float DEFAULT_BUILDING_SPREAD_RADIUS = 0.2f;
     private const int DEFAULT_MAX_ACTIVE_VILLAGERS = 60;
 
     // 겉모습 프리팹이 계열마다 5종이고(병사와 원정은 같은 묶음을 공유하는 배선이라 고유 10종),
@@ -69,6 +71,13 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
 
     private const float FULL_TURN_RADIANS = Mathf.PI * 2f;
 
+    // 황금각(약 137.5°). 몇 개를 연달아 뽑아도 각이 겹치지 않고 원 위에 고르게 흩어지는 값이다.
+    private const float GOLDEN_ANGLE_RADIANS = 2.3999632f;
+
+    // 원판 표본의 중심 치우침 보정. 반지름을 (index + 0.5) / count로 뽑으면 첫 사람이 정중앙에 박히지도,
+    // 마지막 사람이 경계에 딱 붙지도 않아 인원이 적을 때도 반경을 고르게 쓴다.
+    private const float DISK_SAMPLE_CENTER_BIAS = 0.5f;
+
     [Header("참조")]
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private PopulationManager _populationManager;
@@ -87,6 +96,11 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     [SerializeField] private Transform _villagerRoot;
 
     [SerializeField] private float _moveSpeed = DEFAULT_MOVE_SPEED;
+
+    [Tooltip("한 번에 여러 명을 배치·회수할 때 한 명씩 내보내는 간격(초). " +
+             "0이면 전원이 같은 프레임에 나가 서로 포개진다.")]
+    [Min(0f)]
+    [SerializeField] private float _groupSpawnIntervalSeconds = DEFAULT_GROUP_SPAWN_INTERVAL_SECONDS;
 
     [Tooltip("타워에 도착한 캐릭터가 모션을 보여주고 사라지기 시작할 때까지의 시간(초).")]
     [SerializeField] private float _cheerSeconds = DEFAULT_CHEER_SECONDS;
@@ -127,6 +141,11 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     [Tooltip("같은 자리에 여럿이 설 때 흩어지는 반경. 아이소메트릭 종횡비로 눌러 화면상 원형이 된다. " +
              "점령 크루에만 쓴다 - 건물에 서는 캐릭터는 칸을 벗어나지 않도록 흩지 않는다.")]
     [SerializeField] private float _spreadRadius = DEFAULT_SPREAD_RADIUS;
+
+    [Tooltip("건물을 오가는 캐릭터가 작업 칸 안에서 흩어지는 반경. 칸이 폭 1.0 · 높이 0.5 다이아몬드라 " +
+             "0.35를 넘으면 대각 방향에서 칸을 벗어난다. 0이면 전원 칸 정중앙에 선다.")]
+    [Min(0f)]
+    [SerializeField] private float _buildingSpreadRadius = DEFAULT_BUILDING_SPREAD_RADIUS;
 
     [Tooltip("동시에 존재할 수 있는 캐릭터 수 상한. 초과분은 조용히 생성하지 않는다.")]
     [SerializeField] private int _maxActiveVillagers = DEFAULT_MAX_ACTIVE_VILLAGERS;
@@ -199,6 +218,9 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private bool _hasCastleCell;
     private bool _isReconcileQueued;
 
+    // 다음 그룹이 쓸 산개 시작 각. 그룹마다 황금각만큼 돌아간다(TakeNextGroupAngle).
+    private float _nextGroupAngle;
+
     // CycleManager가 없는 씬(팀원 테스트 씬 등)에는 밤 자체가 없으므로 낮으로 본다.
     // WorkerModeController는 조작을 막아야 해서 fail-closed지만, 여기는 연출이라 fail-open이 맞다.
     private bool IsDay =>
@@ -215,6 +237,41 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         {
             Villager = villager;
             WorkCell = workCell;
+        }
+    }
+
+    /// <summary>
+    /// 한 번의 조작으로 함께 움직이는 인원의 공통 지시. 시차 스폰이 await를 넘어가는데
+    /// <see cref="_pendingNotify"/>는 Reconcile이 끝나면서 비워지므로, 필요한 값을 전부 복사해 들고 있는다.
+    /// </summary>
+    private readonly struct GroupOrder
+    {
+        public readonly VillagerProfile Profile;
+        public readonly Vector3Int OriginCell;
+        public readonly Vector3Int DestinationCell;
+        public readonly Vector3Int CastleCell;
+        public readonly VillagerAppearance Appearance;
+        public readonly int Count;
+
+        /// <summary>이 그룹의 산개 시작 각. 그룹끼리 자리가 겹치지 않게 <see cref="TakeNextGroupAngle"/>가 정한다.</summary>
+        public readonly float StartAngle;
+
+        public GroupOrder(
+            VillagerProfile profile,
+            Vector3Int originCell,
+            Vector3Int destinationCell,
+            Vector3Int castleCell,
+            VillagerAppearance appearance,
+            int count,
+            float startAngle)
+        {
+            Profile = profile;
+            OriginCell = originCell;
+            DestinationCell = destinationCell;
+            CastleCell = castleCell;
+            Appearance = appearance;
+            Count = count;
+            StartAngle = startAngle;
         }
     }
 
@@ -1167,12 +1224,18 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
     private static VillagerAppearance ResolveAppearance(IPopulationAllocationTarget target) =>
         target is TowerPopulation ? VillagerAppearance.Soldier : VillagerAppearance.Worker;
 
-    // 건물을 오가는 캐릭터는 산개시키지 않고 작업 칸 정중앙에 세운다.
+    // 한 번에 여러 명을 보낼 때 서로 포개지지 않게 하는 두 장치가 여기 있다. 한 그룹은 출발지·도착지가
+    // 같고 속도까지 같으므로(VillagerMovement.RefreshSegmentSpeed가 구간 이동 시간을 정규화한다)
+    // 아무 조치가 없으면 처음부터 끝까지 픽셀 단위로 겹쳐 한 명처럼 보인다.
     //
-    // 예전에는 ResolveSpreadOffset으로 반경 _spreadRadius(0.45)만큼 흩었는데, 셀은 폭 1.0 · 높이 0.5의
-    // 다이아몬드라(IsometricMath.RADIUS_Y_RATIO / ROW_WORLD_HEIGHT) 그 반경이면 대각 방향에서 칸을
-    // 벗어난다. 특히 아래로 밀린 경우 캐릭터가 건물 칸 밑에 서 있는 것처럼 보였다.
-    // 산개는 청크 전체에 퍼지는 점령 크루(ResolveRingOffset)에만 남긴다 - 그쪽은 칸 하나에 갇히지 않는다.
+    //  1) 출발 시차 - _groupSpawnIntervalSeconds 간격으로 한 명씩 내보낸다(이동 중 분리).
+    //  2) 서는 자리 분산 - 작업 칸 안에서 인덱스마다 다른 자리에 선다(도착 후 분리, ResolveGroupSpreadOffset).
+    //
+    // 2번의 반경은 점령 크루의 _spreadRadius(0.45)와 일부러 분리했다. 셀은 폭 1.0 · 높이 0.5의
+    // 다이아몬드라(IsometricMath.RADIUS_Y_RATIO / ROW_WORLD_HEIGHT) 0.45로 흩으면 대각 방향에서 칸을
+    // 벗어나 캐릭터가 건물 칸 밑에 서 있는 것처럼 보인다 - 예전에 건물 쪽 산개를 아예 걷어냈던 이유다.
+    // 칸을 벗어나지 않는 한계는 2r(|cos|+|sin|) ≤ 1에서 r ≤ 0.354이고, 기본값 0.2는 그 한계의 57%다.
+    // 크루는 청크 전체에 퍼지므로 칸 하나에 갇히지 않아 그쪽 반경은 그대로 둔다.
     private void SpawnGroup(
         VillagerProfile profile,
         Vector3Int originCell,
@@ -1181,22 +1244,105 @@ public sealed class VillagerDispatchSystem : MonoBehaviour
         int count,
         VillagerAppearance appearance)
     {
-        for (int i = 0; i < count; i++)
+        var group = new GroupOrder(
+            profile,
+            originCell,
+            destinationCell,
+            castleCell,
+            appearance,
+            count,
+            TakeNextGroupAngle());
+
+        // 첫 사람은 즉시 내보낸다 - 클릭에 대한 반응이 한 박자 늦지 않도록.
+        SpawnGroupMember(group, 0);
+
+        if (count <= 1)
         {
-            Spawn(
-                new VillagerOrder(
-                    profile,
-                    originCell,
-                    destinationCell,
-                    castleCell,
-                    Vector3.zero,
-                    hasOutboundLeg: true,
-                    hasFixedOriginWorldPosition: originCell == castleCell,
-                    originWorldPosition: CASTLE_SPAWN_WORLD_POSITION,
-                    hasFixedCastleWorldPosition: destinationCell == castleCell,
-                    castleWorldPosition: CASTLE_SPAWN_WORLD_POSITION),
-                appearance);
+            return;
         }
+
+        if (_groupSpawnIntervalSeconds <= 0f)
+        {
+            for (int i = 1; i < count; i++)
+            {
+                SpawnGroupMember(group, i);
+            }
+
+            return;
+        }
+
+        SpawnRemainingStaggeredAsync(group, this.GetCancellationTokenOnDestroy()).Forget();
+    }
+
+    // 남은 인원을 일정 간격으로 내보낸다. Reconcile 밖에서 캐릭터를 만드는 경로가 하나 늘지만
+    // (HandleTowerDisabled가 이미 그렇게 한다) 낮에만 내보내는 규칙은 그대로 지킨다.
+    private async UniTaskVoid SpawnRemainingStaggeredAsync(GroupOrder group, CancellationToken token)
+    {
+        for (int i = 1; i < group.Count; i++)
+        {
+            await UniTask.WaitForSeconds(_groupSpawnIntervalSeconds, cancellationToken: token);
+
+            // 밤이 시작되면 남은 인원은 내보내지 않는다. ReconcileNight는 그 시점에 이미 나와 있는
+            // 캐릭터만 치우므로, 이 가드가 없으면 밤에 성문에서 캐릭터가 계속 나오고 아무도 걷어가지 않는다.
+            if (!IsDay)
+            {
+                return;
+            }
+
+            SpawnGroupMember(group, i);
+        }
+    }
+
+    private void SpawnGroupMember(in GroupOrder group, int index)
+    {
+        // 산개 오프셋이 출발지와 도착지 중 어디에 걸리는지는 Villager.Dispatch가 경로별로 이미 갈라 놨다.
+        // 배치(성 → 건물)는 성문 고정 좌표에서 워프하므로 도착지에만 걸려 건물 앞에서 부채꼴로 벌어지고,
+        // 회수(건물 → 성)는 반대로 출발지에만 걸려 일터에서 흩어져 출발해 성문 한 점으로 모인다.
+        Spawn(
+            new VillagerOrder(
+                group.Profile,
+                group.OriginCell,
+                group.DestinationCell,
+                group.CastleCell,
+                ResolveGroupSpreadOffset(index, group.Count, group.StartAngle),
+                hasOutboundLeg: true,
+                hasFixedOriginWorldPosition: group.OriginCell == group.CastleCell,
+                originWorldPosition: CASTLE_SPAWN_WORLD_POSITION,
+                hasFixedCastleWorldPosition: group.DestinationCell == group.CastleCell,
+                castleWorldPosition: CASTLE_SPAWN_WORLD_POSITION),
+            group.Appearance);
+    }
+
+    // 그룹마다 시작 각을 황금각만큼 돌린다. 인덱스만으로 각을 뽑으면 한 명씩 여러 번 배치할 때
+    // 그룹이 매번 1명이라 늘 같은 각이 나와 같은 자리에 포개진다 - 이 회전이 그 경우까지 커버한다.
+    private float TakeNextGroupAngle()
+    {
+        float angle = _nextGroupAngle;
+
+        // 각을 한 바퀴 안으로 접어 둔다 - 계속 더하면 값이 커져 Cos/Sin의 정밀도가 떨어진다.
+        _nextGroupAngle = Mathf.Repeat(_nextGroupAngle + GOLDEN_ANGLE_RADIANS, FULL_TURN_RADIANS);
+
+        return angle;
+    }
+
+    // 작업 칸 안에서 서는 자리. 원주가 아니라 원판 전체에 뿌린다(해바라기 배치) - 반지름을 sqrt로 뽑으면
+    // 면적당 밀도가 일정해져서, 인원이 많아도 한 줄로 늘어서지 않고 안쪽까지 고르게 채운다.
+    // 아이소메트릭 종횡비로 세로를 눌러 화면상 원형이 된다(ResolveRingOffset과 같은 보정).
+    private Vector3 ResolveGroupSpreadOffset(int index, int count, float startAngle)
+    {
+        if (_buildingSpreadRadius <= 0f)
+        {
+            return Vector3.zero;
+        }
+
+        float angle = startAngle + index * GOLDEN_ANGLE_RADIANS;
+        float radius = _buildingSpreadRadius *
+            Mathf.Sqrt((index + DISK_SAMPLE_CENTER_BIAS) / Mathf.Max(1, count));
+
+        return new Vector3(
+            Mathf.Cos(angle) * radius,
+            Mathf.Sin(angle) * radius * IsometricMath.RADIUS_Y_RATIO,
+            0f);
     }
 
     private Villager Spawn(in VillagerOrder order, VillagerAppearance appearance)
