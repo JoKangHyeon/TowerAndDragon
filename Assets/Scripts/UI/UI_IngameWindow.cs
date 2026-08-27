@@ -132,12 +132,16 @@ public class UI_IngameWindow : MonoBehaviour
 
     [SerializeField] private Button _buttonBuildMode;
     [SerializeField] private UI_BuildModeWindow _buildModeWindow;
+    [Tooltip("건설 모드가 켜져 있는 동안만 보이는 선택 표시(Button_buildMode/Select).")]
+    [SerializeField] private GameObject _buildModeSelectMark;
 
     [Header("인구 배치 (Panel_BottomCenter/Buttons)")]
     [Tooltip("인구 배치 모드(Worker Mode) 토글 버튼.")]
     [SerializeField] private Button _buttonWorkerMode;
     [Tooltip("인구 배치 모드 컨트롤러. 버튼 클릭 시 모드를 토글한다.")]
     [SerializeField] private WorkerModeController _workerModeController;
+    [Tooltip("인구 배치 모드가 켜져 있는 동안만 보이는 선택 표시(Button_WorkerMode/Select).")]
+    [SerializeField] private GameObject _workerModeSelectMark;
 
     [Header("점령 (Panel_BottomRight)")]
     [Tooltip("점령 모드 토글 버튼.")]
@@ -318,6 +322,34 @@ public class UI_IngameWindow : MonoBehaviour
     {
         await UniTask.Yield(this.GetCancellationTokenOnDestroy());
         _newGamePlusBadge.Construct(_runModifiers, _tooltipPresenter);
+    }
+
+    // 건설·인구배치 버튼의 선택 표시를 현재 모드 상태에 맞춘다.
+    //
+    // 이벤트(UIManager.ExclusiveModeOpened/Closed)를 듣지 않고 매 프레임 읽는 이유: 이 창은
+    // UIManager를 참조하지 않아 씬마다 참조를 하나 더 이어야 하고(빠뜨린 씬에서 표시가 조용히 죽는다),
+    // 모드가 꺼지는 경로는 버튼·ESC·다른 모드 열기·밤 시작으로 여럿이다. 이미 배선된 두 모드의
+    // 상태를 그대로 보는 편이 배선 하나 없이 모든 경로를 덮는다.
+    //
+    // 상태를 바꾸는 쪽(UI_BuildModeWindow.Update 등)보다 뒤에 읽도록 LateUpdate에서 본다
+    // (UI_ButtonInteractableFade와 같은 이유).
+    private void LateUpdate()
+    {
+        SetSelectMarkActive(
+            _buildModeSelectMark,
+            _buildModeWindow != null && _buildModeWindow.IsOpen);
+
+        SetSelectMarkActive(
+            _workerModeSelectMark,
+            _workerModeController != null && _workerModeController.IsActive);
+    }
+
+    private static void SetSelectMarkActive(GameObject selectMark, bool isActive)
+    {
+        if (selectMark != null && selectMark.activeSelf != isActive)
+        {
+            selectMark.SetActive(isActive);
+        }
     }
 
     // 클릭음을 붙이기 위한 래퍼. WorkerModeController는 단축키 경로에서도 호출되므로

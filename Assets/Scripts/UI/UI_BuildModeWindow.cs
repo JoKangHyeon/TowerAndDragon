@@ -785,7 +785,8 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         return true;
     }
 
-    bool IExclusiveMode.IsOpen => _isOpen;
+    /// <summary>건설 모드 패널이 열려 있는지. HUD의 선택 표시(UI_IngameWindow)가 이 값을 읽는다.</summary>
+    public bool IsOpen => _isOpen;
     void IExclusiveMode.Open() => OpenBuildPanel();
     void IExclusiveMode.Close()
     {
