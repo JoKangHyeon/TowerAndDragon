@@ -20,6 +20,10 @@ public class MonsterData : ScriptableObject
     [Tooltip("몬스터 종류")]
     [SerializeField] private MonsterType _monsterType;
 
+    [Tooltip("UI 표시용 분류(웨이브 예고 카드 아이콘 등). 전투 판정에는 영향을 주지 않는다 - " +
+             "대공/대지 피격 판정은 아래 Stats의 Movement Type이 결정한다.")]
+    [SerializeField] private MonsterDisplayCategory _displayCategory;
+
     [Header("Stats")]
     [SerializeField] private float _maxHealth;
     [SerializeField] private float _moveSpeed;
@@ -53,6 +57,7 @@ public class MonsterData : ScriptableObject
     public string NameLocKey => _nameLocKey;
     public string DescriptionLocKey => _descriptionLocKey;
     public MonsterType MonsterType => _monsterType;
+    public MonsterDisplayCategory DisplayCategory => _displayCategory;
     public float MaxHealth => _maxHealth;
     public float MoveSpeed => _moveSpeed;
     public MonsterMovementType MovementType => _movementType;
