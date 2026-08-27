@@ -20,11 +20,30 @@ public class AttackSO : ScriptableObject
     [SerializeField] private AttackEffectSO[] _effects;
 
     [Header("Area")]
-    [Min(0f)]   
+    [Min(0f)]
     [SerializeField] private float _areaRadius;
+
+    // 근거리·보스 전용이다. 원거리는 이 필드를 쓰지 않는다 - 투사체 명중 연출은 명중 시점에
+    // 투사체가 직접 들고 있어야 해서 MonsterData._projectilePrefab의 ProjectileVisual이 대신 그린다
+    // (이미 배선돼 있다). 발화 지점은 MonsterAttack이다 - 광역은 Execute가 대상 수만큼 도는 경로가
+    // 있어 "공격 1회"를 아는 것이 MonsterAttack뿐이기 때문에 여기 Execute 안에서는 띄우지 않는다.
+    [Header("Hit VFX (근접 공격용 - 투사체가 있으면 ProjectileVisual이 대신 그린다)")]
+    [WiringOptional]
+    [SerializeField] private GameObject _hitVfxPrefab;
+
+    [Tooltip("명중 이펙트가 스스로 걷히기까지의 시간(초).")]
+    [Min(0f)]
+    [SerializeField] private float _hitVfxLifetimeSeconds;
+
+    [Tooltip("명중 연출을 놓을 기준점.")]
+    [SerializeField] private AttackVfxAnchor _hitVfxAnchor;
 
     public float Range => _range;
     public float Interval => _interval;
+    public GameObject HitVfxPrefab => _hitVfxPrefab;
+    public float HitVfxLifetimeSeconds => _hitVfxLifetimeSeconds;
+    public AttackVfxAnchor HitVfxAnchor => _hitVfxAnchor;
+    public bool HasHitVfx => _hitVfxPrefab != null;
 
     // 효과 목록을 읽기 전용으로 노출한다 - 빌드모드의 타워 정보 팝업이 피해량(DamageEffectSO.Amount)을
     // 표시하려면 이 목록을 훑어야 한다. 적용은 Execute가 담당하므로 밖에서는 조회만 한다.

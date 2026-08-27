@@ -254,11 +254,51 @@ public class MonsterAttack : MonoBehaviour
         if (!_data.HasProjectile)
         {
             _attack.Execute(target, in context);
+            PlayHitVfx(target);
             return;
         }
 
         LaunchProjectile(target, in context);
     }
+
+    // 근거리·보스 전용 명중 연출. 원거리는 ProjectileVisual.OnHit이 대신 그린다(AttackSO 참고).
+    // target이 null이면(ExecuteBlast의 광역) TargetBody를 고를 대상이 없으므로 발밑으로 그린다 -
+    // 시전자 발밑 앵커(CasterGround)와 결과가 같아 별도 분기 없이 안전하게 흐른다.
+    //
+    // 성 공격은 여기서 거른다. Fire()가 이동 중 타워·방벽 공격과 도착 후 성 공격에 같은 AttackSO를
+    // 쓰므로(구조가 갈려 있지 않다) target의 실제 타입으로 판단해야 한다 - 성은 스프라이트가 커서
+    // 이펙트가 가려지고, 앵커가 CasterGround(보스)라도 시전자 자체가 성 앞에 붙어 있어 마찬가지로
+    // 어색하다. 방벽은 성만큼 크지 않아 대상에서 뺀다. target이 null인 광역(ExecuteBlast)은 성을
+    // 때릴 수 없으므로(Castle은 IMonsterTarget이 아니다) 이 가드에 걸리지 않는다.
+    private void PlayHitVfx(IAttackTarget target)
+    {
+        if (!_attack.HasHitVfx || target is Castle)
+        {
+            return;
+        }
+
+        if (_attack.HitVfxAnchor == AttackVfxAnchor.TargetBody && target != null)
+        {
+            Vector3 bodyPosition = AttackVfxPlacement.ResolveVisualImpactPosition(
+                target.TargetTransform.position, target.TargetObject, ProjectileImpactPlacement.Body);
+
+            ProjectilePool.PlayForSeconds(
+                _attack.HitVfxPrefab,
+                bodyPosition,
+                AttackVfxPlacement.ResolveDirectionRotation(bodyPosition - transform.position),
+                _attack.HitVfxLifetimeSeconds);
+            return;
+        }
+
+        Vector3 groundPosition = new Vector3(
+            transform.position.x,
+            AttackVfxPlacement.ResolveGroundY(gameObject),
+            transform.position.z);
+
+        ProjectilePool.PlayForSeconds(
+            _attack.HitVfxPrefab, groundPosition, Quaternion.identity, _attack.HitVfxLifetimeSeconds);
+    }
+
     private void LaunchProjectile(IAttackTarget target, in AttackContext context)
     {
         Vector3 spawnPosition = _firePoint != null
@@ -323,6 +363,9 @@ public class MonsterAttack : MonoBehaviour
         }
 
         AttackContext context = new AttackContext(gameObject, _attackPowerModifier, _targetLayers);
+
+        // 대상 수만큼 도는 Execute와 달리 "공격 1회"를 아는 것은 여기뿐이라 루프 밖에서 한 번만 띄운다.
+        PlayHitVfx(null);
 
         Collider2D[] candidates = Physics2D.OverlapCircleAll(
             transform.position,
