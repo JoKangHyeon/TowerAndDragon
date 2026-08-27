@@ -361,9 +361,8 @@ public class BuildingPlacementController : MonoBehaviour
         NotifySelectedBuildingChanged();
     }
 
-    // 철거 시 돌려받는 비율. 실제 환급과 UI 안내가 같은 판정을 쓰도록 여기서만 결정한다 -
-    // 표시와 지급이 따로 판정하면 "전액 반환"이라 써놓고 일부만 주는 식으로 조용히 어긋난다.
-    // 선택된 건물이 없으면(안내 문구의 기본값) 당일이 아닌 쪽 비율을 준다.
+    // 철거 시 돌려받는 비율. 당일 건설 여부 판정을 여기 한곳에만 두어 실제 환급과 이 비율을 읽는 쪽이
+    // 어긋나지 않게 한다. 건물이 없으면 당일이 아닌 쪽 비율을 준다.
     public float GetDemolishRefundRatio(Building building)
     {
         if (!WiringGuard.Require(_economyBalance, nameof(_economyBalance), this))
