@@ -95,7 +95,7 @@ public class CameraController : MonoBehaviour
 
     // 미들 마우스 드래그
     private bool    _isDragging;
-    private Vector3 _dragWorldOrigin;
+    private Vector2 _dragScreenOrigin;
 
     // 엣지 스크롤 억제 래치. 포인터가 가장자리 영역을 "벗어날 때까지" 엣지 스크롤을 접는다.
     // 두 곳에서 세운다 - 가장자리에서 드래그를 놓았을 때(기존), 그리고 창이 카메라를 막고 있는 동안.
@@ -313,20 +313,22 @@ public class CameraController : MonoBehaviour
 
             if (!_isPointerPressedOverUI)
             {
-                _dragWorldOrigin = ScreenToWorld(Mouse.current.position.ReadValue());
-                _isDragging      = true;
+                _dragScreenOrigin = Mouse.current.position.ReadValue();
+                _isDragging       = true;
             }
         }
 
-        // 드래그 중 — 월드 좌표 차이만큼 targetPos 이동
+        // 드래그 중 — 화면 중심 기준 월드 오프셋의 차이만큼 targetPos 이동.
+        // ScreenToWorldPoint를 직접 빼지 않는 이유는 ScreenToWorldOffset 주석 참고.
         if (_isDragging && Mouse.current.leftButton.isPressed)
         {
-            Vector3 currentWorld = ScreenToWorld(Mouse.current.position.ReadValue());
-            Vector3 delta        = (_dragWorldOrigin - currentWorld) * _dragSensitivity;
+            Vector2 currentScreen = Mouse.current.position.ReadValue();
+            Vector3 delta = (ScreenToWorldOffset(_dragScreenOrigin) - ScreenToWorldOffset(currentScreen))
+                            * _dragSensitivity;
 
-            _targetPos      += delta;
+            _targetPos       += delta;
             // 드래그 기준점을 현재 위치로 갱신해야 누적 오차가 없음
-            _dragWorldOrigin = ScreenToWorld(Mouse.current.position.ReadValue());
+            _dragScreenOrigin = currentScreen;
         }
 
         // 드래그 종료
@@ -463,13 +465,27 @@ public class CameraController : MonoBehaviour
     {
         // Z축은 카메라 고유 깊이 유지
         Vector3 goal = new Vector3(_targetPos.x, _targetPos.y, transform.position.z);
-        Vector3 smoothed = Vector3.SmoothDamp(
-            transform.position, goal, ref _smoothVelocity, _moveSmoothTime,
-            Mathf.Infinity, Time.unscaledDeltaTime);
+
+        Vector3 next;
+        if (_isDragging)
+        {
+            // 드래그 중에는 보간하지 않는다 - 잡은 지점이 커서에 정확히 붙어 있어야 한다.
+            // SmoothDamp을 거치면 실제 위치가 목표에 뒤늦게 따라오게 되고, 그 어긋난 위치를
+            // 다음 프레임 드래그 계산이 다시 기준으로 삼아 목표를 되밀어내는 진동이 생긴다.
+            // 잔여 속도까지 지워야 손을 뗀 뒤 그 자리에서 바로 멈춘다.
+            next            = goal;
+            _smoothVelocity = Vector3.zero;
+        }
+        else
+        {
+            next = Vector3.SmoothDamp(
+                transform.position, goal, ref _smoothVelocity, _moveSmoothTime,
+                Mathf.Infinity, Time.unscaledDeltaTime);
+        }
 
         // 시작 위치가 경계 밖이거나 줌 아웃으로 허용 범위가 좁아지는 중에도
         // 실제 화면이 맵 밖을 비추지 않도록 최종 위치까지 클램프한다.
-        transform.position = ClampToMapBounds(smoothed);
+        transform.position = ClampToMapBounds(next);
 
         _cam.orthographicSize = Mathf.Lerp(
             _cam.orthographicSize, _targetZoom, _zoomSmoothing * Time.unscaledDeltaTime);
@@ -507,11 +523,20 @@ public class CameraController : MonoBehaviour
     // 유틸리티
     // ─────────────────────────────────────────────
 
-    /// 스크린 좌표 → 월드 좌표 (2D Orthographic 전용)
-    private Vector3 ScreenToWorld(Vector3 screenPos)
+    /// 화면 중심에서 해당 스크린 좌표까지의 월드 오프셋 (2D Orthographic 전용).
+    /// ScreenToWorldPoint를 그대로 쓰지 않는 이유: 그 값은 카메라의 실제 위치에 종속돼,
+    /// 마우스를 멈춰도 "카메라가 방금 이동한 만큼"이 드래그 이동량으로 잡힌다.
+    /// 그러면 목표가 뒤로 밀리는 되먹임이 생겨 화면이 진동한다.
+    /// ScreenToWorldPoint는 카메라 위치에 대해 아핀이므로, 위치를 빼면 종속성이 사라진다.
+    private Vector3 ScreenToWorldOffset(Vector2 screenPos)
     {
-        screenPos.z = 0f;
-        return _cam.ScreenToWorldPoint(screenPos);
+        Vector3 world = _cam.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, 0f));
+        world.z = 0f;
+
+        Vector3 center = transform.position;
+        center.z = 0f;
+
+        return world - center;
     }
 
     /// 스크린 좌표가 게임 화면 안에 있는지
