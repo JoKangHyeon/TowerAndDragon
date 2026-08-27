@@ -98,13 +98,15 @@ public class CameraController : MonoBehaviour
     private Vector2 _dragScreenOrigin;
 
     // 엣지 스크롤 억제 래치. 포인터가 가장자리 영역을 "벗어날 때까지" 엣지 스크롤을 접는다.
-    // 두 곳에서 세운다 - 가장자리에서 드래그를 놓았을 때(기존), 그리고 창이 카메라를 막고 있는 동안.
+    // 세 곳에서 세운다 - 가장자리에서 드래그를 놓았을 때(기존), 창이 카메라를 막고 있는 동안,
+    // 그리고 가장자리의 버튼·툴팁 등 상호작용 UI 위에 커서가 있는 동안(HandleEdgeScroll).
     // 미니맵도 창 닫기 버튼도 화면 구석에 있어서, 손을 떼거나 창이 닫히는 순간 화면이 튄다.
     private bool _isEdgeScrollSuppressed;
 
     // UI 위에서 시작한 좌클릭이 눌려 있는 동안 참. 미니맵을 끄는 내내 카메라가 같이 움직이던 원인이다.
-    // 포인터가 UI 위에 "있기만" 한 경우는 세우지 않는다 - 자원 바·건설 바 위를 지나며 하는
-    // 평범한 엣지 스크롤은 그대로 살아 있어야 한다.
+    // 포인터가 반응하지 않는 UI(배경판·아이콘·텍스트) 위에 "있기만" 한 경우는 세우지 않는다 -
+    // 그런 UI 위를 지나며 하는 평범한 엣지 스크롤은 그대로 살아 있어야 한다. 버튼·툴팁 같은
+    // 상호작용 UI 위는 이 플래그가 아니라 HandleEdgeScroll의 자체 판정으로 따로 막는다.
     private bool _isPointerPressedOverUI;
 
     // 씬 로드 직후 Input System의 마우스 위치는 첫 마우스 이벤트가 오기 전까지 (0,0)이다.
@@ -283,6 +285,15 @@ public class CameraController : MonoBehaviour
 
         if (dir == Vector3.zero) return;
 
+        // 레이캐스트는 커서가 실제로 가장자리 밴드 안에 있는 프레임에만 돈다.
+        // 버튼·툴팁 위에서 카메라가 흘러가지 않게 하되, 억제 래치를 세워
+        // 커서가 밴드를 벗어날 때까지는 재개하지 않는다(버튼 사이 틈에서의 깜빡임 방지).
+        if (IsPointerOverInteractiveUI())
+        {
+            _isEdgeScrollSuppressed = true;
+            return;
+        }
+
         _targetPos += dir.normalized * _edgeScrollSpeed * InputDeltaTime;
     }
 
@@ -366,6 +377,59 @@ public class CameraController : MonoBehaviour
     /// </summary>
     private bool IsPointerOverZoomBlockingUI()
     {
+        if (!TryRaycastPointerUI(out List<RaycastResult> hits))
+        {
+            return false;
+        }
+
+        foreach (RaycastResult hit in hits)
+        {
+            // 투명하다고 표시한 것은 그 아래 UI를 가리지 않는다 - 딤을 뚫고 스크롤 패널이 잡혀야 한다.
+            if (IsCameraInputTransparent(hit.gameObject))
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 지금 포인터 아래에 <b>포인터 이벤트를 받는 UI</b>(버튼·토글·슬라이더·툴팁 트리거·
+    /// 미니맵·스크롤 뷰 등)가 있는지. 배경판·아이콘·텍스트처럼 반응하지 않는 UI는 없는 것으로 친다.
+    /// <see cref="IsPointerOverZoomBlockingUI"/>와 같은 <see cref="ICameraInputTransparent"/> 예외를
+    /// 적용한다 - 안내 딤이 깔린 동안에도 엣지 스크롤은 살아 있어야 한다.
+    /// </summary>
+    private bool IsPointerOverInteractiveUI()
+    {
+        if (!TryRaycastPointerUI(out List<RaycastResult> hits))
+        {
+            return false;
+        }
+
+        foreach (RaycastResult hit in hits)
+        {
+            if (IsCameraInputTransparent(hit.gameObject))
+            {
+                continue;
+            }
+
+            if (HasEventHandlerInParents(hit.gameObject))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// 포인터 위치로 UI 레이캐스트를 돌려 결과 버퍼를 채운다. EventSystem·Mouse가 없으면 false.
+    private bool TryRaycastPointerUI(out List<RaycastResult> hits)
+    {
+        hits = _pointerRaycastBuffer;
+
         if (EventSystem.current == null || Mouse.current == null)
         {
             return false;
@@ -376,17 +440,28 @@ public class CameraController : MonoBehaviour
 
         _pointerRaycastBuffer.Clear();
         EventSystem.current.RaycastAll(_pointerEventData, _pointerRaycastBuffer);
+        return true;
+    }
 
-        foreach (RaycastResult hit in _pointerRaycastBuffer)
+    private static bool IsCameraInputTransparent(GameObject go) =>
+        go == null || go.GetComponentInParent<ICameraInputTransparent>() != null;
+
+    /// hit 자신부터 부모로 올라가며, 활성 상태인 IEventSystemHandler 구현체가 하나라도 있는지.
+    /// 레이캐스트 타깃은 보통 자식 Image이고 실제 핸들러(UI_TooltipTrigger 등)는 부모에 있으므로
+    /// GetComponentInParent 한 번으로는 컴포넌트 활성 여부까지 정확히 가릴 수 없어 직접 순회한다.
+    private static bool HasEventHandlerInParents(GameObject go)
+    {
+        for (Transform t = go.transform; t != null; t = t.parent)
         {
-            // 투명하다고 표시한 것은 그 아래 UI를 가리지 않는다 - 딤을 뚫고 스크롤 패널이 잡혀야 한다.
-            if (hit.gameObject == null ||
-                hit.gameObject.GetComponentInParent<ICameraInputTransparent>() != null)
+            foreach (IEventSystemHandler handler in t.GetComponents<IEventSystemHandler>())
             {
-                continue;
-            }
+                if (handler is Behaviour behaviour && !behaviour.isActiveAndEnabled)
+                {
+                    continue;
+                }
 
-            return true;
+                return true;
+            }
         }
 
         return false;
