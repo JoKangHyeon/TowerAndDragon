@@ -60,6 +60,9 @@ public class SoundManager : MonoBehaviour
     [Tooltip("동시에 울릴 수 있는 효과음 개수. 넘치면 가장 오래된 소리를 덮어쓴다.")]
     [SerializeField] private int _sePoolSize = 12;
 
+    [Tooltip("켜면 동시에 울린 효과음 수의 최고치가 갱신될 때마다 로그를 남긴다. 믹싱 조정(M6)용이며 평소에는 끈다.")]
+    [SerializeField] private bool _logSeUsagePeak;
+
     [Tooltip("BGM이 바뀔 때 이전 곡과 겹쳐 넘어가는 시간(초). 0이면 즉시 전환.")]
     [SerializeField] private float _bgmFadeDuration = 2f;
 
@@ -78,6 +81,7 @@ public class SoundManager : MonoBehaviour
 
     private AudioSource[] _seSources;
     private int _nextSeIndex;
+    private int _seUsagePeak;
 
     // 같은 사운드가 짧은 간격으로 겹쳐 울리는 것을 막기 위한 마지막 재생 시각(unscaled).
     private readonly Dictionary<SoundId, float> _lastPlayTimes = new();
@@ -273,6 +277,34 @@ public class SoundManager : MonoBehaviour
         }
 
         return sources;
+    }
+
+
+    // 믹싱 조정용 계측. 풀이 실제로 포화되는지가 볼륨·MinInterval을 만지기 전에 알아야 할 첫 숫자다.
+    // 포화되면 재생 중인 소스를 덮어써서 소리가 잘리고 피치·정위가 튄다(설계 문서 §14).
+    private void LateUpdate()
+    {
+        if (!_logSeUsagePeak || _seSources == null)
+        {
+            return;
+        }
+
+        int playing = 0;
+        foreach (AudioSource source in _seSources)
+        {
+            if (source != null && source.isPlaying)
+            {
+                playing++;
+            }
+        }
+
+        if (playing <= _seUsagePeak)
+        {
+            return;
+        }
+
+        _seUsagePeak = playing;
+        Debug.Log($"[SoundManager] 동시 재생 최고치 {_seUsagePeak}/{_seSources.Length}", this);
     }
 
     private void PlaySe(SoundId id)
