@@ -61,6 +61,20 @@ public class TowerData : ScriptableObject
              "비우면 표시하지 않는다.")]
     [SerializeField] private GameObject _allyHealOrbPrefab;
 
+    [Header("Sound")]
+    [Tooltip("공격 또는 회복 투사체를 발동하는 순간 재생할 효과음.")]
+    [SerializeField] private OptionalSoundId _launchSound;
+
+    [Tooltip("투사체가 목적지에 도착해 공격 또는 회복 효과를 적용할 때 재생할 효과음.")]
+    [SerializeField] private OptionalSoundId _resolveSound;
+
+    [Tooltip("오라가 비활성에서 활성으로 바뀔 때 한 번 재생할 효과음.")]
+    [SerializeField] private OptionalSoundId _auraOnSound;
+
+    public SoundId? LaunchSound => _launchSound.Value;
+    public SoundId? ResolveSound => _resolveSound.Value;
+    public SoundId? AuraOnSound => _auraOnSound.Value;
+
 
     public string NameLocKey => _nameLocKey;
     public virtual TowerCategory Category => TowerCategory.Basic;

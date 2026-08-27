@@ -322,6 +322,9 @@ public class TowerAttack : MonoBehaviour
         return _terrainPenaltyQuery.Resolve(_ownerTower);
     }
 
+    // 발사음과 투사체 생성 위치는 같은 기준을 쓴다 - 소리가 총구에서 나야 화면 감쇠·정위가 연출과 맞는다.
+    private Vector3 LaunchPosition => _firePoint != null ? _firePoint.position : transform.position;
+
     /// <summary>
     /// 사거리 내 대상에 공격을 적용한다.
     /// 투사체가 설정된 경우 투사체가 피해를 운반해 명중 시점에 적용하고,
@@ -334,7 +337,10 @@ public class TowerAttack : MonoBehaviour
             Debug.Log($"[TowerAttack] {name} → {_target.name} 공격 발사!", this);
         }
 
-        SoundManager.Play(SoundId.TowerFire);
+        if (_towerData.LaunchSound is SoundId launchSound)
+        {
+            SoundManager.Play(launchSound, LaunchPosition);
+        }
 
         ResolvedEnemyStatModifier damageModifier = ResolveDamageModifier();
 
@@ -374,9 +380,7 @@ public class TowerAttack : MonoBehaviour
 
     private void LaunchProjectile(BaseMonster target, in AttackContext context)
     {
-        Vector3 spawnPosition = _firePoint != null
-            ? _firePoint.position
-            : transform.position;
+        Vector3 spawnPosition = LaunchPosition;
 
         // 프리팹 검증(Projectile 유무)과 널일 때의 로그는 풀이 한다 - 여기서 되풀이하지 않는다.
         Projectile projectile = ProjectilePool.Spawn(_towerData.ProjectilePrefab, spawnPosition);
@@ -388,7 +392,12 @@ public class TowerAttack : MonoBehaviour
             return;
         }
 
-        projectile.Launch(target, Attack, in context, _towerData.ProjectileSpeed);
+        projectile.Launch(
+            target,
+            Attack,
+            in context,
+            _towerData.ProjectileSpeed,
+            _towerData.ResolveSound);
     }
 
 #if UNITY_EDITOR

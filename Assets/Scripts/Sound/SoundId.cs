@@ -19,4 +19,36 @@ public enum SoundId
     ConquestComplete,
     GameOver,
     Victory,
+
+    // 아래는 타워 전투 효과음(Docs/타워_전투_효과음_설계.md §5).
+    // SoundCatalog가 정수로 직렬화하므로 중간에 끼우지 말고 끝에만 추가한다.
+    TowerManaLaunch,
+    TowerManaResolve,
+    TowerCrossbowLaunch,
+    TowerCrossbowResolve,
+    TowerMusketLaunch,
+    TowerMusketResolve,
+    TowerAntiAirLaunch,
+    TowerAntiAirResolve,
+    TowerFlameLaunch,
+    TowerFlameResolve,
+    TowerFrostLaunch,
+    TowerFrostResolve,
+    TowerBoulderLaunch,
+    TowerBoulderResolve,
+    TowerLifeLaunch,
+    TowerLifeResolve,
+    TowerAuraOn,
+
+    // 새끼용 공격 모드 효과음. 새끼용도 TowerData를 상속하므로 같은 Launch/Resolve 구조를 쓴다.
+    BabyDragonFireLaunch,
+    BabyDragonFireResolve,
+    BabyDragonIceLaunch,
+    BabyDragonIceResolve,
+    BabyDragonTimeLaunch,
+    BabyDragonTimeResolve,
+    BabyDragonStoneLaunch,
+    BabyDragonStoneResolve,
+    BabyDragonLifeLaunch,
+    BabyDragonLifeResolve,
 }

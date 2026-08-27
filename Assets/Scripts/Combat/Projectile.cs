@@ -32,6 +32,9 @@ public class Projectile : MonoBehaviour
 
     private ProjectileVisual _visual;
 
+    // 명중 시점에 낼 소리. 쏜 쪽의 데이터라 투사체 프리팹이 아니라 발사할 때 받아 둔다.
+    private SoundId? _resolveSound;
+
     /// <summary>만든 쪽이 반납 창구를 알려 준다. 재사용할 때마다 다시 불려도 무해하다.</summary>
     public void BindRelease(Action<Projectile> release)
     {
@@ -42,7 +45,8 @@ public class Projectile : MonoBehaviour
         IAttackTarget target,
         AttackSO attack,
         in AttackContext context,
-        float speed)
+        float speed,
+        SoundId? resolveSound = null)
     {
         // 재사용된 인스턴스는 지난번 발사의 상태를 그대로 들고 있다 - 무엇보다 _isLaunched가
         // 켜진 채로 남아 있어, 아래 실패 경로로 빠져도 Update가 옛 타겟을 향해 돌기 시작한다.
@@ -67,6 +71,7 @@ public class Projectile : MonoBehaviour
         _attack = attack;
         _context = context;
         _speed = speed;
+        _resolveSound = resolveSound;
         _lastTargetPosition = _targetTransform.position;
         _isLaunched = true;
 
@@ -93,6 +98,7 @@ public class Projectile : MonoBehaviour
         _lastTargetPosition = Vector3.zero;
         _speed = 0f;
         _travelDirection = Vector3.zero;
+        _resolveSound = null;
     }
 
     private bool IsTargetAlive()
@@ -130,6 +136,12 @@ public class Projectile : MonoBehaviour
         ApplyHit();
 
         _visual?.OnHit(transform.position, _travelDirection, _targetObject);
+
+        // 명중 VFX와 같은 프레임에 낸다. 날아가는 동안 타겟이 죽어도 VFX가 목적지에서 터지는 규칙에 맞춘다.
+        if (_resolveSound is SoundId resolveSound)
+        {
+            SoundManager.Play(resolveSound, transform.position);
+        }
 
         Release();
     }
