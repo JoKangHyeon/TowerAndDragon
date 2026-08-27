@@ -131,6 +131,11 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
     private int _animKeyTakeDamage = Animator.StringToHash("TakeDamage");
     private int _animKeyDied = Animator.StringToHash("Died");
 
+    // 컨트롤러에 Move 파라미터가 있는지. Move 반영을 매 프레임 하므로 없는 컨트롤러
+    // (아트 미배정 프리팹에 꽂힌 플레이스홀더)에서는 프레임마다 "Parameter does not exist"
+    // 경고가 쌓인다. 해시 오버로드도 경고하므로 한 번 확인해 캐시한다.
+    private bool _hasMoveParameter;
+
 
     private void Awake()
     {
@@ -141,6 +146,7 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
         _statusReceiver = GetComponent<MonsterStatusReceiver>();
         _animator = GetComponent<Animator>();
         _spriteRenderer = GetComponent<SpriteRenderer>();
+        _hasMoveParameter = AnimatorParameterUtility.Has(_animator, _animKeyMove);
     }
 
     // 등록은 OnEnable에서 한다 - MonsterPicker의 몸통 우선 판정이 이 목록을 인덱서로 훑는다.
@@ -172,15 +178,33 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
         }
 
         float multiplier = _statusReceiver != null ? _statusReceiver.MoveSpeedMultiplier : 1f;
-        float moveSpeed = _baseMoveSpeed * multiplier;
-        _movement.SetSpeed(moveSpeed);
-        if (_animator != null)
-        {
-            _animator.SetBool(_animKeyMove, moveSpeed > 0);
+        _movement.SetSpeed(_baseMoveSpeed * multiplier);
+        ApplyMovementAnimation();
+    }
 
-            // 빙결은 애니메이션까지 멈춰야 "얼어붙었다"로 읽힌다 - Move를 꺼도 대기 동작은 계속 돈다.
-            _animator.speed = IsActionBlocked ? 0f : 1f;
+    /// <summary>
+    /// 애니메이터의 Move bool과 재생 속도를 현재 이동 상태에 맞춘다.
+    /// </summary>
+    /// <remarks>
+    /// Move 판정은 "속도 > 0"이 아니라 MonsterMovement.IsAdvancing이어야 한다 - 공격하려고 멈출 때
+    /// Stop()은 _isMoving만 내리고 속도는 유지하므로, 속도 기준으로는 Move가 스폰 이후 계속 true로
+    /// 남는다. 그러면 애니메이터가 Move 상태를 벗어나지 못하고, Attack의 유일한 진입로인
+    /// Idle -> Attack에 도달할 수 없어 공격 모션이 아예 재생되지 않는다.
+    /// </remarks>
+    private void ApplyMovementAnimation()
+    {
+        if (_animator == null)
+        {
+            return;
         }
+
+        if (_hasMoveParameter)
+        {
+            _animator.SetBool(_animKeyMove, _movement != null && _movement.IsAdvancing);
+        }
+
+        // 빙결은 애니메이션까지 멈춰야 "얼어붙었다"로 읽힌다 - Move를 꺼도 대기 동작은 계속 돈다.
+        _animator.speed = IsActionBlocked ? 0f : 1f;
     }
 
     /// <summary>
@@ -229,6 +253,14 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
 
     private void Update()
     {
+        // 매 프레임 다시 반영한다. 이동/정지 전환은 공격을 시작하는 "한 번"만 일어나므로 그 시점에
+        // 애니메이터가 준비돼 있지 않으면 공격 내내 모션이 죽는다(같은 이유와 대처가
+        // Villager.SetLocomotionState 주석에 정리돼 있다). Stop()/Begin()을 부르는 지점이
+        // MonsterAttack·SpecialBehavior 등 여러 곳으로 흩어져 있어, 호출부마다 애니메이터를
+        // 갱신하게 만드는 대신 상태를 여기서 한 번에 따라가게 한다.
+        // CanAct 검사보다 앞에 둔다 - 행동이 막힌 동안에도 재생 속도는 갱신돼야 한다.
+        ApplyMovementAnimation();
+
         if (!CanAct)
         {
             return;
@@ -331,9 +363,6 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
             _enhancement.MoveSpeed.Apply(_data.MoveSpeed));
         RefreshMoveSpeed();
 
-        if (_animator != null)
-            _animator.SetBool(_animKeyMove, _movement.GetSpeed() > 0);
-
         switch (_movement)
         {
             case GroundSplineMovement ground:
@@ -346,6 +375,10 @@ public class BaseMonster : MonoBehaviour, IAttackTarget, IStatusEffectTarget, IM
 
         _movement.Arrived.AddListener(HandleArrivedAtCastle);
         _movement.Begin();
+
+        // Begin() 뒤에 한 번 더 반영한다 - 위의 RefreshMoveSpeed 시점에는 아직 이동을 시작하지
+        // 않아 IsAdvancing이 false이므로, 그대로 두면 스폰 직후 한 프레임 동안 Move가 false다.
+        ApplyMovementAnimation();
     }
 
     private void HandleArrivedAtCastle()

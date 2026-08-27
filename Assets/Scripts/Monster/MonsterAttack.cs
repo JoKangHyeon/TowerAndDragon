@@ -28,6 +28,10 @@ public class MonsterAttack : MonoBehaviour
     private bool _isInitialized;
     private int _animKeyEnemyAttack = Animator.StringToHash("EnemyAttack");
 
+    // 컨트롤러에 EnemyAttack 트리거가 있는지. 없는 컨트롤러(플레이스홀더)에 트리거를 걸면
+    // 공격마다 "Parameter does not exist" 경고가 쌓인다.
+    private bool _hasEnemyAttackParameter;
+
 
     public float Range => _attack.Range;
     public float Interval => _attack.Interval;
@@ -68,7 +72,9 @@ public class MonsterAttack : MonoBehaviour
         Animator animator,
         ResolvedEnemyStatModifier attackPowerModifier)
     {
-        _animator= animator; 
+        _animator= animator;
+        _hasEnemyAttackParameter =
+            AnimatorParameterUtility.Has(_animator, _animKeyEnemyAttack);
 
         _data = data;
         _owner = GetComponent<BaseMonster>();
@@ -228,6 +234,12 @@ public class MonsterAttack : MonoBehaviour
     {
         _currentTarget = null;
         _currentTargetCollider = null;
+
+        // 여기서 EnemyAttack 트리거를 ResetTrigger로 지우지 않는다. 트리거는 전이가 채택할 때까지
+        // 남으므로 지우면 "공격이 들어갔는데 모션이 없는" 경우가 생긴다 - Move가 내려가고
+        // Idle -> Attack이 성립하기까지 1~2프레임이 걸리는데, 그 사이에 대상이 죽으면(방벽/타워를
+        // 한두 방에 부수는 경우) 방금 발행한 트리거를 지우게 된다. 남겨두면 다음 정지 때 한 프레임
+        // 늦게 재생될 뿐이라 그쪽이 낫다.
         _movement.Begin();
     }
 
@@ -248,8 +260,12 @@ public class MonsterAttack : MonoBehaviour
             _attackPowerModifier,
             _targetLayers);
 
-        if (_animator != null)
+        // 공격 모션은 근접·원거리 공통이다 - 아래 투사체 분기 안에 두면 근접 몬스터는
+        // 트리거 자체를 받지 못해 피해만 들어가고 모션이 나오지 않는다.
+        if (_animator != null && _hasEnemyAttackParameter)
+        {
             _animator.SetTrigger(_animKeyEnemyAttack);
+        }
 
         if (!_data.HasProjectile)
         {

@@ -18,6 +18,12 @@ public abstract class MonsterMovement : MonoBehaviour
     public bool HasArrived { get; protected set; }
     public UnityEvent Arrived;
 
+    // 지금 실제로 전진 중인가(이동 애니메이션을 틀어야 하는 상태인가).
+    // 두 조건이 모두 필요하다 - Stop()은 _speed를 그대로 두므로 속도만으로는 "공격하려고 멈춤"을
+    // 알 수 없고, 빙결로 속도가 0이 되는 경우는 _isMoving이 true로 남으므로 _isMoving만으로도
+    // 알 수 없다.
+    public bool IsAdvancing => _isMoving && _speed > 0;
+
     // 지형 고저차만큼 들어올리기 전의 평면 좌표. 이 유닛이 "논리적으로 서 있는" 셀을 알아야 하는 쪽
     // (안개 틴트 등)이 화면 픽셀 기준으로 되짚지 않고 바로 쓰도록 노출한다 - 되짚으면 앞쪽 절벽에
     // 가려진 경우 엉뚱한 셀이 나온다. 들어올리지 않는 이동 방식은 현재 위치가 그대로 평면 좌표다.
