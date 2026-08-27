@@ -78,7 +78,7 @@ public sealed class MonsterPathGuideAnchor : MonoBehaviour
         {
             Debug.LogWarning(
                 "[MonsterPathGuideAnchor] RectTransform 부모 밑의 UI 오브젝트여야 합니다 - 영역을 계산할 수 없습니다.", this);
-            enabled = false;
+            DisableWithAnchor();
             return;
         }
 
@@ -91,12 +91,27 @@ public sealed class MonsterPathGuideAnchor : MonoBehaviour
         CachePathLines();
     }
 
+    /// <summary>
+    /// 자리를 계산할 수 없을 때 자기와 함께 형제 <see cref="GuideAnchor"/>도 내린다.
+    /// 이 컴포넌트만 꺼도 앵커는 그대로 등록돼, 한 번도 갱신되지 않은 사각형이 안내 대상으로 잡힌다 -
+    /// 그러면 경로와 아무 상관 없는 자리에 딤 구멍이 뚫리고, 배선이 빠졌다는 사실은 드러나지 않는다.
+    /// </summary>
+    private void DisableWithAnchor()
+    {
+        enabled = false;
+
+        if (TryGetComponent(out GuideAnchor anchor))
+        {
+            anchor.enabled = false;
+        }
+    }
+
     private void CachePathLines()
     {
         if (_pathRoot == null)
         {
             Debug.LogWarning("[MonsterPathGuideAnchor] 경로 루트(_pathRoot)가 비어 있어 경로 영역을 찾을 수 없습니다.", this);
-            enabled = false;
+            DisableWithAnchor();
             return;
         }
 

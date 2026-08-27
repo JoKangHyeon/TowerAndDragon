@@ -117,6 +117,10 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     private RectTransform _resolvedTarget;
     private Renderer _resolvedWorldTarget;
 
+    // 이 단계에서 목록을 맞춰 준 건설 슬롯. 같은 슬롯에 두 번 스크롤하지 않기 위한 것이다 -
+    // 매 프레임 다시 맞추면 안내가 막지 않는 단계에서 플레이어가 목록을 움직일 수 없다.
+    private RectTransform _scrolledSlot;
+
     // 이 단계가 가리킬 곳을 한 번이라도 잡았는지. "아직 안 나타났다"와 "나타났다가 사라졌다"는
     // 화면 처리가 다르다 - 앞은 앞 그림을 유지하고, 뒤는 걷는다.
     private bool _hasEverResolvedTarget;
@@ -739,6 +743,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         // 대상 판정도 단계마다 새로 시작한다. 앞 단계의 캐시가 남으면 지나간 곳을 가리킨다.
         _resolvedTarget = null;
         _resolvedWorldTarget = null;
+        _scrolledSlot = null;
         _isWorldTargetCovered = false;
         _hasEverResolvedTarget = false;
         _hasWarnedMissingTarget = false;
@@ -976,6 +981,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         }
 
         _resolvedTarget = ResolveAnchor(_activeStep);
+        ScrollTargetSlotIntoView();
 
         // 월드 대상은 건물 순회 + GetComponentInChildren이라 한 번 잡으면 단계가 바뀔 때까지 들고 있는다.
         if (_resolvedTarget != null)
@@ -1007,6 +1013,27 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
                 $"[TutorialRunner] '{_activeStep.StepId}' 단계가 가리킬 대상을 {TARGET_WAIT_SECONDS}초 안에 찾지 못해 " +
                 "문구만 띄웁니다. 앵커 배선을 확인하세요.", this);
         }
+    }
+
+    /// <summary>
+    /// 건설 목록에서 가리킨 슬롯이 화면 밖에 있으면 그 자리로 목록을 내려 준다.
+    /// 미리 목록을 내려 둔 채로 이 단계에 들어오면 가리킨 슬롯이 화면 밖이라 딤 구멍도 없어
+    /// 무엇을 누르라는 것인지 알 수 없었다.
+    ///
+    /// 슬롯이 새로 잡혔을 때만 한 번 맞춘다. 탭을 바꾸면 슬롯이 통째로 다시 만들어지므로
+    /// 그때는 다른 인스턴스가 되어 자동으로 다시 맞춰진다.
+    /// </summary>
+    private void ScrollTargetSlotIntoView()
+    {
+        if (_buildModeWindow == null || _resolvedTarget == null ||
+            _activeStep.TargetBuildingSlot == null ||
+            ReferenceEquals(_resolvedTarget, _scrolledSlot))
+        {
+            return;
+        }
+
+        _scrolledSlot = _resolvedTarget;
+        _buildModeWindow.ScrollSlotIntoView(_activeStep.TargetBuildingSlot);
     }
 
     /// <summary>

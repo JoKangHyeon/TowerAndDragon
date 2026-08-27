@@ -126,6 +126,13 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
     private int _currentFilterIndex;
     private bool _initialized;
 
+    private const float HALF = 0.5f;
+
+    // RectTransform.GetWorldCorners의 순서: 0 좌하 · 1 좌상 · 2 우상 · 3 우하.
+    private const int BOTTOM_LEFT_CORNER = 0;
+    private const int TOP_LEFT_CORNER = 1;
+    private const int RECT_CORNER_COUNT = 4;
+
     // stringtable — buildMode_panel_info_refund : "{0}%를 반환"
     private const string REFUND_INFO_LOC_KEY = "buildMode_panel_info_refund";
     private const int PERCENT_SCALE = 100;
@@ -140,6 +147,7 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
 
     private readonly List<UI_BuildingSlot> _spawnedSlots = new();
     private readonly List<IBuildModeInteractionQuery> _interactionQueries = new();
+    private readonly Vector3[] _slotCornerBuffer = new Vector3[RECT_CORNER_COUNT];
 
     public void AddInteractionQuery(IBuildModeInteractionQuery query)
     {
@@ -193,6 +201,52 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 이 건물의 슬롯이 목록에서 다 보이도록 스크롤을 맞춘다. 이미 다 보이면 아무것도 하지 않는다.
+    ///
+    /// 플레이어가 미리 목록을 내려 둔 채로 그 슬롯을 가리키는 단계에 들어오면, 가리킨 슬롯이 화면 밖이라
+    /// 딤 구멍도 그 자리에 뚫리지 않는다 - 무엇을 누르라는 것인지 알 수 없어진다.
+    /// 단계에 들어서는 순간 목록을 그 슬롯에 맞춰 두면 그 상황이 생기지 않는다.
+    /// </summary>
+    public void ScrollSlotIntoView(Building prefab)
+    {
+        if (!TryGetSlotRect(prefab, out RectTransform slotRect) || _slotContainer == null)
+        {
+            return;
+        }
+
+        ScrollRect scroll = _slotContainer.GetComponentInParent<ScrollRect>();
+        if (scroll == null || !scroll.vertical || scroll.content == null || scroll.viewport == null)
+        {
+            return;
+        }
+
+        // 방금 만들어진 슬롯은 레이아웃이 아직 돌지 않아 전부 원점에 있다 - 그대로 재면 엉뚱한 값이 나온다.
+        LayoutRebuilder.ForceRebuildLayoutImmediate(scroll.content);
+
+        float viewHeight = scroll.viewport.rect.height;
+        float scrollableHeight = scroll.content.rect.height - viewHeight;
+        if (scrollableHeight <= 0f)
+        {
+            return;
+        }
+
+        // 거리는 전부 내용의 위 끝에서 아래로 잰다 - 스크롤 값(1이 맨 위)과 방향이 반대라 섞으면 헷갈린다.
+        slotRect.GetWorldCorners(_slotCornerBuffer);
+        float contentTop = scroll.content.rect.yMax;
+        float slotTop = contentTop - scroll.content.InverseTransformPoint(_slotCornerBuffer[TOP_LEFT_CORNER]).y;
+        float slotBottom = contentTop - scroll.content.InverseTransformPoint(_slotCornerBuffer[BOTTOM_LEFT_CORNER]).y;
+        float viewTop = (1f - scroll.verticalNormalizedPosition) * scrollableHeight;
+
+        if (slotTop >= viewTop && slotBottom <= viewTop + viewHeight)
+        {
+            return;
+        }
+
+        float centeredTop = Mathf.Clamp((slotTop + slotBottom) * HALF - viewHeight * HALF, 0f, scrollableHeight);
+        scroll.verticalNormalizedPosition = 1f - centeredTop / scrollableHeight;
     }
 
     private void Awake()
@@ -610,7 +664,12 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         foreach (UI_BuildingSlot slot in _spawnedSlots)
         {
             if (slot != null)
+            {
+                // Destroy는 프레임 끝에 처리된다 - 그대로 두면 이번 프레임 레이아웃에 아직 남아 있어
+                // 새 슬롯이 사라질 슬롯들 밑에 깔리고, 안내가 한 프레임 엉뚱한 자리에 구멍을 뚫는다.
+                slot.gameObject.SetActive(false);
                 Destroy(slot.gameObject);
+            }
         }
         _spawnedSlots.Clear();
 
