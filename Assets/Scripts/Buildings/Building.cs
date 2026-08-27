@@ -78,9 +78,11 @@ public class Building : MonoBehaviour
     // GridMap 전용. 셀 점유와 앵커가 어긋나면 세이브가 엉뚱한 자리에 건물을 되살린다.
     public void SetPlacementAnchor(Vector3Int anchor) => PlacementAnchor = anchor;
 
-    // 범위 판정의 기준점 - 이 건물이 점유한 풋프린트의 지면 중앙(지형 고저차 포함).
-    // transform.position은 프리팹 루트 localPosition만큼 위로 띄운 "표시" 좌표라(새끼용은 1.5,
-    // 일반 타워는 1) 그대로 판정 중심에 쓰면 사거리·버프 반경 등의 원이 위로 밀린다.
+    // 범위 판정의 기준점 - 이 건물이 점유한 풋프린트의 "눈에 보이는 타일 표면" 중앙
+    // (지형 고저차 포함, 셀 하이라이트·청크 경계가 그려지는 평면과 같다 - GridMap.CellSurfaceOffset).
+    // GridMap.ConvertGridToWorld가 돌려주는 셀 중앙 평면과도, 프리팹 루트 localPosition만큼
+    // 더 위로 띄운 "표시" 좌표 transform.position(새끼용은 1.5, 일반 타워는 1)과도 다른 평면이다 -
+    // 셋 다 그대로 판정 중심에 쓰면 사거리·버프 반경 등의 원이 타일과 어긋난다.
     // GridMap이 배치·복원·이동 때마다 PlacementAnchor와 함께 채운다.
     public Vector3 GroundWorldPosition { get; private set; }
 

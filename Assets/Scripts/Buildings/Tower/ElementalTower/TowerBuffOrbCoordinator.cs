@@ -178,7 +178,8 @@ public sealed class TowerBuffOrbCoordinator : MonoBehaviour
         }
 
         // 프리팹 루트 스케일 1이 반경 1이다(FX_Aura_* 4종 모두 Scale 래퍼가 아이소 압축을 들고 있다).
-        _rangeMarker.position = source.transform.position;
+        // 사거리 판정·LineRenderer 표시와 같은 기준점(타일 표면 중앙)을 써야 이 마커가 대신 서도 자리가 갈리지 않는다.
+        _rangeMarker.position = source.GroundWorldPosition;
         _rangeMarker.rotation = Quaternion.identity;
         _rangeMarker.localScale = Vector3.one * effectiveRadius;
     }

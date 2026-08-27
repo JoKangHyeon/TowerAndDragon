@@ -16,9 +16,6 @@ public class MouseSelectController : MonoBehaviour
     private GridMap _gridMap;
 
     [SerializeField]
-    private float _yOffset = 0.7f;
-
-    [SerializeField]
     private SpriteRenderer _ghostRenderer;
 
     [SerializeField]
@@ -78,7 +75,10 @@ public class MouseSelectController : MonoBehaviour
     public Vector3Int CurrentAnchor { get; private set; }
     public bool CanConstruct { get; private set; }
     public Color SelectionHighlightColor => _selectionHighlightColor;
-    public float YOffset => _yOffset;
+
+    // GridMap.CellSurfaceYOffset으로 위임 - 셀 하이라이트·청크 경계 등 여러 오버레이가
+    // GetYOffsetOrZero를 통해 공유하는 값이라, 여기서 값을 새로 갖지 않고 단일 소유자(GridMap)를 그대로 읽는다.
+    public float YOffset => _gridMap != null ? _gridMap.CellSurfaceYOffset : 0f;
 
     // 미리보기 중인(아직 확정 안 된) 회전 스텝 - 배치/이동 확정 시 BuildingPlacementController가 그대로 GridMap에 넘긴다.
     public int PreviewRotationSteps => _previewRotationSteps;
@@ -213,8 +213,8 @@ public class MouseSelectController : MonoBehaviour
             Deactivate();
     }
 
-    // 하이라이트를 그릴 때(HighlightCells 등) ConvertGridToWorld 결과에 _yOffset을 더하므로,
-    // 역방향인 여기서도 같은 양을 빼서 "하이라이트가 그려진 자리"를 기준으로 셀을 찾는다.
+    // 하이라이트를 그릴 때(HighlightCells 등) GridMap.GetCellSurfaceWorld로 타일 표면까지 띄우므로,
+    // 역방향인 여기서도 같은 양(YOffset)을 빼서 "하이라이트가 그려진 자리"를 기준으로 셀을 찾는다.
     // 셀 판정은 ConvertWorldToGrid가 아니라 PickCellAtWorldPoint로 해야 단차가 높은 지형에서도
     // 화면에 보이는 타일과 클릭 지점이 일치한다.
     // 포인터의 월드 좌표(Y 오프셋 미적용). 그리드 셀이 아니라 실제로 그려진 위치와 비교해야 하는
@@ -261,7 +261,7 @@ public class MouseSelectController : MonoBehaviour
             return false;
         }
 
-        worldPos.y -= _yOffset;
+        worldPos.y -= YOffset;
         cell = _gridMap.PickCellAtWorldPoint(worldPos);
 
         return true;
@@ -270,7 +270,7 @@ public class MouseSelectController : MonoBehaviour
     public Vector3Int GetHoveredCell()
     {
         Vector3 worldPos = GetPointerWorldPoint();
-        worldPos.y -= _yOffset;
+        worldPos.y -= YOffset;
 
         return _gridMap.PickCellAtWorldPoint(worldPos);
     }
@@ -399,9 +399,7 @@ public class MouseSelectController : MonoBehaviour
         for (int i = 0; i < coords.Count; i++)
         {
             SpriteRenderer highlight = pool.Get(i);
-            Vector3 cellPos = _gridMap.ConvertGridToWorld(coords[i]);
-            cellPos.y += _yOffset;
-            highlight.transform.position = cellPos;
+            highlight.transform.position = _gridMap.GetCellSurfaceWorld(coords[i]);
             highlight.color = color;
         }
 
@@ -421,9 +419,7 @@ public class MouseSelectController : MonoBehaviour
             foreach (Vector3Int coord in group.Coords)
             {
                 SpriteRenderer highlight = _selectionHighlightPool.Get(index);
-                Vector3 cellPos = _gridMap.ConvertGridToWorld(coord);
-                cellPos.y += _yOffset;
-                highlight.transform.position = cellPos;
+                highlight.transform.position = _gridMap.GetCellSurfaceWorld(coord);
                 highlight.color = group.Color;
                 index++;
             }
@@ -468,7 +464,7 @@ public class MouseSelectController : MonoBehaviour
 
     private void DrawRangeIndicator(Vector3Int anchor)
     {
-        // 판정 기준점(지면 중앙)으로 그린다 - 시각 오프셋(_ghostVisualOffset)까지 더하면
+        // 판정 기준점(타일 표면 중앙)으로 그린다 - 시각 오프셋(_ghostVisualOffset)까지 더하면
         // 새끼용처럼 스프라이트가 위로 뜬 건물의 사거리 원이 몸통 쪽으로 밀려 표시=판정 규약이 깨진다.
         Vector3 center = GetPreviewGroundPosition(anchor);
 
@@ -476,13 +472,22 @@ public class MouseSelectController : MonoBehaviour
         DrawBuffRangeIndicator(center);
     }
 
-    private Vector3 GetPreviewGroundPosition(Vector3Int anchor) =>
+    // 셀 중앙 평면 - 고스트 스프라이트가 프리팹 오프셋을 더할 기준(회전 짝홀 보정만 반영).
+    private Vector3 GetPreviewCellCenterPosition(Vector3Int anchor) =>
         _gridMap != null
             ? _gridMap.GetFootprintCenterWorld(anchor, _footprintShape) + _ghostGroundCompensation
             : Vector3.zero;
 
+    // 타일 표면 평면 - 실제 배치 후 Building.GroundWorldPosition과 같은 값(GridMap.ApplyPlacement 참고).
+    // 사거리·버프 반경 표시(DrawRangeIndicator)와 판정 위치 조회(PreviewGroundWorldPosition)가 쓴다.
+    private Vector3 GetPreviewGroundPosition(Vector3Int anchor) =>
+        _gridMap != null
+            ? GetPreviewCellCenterPosition(anchor) + _gridMap.CellSurfaceOffset
+            : Vector3.zero;
+
+    // 고스트 스프라이트 표시 전용 - 셀 중앙에 프리팹 루트 localPosition(+회전별 미세조정)을 더한다.
     private Vector3 GetPreviewWorldPosition(Vector3Int anchor) =>
-        GetPreviewGroundPosition(anchor) + _ghostVisualOffset;
+        GetPreviewCellCenterPosition(anchor) + _ghostVisualOffset;
 
     // 배치/이동 대상이 공격 가능한 타워일 때만, 실제 판정(TowerAttack.IsWithinAttackRange)과 같은
     // 타원으로 사거리를 표시한다 - 그 외 건물이거나 인디케이터가 연결 안 됐으면 숨긴다.

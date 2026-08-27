@@ -38,7 +38,10 @@ public sealed class TowerHealAuraEffectSO : AttackEffectSO
         }
 
         Tower owner = context.Source.GetComponent<Tower>();
-        Vector3 center = context.Source.transform.position;
+        // 다른 사거리·버프 반경 판정(TowerAttack·TowerAllyHealer 등)과 같은 기준점(타일 표면 중앙)을
+        // 써야 이 회복 범위가 그 원들과 어긋나지 않는다. owner가 없는 예외적인 호출부를 위해
+        // transform.position을 대체값으로 남긴다.
+        Vector3 center = owner != null ? owner.GroundWorldPosition : context.Source.transform.position;
 
         if (_healVfxPrefab != null)
         {
@@ -69,9 +72,9 @@ public sealed class TowerHealAuraEffectSO : AttackEffectSO
             }
 
             if (!IsometricMath.IsWithinEllipse(
-                    tower.transform.position, 
-                    center, 
-                    _radius, 
+                    tower.GroundWorldPosition,
+                    center,
+                    _radius,
                     radiusY))
             {
                 continue;

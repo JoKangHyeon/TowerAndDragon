@@ -262,7 +262,8 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
                 continue;
             }
 
-            Vector3 cellWorldPos = _gridMap.ConvertGridToWorld(coord); // 실제로는 _gridMap.ConvertGridToWorld(coord)
+            // center(babyDragon.GroundWorldPosition)와 같은 평면(타일 표면)에서 비교해야 한다.
+            Vector3 cellWorldPos = _gridMap.GetCellSurfaceWorld(coord);
 
             if (IsometricMath.IsWithinEllipse(cellWorldPos, center, radius, radiusY))
             {

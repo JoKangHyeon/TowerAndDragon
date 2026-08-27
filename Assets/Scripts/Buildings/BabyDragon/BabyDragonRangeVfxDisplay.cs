@@ -63,7 +63,10 @@ public sealed class BabyDragonRangeVfxDisplay : MonoBehaviour
             return;
         }
 
-        _activeEffect.position = _owner.transform.position;
+        // 버프/공격 판정(BabyDragonBuffSystem·TowerAttack)과 같은 기준점(타일 표면 중앙)을 써야
+        // 이 이펙트가 실제 판정 원과 어긋나지 않는다 - _owner.transform.position은 프리팹 루트
+        // localPosition(1.5)만큼 위로 뜬 표시 좌표라 그대로 쓰면 원이 몸통 쪽으로 밀린다.
+        _activeEffect.position = _owner.GroundWorldPosition;
         _activeEffect.rotation = Quaternion.identity;
         _activeEffect.localScale = Vector3.one;
 

@@ -10,6 +10,12 @@ public class GridMap : MonoBehaviour
     [SerializeField]
     private Tilemap _tilemap;
 
+    // 셀 중앙(ConvertGridToWorld)에서 "눈에 보이는 타일 표면"까지의 Y 오프셋 - 셀 하이라이트·
+    // 청크 경계·청크 정보 오버레이·마우스 픽킹 역변환이 전부 공유하던 값(과거 MouseSelectController._yOffset)을
+    // 여기로 옮겼다. 사거리·버프 반경 등 표시=판정 기준점(Building.GroundWorldPosition)도 이 평면을 쓴다.
+    [SerializeField]
+    private float _cellSurfaceYOffset = 0.75f;
+
     [SerializeField]
     private TerrainTileMap _terrainTileMap;
 
@@ -494,6 +500,13 @@ public class GridMap : MonoBehaviour
         return worldPos;
     }
 
+    // 셀 중앙 평면에서 "눈에 보이는 타일 표면" 평면으로 올릴 때 더하는 값.
+    public float CellSurfaceYOffset => _cellSurfaceYOffset;
+    public Vector3 CellSurfaceOffset => new Vector3(0f, _cellSurfaceYOffset, 0f);
+
+    // ConvertGridToWorld + 타일 표면 오프셋 - 셀 하이라이트가 그려지는 자리와 같은 점이다.
+    public Vector3 GetCellSurfaceWorld(Vector3Int cellCoord) => ConvertGridToWorld(cellCoord) + CellSurfaceOffset;
+
     // Isometric Z As Y 레이아웃에서는 셀 중심 평면보다 살짝 뜬 위치(오브젝트 피벗 등)를 넣으면
     // WorldToCell이 z를 0이 아닌 값으로 돌려줄 때가 있다 - 이 프로젝트의 실제 셀 좌표는 항상 z=0이므로
     // (셀 딕셔너리도 그렇게 키가 잡혀 있다) 여기서 강제로 맞춰, Props 등이 엉뚱한 z 탓에 셀 조회에
@@ -908,7 +921,8 @@ public class GridMap : MonoBehaviour
         building.SetPlacementAnchor(anchor);
         building.SetGroundWorldPosition(
             GetFootprintCenterWorld(anchor, building.FootprintShape)
-            + ComputeRotationCompensation(building.BaseFootprintShape, building.RotationSteps));
+            + ComputeRotationCompensation(building.BaseFootprintShape, building.RotationSteps)
+            + CellSurfaceOffset);
         building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor));
     }
 
