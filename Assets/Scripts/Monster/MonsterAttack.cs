@@ -272,7 +272,7 @@ public class MonsterAttack : MonoBehaviour
     // 때릴 수 없으므로(Castle은 IMonsterTarget이 아니다) 이 가드에 걸리지 않는다.
     private void PlayHitVfx(IAttackTarget target)
     {
-        if (!_attack.HasHitVfx || target is Castle)
+        if (!_attack.HasHitVfx || target is Castle || IsDestroyed(target))
         {
             return;
         }
@@ -290,13 +290,23 @@ public class MonsterAttack : MonoBehaviour
             return;
         }
 
-        Vector3 groundPosition = new Vector3(
-            transform.position.x,
-            AttackVfxPlacement.ResolveGroundY(gameObject),
-            transform.position.z);
+        // _movement를 넘겨 ResolveGroundY가 GetComponent<MonsterMovement>를 다시 돌지 않게 한다 -
+        // 이 컴포넌트는 Initialize에서 이미 캐시해 뒀다. x도 raw transform.position이 아니라
+        // 스프라이트 bounds 중심을 쓴다 - TargetBody 분기와 같은 기준이어야 피벗이 중앙이 아닌
+        // 몬스터(발밑 이펙트가 옆으로 밀려 보이는 프리팹)에서도 어긋나지 않는다.
+        Vector3 groundPosition = AttackVfxPlacement.ResolveVisualImpactPosition(
+            transform.position, gameObject, ProjectileImpactPlacement.Ground, _movement);
 
         ProjectilePool.PlayForSeconds(
             _attack.HitVfxPrefab, groundPosition, Quaternion.identity, _attack.HitVfxLifetimeSeconds);
+    }
+
+    // IsCurrentTargetValid(133번째 줄)와 같은 이유다 - target은 인터페이스 타입이라 Unity가
+    // 오버로드한 == 연산자를 타지 않는다. Destroy() 직후(같은 프레임, GC 전)에도 `target != null`이
+    // 여전히 true를 반환할 수 있어, 이 검사가 없으면 그 틈을 놓친다.
+    private static bool IsDestroyed(IAttackTarget target)
+    {
+        return target is Object unityObject && unityObject == null;
     }
 
     private void LaunchProjectile(IAttackTarget target, in AttackContext context)

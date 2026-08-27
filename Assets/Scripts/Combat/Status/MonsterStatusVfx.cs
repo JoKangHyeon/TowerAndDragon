@@ -38,7 +38,7 @@ public sealed class MonsterStatusVfx
     // 몸통 위치의 기준. 몬스터마다 크기가 달라 고정 오프셋으로는 어느 한쪽이 반드시 어긋난다.
     private SpriteRenderer _bodyRenderer;
 
-    // 발밑의 기준. 스프라이트 경계의 밑변으로는 못 구한다 - 아래 ResolveAnchors 주석 참고.
+    // 발밑의 기준. 스프라이트 경계의 밑변으로는 못 구한다 - AttackVfxPlacement.ResolveGroundY 참고.
     private MonsterMovement _movement;
 
     /// <summary>소유 몬스터를 물린다. 렌더러 탐색이 들어 있으므로 Awake에서 한 번만 부른다.</summary>
@@ -172,16 +172,13 @@ public sealed class MonsterStatusVfx
     // 몸통 중앙은 스프라이트 경계(월드 AABB)에서 구한다. 경계를 쓰므로 루트 스케일이
     // 0.1~1.5로 갈려도 같은 코드로 찾는다 - 고정 오프셋이면 어느 크기에서 반드시 어긋난다.
     //
-    // 발밑은 경계로 구하면 안 된다. `bounds.min.y`는 스프라이트 사각형의 밑변이고, PixelWorld
-    // 시트는 발 위치에 커스텀 피벗을 두기 때문에 그 아래로 셀 높이의 18~25%가 남는다.
-    // 보스 1(GolemGian_194, 셀 194 / PPU 32 / 피벗 0.18)은 사각형 밑변이 피벗선보다 1.09 아래고,
-    // 실측한 시각 오차는 0.82 월드 유닛이었다.
-    // 이동 컴포넌트의 지면 좌표가 이 프로젝트의 발밑 기준이며 지형 고저차 보정도 들어 있다.
+    // 발밑은 AttackVfxPlacement.ResolveGroundY를 쓴다 - 경계로 구하면 안 되는 이유(스프라이트
+    // 사각형 밑변과 실제 발 피벗이 셀 높이의 18~25%까지 어긋난다)는 그쪽 주석에 있다. 근거리·보스
+    // 공격 이펙트(AttackVfxPlacement)와 상태 지속 연출(여기)이 같은 함정을 각자 겪지 않도록
+    // 한 곳에 모아 뒀다. _movement를 넘겨 GetComponent를 다시 돌지 않는다 - Bind에서 이미 캐시했다.
     private void ResolveAnchors(out Vector3 body, out Vector3 feet)
     {
-        float groundY = _movement != null
-            ? _movement.GroundPlanePosition.y
-            : _owner.position.y;
+        float groundY = AttackVfxPlacement.ResolveGroundY(_owner.gameObject, _movement);
 
         if (_bodyRenderer == null)
         {

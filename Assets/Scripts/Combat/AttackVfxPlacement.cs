@@ -12,10 +12,16 @@ public static class AttackVfxPlacement
     /// <paramref name="placement"/>에 따라 명중 연출을 놓을 월드 좌표를 정한다.
     /// <see cref="ProjectileImpactPlacement.TargetOrigin"/>이거나 대상이 없으면 hitPosition을 그대로 쓴다.
     /// </summary>
+    /// <param name="cachedMovement">
+    /// 호출하는 쪽이 이미 <see cref="MonsterMovement"/>를 캐시해 뒀다면 넘긴다(예: MonsterAttack의
+    /// Initialize에서 잡아 둔 참조) - <see cref="ResolveGroundY"/>가 매번 GetComponent를 다시 돌지
+    /// 않는다. 비워 두면(기본값 null) 예전처럼 targetObject에서 직접 찾는다.
+    /// </param>
     public static Vector3 ResolveVisualImpactPosition(
         Vector3 hitPosition,
         GameObject targetObject,
-        ProjectileImpactPlacement placement)
+        ProjectileImpactPlacement placement,
+        MonsterMovement cachedMovement = null)
     {
         if (placement == ProjectileImpactPlacement.TargetOrigin || targetObject == null)
         {
@@ -37,7 +43,7 @@ public static class AttackVfxPlacement
         Bounds bounds = bodyRenderer.bounds;
 
         return placement == ProjectileImpactPlacement.Ground
-            ? new Vector3(bounds.center.x, ResolveGroundY(targetObject), hitPosition.z)
+            ? new Vector3(bounds.center.x, ResolveGroundY(targetObject, cachedMovement), hitPosition.z)
             : new Vector3(bounds.center.x, bounds.center.y, hitPosition.z);
     }
 
@@ -46,9 +52,11 @@ public static class AttackVfxPlacement
     // 보스 1(GolemGian_194, 셀 194 / PPU 32 / 피벗 0.18)은 사각형 밑변이 피벗선보다 1.09 아래고,
     // 실측한 시각 오차는 0.82 월드 유닛이었다.
     // 이동 컴포넌트의 지면 좌표가 이 프로젝트의 발밑 기준이며 지형 고저차 보정도 들어 있다.
-    public static float ResolveGroundY(GameObject targetObject)
+    public static float ResolveGroundY(GameObject targetObject, MonsterMovement cachedMovement = null)
     {
-        MonsterMovement movement = targetObject.GetComponent<MonsterMovement>();
+        MonsterMovement movement = cachedMovement != null
+            ? cachedMovement
+            : targetObject.GetComponent<MonsterMovement>();
 
         return movement != null
             ? movement.GroundPlanePosition.y

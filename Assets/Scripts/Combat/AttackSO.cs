@@ -12,6 +12,10 @@ using System.Collections.Generic;
 [CreateAssetMenu(menuName = "TowerAndDragon/Attack", fileName = "Attack")]
 public class AttackSO : ScriptableObject
 {
+    // ProjectileVisual._impactLifetimeSeconds와 같은 이유로 기본값을 둔다 - 없으면 새 애셋마다
+    // 조용히 0으로 시작해 ProjectilePool이 다음 프레임에 바로 반납한다(1프레임짜리 플래시).
+    private const float DEFAULT_HIT_VFX_LIFETIME_SECONDS = 1f;
+
     [Header("Firing")]
     [SerializeField] private float _range;
     [SerializeField] private float _interval;
@@ -27,13 +31,20 @@ public class AttackSO : ScriptableObject
     // 투사체가 직접 들고 있어야 해서 MonsterData._projectilePrefab의 ProjectileVisual이 대신 그린다
     // (이미 배선돼 있다). 발화 지점은 MonsterAttack이다 - 광역은 Execute가 대상 수만큼 도는 경로가
     // 있어 "공격 1회"를 아는 것이 MonsterAttack뿐이기 때문에 여기 Execute 안에서는 띄우지 않는다.
+    //
+    // 클래스 헤더의 "타워·적이 동일 애셋을 공유할 수 있다"는 문장에 이 필드는 해당하지 않는다.
+    // TowerAttack.Fire()의 비투사체 분기(MonsterAttack.Fire()와 같은 모양)는 이 필드를 전혀
+    // 읽지 않는다 - 타워 쪽 명중 연출 훅이 아직 없다. TA_* 애셋에 채워도 조용히 아무 일도
+    // 일어나지 않으니 비워 둔다(적_이펙트_연출_설계.md §3-1).
     [Header("Hit VFX (근접 공격용 - 투사체가 있으면 ProjectileVisual이 대신 그린다)")]
+    [Tooltip("근거리·보스 몬스터 공격 전용. TowerAttack은 이 필드를 읽지 않으므로 TA_* 애셋에는 " +
+             "채우지 않는다.")]
     [WiringOptional]
     [SerializeField] private GameObject _hitVfxPrefab;
 
     [Tooltip("명중 이펙트가 스스로 걷히기까지의 시간(초).")]
     [Min(0f)]
-    [SerializeField] private float _hitVfxLifetimeSeconds;
+    [SerializeField] private float _hitVfxLifetimeSeconds = DEFAULT_HIT_VFX_LIFETIME_SECONDS;
 
     [Tooltip("명중 연출을 놓을 기준점.")]
     [SerializeField] private AttackVfxAnchor _hitVfxAnchor;
@@ -181,4 +192,26 @@ public class AttackSO : ScriptableObject
             }
         }
     }
+
+#if UNITY_EDITOR
+    // 수명 0은 문법적으로 유효하지만(ProjectilePool이 다음 프레임에 반납할 뿐 에러가 아니다),
+    // 결과가 "1프레임짜리 플래시"라 눈으로만 확인 가능하다 - 실제로 두 애셋(MA_SelfDestruct 등)에서
+    // 한 번 발생했다. 저장 시점에 잡아 준다.
+    private void OnValidate()
+    {
+        if (_hitVfxPrefab == null)
+        {
+            return;
+        }
+
+        if (_hitVfxLifetimeSeconds <= 0f)
+        {
+            Debug.LogWarning(
+                $"[{name}] HitVfxPrefab '{_hitVfxPrefab.name}'이 설정됐지만 " +
+                "HitVfxLifetimeSeconds가 0입니다. 다음 프레임에 바로 반납돼 1프레임짜리 " +
+                "플래시로만 보입니다.",
+                this);
+        }
+    }
+#endif
 }
