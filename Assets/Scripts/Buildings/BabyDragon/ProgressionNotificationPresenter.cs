@@ -47,6 +47,7 @@ public class ProgressionNotificationPresenter : MonoBehaviour
         if (_researchManager != null)
         {
             _researchManager.NodeCompleted.AddListener(HandleResearchCompleted);
+            _researchManager.ProgressRestored.AddListener(HandleResearchProgressRestored);
         }
 
         if (_cycleManager != null)
@@ -71,6 +72,7 @@ public class ProgressionNotificationPresenter : MonoBehaviour
         if (_researchManager != null)
         {
             _researchManager.NodeCompleted.RemoveListener(HandleResearchCompleted);
+            _researchManager.ProgressRestored.RemoveListener(HandleResearchProgressRestored);
         }
 
         if (_cycleManager != null)
@@ -155,7 +157,34 @@ public class ProgressionNotificationPresenter : MonoBehaviour
 
     private void HandleResearchCompleted(ResearchNodeData _)
     {
+        if (_researchManager != null && _researchManager.IsRestoringProgress)
+        {
+            return;
+        }
+
         NotifyNewlyUnlockedTowers();
+    }
+
+    private void HandleResearchProgressRestored()
+    {
+        // 복원된 해금은 과거에 이미 알림을 보낸 상태로 취급한다. 이후 실제 연구가
+        // 완료됐을 때 새 타워만 토스트를 띄우도록 현재 상태를 기준선으로 삼는다.
+        _notifiedTowers.Clear();
+
+        if (_researchManager == null)
+        {
+            return;
+        }
+
+        _researchManager.CollectUnlockedLandmarkTowers(_unlockedTowerBuffer);
+
+        foreach (TowerData tower in _unlockedTowerBuffer)
+        {
+            if (tower != null)
+            {
+                _notifiedTowers.Add(tower);
+            }
+        }
     }
 
     private void FlushArtifactNotifications()

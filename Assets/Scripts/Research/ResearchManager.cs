@@ -37,6 +37,7 @@ public sealed class ResearchManager : MonoBehaviour,
 
     [SerializeField] private UnityEvent<int> _researchPointsChanged = new();
     [SerializeField] private UnityEvent<ResearchNodeData> _nodeCompleted = new();
+    [SerializeField] private UnityEvent _progressRestored = new();
     [SerializeField] private UnityEvent<ResearchLab> _activeLabChanged = new();
 
     private readonly Dictionary<string, ResearchNodeData> _nodesById = new();
@@ -58,6 +59,7 @@ public sealed class ResearchManager : MonoBehaviour,
     /// </summary>
     private readonly List<ResearchEffectSO> _activeEffects = new();
     private bool _isActiveEffectsDirty = true;
+    private bool _isRestoringProgress;
 
     private CycleManager _cycleManager;
     private ResourceManager _resourceManager;
@@ -95,7 +97,9 @@ public sealed class ResearchManager : MonoBehaviour,
     public ResearchTreeData Tree => _tree;
     public UnityEvent<int> ResearchPointsChanged => _researchPointsChanged;
     public UnityEvent<ResearchNodeData> NodeCompleted => _nodeCompleted;
+    public UnityEvent ProgressRestored => _progressRestored;
     public UnityEvent<ResearchLab> ActiveLabChanged => _activeLabChanged;
+    public bool IsRestoringProgress => _isRestoringProgress;
 
     public void Construct(
         CycleManager cycleManager,
@@ -451,10 +455,22 @@ public sealed class ResearchManager : MonoBehaviour,
         _researchPointsChanged.Invoke(_researchPoints);
 
         // 구독자가 완료 집합을 건드려도 순회가 깨지지 않도록 복사본을 돌린다.
-        foreach (string nodeId in new List<string>(_completedNodeIds))
+        // 복원 중에도 NodeCompleted는 유지한다. 시야·인구·UI 갱신 등 다른 소비자는
+        // 이 이벤트를 필요로 하며, 알림 Presenter만 복원 상태를 보고 토스트를 억제한다.
+        _isRestoringProgress = true;
+        try
         {
-            _nodeCompleted.Invoke(_nodesById[nodeId]);
+            foreach (string nodeId in new List<string>(_completedNodeIds))
+            {
+                _nodeCompleted.Invoke(_nodesById[nodeId]);
+            }
         }
+        finally
+        {
+            _isRestoringProgress = false;
+        }
+
+        _progressRestored.Invoke();
     }
 
 #if UNITY_EDITOR
