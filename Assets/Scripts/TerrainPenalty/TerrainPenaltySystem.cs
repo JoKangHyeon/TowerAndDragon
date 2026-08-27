@@ -105,7 +105,7 @@ public class TerrainPenaltySystem : MonoBehaviour, IBuildingTerrainPenaltyQuery
 
     private TerrainPenaltyModifiers Compute(Building building) =>
         _gridMap != null
-            ? ComputeFromCoords(_gridMap.GetFootprintCoords(building), building.transform.position)
+            ? ComputeFromCoords(_gridMap.GetFootprintCoords(building), building.GroundWorldPosition)
             : TerrainPenaltyModifiers.Neutral;
 
     // 배치된 건물과 배치 미리보기가 공유하는 본체. 완화 배율은 건물이 아니라 좌표로 조회하므로

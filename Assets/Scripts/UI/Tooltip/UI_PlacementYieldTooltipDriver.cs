@@ -131,7 +131,7 @@ public class UI_PlacementYieldTooltipDriver : MonoBehaviour
                 _gridMap,
                 _terrainPenaltySystem,
                 footprint,
-                _mouseSelectController.PreviewWorldPosition))
+                _mouseSelectController.PreviewGroundWorldPosition))
         {
             Hide();
             return;

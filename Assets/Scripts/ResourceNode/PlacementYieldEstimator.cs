@@ -39,7 +39,7 @@ public sealed class PlacementYieldEstimator
     /// 계산할 수 없으면(데이터·그리드 미비) false를 돌려주고 내용은 비운다.
     ///
     /// worldPosition은 그 자리에 실제로 지었을 때 건물이 놓일 좌표여야 한다
-    /// (MouseSelectController.PreviewWorldPosition).
+    /// (MouseSelectController.PreviewGroundWorldPosition).
     /// terrainPenaltySystem은 null이어도 된다 - 지형 페널티를 쓰지 않는 씬에서는 페널티 없이 계산한다.
     /// </summary>
     public bool TryEstimate(

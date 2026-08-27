@@ -241,7 +241,7 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         }
 
         float radiusY = radius * IsometricMath.RADIUS_Y_RATIO;
-        Vector3 center = babyDragon.transform.position;
+        Vector3 center = babyDragon.GroundWorldPosition;
 
         foreach (Vector3Int coord in _gridMap.EnumerateAllCoords())
         {
@@ -311,7 +311,7 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
 
         return IsometricMath.IsWithinEllipse(
             worldPosition,
-            babyDragon.transform.position,
+            babyDragon.GroundWorldPosition,
             radius,
             radius * IsometricMath.RADIUS_Y_RATIO);
     }
@@ -384,14 +384,14 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         }
 
         float radiusY = radius * IsometricMath.RADIUS_Y_RATIO;
-        Vector3 center = babyDragon.transform.position;
+        Vector3 center = babyDragon.GroundWorldPosition;
 
         // 시설마다 달라지지 않는 값이라 루프 밖에서 한 번만 구한다.
         float babyDragonMultiplier = GetEffectiveYieldMultiplier(babyDragon.DragonData);
 
         foreach (Factory factory in _factories)
         {
-            if (!IsometricMath.IsWithinEllipse(factory.transform.position, center, radius, radiusY))
+            if (!IsometricMath.IsWithinEllipse(factory.GroundWorldPosition, center, radius, radiusY))
             {
                 Debug.Log($"[BabyDragonBuffSystem] {factory.name}: 범위 밖 → 버프 없음");
                 continue;
@@ -454,12 +454,12 @@ public class BabyDragonBuffSystem : MonoBehaviour, IConstructionOverrideQuery, I
         BabyDragonData data = babyDragon.DragonData;
         float radius = GetEffectiveBuffRadius(babyDragon);
         float radiusY = radius * IsometricMath.RADIUS_Y_RATIO;
-        Vector3 center = babyDragon.transform.position;
+        Vector3 center = babyDragon.GroundWorldPosition;
 
         foreach (Factory factory in _factories)
         {
             if (!IsometricMath.IsWithinEllipse(
-                    factory.transform.position, center, radius, radiusY))
+                    factory.GroundWorldPosition, center, radius, radiusY))
             {
                 continue;
             }

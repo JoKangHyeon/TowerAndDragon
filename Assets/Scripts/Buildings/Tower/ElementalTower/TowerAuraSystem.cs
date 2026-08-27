@@ -416,8 +416,8 @@ public sealed class TowerAuraSystem : MonoBehaviour
             radius * IsometricMath.RADIUS_Y_RATIO;
 
         return IsometricMath.IsWithinEllipse(
-            target.transform.position,
-            source.transform.position,
+            target.GroundWorldPosition,
+            source.GroundWorldPosition,
             radius,
             radiusY);
     }

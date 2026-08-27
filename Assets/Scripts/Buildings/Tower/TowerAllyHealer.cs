@@ -94,7 +94,7 @@ public class TowerAllyHealer : MonoBehaviour
         // FindLowestHealthAlly처럼 지역 변수로 한 번만 받는다.
         float radiusX = EffectiveRange;
         float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
-        return IsometricMath.IsWithinEllipse(_target.transform.position, transform.position, radiusX, radiusY);
+        return IsometricMath.IsWithinEllipse(_target.GroundWorldPosition, _ownerTower.GroundWorldPosition, radiusX, radiusY);
     }
 
     private Tower FindLowestHealthAlly()
@@ -120,7 +120,7 @@ public class TowerAllyHealer : MonoBehaviour
                 continue;
             }
 
-            if (!IsometricMath.IsWithinEllipse(targetTower.transform.position, transform.position, range, radiusY))
+            if (!IsometricMath.IsWithinEllipse(targetTower.GroundWorldPosition, _ownerTower.GroundWorldPosition, range, radiusY))
             {
                 continue;
             }

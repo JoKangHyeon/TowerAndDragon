@@ -885,8 +885,7 @@ public class GridMap : MonoBehaviour
             return null;
 
         Building building = CreatePlacedInstance(prefab, anchor, rotationSteps);
-        building.SetPlacementAnchor(anchor);
-        building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor));
+        ApplyPlacement(building, anchor);
 
         foreach (GridCell cell in footprint)
             cell.PlaceBuilding(building);
@@ -899,6 +898,18 @@ public class GridMap : MonoBehaviour
         LastAddedBuilding = building;
         OnBuildingAdded?.Invoke(building);
         return building;
+    }
+
+    // 배치·복원·이동이 공통으로 거치는 마무리 - 앵커·지면 기준점(GroundWorldPosition)·정렬 순서를
+    // 한 곳에서 맞춘다. 셋을 호출부마다 따로 세팅하면 하나만 빠뜨려 판정과 표시가 조용히 갈라질 수
+    // 있다. building.FootprintShape/RotationSteps가 최신이어야 하므로 SetRotation 이후에 불러야 한다.
+    private void ApplyPlacement(Building building, Vector3Int anchor)
+    {
+        building.SetPlacementAnchor(anchor);
+        building.SetGroundWorldPosition(
+            GetFootprintCenterWorld(anchor, building.FootprintShape)
+            + ComputeRotationCompensation(building.BaseFootprintShape, building.RotationSteps));
+        building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor));
     }
 
     // 프리팹을 배치 위치·회전으로 인스턴스화하는 부분만 떼어낸 것 - 일반 건설과 세이브 복원이 공유한다.
@@ -1003,8 +1014,7 @@ public class GridMap : MonoBehaviour
         }
 
         _buildingFootprintCells[building] = footprint;
-        building.SetPlacementAnchor(anchor);
-        building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor));
+        ApplyPlacement(building, anchor);
         LastAddedBuilding = building;
         OnBuildingAdded?.Invoke(building);
         return true;
@@ -1517,8 +1527,7 @@ public class GridMap : MonoBehaviour
             + building.ComputePlacementOffset(rotationSteps)
             + ComputeRotationCompensation(building.BaseFootprintShape, rotationSteps);
         building.SetRotation(rotationSteps);
-        building.SetPlacementAnchor(nextCoord);
-        building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(nextCoord));
+        ApplyPlacement(building, nextCoord);
 
         foreach (GridCell footprintCell in newFootprint)
             footprintCell.PlaceBuilding(building);

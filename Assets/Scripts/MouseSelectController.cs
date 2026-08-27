@@ -59,7 +59,12 @@ public class MouseSelectController : MonoBehaviour
     private FootprintShape _baseFootprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private FootprintShape _footprintShape = new FootprintShape(new bool[1, 1] { { true } });
     private int _previewRotationSteps;
-    private Vector3 _ghostLocalOffset;
+    // 회전 짝홀 어긋남을 보정하는 지면 중앙 성분 - GridMap.ApplyPlacement가 실제 배치 때 더하는
+    // ComputeRotationCompensation과 같은 값이라, 판정 표시(DrawRangeIndicator)는 이 성분만 쓴다.
+    private Vector3 _ghostGroundCompensation;
+    // 프리팹 루트 localPosition(+ 회전별 미세조정) - 스프라이트를 지면 위로 띄워 보이는 표시 전용
+    // 성분. 고스트 렌더러(DrawGhost)만 이 값을 더한다.
+    private Vector3 _ghostVisualOffset;
     private Sprite _ghostSpriteOverride;
     // 풀을 한 번이라도 만들어 봤는지. 템플릿 렌더러가 없어 풀이 null로 남는 씬에서 매 프레임
     // 재시도하지 않게 한다. 도메인 리로드로 이 값도 함께 초기화되므로 복구 목적은 그대로 지켜진다.
@@ -81,9 +86,9 @@ public class MouseSelectController : MonoBehaviour
     // 현재 회전이 반영된 풋프린트 모양 - 확정 시에도 미리보기와 동일한 모양을 쓰기 위해 공개.
     public FootprintShape CurrentFootprintShape => _footprintShape;
 
-    // 미리보기 중인 건물이 실제로 놓일 월드 좌표. GridMap.CreatePlacedInstance가 배치 시 쓰는 식과
+    // 미리보기 중인 건물이 실제로 놓일 지면 중앙 좌표. GridMap.ApplyPlacement가 배치 시 쓰는 식과
     // 반드시 같아야 위치로 판정하는 것들(지형 페널티 완화 반경 등)이 미리보기와 실제 사이에서 어긋나지 않는다.
-    public Vector3 PreviewWorldPosition => GetPreviewWorldPosition(CurrentAnchor);
+    public Vector3 PreviewGroundWorldPosition => GetPreviewGroundPosition(CurrentAnchor);
 
     // 참조가 비어 있어도(=null) 안전하게 0을 반환 - Y 오프셋을 쓰는 다른 오버레이 스크립트들이 공용으로 사용.
     public static float GetYOffsetOrZero(MouseSelectController mouseSelectController) =>
@@ -347,10 +352,10 @@ public class MouseSelectController : MonoBehaviour
 
     private void RefreshGhostVisual()
     {
-        Vector3 compensation = _gridMap != null
+        _ghostGroundCompensation = _gridMap != null
             ? _gridMap.ComputeRotationCompensation(_baseFootprintShape, _previewRotationSteps)
             : Vector3.zero;
-        _ghostLocalOffset = _selectedBuildingRef.ComputePlacementOffset(_previewRotationSteps) + compensation;
+        _ghostVisualOffset = _selectedBuildingRef.ComputePlacementOffset(_previewRotationSteps);
 
         if (_ghostRenderer == null)
             return;
@@ -463,16 +468,21 @@ public class MouseSelectController : MonoBehaviour
 
     private void DrawRangeIndicator(Vector3Int anchor)
     {
-        Vector3 center = GetPreviewWorldPosition(anchor);
+        // 판정 기준점(지면 중앙)으로 그린다 - 시각 오프셋(_ghostVisualOffset)까지 더하면
+        // 새끼용처럼 스프라이트가 위로 뜬 건물의 사거리 원이 몸통 쪽으로 밀려 표시=판정 규약이 깨진다.
+        Vector3 center = GetPreviewGroundPosition(anchor);
 
         DrawAttackRangeIndicator(center);
         DrawBuffRangeIndicator(center);
     }
 
-    private Vector3 GetPreviewWorldPosition(Vector3Int anchor) =>
+    private Vector3 GetPreviewGroundPosition(Vector3Int anchor) =>
         _gridMap != null
-            ? _gridMap.GetFootprintCenterWorld(anchor, _footprintShape) + _ghostLocalOffset
+            ? _gridMap.GetFootprintCenterWorld(anchor, _footprintShape) + _ghostGroundCompensation
             : Vector3.zero;
+
+    private Vector3 GetPreviewWorldPosition(Vector3Int anchor) =>
+        GetPreviewGroundPosition(anchor) + _ghostVisualOffset;
 
     // 배치/이동 대상이 공격 가능한 타워일 때만, 실제 판정(TowerAttack.IsWithinAttackRange)과 같은
     // 타원으로 사거리를 표시한다 - 그 외 건물이거나 인디케이터가 연결 안 됐으면 숨긴다.

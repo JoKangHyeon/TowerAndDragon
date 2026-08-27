@@ -953,7 +953,7 @@ public class BuildingPlacementController : MonoBehaviour
             return;
         }
 
-        _rangeIndicator.SetCenter(tower.transform.position);
+        _rangeIndicator.SetCenter(tower.GroundWorldPosition);
         _rangeIndicator.Show(tower.Attack.EffectiveRange, tower.Attack.EffectiveRange * IsometricMath.RADIUS_Y_RATIO);
     }
 
@@ -982,7 +982,7 @@ public class BuildingPlacementController : MonoBehaviour
 
             if (radius > 0f)
             {
-                ShowBuffRange(babyDragon.transform.position, radius);
+                ShowBuffRange(babyDragon.GroundWorldPosition, radius);
             }
             else
             {
@@ -1004,7 +1004,7 @@ public class BuildingPlacementController : MonoBehaviour
                     out float auraRadius) &&
                 !IsMarkerDrawnInsteadOfIndicator(aura.HasRangeMarker))
             {
-                ShowBuffRange(tower.transform.position, auraRadius);
+                ShowBuffRange(tower.GroundWorldPosition, auraRadius);
             }
             else
             {

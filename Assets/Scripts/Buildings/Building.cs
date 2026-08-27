@@ -78,6 +78,15 @@ public class Building : MonoBehaviour
     // GridMap 전용. 셀 점유와 앵커가 어긋나면 세이브가 엉뚱한 자리에 건물을 되살린다.
     public void SetPlacementAnchor(Vector3Int anchor) => PlacementAnchor = anchor;
 
+    // 범위 판정의 기준점 - 이 건물이 점유한 풋프린트의 지면 중앙(지형 고저차 포함).
+    // transform.position은 프리팹 루트 localPosition만큼 위로 띄운 "표시" 좌표라(새끼용은 1.5,
+    // 일반 타워는 1) 그대로 판정 중심에 쓰면 사거리·버프 반경 등의 원이 위로 밀린다.
+    // GridMap이 배치·복원·이동 때마다 PlacementAnchor와 함께 채운다.
+    public Vector3 GroundWorldPosition { get; private set; }
+
+    // GridMap 전용. PlacementAnchor를 세팅할 때 반드시 같이 불러야 한다.
+    public void SetGroundWorldPosition(Vector3 position) => GroundWorldPosition = position;
+
     // 이 건물에 마지막으로 적용된 화면 정렬 순서(IsometricMath.ComputeDepthSortOrder). 클수록 앞쪽이다.
     // 겹친 건물의 클릭 후보를 "보이는 순서"대로 줄 세울 때 쓴다(BuildingClickCycle) - 앵커로 다시
     // 계산하지 않고 실제로 적용된 값을 읽어야, 렌더 순서와 선택 순서가 갈라지지 않는다.
@@ -204,6 +213,11 @@ public class Building : MonoBehaviour
 
         if (_spriteRenderer != null)
             _originalColor = _spriteRenderer.color;
+
+        // GridMap을 거치지 않고 씬에 직접 놓인 개체(에디터 테스트 씬 등)를 위한 기본값 -
+        // GridMap.ConstructBuilding/RegisterFootprint/MoveBuilding이 배치 시 곧바로 정확한
+        // 값으로 덮어쓴다.
+        GroundWorldPosition = transform.position;
     }
 
     public void SetHighlighted(bool isHighlighted, Color highlightColor)

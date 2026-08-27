@@ -248,7 +248,7 @@ public class TowerAttack : MonoBehaviour
     {
         float radiusX = EffectiveRange;
         float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
-        return IsometricMath.IsWithinEllipse(targetPosition, transform.position, radiusX, radiusY);
+        return IsometricMath.IsWithinEllipse(targetPosition, _ownerTower.GroundWorldPosition, radiusX, radiusY);
     }
 
     // 구현체가 없으면 공격하지 않는다 - 인구 할당 생성에 실패한 타워가 지금처럼
@@ -265,11 +265,12 @@ public class TowerAttack : MonoBehaviour
         // 읽을 때마다 계산되므로 후보마다 다시 읽으면 몬스터 수만큼 같은 계산을 반복한다.
         float radiusX = EffectiveRange;
         float radiusY = radiusX * IsometricMath.RADIUS_Y_RATIO;
+        Vector3 center = _ownerTower.GroundWorldPosition;
 
         // 브로드페이즈: 타원의 두 반지름 중 더 큰 X 반지름의 원으로 넉넉히 후보를 모은 뒤
         // 타원 방정식으로 정확히 걸러낸다 (IsWithinAttackRange와 동일한 판정).
         Collider2D[] candidates = Physics2D.OverlapCircleAll(
-            transform.position,
+            center,
             radiusX,
             _targetLayers);
 
@@ -287,7 +288,7 @@ public class TowerAttack : MonoBehaviour
             }
 
             float normalizedDistanceSqr = IsometricMath.EllipseNormalizedDistanceSqr(
-                monster.transform.position, transform.position, radiusX, radiusY);
+                monster.transform.position, center, radiusX, radiusY);
 
             if (normalizedDistanceSqr > 1f || normalizedDistanceSqr >= closestNormalizedDistanceSqr)
             {
@@ -407,9 +408,11 @@ public class TowerAttack : MonoBehaviour
         };
 
         // 실제 판정(IsWithinAttackRange)과 같은 타원을 그린다 - Gizmos엔 타원 API가 없으므로
-        // Y축만 압축한 행렬로 원을 그려 근사한다.
+        // Y축만 압축한 행렬로 원을 그려 근사한다. 에디터에서 Awake가 아직 안 돌아 _ownerTower가
+        // 비어 있을 수 있으므로(플레이 중이 아닌 씬 뷰) 그때는 transform.position으로 대체한다.
+        Vector3 center = _ownerTower != null ? _ownerTower.GroundWorldPosition : transform.position;
         Matrix4x4 previousMatrix = Gizmos.matrix;
-        Gizmos.matrix = Matrix4x4.TRS(transform.position, Quaternion.identity, new Vector3(1f, IsometricMath.RADIUS_Y_RATIO, 1f));
+        Gizmos.matrix = Matrix4x4.TRS(center, Quaternion.identity, new Vector3(1f, IsometricMath.RADIUS_Y_RATIO, 1f));
         Gizmos.DrawWireSphere(Vector3.zero, EffectiveRange);
         Gizmos.matrix = previousMatrix;
     }
