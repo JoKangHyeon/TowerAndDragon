@@ -150,7 +150,6 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
             _outputRowSeed);
 
         AddButtonListeners();
-        ApplyLocalizedLabels();
 
         if (_windowRoot != null)
         {
@@ -178,6 +177,11 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         {
             _closeAction.action.performed += OnCloseActionPerformed;
         }
+
+        // 구독 직후 현재 언어로 한 번 반영한다 - 창이 닫혀 있는 동안 바뀐 언어를 놓치지 않는다
+        // (LocalizedText와 같은 방식).
+        StringTable.OnLanguageChanged += HandleLanguageChanged;
+        HandleLanguageChanged();
     }
 
     private void OnDisable()
@@ -198,6 +202,8 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         {
             _closeAction.action.performed -= OnCloseActionPerformed;
         }
+
+        StringTable.OnLanguageChanged -= HandleLanguageChanged;
     }
 
     private void OnDestroy()
@@ -609,6 +615,14 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
     private void HandlePopulationChanged(PopulationState state)
     {
+        Refresh();
+    }
+
+    // 버튼 라벨·밤 잠금 안내는 한 번 써 놓고 마는 글자라 언어가 바뀌면 여기서 다시 칠한다.
+    // 값 행은 Refresh가 주기적으로 다시 그리지만, 언어 전환은 즉시 보이는 편이 낫다.
+    private void HandleLanguageChanged()
+    {
+        ApplyLocalizedLabels();
         Refresh();
     }
 

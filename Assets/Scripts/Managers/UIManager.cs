@@ -130,6 +130,14 @@ public class UIManager : MonoBehaviour
     /// </summary>
     public bool CanUseShortcut(MonoBehaviour mode)
     {
+        // 게임이 끝난 뒤에는 어떤 관문도 예외를 낼 수 없다 - AllowsShortcut보다 위에서 막는다.
+        // 게임오버·승리 창은 전체 화면 레이캐스트로 마우스를 막지만 키보드는 그대로 통과하므로,
+        // 여기서 막지 않으면 창 뒤에서 건설·점령·연구 창이 단축키로 열린다(안내 딤과 같은 문제).
+        if (IsGameEnded)
+        {
+            return false;
+        }
+
         if (!IsShortcutBlocked())
         {
             return true;
@@ -145,6 +153,10 @@ public class UIManager : MonoBehaviour
 
         return false;
     }
+
+    // _gameManager가 없는 씬(테스트 씬)에서는 끝나지 않은 것으로 본다 - 다른 [WiringOptional]
+    // 참조들과 같은 관례다.
+    private bool IsGameEnded => _gameManager != null && _gameManager.IsGameEnded;
 
     private bool IsShortcutBlocked()
     {
@@ -568,12 +580,36 @@ public class UIManager : MonoBehaviour
 
     private void HandleGameOver()
     {
+        CloseAllModesOnGameEnd();
         ShowGameOverAfterDelay().Forget();
     }
 
     private void HandleVictory()
     {
+        CloseAllModesOnGameEnd();
         ShowVictoryAfterDelay().Forget();
+    }
+
+    // 게임이 끝난 순간 이미 열려 있던 창·모드를 전부 닫는다. CanUseShortcut의 하드 차단은
+    // "새로 여는 것"만 막으므로, 죽는 순간 열려 있던 건설창이나 진행 중이던 스킬 타겟팅은
+    // 그대로 남아 게임오버 화면 뒤에 굳는다. CloseAllExcept(null)을 쓰지 않는 이유는 그 경로가
+    // CanOpenByQueries(null)에 먼저 걸려, 안내 관문이 거절하면 아무것도 안 닫힐 수 있기 때문이다 -
+    // 게임 종료는 거절될 수 있는 요청이 아니다. _escapeBlockingWindows가 등록 배열 밖의 모드
+    // (점령·워커·스킬 타겟팅)까지 포함하는 완전한 집합이라 이것을 순회한다.
+    private void CloseAllModesOnGameEnd()
+    {
+        if (_escapeBlockingWindows == null)
+        {
+            return;
+        }
+
+        foreach (IExclusiveMode mode in _escapeBlockingWindows)
+        {
+            if (mode.IsOpen)
+            {
+                mode.Close();
+            }
+        }
     }
 
     private async UniTaskVoid ShowGameOverAfterDelay()
