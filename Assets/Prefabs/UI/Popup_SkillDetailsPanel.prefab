@@ -353,6 +353,7 @@ MonoBehaviour:
   _nameText: {fileID: 4066839133486727459}
   _descriptionText: {fileID: 4975648487468531267}
   _statusText: {fileID: 8653299091005900444}
+  _skillNameLinks: {fileID: 1857553341123615960}
   _costContainer: {fileID: 2107466275429720567}
   _costSlotPrefab: {fileID: -3148026475485260538, guid: d830ba9015398e64e8debcbe7b5066d6, type: 3}
   _upgradeButton: {fileID: 5057496555086907994}
@@ -920,6 +921,7 @@ GameObject:
   - component: {fileID: 153979583855963872}
   - component: {fileID: 3944312636239068991}
   - component: {fileID: 4975648487468531267}
+  - component: {fileID: 1857553341123615960}
   m_Layer: 5
   m_Name: Upgrade_Name (1)
   m_TagString: Untagged
@@ -1054,6 +1056,22 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1857553341123615960
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7077819952578245662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58fcde05b25fc2f42b29b02201e1222e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_SkillNameLinkTooltip
+  _text: {fileID: 4975648487468531267}
+  _dragonTreeManager: {fileID: 0}
+  _tooltipPresenter: {fileID: 0}
+  _linkColor: {r: 1, g: 0.82, b: 0.35, a: 1}
 --- !u!1 &7603518551728483639
 GameObject:
   m_ObjectHideFlags: 0

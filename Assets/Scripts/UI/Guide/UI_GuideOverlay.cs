@@ -57,6 +57,11 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IDayEndConfirmB
     [SerializeField] private RectTransform _bubbleRoot;
     [SerializeField] private TMP_Text _bubbleText;
 
+    [Tooltip("말풍선 문구 안의 [스킬명]을 호버 가능한 링크로 바꾼다. _bubbleText와 같은 오브젝트에 " +
+             "붙여야 한다. 비우면 대괄호가 원문 그대로 보인다.")]
+    [WiringOptional]
+    [SerializeField] private UI_SkillNameLinkTooltip _skillNameLinks;
+
     [Tooltip("말풍선 글상자의 최대 폭(px). 이보다 길어지는 문구만 줄바꿈해 접는다. " +
              "0이면 제한하지 않는다(예전 동작).")]
     [SerializeField] private float _bubbleMaxWidth = DEFAULT_BUBBLE_MAX_WIDTH;
@@ -391,6 +396,13 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IDayEndConfirmB
                              "onClick도 등록되지 않아 읽고 넘기는 안내가 진행되지 않습니다.");
         }
 
+        // 같은 이유로 말풍선 글자의 raycastTarget도 꺼진다 - [스킬명] 링크를 호버로 잡으려면
+        // _bubbleText 자신이 레이캐스트 대상이어야 한다.
+        if (_skillNameLinks != null && _bubbleText != null)
+        {
+            _bubbleText.raycastTarget = true;
+        }
+
         SetVisualsActive(false);
     }
 
@@ -464,7 +476,8 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IDayEndConfirmB
 
         string raw = StringTable.GetString(_drawnRequest.MessageLocKey);
         object[] args = _drawnRequest.Args;
-        _bubbleText.text = args == null || args.Length == 0 ? raw : string.Format(raw, args);
+        string formatted = args == null || args.Length == 0 ? raw : string.Format(raw, args);
+        _bubbleText.text = _skillNameLinks != null ? _skillNameLinks.Decorate(formatted) : formatted;
 
         ClampBubbleWidth();
     }

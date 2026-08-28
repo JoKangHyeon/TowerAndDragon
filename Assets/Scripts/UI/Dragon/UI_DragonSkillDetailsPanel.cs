@@ -28,6 +28,10 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _nameText;
     [SerializeField] private TextMeshProUGUI _descriptionText;
     [SerializeField] private TextMeshProUGUI _statusText;
+
+    [Tooltip("설명문 안의 [스킬명]을 호버 가능한 링크로 바꾼다. 비우면 대괄호가 원문 그대로 보인다.")]
+    [WiringOptional]
+    [SerializeField] private UI_SkillNameLinkTooltip _skillNameLinks;
     [SerializeField] private Transform _costContainer;
     [SerializeField] private UI_ResourceCostSlot _costSlotPrefab;
     [SerializeField] private Button _upgradeButton;
@@ -250,7 +254,8 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
 
         if (_descriptionText != null)
         {
-            _descriptionText.text = StringTable.GetString(_selectedNode.DescriptionLocKey);
+            string description = StringTable.GetString(_selectedNode.DescriptionLocKey);
+            _descriptionText.text = _skillNameLinks != null ? _skillNameLinks.Decorate(description) : description;
         }
 
         ProgressionNodeState state = _dragonTreeManager.GetNodeState(_selectedNode);

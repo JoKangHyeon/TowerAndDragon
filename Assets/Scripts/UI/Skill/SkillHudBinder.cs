@@ -15,9 +15,20 @@ public class SkillHudBinder : MonoBehaviour
     [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private List<UI_SkillIndicator> _indicators;
 
+    [Tooltip("스킬 아이콘 호버 툴팁을 그릴 표시기. 비우면 이 HUD의 스킬 아이콘은 호버해도 아무것도 뜨지 않는다.")]
+    [WiringOptional]
+    [SerializeField] private UI_TooltipPresenter _tooltipPresenter;
+
     // SkillManager.Awake가 스킬 목록을 이미 구성한 뒤여야 하므로 Awake가 아닌 Start에서 첫 바인딩한다.
     private void Start()
     {
+        // 인디케이터는 인스펙터에 고정 배치된 슬롯이라 매 Rebind마다 새로 생기지 않는다 - 표시기는
+        // 한 번만 주입하면 된다.
+        foreach (UI_SkillIndicator indicator in _indicators)
+        {
+            indicator?.Construct(_tooltipPresenter, _dragonTreeManager);
+        }
+
         Rebind();
     }
 
