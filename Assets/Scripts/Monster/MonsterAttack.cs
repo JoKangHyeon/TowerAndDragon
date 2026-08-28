@@ -254,11 +254,61 @@ public class MonsterAttack : MonoBehaviour
         if (!_data.HasProjectile)
         {
             _attack.Execute(target, in context);
+            PlayHitVfx(target);
             return;
         }
 
         LaunchProjectile(target, in context);
     }
+
+    // 근거리·보스 전용 명중 연출. 원거리는 ProjectileVisual.OnHit이 대신 그린다(AttackSO 참고).
+    // target이 null이면(ExecuteBlast의 광역) TargetBody를 고를 대상이 없으므로 발밑으로 그린다 -
+    // 시전자 발밑 앵커(CasterGround)와 결과가 같아 별도 분기 없이 안전하게 흐른다.
+    //
+    // 성 공격은 여기서 거른다. Fire()가 이동 중 타워·방벽 공격과 도착 후 성 공격에 같은 AttackSO를
+    // 쓰므로(구조가 갈려 있지 않다) target의 실제 타입으로 판단해야 한다 - 성은 스프라이트가 커서
+    // 이펙트가 가려지고, 앵커가 CasterGround(보스)라도 시전자 자체가 성 앞에 붙어 있어 마찬가지로
+    // 어색하다. 방벽은 성만큼 크지 않아 대상에서 뺀다. target이 null인 광역(ExecuteBlast)은 성을
+    // 때릴 수 없으므로(Castle은 IMonsterTarget이 아니다) 이 가드에 걸리지 않는다.
+    private void PlayHitVfx(IAttackTarget target)
+    {
+        if (!_attack.HasHitVfx || target is Castle || IsDestroyed(target))
+        {
+            return;
+        }
+
+        if (_attack.HitVfxAnchor == AttackVfxAnchor.TargetBody && target != null)
+        {
+            Vector3 bodyPosition = AttackVfxPlacement.ResolveVisualImpactPosition(
+                target.TargetTransform.position, target.TargetObject, ProjectileImpactPlacement.Body);
+
+            ProjectilePool.PlayForSeconds(
+                _attack.HitVfxPrefab,
+                bodyPosition,
+                AttackVfxPlacement.ResolveDirectionRotation(bodyPosition - transform.position),
+                _attack.HitVfxLifetimeSeconds);
+            return;
+        }
+
+        // _movement를 넘겨 ResolveGroundY가 GetComponent<MonsterMovement>를 다시 돌지 않게 한다 -
+        // 이 컴포넌트는 Initialize에서 이미 캐시해 뒀다. x도 raw transform.position이 아니라
+        // 스프라이트 bounds 중심을 쓴다 - TargetBody 분기와 같은 기준이어야 피벗이 중앙이 아닌
+        // 몬스터(발밑 이펙트가 옆으로 밀려 보이는 프리팹)에서도 어긋나지 않는다.
+        Vector3 groundPosition = AttackVfxPlacement.ResolveVisualImpactPosition(
+            transform.position, gameObject, ProjectileImpactPlacement.Ground, _movement);
+
+        ProjectilePool.PlayForSeconds(
+            _attack.HitVfxPrefab, groundPosition, Quaternion.identity, _attack.HitVfxLifetimeSeconds);
+    }
+
+    // IsCurrentTargetValid(133번째 줄)와 같은 이유다 - target은 인터페이스 타입이라 Unity가
+    // 오버로드한 == 연산자를 타지 않는다. Destroy() 직후(같은 프레임, GC 전)에도 `target != null`이
+    // 여전히 true를 반환할 수 있어, 이 검사가 없으면 그 틈을 놓친다.
+    private static bool IsDestroyed(IAttackTarget target)
+    {
+        return target is Object unityObject && unityObject == null;
+    }
+
     private void LaunchProjectile(IAttackTarget target, in AttackContext context)
     {
         Vector3 spawnPosition = _firePoint != null
@@ -323,6 +373,9 @@ public class MonsterAttack : MonoBehaviour
         }
 
         AttackContext context = new AttackContext(gameObject, _attackPowerModifier, _targetLayers);
+
+        // 대상 수만큼 도는 Execute와 달리 "공격 1회"를 아는 것은 여기뿐이라 루프 밖에서 한 번만 띄운다.
+        PlayHitVfx(null);
 
         Collider2D[] candidates = Physics2D.OverlapCircleAll(
             transform.position,
