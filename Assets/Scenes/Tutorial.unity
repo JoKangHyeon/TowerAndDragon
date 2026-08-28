@@ -6365,7 +6365,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4429832511105182359, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.0008544922
+      value: -0.000030517578
       objectReference: {fileID: 0}
     - target: {fileID: 4439690152447319859, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -8939,6 +8939,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -25
       objectReference: {fileID: 0}
+    - target: {fileID: 9154567364806831487, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
+      propertyPath: _speedManager
+      value: 
+      objectReference: {fileID: 1632594321}
     - target: {fileID: 9173607114328763900, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -10591,17 +10595,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 1988692893525112168, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
   m_PrefabInstance: {fileID: 1677085708}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &2042589615 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1019691233782934820, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-  m_PrefabInstance: {fileID: 1677085708}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 733e90b5a4161d749b2b914533982d3d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UI_SpeedSettingWindow
 --- !u!1 &2063666045
 GameObject:
   m_ObjectHideFlags: 0
@@ -10685,6 +10678,9 @@ MonoBehaviour:
   _nightLockedBuildingTint: {r: 0.7, g: 0.7, b: 0.7, a: 1}
   _countLabelColor: {r: 1, g: 1, b: 1, a: 1}
   _dragThreshold: 10
+  OnActiveChanged:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &2064955282
 GameObject:
   m_ObjectHideFlags: 0
@@ -12272,7 +12268,7 @@ PrefabInstance:
     - target: {fileID: 7301496218783507221, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
       propertyPath: _speedSettingWindow
       value: 
-      objectReference: {fileID: 2042589615}
+      objectReference: {fileID: 0}
     - target: {fileID: 7301496218783507221, guid: abd093105d78d934db0919922e5b0cc0, type: 3}
       propertyPath: _placementController
       value: 
