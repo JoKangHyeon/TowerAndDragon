@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
@@ -117,6 +118,11 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode, IExclusiveMod
     private float _dragThreshold = 10f;
 
     public bool IsActive { get; private set; }
+
+    // 모드가 켜지고 꺼질 때 알린다. HUD의 선택 표시(UI_IngameWindow)가 이 값을 듣는다.
+    // 버튼·단축키·ESC·다른 모드 열기 등 모든 경로가 SetWorkerModeActive를 지나므로
+    // 그 한 곳에서만 발화하면 된다.
+    public UnityEvent<bool> OnActiveChanged = new();
 
     private Vector2 _pressScreenPosition;
 
@@ -328,6 +334,8 @@ public class WorkerModeController : MonoBehaviour, IExclusiveMode, IExclusiveMod
                 _countOverlay.Clear();
             }
         }
+
+        OnActiveChanged.Invoke(isActive);
     }
 
     private void HandleCloseInput()

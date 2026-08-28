@@ -156,6 +156,11 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
     // 탭 순서가 바뀌면 조용히 어긋난다. 버튼이면 안내가 가리키던 대상과 그대로 비교할 수 있다.
     public UnityEvent<RectTransform> OnTabSelected = new();
 
+    // 창이 열리고 닫힐 때 알린다. HUD의 선택 표시(UI_IngameWindow)가 이 값을 듣는다.
+    // 여닫는 경로(버튼·ESC·다른 모드 열기·밤 시작)가 모두 OpenBuildPanel/CloseBuildPanel을
+    // 지나므로 그 두 곳에서만 발화하면 된다.
+    public UnityEvent<bool> OnOpenChanged = new();
+
     /// <summary>
     /// 현재 탭에 그려진 슬롯 중 이 건물 프리팹에 해당하는 것. 슬롯은 런타임 생성이라
     /// GuideAnchor로는 가리킬 수 없어서 창이 직접 돌려준다.
@@ -515,6 +520,7 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         SoundManager.Play(SoundId.UiWindowOpen);
 
         _isOpen = true;
+        OnOpenChanged.Invoke(true);
         _panelTween?.Kill();
 
         if (!gameObject.activeSelf)
@@ -554,6 +560,7 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         SoundManager.Play(SoundId.UiWindowClose);
 
         _isOpen = false;
+        OnOpenChanged.Invoke(false);
         HideSlotInfo();
         if (_buildingPlacementController != null)
         {
@@ -785,7 +792,8 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         return true;
     }
 
-    bool IExclusiveMode.IsOpen => _isOpen;
+    /// <summary>건설 모드 패널이 열려 있는지. HUD의 선택 표시(UI_IngameWindow)가 이 값을 읽는다.</summary>
+    public bool IsOpen => _isOpen;
     void IExclusiveMode.Open() => OpenBuildPanel();
     void IExclusiveMode.Close()
     {

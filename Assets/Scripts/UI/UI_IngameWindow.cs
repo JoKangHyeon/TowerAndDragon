@@ -132,12 +132,16 @@ public class UI_IngameWindow : MonoBehaviour
 
     [SerializeField] private Button _buttonBuildMode;
     [SerializeField] private UI_BuildModeWindow _buildModeWindow;
+    [Tooltip("건설 모드가 켜져 있는 동안만 보이는 선택 표시(Button_buildMode/Select).")]
+    [SerializeField] private GameObject _buildModeSelectMark;
 
     [Header("인구 배치 (Panel_BottomCenter/Buttons)")]
     [Tooltip("인구 배치 모드(Worker Mode) 토글 버튼.")]
     [SerializeField] private Button _buttonWorkerMode;
     [Tooltip("인구 배치 모드 컨트롤러. 버튼 클릭 시 모드를 토글한다.")]
     [SerializeField] private WorkerModeController _workerModeController;
+    [Tooltip("인구 배치 모드가 켜져 있는 동안만 보이는 선택 표시(Button_WorkerMode/Select).")]
+    [SerializeField] private GameObject _workerModeSelectMark;
 
     [Header("점령 (Panel_BottomRight)")]
     [Tooltip("점령 모드 토글 버튼.")]
@@ -308,6 +312,19 @@ public class UI_IngameWindow : MonoBehaviour
             _cycleManager.OnDayReady.AddListener(HandleDayReady);
         }
 
+        // 구독 직후 현재 값을 한 번 반영해, 이 창이 켜지기 전에 이미 켜져 있던 모드도 표시되게 한다.
+        if (_buildModeWindow != null)
+        {
+            _buildModeWindow.OnOpenChanged.AddListener(HandleBuildModeOpenChanged);
+            HandleBuildModeOpenChanged(_buildModeWindow.IsOpen);
+        }
+
+        if (_workerModeController != null)
+        {
+            _workerModeController.OnActiveChanged.AddListener(HandleWorkerModeActiveChanged);
+            HandleWorkerModeActiveChanged(_workerModeController.IsActive);
+        }
+
         // 언어가 바뀌면 이 창의 로컬라이즈된 텍스트를 다시 그린다.
         StringTable.OnLanguageChanged += RefreshLocalizedTexts;
     }
@@ -318,6 +335,30 @@ public class UI_IngameWindow : MonoBehaviour
     {
         await UniTask.Yield(this.GetCancellationTokenOnDestroy());
         _newGamePlusBadge.Construct(_runModifiers, _tooltipPresenter);
+    }
+
+    // 건설·인구배치 버튼의 선택 표시. 두 모드의 상태가 바뀔 때만 갱신한다.
+    //
+    // 구독 대상은 이미 인스펙터에 배선돼 있는 _buildModeWindow / _workerModeController이므로
+    // 배선이 늘지 않는다. 모드가 꺼지는 경로(버튼·ESC·다른 모드 열기·밤 시작)는 모두
+    // 각 클래스의 한 지점(OpenBuildPanel/CloseBuildPanel, SetWorkerModeActive)을 지나므로
+    // 이벤트 하나로 전부 덮인다.
+    private void HandleBuildModeOpenChanged(bool isOpen)
+    {
+        SetSelectMarkActive(_buildModeSelectMark, isOpen);
+    }
+
+    private void HandleWorkerModeActiveChanged(bool isActive)
+    {
+        SetSelectMarkActive(_workerModeSelectMark, isActive);
+    }
+
+    private static void SetSelectMarkActive(GameObject selectMark, bool isActive)
+    {
+        if (selectMark != null && selectMark.activeSelf != isActive)
+        {
+            selectMark.SetActive(isActive);
+        }
     }
 
     // 클릭음을 붙이기 위한 래퍼. WorkerModeController는 단축키 경로에서도 호출되므로
@@ -445,6 +486,16 @@ public class UI_IngameWindow : MonoBehaviour
         {
             _cycleManager.OnNightEnd.RemoveListener(HandleWaveCleared);
             _cycleManager.OnDayReady.RemoveListener(HandleDayReady);
+        }
+
+        if (_buildModeWindow != null)
+        {
+            _buildModeWindow.OnOpenChanged.RemoveListener(HandleBuildModeOpenChanged);
+        }
+
+        if (_workerModeController != null)
+        {
+            _workerModeController.OnActiveChanged.RemoveListener(HandleWorkerModeActiveChanged);
         }
 
         StringTable.OnLanguageChanged -= RefreshLocalizedTexts;
