@@ -315,19 +315,36 @@ public class GridMap : MonoBehaviour
 
         foreach (var pair in _chunks)
         {
-            Chunk chunk = pair.Value;
-            if (chunk.Cells.Count == 0)
-                continue;
-
-            Vector3 sum = Vector3.zero;
-            foreach (GridCell cell in chunk.Cells)
-                sum += ConvertGridToWorld(cell.Coord);
-            _chunkCenterWorldCache[pair.Key] = sum / chunk.Cells.Count;
+            _chunkCenterWorldCache[pair.Key] = CalculateChunkCenterWorld(pair.Value);
         }
 
         BuildChunkAdjacency();
 
         Debug.Log($"[GridMap] 청크 생성 완료 - 청크 개수: {_chunks.Count}");
+    }
+
+    // 청크 중심은 육지 셀(LandCellCoords) 평균을 우선으로 삼는다 - GetChunkCenterWorld 소비자
+    // (랜드마크·원정 마커·청크 정보 오버레이 등)는 전부 "육지 위 한 지점"을 원한다.
+    // 물 셀까지 포함해 평균하면 해안 청크의 중심이 바다 쪽으로 끌려간다 - 맵 가장자리에 바다를
+    // 넓게 두를수록(카메라 UI 여백 확보) 이 편향이 커지므로, 물만 있는 청크(육지가 전혀 없는
+    // 경우, 있다면)에 한해서만 기존처럼 전체 셀 평균으로 폴백한다.
+    private Vector3 CalculateChunkCenterWorld(Chunk chunk)
+    {
+        if (chunk.LandCellCoords.Count > 0)
+        {
+            Vector3 landSum = Vector3.zero;
+            foreach (Vector3Int coord in chunk.LandCellCoords)
+                landSum += ConvertGridToWorld(coord);
+            return landSum / chunk.LandCellCoords.Count;
+        }
+
+        if (chunk.Cells.Count == 0)
+            return Vector3.zero;
+
+        Vector3 sum = Vector3.zero;
+        foreach (GridCell cell in chunk.Cells)
+            sum += ConvertGridToWorld(cell.Coord);
+        return sum / chunk.Cells.Count;
     }
 
     // 레이아웃 에셋에서 셀→청크 소속을 읽어온다. 그리드에 실제로 존재하지 않는 좌표(타일이 지워진

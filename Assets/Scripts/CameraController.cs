@@ -84,6 +84,14 @@ public class CameraController : MonoBehaviour
     [SerializeField] private Vector2 _mapMin = new Vector2(-60f, -60f);
     [SerializeField] private Vector2 _mapMax = new Vector2( 60f,  60f);
 
+    [Header("UI 여백 (건설 창 등 화면 가장자리를 덮어 클릭할 수 없는 UI)")]
+    [Tooltip("서(x)·남(y) 방향 UI가 덮는 폭 - CanvasScaler 참조 해상도 기준 픽셀")]
+    [SerializeField] private Vector2 _uiInsetMin = new Vector2(500f, 150f);
+    [Tooltip("동(x)·북(y) 방향 UI가 덮는 폭 - CanvasScaler 참조 해상도 기준 픽셀")]
+    [SerializeField] private Vector2 _uiInsetMax = new Vector2(520f, 150f);
+    [Tooltip("위 두 값의 기준이 되는 CanvasScaler 참조 해상도 세로 픽셀 (UI_Canvas의 Reference Resolution.y)")]
+    [SerializeField] private float _uiReferenceHeight = 1080f;
+
     // ─────────────────────────────────────────────
     // 내부 상태
     // ─────────────────────────────────────────────
@@ -519,10 +527,23 @@ public class CameraController : MonoBehaviour
         float halfHeight = _cam.orthographicSize;
         float halfWidth  = halfHeight * _cam.aspect;
 
-        position.x = ClampAxis(position.x, _mapMin.x + halfWidth,  _mapMax.x - halfWidth);
-        position.y = ClampAxis(position.y, _mapMin.y + halfHeight, _mapMax.y - halfHeight);
+        // UI가 덮은 화면 가장자리는 보이지만 클릭할 수 없는 영역이다 - 그 폭만큼 클램프 범위를
+        // 바깥으로 넓혀야 맵 가장자리 타일이 UI 아래에서 빠져나온다. 그만큼 Grid.prefab의 바다를
+        // 넓혀 두지 않으면 반대로 빈 공간(void)이 보이니, 둘은 항상 같이 맞춰야 한다.
+        Vector2 insetMin = ScreenInsetToWorld(_uiInsetMin, halfHeight);
+        Vector2 insetMax = ScreenInsetToWorld(_uiInsetMax, halfHeight);
+
+        position.x = ClampAxis(position.x, _mapMin.x + halfWidth  - insetMin.x, _mapMax.x - halfWidth  + insetMax.x);
+        position.y = ClampAxis(position.y, _mapMin.y + halfHeight - insetMin.y, _mapMax.y - halfHeight + insetMax.y);
         return position;
     }
+
+    /// 캔버스 기준 해상도 픽셀 -> 월드 단위. CanvasScaler가 높이 기준(Match=Height)이므로
+    /// 실제 해상도·종횡비와 무관하게 "화면 높이 = 2 * orthographicSize"라는 관계만으로 환산된다.
+    private Vector2 ScreenInsetToWorld(Vector2 insetPixels, float halfHeight) =>
+        _uiReferenceHeight > 0f
+            ? insetPixels * (halfHeight * 2f / _uiReferenceHeight)
+            : Vector2.zero;
 
     /// 뷰포트가 맵보다 큰 축은 min > max가 되므로, 그 축은 맵 중앙으로 고정한다.
     private static float ClampAxis(float value, float min, float max)

@@ -24,10 +24,10 @@ public sealed class MonsterCodexCatalogSO : ScriptableObject
     public readonly struct Row
     {
         public readonly MonsterData Data;
-        public readonly Sprite Icon;
+        public readonly MonsterIcon Icon;
         public readonly MonsterCodexCategory Category;
 
-        public Row(MonsterData data, Sprite icon, MonsterCodexCategory category)
+        public Row(MonsterData data, MonsterIcon icon, MonsterCodexCategory category)
         {
             Data = data;
             Icon = icon;
@@ -119,20 +119,12 @@ public sealed class MonsterCodexCatalogSO : ScriptableObject
                 ? MonsterCodexCategory.Boss
                 : ResolveNonBossCategory(prefab.Data);
 
-            _rows.Add(new Row(prefab.Data, ResolveIcon(prefab), category));
+            _rows.Add(new Row(prefab.Data, MonsterIcon.Resolve(prefab), category));
         }
     }
 
     private static MonsterCodexCategory ResolveNonBossCategory(MonsterData data) =>
         data.MovementType == MonsterMovementType.Air ? MonsterCodexCategory.Air : MonsterCodexCategory.Ground;
-
-    // MonsterData에는 아이콘 필드가 없어, 인게임 프리팹의 스프라이트를 그대로 도감 아이콘으로 쓴다
-    // (PortalWavePreviewRenderer.ResolveMonsterIcon과 같은 이유·같은 방식).
-    private static Sprite ResolveIcon(BaseMonster prefab)
-    {
-        SpriteRenderer spriteRenderer = prefab.GetComponentInChildren<SpriteRenderer>(true);
-        return spriteRenderer != null ? spriteRenderer.sprite : null;
-    }
 
     // 목록을 고치고 나면 곧바로 반영되도록 캐시를 비운다. 중복 NameLocKey는 항목 하나만 봐서는
     // 알 수 없으므로(HelpCatalogSO.OnValidate와 같은 이유) 여기서 검사한다.

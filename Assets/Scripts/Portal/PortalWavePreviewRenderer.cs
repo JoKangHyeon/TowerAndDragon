@@ -62,10 +62,10 @@ public class PortalWavePreviewRenderer : MonoBehaviour
         (left, right) => left.RouteIndex.CompareTo(right.RouteIndex);
 
     private readonly Dictionary<PortalDirection, Portal> _portalById = new();
-    private readonly Dictionary<BaseMonster, Sprite> _iconByMonsterPrefab = new();
+    private readonly Dictionary<BaseMonster, MonsterIcon> _iconByMonsterPrefab = new();
     private readonly Dictionary<MonsterData, int> _entryIndexByMonster = new();
     private readonly List<RouteSpawnPlan> _sortedRoutes = new();
-    private readonly List<(Sprite Icon, int Count, MonsterData Data, EnemyEnhancementSnapshot Enhancement)> _entryBuffer = new();
+    private readonly List<(MonsterIcon Icon, int Count, MonsterData Data, EnemyEnhancementSnapshot Enhancement)> _entryBuffer = new();
 
     private ComponentPool<UI_PortalWavePreviewCard> _cardPool;
     private bool _isRefreshQueued;
@@ -353,7 +353,7 @@ public class PortalWavePreviewRenderer : MonoBehaviour
                 {
                     // 강화는 첫 무리 것을 유지한다 - 같은 적은 어느 경로로 오든 같은 강화를 받으므로
                     // (EnemyEnhancementResolver가 몬스터 종류로만 규칙을 고른다) 덮어써도 같은 값이다.
-                    (Sprite icon, int count, MonsterData data, EnemyEnhancementSnapshot enhancement) =
+                    (MonsterIcon icon, int count, MonsterData data, EnemyEnhancementSnapshot enhancement) =
                         _entryBuffer[existingIndex];
 
                     _entryBuffer[existingIndex] =
@@ -373,23 +373,21 @@ public class PortalWavePreviewRenderer : MonoBehaviour
         }
     }
 
-    // MonsterData에는 아이콘 필드가 없어, 인게임 프리팹의 스프라이트를 그대로 UI 아이콘으로 쓴다.
-    // 스프라이트를 자식으로 분리한 프리팹이 있으므로 자식까지 훑는다(WorkerCountOverlayRenderer와 동일).
-    private Sprite ResolveMonsterIcon(BaseMonster monsterPrefab)
+    // MonsterData에는 아이콘 필드가 없어, 인게임 프리팹의 스프라이트+색을 그대로 UI 아이콘으로 쓴다
+    // (MonsterIcon 클래스 주석 참고). 프레임마다 다시 찾지 않도록 프리팹 단위로 캐시한다.
+    private MonsterIcon ResolveMonsterIcon(BaseMonster monsterPrefab)
     {
         if (monsterPrefab == null)
         {
-            return null;
+            return new MonsterIcon(null, Color.white);
         }
 
-        if (_iconByMonsterPrefab.TryGetValue(monsterPrefab, out Sprite cachedIcon))
+        if (_iconByMonsterPrefab.TryGetValue(monsterPrefab, out MonsterIcon cachedIcon))
         {
             return cachedIcon;
         }
 
-        SpriteRenderer spriteRenderer = monsterPrefab.GetComponentInChildren<SpriteRenderer>(true);
-        Sprite icon = spriteRenderer != null ? spriteRenderer.sprite : null;
-
+        MonsterIcon icon = MonsterIcon.Resolve(monsterPrefab);
         _iconByMonsterPrefab[monsterPrefab] = icon;
         return icon;
     }

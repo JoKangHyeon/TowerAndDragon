@@ -102,7 +102,7 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
     // 강화를 함께 받는 이유는 툴팁이 밤에 실제로 만날 수치를 적어야 하기 때문이다 -
     // MonsterData의 설계값만 쓰면 점령 강화가 걸린 밤에 낮에 본 숫자와 실제 적이 달라진다.
     public void Setup(
-        IReadOnlyList<(Sprite Icon, int Count, MonsterData Data, EnemyEnhancementSnapshot Enhancement)> entries,
+        IReadOnlyList<(MonsterIcon Icon, int Count, MonsterData Data, EnemyEnhancementSnapshot Enhancement)> entries,
         UI_TooltipPresenter presenter)
     {
         for (int i = 0; i < _runtimes.Count; i++)
@@ -112,7 +112,7 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
 
         for (int i = 0; i < entries.Count; i++)
         {
-            (Sprite icon, int count, MonsterData data, EnemyEnhancementSnapshot enhancement) = entries[i];
+            (MonsterIcon icon, int count, MonsterData data, EnemyEnhancementSnapshot enhancement) = entries[i];
 
             if (data == null)
             {
@@ -127,9 +127,9 @@ public class UI_PortalWavePreviewCard : MonoBehaviour
             int slotIndex = runtime.UsedSlotCount;
             runtime.UsedSlotCount++;
 
-            // 몬스터 아이콘은 인게임 스프라이트를 그대로 쓰므로 틴트 없이 원색으로 표시한다.
+            // 몬스터 아이콘은 인게임 프리팹의 SpriteRenderer 색을 그대로 옮겨 밤에 보는 것과 같게 한다.
             UI_ConquestRewardSlot slot = runtime.Pool.Get(slotIndex);
-            slot.Setup(icon, Color.white, string.Format(CountFormat, count));
+            slot.Setup(icon.Sprite, icon.Tint, string.Format(CountFormat, count));
 
             SetupTooltip(runtime, slotIndex, slot, data, enhancement, presenter);
         }

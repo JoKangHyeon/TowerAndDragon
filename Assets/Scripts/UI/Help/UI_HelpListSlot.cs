@@ -46,7 +46,7 @@ public sealed class UI_HelpListSlot : MonoBehaviour
     /// 표시가 그대로 남는다. 그래서 SetUnviewed 같은 별도 메서드를 두지 않고 파라미터로 받는다.
     /// </summary>
     public void Setup(
-        string titleLocKey, Sprite icon, bool isSelected, bool isUnviewed, int rowIndex, Action<int> onClick)
+        string titleLocKey, MonsterIcon icon, bool isSelected, bool isUnviewed, int rowIndex, Action<int> onClick)
     {
         _rowIndex = rowIndex;
         _onClick = onClick;
@@ -58,8 +58,9 @@ public sealed class UI_HelpListSlot : MonoBehaviour
 
         if (_icon != null)
         {
-            _icon.sprite = icon;
-            _icon.gameObject.SetActive(icon != null);
+            _icon.sprite = icon.Sprite;
+            _icon.color = icon.Tint;
+            _icon.gameObject.SetActive(icon.Sprite != null);
         }
 
         if (_selectedHighlight != null)

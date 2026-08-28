@@ -32,13 +32,13 @@ public sealed class UI_HelpWindow : MonoBehaviour, IExclusiveMode
     {
         public readonly string Id; // HelpProfile 기록 키(EntryId 또는 MonsterData.NameLocKey)
         public readonly string TitleLocKey;
-        public readonly Sprite Icon;
+        public readonly MonsterIcon Icon;
         public readonly string CategoryLocKey;
         public readonly HelpEntrySO Entry;
         public readonly MonsterData Monster;
 
         private CodexRow(
-            string id, string titleLocKey, Sprite icon, string categoryLocKey,
+            string id, string titleLocKey, MonsterIcon icon, string categoryLocKey,
             HelpEntrySO entry, MonsterData monster)
         {
             Id = id;
@@ -52,7 +52,7 @@ public sealed class UI_HelpWindow : MonoBehaviour, IExclusiveMode
         public static CodexRow ForHelp(HelpEntrySO entry) => new CodexRow(
             entry.EntryId,
             entry.TitleLocKey,
-            entry.Icon,
+            new MonsterIcon(entry.Icon, Color.white),
             HelpLocKeys.CategoryLocKey(entry.Category),
             entry,
             null);
@@ -543,13 +543,13 @@ public sealed class UI_HelpWindow : MonoBehaviour, IExclusiveMode
 
         string title = string.Empty;
         string body = string.Empty;
-        Sprite illustration = null;
+        MonsterIcon illustration = new MonsterIcon(null, Color.white);
 
         if (hasSelection && row.Entry != null)
         {
             title = StringTable.GetString(row.Entry.TitleLocKey);
             body = StringTable.GetString(row.Entry.BodyLocKey);
-            illustration = row.Entry.Illustration;
+            illustration = new MonsterIcon(row.Entry.Illustration, Color.white);
         }
         else if (hasSelection && row.Monster != null)
         {
@@ -571,11 +571,13 @@ public sealed class UI_HelpWindow : MonoBehaviour, IExclusiveMode
             _detailBodyText.text = body;
         }
 
-        // 그림이 없는 항목에서 빈 액자가 남지 않도록 오브젝트째 끈다.
+        // 그림이 없는 항목에서 빈 액자가 남지 않도록 오브젝트째 끈다. 색은 매번 함께 대입한다 -
+        // 도움말 탭에서는 흰색으로 되돌아가야 앞서 본 적의 틴트가 남지 않는다.
         if (_detailIllustration != null)
         {
-            _detailIllustration.sprite = illustration;
-            _detailIllustration.gameObject.SetActive(illustration != null);
+            _detailIllustration.sprite = illustration.Sprite;
+            _detailIllustration.color = illustration.Tint;
+            _detailIllustration.gameObject.SetActive(illustration.Sprite != null);
         }
     }
 
