@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -11,6 +12,8 @@ public interface IBuildModeInteractionQuery
 {
     bool CanSelectFilter(RectTransform filterTab);
     bool CanSelectBuilding(Building prefab);
+    bool CanPlaceBuildingAt(Building prefab, Vector3Int anchor);
+    bool TryGetPlacementGuideAnchors(Building prefab, out IReadOnlyList<Vector3Int> anchors);
     bool CanMoveSelectedBuilding();
     bool CanRemoveSelectedBuilding();
     bool CanCancelPlacement();

@@ -575,6 +575,37 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         return Reject();
     }
 
+    bool IBuildModeInteractionQuery.CanPlaceBuildingAt(Building prefab, Vector3Int anchor)
+    {
+        if (!IsWaitingForAction || _activeStep.AllowedPlacementAnchors.Count == 0 ||
+            !MatchesBuilding(prefab, _activeStep))
+        {
+            return true;
+        }
+
+        foreach (Vector3Int allowedAnchor in _activeStep.AllowedPlacementAnchors)
+        {
+            if (anchor == allowedAnchor)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool IBuildModeInteractionQuery.TryGetPlacementGuideAnchors(
+        Building prefab,
+        out IReadOnlyList<Vector3Int> anchors)
+    {
+        bool hasGuide = IsWaitingForAction &&
+                        _activeStep.AllowedPlacementAnchors.Count > 0 &&
+                        MatchesBuilding(prefab, _activeStep);
+
+        anchors = hasGuide ? _activeStep.AllowedPlacementAnchors : null;
+        return hasGuide;
+    }
+
     /// <summary>
     /// 개수를 채우라고 시키는 단계인지. 손잡아 가르치는 단계와 달리 플레이어가 스스로 더 지어야 하므로
     /// 건설 패널의 탭과 그 종류의 건물을 열어 준다 - 막아두면 시킨 것을 할 수 없어 관문에 갇힌다.

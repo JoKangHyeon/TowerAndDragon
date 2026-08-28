@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -81,6 +82,10 @@ public sealed class TutorialStepSO : ScriptableObject
     [Min(0)]
     [SerializeField] private int _maxCount;
 
+    [Tooltip("BuildingConstructed / BuildingCountReached 단계에서 건물을 놓을 수 있는 앵커 셀. " +
+             "비우면 일반 배치 규칙을 따른다. 튜토리얼 뒤 단계가 쓸 2x2 공간을 보존해야 할 때 지정한다.")]
+    [SerializeField] private List<Vector3Int> _allowedPlacementAnchors = new();
+
     [Tooltip("BuildingCountReached 조건에서 정원을 채운 것만 셀지. 타워는 충원율이 곧 화력이라 " +
              "개수만 채운 것으로는 밤을 넘기는 기준이 되지 않는다.")]
     [SerializeField] private bool _requiresStaffed;
@@ -124,6 +129,7 @@ public sealed class TutorialStepSO : ScriptableObject
 
     /// <summary>0이면 상한 없음.</summary>
     public int MaxCount => _maxCount;
+    public IReadOnlyList<Vector3Int> AllowedPlacementAnchors => _allowedPlacementAnchors;
     public bool RequiresStaffed => _requiresStaffed;
     public TutorialExclusiveModeKind SkipIfModeOpen => _skipIfModeOpen;
 

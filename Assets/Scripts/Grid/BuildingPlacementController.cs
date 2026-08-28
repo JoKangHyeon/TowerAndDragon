@@ -203,12 +203,16 @@ public class BuildingPlacementController : MonoBehaviour
 
         _gridMap.OnCellChanged.AddListener(HandleCellChanged);
         _clickCycle = new BuildingClickCycle(_gridMap);
+        _mouseSelectController.SetBuildingPlacementController(this);
     }
 
     private void OnDestroy()
     {
         if (_gridMap != null)
             _gridMap.OnCellChanged.RemoveListener(HandleCellChanged);
+
+        if (_mouseSelectController != null)
+            _mouseSelectController.ClearBuildingPlacementController(this);
     }
 
     private void HandleCellChanged(GridCell cell) => RefreshOccupiedOverlay();
@@ -651,6 +655,35 @@ public class BuildingPlacementController : MonoBehaviour
         return true;
     }
 
+    public bool CanPlaceBuildingAt(Building prefab, Vector3Int anchor)
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanPlaceBuildingAt(prefab, anchor))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public bool TryGetPlacementGuideAnchors(
+        Building prefab,
+        out IReadOnlyList<Vector3Int> anchors)
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (query.TryGetPlacementGuideAnchors(prefab, out anchors))
+            {
+                return true;
+            }
+        }
+
+        anchors = null;
+        return false;
+    }
+
     public void ConfirmAtPointer()
     {
         if (_selectedBuilding != null)
@@ -721,6 +754,11 @@ public class BuildingPlacementController : MonoBehaviour
         // 풋프린트를 한 번만 계산해 판정과 경고가 같은 칸 목록을 보게 한다(MouseSelectController.Update와 같은 형태).
         List<Vector3Int> footprint =
             _gridMap.GetFootprintCoords(anchor, _mouseSelectController.CurrentFootprintShape);
+
+        if (!CanPlaceBuildingAt(_selectedBuilding, anchor))
+        {
+            return false;
+        }
 
         if (!_gridMap.CanConstructBuildingFootprint(footprint, _selectedBuilding, null))
         {

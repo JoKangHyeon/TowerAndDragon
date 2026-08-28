@@ -71,6 +71,8 @@ public class MouseSelectController : MonoBehaviour
     private bool _isRepositionPreview;
     private Vector3Int? _lastDrawnAnchor;
     private Building _selectedBuildingRef; // 재배치 중이면 실제 인스턴스 - 자기 자신과 겹치는 위치도 유효하게 판정하기 위함
+    private BuildingPlacementController _buildingPlacementController;
+    private readonly List<(List<Vector3Int> Coords, Color Color)> _placementHighlightGroups = new();
 
     public Vector3Int CurrentAnchor { get; private set; }
     public bool CanConstruct { get; private set; }
@@ -93,6 +95,15 @@ public class MouseSelectController : MonoBehaviour
     // 참조가 비어 있어도(=null) 안전하게 0을 반환 - Y 오프셋을 쓰는 다른 오버레이 스크립트들이 공용으로 사용.
     public static float GetYOffsetOrZero(MouseSelectController mouseSelectController) =>
         mouseSelectController != null ? mouseSelectController.YOffset : 0f;
+
+    public void SetBuildingPlacementController(BuildingPlacementController controller) =>
+        _buildingPlacementController = controller;
+
+    public void ClearBuildingPlacementController(BuildingPlacementController controller)
+    {
+        if (ReferenceEquals(_buildingPlacementController, controller))
+            _buildingPlacementController = null;
+    }
 
     private void Awake()
     {
@@ -292,12 +303,15 @@ public class MouseSelectController : MonoBehaviour
         _lastDrawnAnchor = anchor;
 
         List<Vector3Int> footprint = _gridMap.GetFootprintCoords(anchor, _footprintShape);
-        bool canConstruct = _gridMap.CanConstructBuildingFootprint(footprint, _selectedBuildingRef, _selectedBuildingRef);
+        bool canConstruct =
+            _gridMap.CanConstructBuildingFootprint(footprint, _selectedBuildingRef, _selectedBuildingRef) &&
+            (_buildingPlacementController == null || _isRepositionPreview ||
+             _buildingPlacementController.CanPlaceBuildingAt(_selectedBuildingRef, anchor));
 
         CurrentAnchor = anchor;
         CanConstruct = canConstruct;
 
-        DrawFootprint(footprint, canConstruct);
+        DrawPlacementHighlights(footprint, canConstruct);
         DrawGhost(anchor, canConstruct);
         DrawRangeIndicator(anchor);
     }
@@ -387,6 +401,38 @@ public class MouseSelectController : MonoBehaviour
     // 사유는 경고 토스트(UI_WarningWindow)가 대신 알린다.
     private void DrawFootprint(List<Vector3Int> footprint, bool canConstruct) =>
         HighlightCells(footprint, canConstruct ? Color.green : Color.red);
+
+    private void DrawPlacementHighlights(List<Vector3Int> footprint, bool canConstruct)
+    {
+        if (_buildingPlacementController == null || _isRepositionPreview ||
+            !_buildingPlacementController.TryGetPlacementGuideAnchors(
+                _selectedBuildingRef,
+                out IReadOnlyList<Vector3Int> guideAnchors))
+        {
+            DrawFootprint(footprint, canConstruct);
+            return;
+        }
+
+        _placementHighlightGroups.Clear();
+
+        foreach (Vector3Int guideAnchor in guideAnchors)
+        {
+            if (guideAnchor == CurrentAnchor)
+                continue;
+
+            List<Vector3Int> guideFootprint = _gridMap.GetFootprintCoords(guideAnchor, _footprintShape);
+            if (_gridMap.CanConstructBuildingFootprint(
+                    guideFootprint,
+                    _selectedBuildingRef,
+                    _selectedBuildingRef))
+            {
+                _placementHighlightGroups.Add((guideFootprint, Color.green));
+            }
+        }
+
+        _placementHighlightGroups.Add((footprint, canConstruct ? Color.green : Color.red));
+        HighlightCellGroups(_placementHighlightGroups);
+    }
 
     public void HighlightCells(List<Vector3Int> coords, Color color)
     {
