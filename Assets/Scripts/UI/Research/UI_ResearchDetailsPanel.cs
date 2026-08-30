@@ -14,6 +14,10 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
     // 열고 닫을 때의 스케일 연출. 0이 아니라 살짝 작은 값에서 시작해 "튀어나온다"는 느낌만 준다 -
     // 0에서 키우면 창이 한 점에서 자라나 다른 창처럼 보인다.
     private const float POP_SCALE = 0.85f;
+
+    // 코스트 줄이 상자 안에서 차지해도 되는 비율. 1이면 슬롯이 상자 테두리에 딱 붙는다.
+    private const float COST_ROW_FILL_RATIO = 0.95f;
+
     private const float OPEN_DURATION = 0.18f;
     private const float CLOSE_DURATION = 0.12f;
 
@@ -332,6 +336,45 @@ public class UI_ResearchDetailsPanel : MonoBehaviour
 
             slot.Setup(icon, Color.white, cost.Amount.ToString(), textColor);
         }
+
+        FitCostRowToBox();
+    }
+
+    /// <summary>
+    /// 코스트 줄이 상자를 넘치면 줄 전체를 축소해 맞춘다.
+    ///
+    /// 슬롯은 폭이 고정이다(아이콘 50 + 숫자칸 50). 자원이 3종이 되면 줄이 상자보다 넓어져
+    /// 마지막 숫자가 상자 밖으로 삐져나온다.
+    ///
+    /// 슬롯 프리팹(Slot_CostToConquer)을 줄이지 않는 이유: 점령 창·드래곤 스킬 창과 공유하는데,
+    /// 점령 창만 숫자를 "보유/필요"(예: 120/200)로 찍는다. 숫자칸을 줄이면 그쪽에서 글자가
+    /// 칸을 넘어 옆 슬롯과 겹친다(슬롯 내부 레이아웃이 childControlWidth = false라
+    /// 글자가 길어져도 슬롯이 넓어지지 않는다).
+    ///
+    /// 그래서 공유물은 그대로 두고 이 패널에서만 줄을 축소한다. 자원이 2종 이하면 아무 일도 없다.
+    /// </summary>
+    private void FitCostRowToBox()
+    {
+        if (_costContainer is not RectTransform row ||
+            row.parent is not RectTransform box)
+        {
+            return;
+        }
+
+        // 직전 호출에서 줄인 채로 재면 축소가 누적된다 - 원래 크기로 되돌리고 잰다.
+        row.localScale = Vector3.one;
+        LayoutRebuilder.ForceRebuildLayoutImmediate(row);
+
+        float contentWidth = LayoutUtility.GetPreferredWidth(row);
+        float availableWidth = box.rect.width * COST_ROW_FILL_RATIO;
+
+        if (contentWidth <= availableWidth || contentWidth <= 0f)
+        {
+            return;
+        }
+
+        float scale = availableWidth / contentWidth;
+        row.localScale = new Vector3(scale, scale, 1f);
     }
 
     private void HandleResearchClicked()

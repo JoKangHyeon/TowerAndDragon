@@ -22,8 +22,14 @@ MonoBehaviour:
   _prerequisites:
   - {fileID: 11400000, guid: a3c071e3497001f45af3e34c53092bcc, type: 2}
   - {fileID: 11400000, guid: 1a5074b4b30c340449ee1d14ea5658b4, type: 2}
-  _researchPointCost: 150
-  _resourceCost: []
+  _researchPointCost: 100
+  _resourceCost:
+  - Type: 4
+    Amount: 60
+  - Type: 64
+    Amount: 30
+  - Type: 16
+    Amount: 20
   _effects:
   - {fileID: 11400000, guid: 4bd0fd5ad0fbbce4aa4cdc9305ce84e0, type: 2}
   _requiredLandmark: {fileID: 0}
