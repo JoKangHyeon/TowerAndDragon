@@ -3,41 +3,27 @@ using UnityEngine;
 public static class ConquestDurationRules
 {
     public static int ResolveDaysRequired(
-        int baseDaysRequired,
-        int externalDaysReduction,
         Vector2Int targetChunkCoord,
         Vector2Int originChunkCoord,
-        int nearOriginDistanceThreshold,
-        int nearOriginDaysReduction,
+        int baseDaysAtInnerRing,
+        int daysPerDistanceStep,
+        int externalDaysReduction,
         int minimumDaysRequired)
     {
-        int totalReduction = Mathf.Max(0, externalDaysReduction);
-
-        if (IsWithinOrthogonalDistance(
-                targetChunkCoord,
-                originChunkCoord,
-                nearOriginDistanceThreshold))
-        {
-            totalReduction += Mathf.Max(0, nearOriginDaysReduction);
-        }
-
-        return Mathf.Max(
+        int orthogonalDistance = CalculateOrthogonalDistance(targetChunkCoord, originChunkCoord);
+        int distancePastInnerGrass = Mathf.Max(0, orthogonalDistance - 1);
+        int daysBeforeReduction = Mathf.Max(
             minimumDaysRequired,
-            baseDaysRequired - totalReduction);
+            Mathf.Max(0, baseDaysAtInnerRing) + distancePastInnerGrass * Mathf.Max(0, daysPerDistanceStep));
+
+        return Mathf.Max(minimumDaysRequired, daysBeforeReduction - Mathf.Max(0, externalDaysReduction));
     }
 
-    private static bool IsWithinOrthogonalDistance(
+    public static int CalculateOrthogonalDistance(
         Vector2Int targetChunkCoord,
-        Vector2Int originChunkCoord,
-        int distanceThreshold)
+        Vector2Int originChunkCoord)
     {
-        if (distanceThreshold <= 0)
-        {
-            return false;
-        }
-
         Vector2Int delta = targetChunkCoord - originChunkCoord;
-        int distance = Mathf.Abs(delta.x) + Mathf.Abs(delta.y);
-        return distance <= distanceThreshold;
+        return Mathf.Abs(delta.x) + Mathf.Abs(delta.y);
     }
 }

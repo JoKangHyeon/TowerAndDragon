@@ -14,10 +14,10 @@ using UnityEngine;
 // 노드·코스트·선행관계는 전부 Docs/Sangwook/연구트리_로드맵.md §5(= 연구트리_시각화.html DATA)를
 // 그대로 옮긴 것이며 밸런싱 대상이다.
 //
-// 로드맵 코스트 표기 중 아래 두 가지는 자원 코스트에서 생략한다(RP 코스트는 그대로 반영):
-//  - 鑛(광물): ResourceType에 대응 자원이 없다(기본 자원은 Food/Wood/Stone 3종).
-//  - 특화·슬: "특화 다량", "특화×2종"처럼 종류·수량이 기획 [미정]이라 임의 확정하지 않는다.
-//    (CLAUDE.md "기획서의 [미정] 항목은 임의로 확정 구현 금지")
+// 단 자원 코스트만은 예외로 로드맵을 따르지 않는다. 노드별 표기 대신 (갈래 × 티어) 규칙으로
+// 통일했다 - 규칙과 값은 BuildResourceCost 위 주석 참조(팀 확정, 2026-08-29).
+// 로드맵의 "특화 다량", "특화×2종" 같은 [미정] 표기와 대응 자원이 없는 鑛(광물)은
+// 그 규칙으로 대체되었다. RP 코스트는 종전대로 노드별로 유지한다.
 public static class ResearchTreeAssetGenerator
 {
     private const string DATA_FOLDER = "Assets/Data/Research";
@@ -40,7 +40,11 @@ public static class ResearchTreeAssetGenerator
         public int Rank;
 
         public int ResearchPointCost;
+
+        // T4·T5 전용. null이면 티어 규칙(BuildResourceCost)을 쓴다.
+        // 어느 쪽이어야 하는지는 티어가 정하며 ValidateCostTables가 확인한다.
         public ResourceAmount[] ResourceCost;
+
         public string[] PrerequisiteIds;
         public string EffectAssetName; // null이면 효과 미구현(stub) - 로드맵 §8과 동일한 취급
         public string[] EffectAssetNames;
@@ -80,11 +84,167 @@ public static class ResearchTreeAssetGenerator
 
     private static string[] Effects(params string[] effectAssetNames) => effectAssetNames;
 
+    // ── 자원 코스트 규칙 (팀 확정, 2026-08-29) ──────────────────────────────────
+    // 노드마다 코스트를 따로 적지 않고 (갈래 × 티어)에서 계산한다. "같은 티어면 같은 코스트"가
+    // 규칙이므로, 노드별 리터럴로 두면 규칙이 38곳에 흩어져 반드시 어긋난다.
+    // RP 코스트는 이 규칙과 무관하게 노드별로 유지한다(밸런싱 축이 다르다).
+    //
+    // 코스트를 정하는 방식이 티어에 따라 둘로 갈린다.
+    //
+    // **T1~T3: 티어 규칙.** 같은 티어면 갈래만 다를 뿐 코스트가 같다. 자원은 정확히 2종이고,
+    // 티어가 오를수록 더 귀한 자원으로 한 칸씩 옮겨간다. 노드별로 적지 않는 이유는
+    // "같은 티어면 같은 코스트"가 규칙이기 때문이다 - 38곳에 흩어 두면 반드시 어긋난다.
+    //
+    //   T1  식량 20 + 목재 20   (중앙 초원에서 바로 나오는 자원)
+    //   T2  목재 30 + 석재 30
+    //   T3  석재 40 + 갈래 특화 10   (3주기 - 기초 1 + 특화 1)
+    //
+    // **T4·T5: 노드별 명시(NodeSpec.ResourceCost).** 후반 연구는 노드마다 성격이 뚜렷해서
+    // 같은 티어라도 요구 자원이 다른 편이 낫다는 판단이다(팀 확정, 2026-08-30).
+    // 자원은 3종이고, 그중 하나는 반드시 눈의 결정이다(4주기 = 설원 확보 요구).
+    // 양은 T3보다 확실히 비싸고 T5가 T4보다 비싸다.
+    //
+    // 티어↔주기 매핑은 ResearchTierRules.TIER_UNLOCK_CYCLES가 정한다 - T1~T5가 각각
+    // 1·2·3·4·4주기에 열리므로 T3 = 3주기, T4·T5 = 4주기다. 그 매핑을 바꾸면 여기도 같이 봐야 한다.
+    //
+    // 위 규약은 전부 ValidateCostTables가 생성 시작 전에 확인한다.
+    private const int FIRST_TIER = 1;
+
+    // 노드별 명시 코스트로 넘어가는 첫 티어(= 4주기).
+    private const int EXPLICIT_COST_FIRST_TIER = 4;
+
+    private const int RULE_RESOURCE_KINDS = 2;
+    private const int EXPLICIT_RESOURCE_KINDS = 3;
+
+    // 인덱스 = 티어 - FIRST_TIER. T1~T3만 담는다(T4·T5는 노드별 명시).
+    private static readonly int[] FOOD_BY_TIER = { 20, 0, 0 };
+    private static readonly int[] WOOD_BY_TIER = { 20, 30, 0 };
+    private static readonly int[] STONE_BY_TIER = { 0, 30, 40 };
+
+    // 갈래별 특화 자원(아래 BranchResource)의 양. 3주기(T3)부터 붙는다.
+    private static readonly int[] BRANCH_RESOURCE_BY_TIER = { 0, 0, 10 };
+
+    private static ResourceType BranchResource(ResearchBranch branch) => branch switch
+    {
+        ResearchBranch.Tower => ResourceType.FlameHeart,
+        ResearchBranch.Production => ResourceType.PhilosopherStone,
+        ResearchBranch.Convenience => ResourceType.TimeSand,
+        _ => ResourceType.None,
+    };
+
+    // 노드에 코스트가 적혀 있으면 그것을, 없으면 티어 규칙을 쓴다.
+    private static ResourceAmount[] ResolveResourceCost(NodeSpec spec)
+    {
+        return spec.ResourceCost ?? BuildResourceCost(spec.Branch, spec.Tier);
+    }
+
+    private static ResourceAmount[] BuildResourceCost(ResearchBranch branch, int tier)
+    {
+        int index = tier - FIRST_TIER;
+
+        if (index < 0 || index >= WOOD_BY_TIER.Length)
+        {
+            Debug.LogError(
+                $"[ResearchTreeAssetGenerator] 티어 {tier}에는 규칙 코스트가 없습니다 " +
+                $"(T{EXPLICIT_COST_FIRST_TIER} 이상은 노드별로 적어야 한다). 코스트를 비웁니다.");
+            return Array.Empty<ResourceAmount>();
+        }
+
+        var costs = new List<ResourceAmount>();
+        AddIfAny(costs, ResourceType.Food, FOOD_BY_TIER[index]);
+        AddIfAny(costs, ResourceType.Wood, WOOD_BY_TIER[index]);
+        AddIfAny(costs, ResourceType.Stone, STONE_BY_TIER[index]);
+        AddIfAny(costs, BranchResource(branch), BRANCH_RESOURCE_BY_TIER[index]);
+        return costs.ToArray();
+    }
+
+    // 0인 항목은 넣지 않는다 - 코스트 목록에 "0개"가 남으면 UI가 빈 줄을 그린다.
+    private static void AddIfAny(List<ResourceAmount> costs, ResourceType type, int amount)
+    {
+        if (type != ResourceType.None && amount > 0)
+        {
+            costs.Add(Amount(type, amount));
+        }
+    }
+
+    // 코스트 규약은 표 4개와 노드 스펙 12곳에 흩어져 있어 한 칸만 잘못 고쳐도 조용히 깨진다.
+    // 에셋 38개를 덮어쓴 뒤 알아채면 되돌리기 번거로우므로 생성 시작 전에 전부 확인한다.
+    private static bool ValidateCostTables(NodeSpec[] specs)
+    {
+        bool isValid = true;
+
+        // 1) T1~T3 규칙: 갈래와 무관하게 정확히 2종.
+        for (int tier = FIRST_TIER; tier < EXPLICIT_COST_FIRST_TIER; tier++)
+        {
+            foreach (ResearchBranch branch in Enum.GetValues(typeof(ResearchBranch)))
+            {
+                int kinds = BuildResourceCost(branch, tier).Length;
+
+                if (kinds == RULE_RESOURCE_KINDS)
+                {
+                    continue;
+                }
+
+                Debug.LogError(
+                    $"[ResearchTreeAssetGenerator] {branch} 갈래 T{tier}의 규칙 코스트가 {kinds}종입니다. " +
+                    $"T{FIRST_TIER}~T{EXPLICIT_COST_FIRST_TIER - 1}은 {RULE_RESOURCE_KINDS}종이어야 합니다.");
+                isValid = false;
+            }
+        }
+
+        // 2) 노드별: 어느 방식을 써야 하는지가 티어로 정해진다.
+        foreach (NodeSpec spec in specs)
+        {
+            bool needsExplicit = spec.Tier >= EXPLICIT_COST_FIRST_TIER;
+
+            if (!needsExplicit)
+            {
+                if (spec.ResourceCost != null)
+                {
+                    Debug.LogError(
+                        $"[ResearchTreeAssetGenerator] '{spec.NodeId}'(T{spec.Tier})에 코스트가 적혀 있습니다. " +
+                        $"T{EXPLICIT_COST_FIRST_TIER} 미만은 티어 규칙을 써야 합니다 - ResourceCost를 지우세요.");
+                    isValid = false;
+                }
+
+                continue;
+            }
+
+            if (spec.ResourceCost == null)
+            {
+                Debug.LogError(
+                    $"[ResearchTreeAssetGenerator] '{spec.NodeId}'(T{spec.Tier})에 코스트가 없습니다. " +
+                    $"T{EXPLICIT_COST_FIRST_TIER} 이상은 노드별로 적어야 합니다.");
+                isValid = false;
+                continue;
+            }
+
+            if (spec.ResourceCost.Length != EXPLICIT_RESOURCE_KINDS)
+            {
+                Debug.LogError(
+                    $"[ResearchTreeAssetGenerator] '{spec.NodeId}'의 자원이 {spec.ResourceCost.Length}종입니다. " +
+                    $"T{EXPLICIT_COST_FIRST_TIER} 이상은 {EXPLICIT_RESOURCE_KINDS}종이어야 합니다.");
+                isValid = false;
+            }
+
+            // 4주기 연구는 설원 확보를 요구한다 - 눈의 결정이 빠지면 그 관문이 사라진다.
+            if (Array.FindIndex(spec.ResourceCost, c => c.Type == ResourceType.SnowCrystal) < 0)
+            {
+                Debug.LogError(
+                    $"[ResearchTreeAssetGenerator] '{spec.NodeId}'에 눈의 결정이 없습니다. " +
+                    $"T{EXPLICIT_COST_FIRST_TIER} 이상은 모두 눈의 결정을 요구해야 합니다.");
+                isValid = false;
+            }
+        }
+
+        return isValid;
+    }
+
     // 티어는 Docs/연구트리_개편안.md §2의 확정 배치다. UI가 (갈래 × 티어) 격자로 자동 배치하고
     // 한 칸의 폭이 갈래 열 폭(500)을 넘으면 옆 갈래를 침범하므로 칸당 3개가 상한이다.
     // 배치를 바꿀 때는 그 상한을 먼저 확인할 것.
     //
-    // RP 코스트는 티어 곡선(10 / 25 / 50 / 90 / 150)을 그대로 따른다 - 티어가 바뀐 노드는
+    // RP 코스트는 티어 곡선(10 / 25 / 50 / 70 / 100)을 그대로 따른다 - 티어가 바뀐 노드는
     // 새 티어의 값으로 맞췄다(밸런싱 대상).
     private static NodeSpec[] BuildNodeSpecs() => new[]
     {
@@ -94,7 +254,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "tower_damage", AssetName = "RN_TowerDamage",
             Branch = ResearchBranch.Tower, Tier = 1, ResearchPointCost = 10,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_TowerDamageIncrease",
             NameEn = "[TBD] Basic Training I", NameKo = "[미정] 기본 훈련 I",
@@ -104,7 +263,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "tower_range_1", AssetName = "RN_TowerRange1",
             Branch = ResearchBranch.Tower, Tier = 1, Rank = 1, ResearchPointCost = 10,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_TowerRangeIncrease",
             NameEn = "[TBD] Range Extension I", NameKo = "[미정] 사거리 확장 I",
@@ -114,7 +272,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "tower_firerate_1", AssetName = "RN_TowerFireRate1",
             Branch = ResearchBranch.Tower, Tier = 1, Rank = 1, ResearchPointCost = 10,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_TowerFireRateIncrease",
             NameEn = "[TBD] Rate of Fire I", NameKo = "[미정] 연사 개량 I",
@@ -138,8 +295,9 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "tower_elemental_unlock", AssetName = "RN_TowerElementalUnlock",
-            Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 30)),
+            // 해금 노드라 티어 곡선(T2=25)보다 싸게 둔다 - 에셋에서 손으로 조정돼 있던 값을
+            // 여기로 옮겼다. 스펙과 에셋이 어긋나 있으면 재생성이 조용히 되돌린다.
+            Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 15,
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetNames = Effects(
                 "RE_FireTowerUnlock", "RE_IceTowerUnlock", "RE_StoneTowerUnlock",
@@ -152,7 +310,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "tower_reverse_engineering", AssetName = "RN_TowerReverseEngineering",
             Branch = ResearchBranch.Tower, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("tower_elemental_unlock"),
             // 일단 랜드마크 게이트를 해제한다 - 역설계 연구를 완료하는 것만으로
             // 은신·영혼·강화·가시 타워 4종이 해금된다.
@@ -169,7 +326,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "tower_manpower_1", AssetName = "RN_TowerManpower1",
             Branch = ResearchBranch.Tower, Tier = 2, Rank = 1, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 30)),
             PrerequisiteIds = After("tower_damage"),
             EffectAssetName = "RE_TowerManpowerReduction",
             NameEn = "[TBD] Manpower Efficiency I", NameKo = "[미정] 인력 효율 I",
@@ -179,8 +335,8 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "tower_anti_air", AssetName = "RN_TowerAntiAir",
-            Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 30), Amount(ResourceType.Stone, 20)),
+            // 해금 노드 - tower_elemental_unlock과 같은 이유로 티어 곡선보다 싸다.
+            Branch = ResearchBranch.Tower, Tier = 2, ResearchPointCost = 15,
             PrerequisiteIds = After("tower_range_1"),
             EffectAssetName = "RE_AntiAirTowerUnlock",
             NameEn = "[TBD] Anti-Air Tower", NameKo = "[미정] 대공 타워",
@@ -192,7 +348,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "tower_fire_damage", AssetName = "RN_TowerFireDamage",
             Branch = ResearchBranch.Tower, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("tower_elemental_unlock"),
             EffectAssetName = "RE_FireTowerDamage",
             NameEn = "[TBD] Fire Tower Mastery", NameKo = "[미정] 화염 타워 강화",
@@ -202,7 +357,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "tower_ice_damage", AssetName = "RN_TowerIceDamage",
             Branch = ResearchBranch.Tower, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("tower_elemental_unlock"),
             EffectAssetName = "RE_IceTowerDamage",
             NameEn = "[TBD] Ice Tower Mastery", NameKo = "[미정] 얼음 타워 강화",
@@ -212,7 +366,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "tower_stone_damage", AssetName = "RN_TowerStoneDamage",
             Branch = ResearchBranch.Tower, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("tower_elemental_unlock"),
             EffectAssetName = "RE_StoneTowerDamage",
             NameEn = "[TBD] Stone Tower Mastery", NameKo = "[미정] 암석 타워 강화",
@@ -225,8 +378,11 @@ public static class ResearchTreeAssetGenerator
             // 최대체력은 TowerAttack이 pull하지 않는 유일한 스탯이라 씬의 TowerMaxHealthApplier가
             // 밤 시작에 push한다 - 그 적용기와 TowerMaxHealthMultiplierComposite가 씬에 있어야 한다.
             NodeId = "tower_armor", AssetName = "RN_TowerArmor",
-            Branch = ResearchBranch.Tower, Tier = 4, ResearchPointCost = 90,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            Branch = ResearchBranch.Tower, Tier = 4, ResearchPointCost = 70,
+            // 장갑 - 석재 골조에 불꽃으로 단조, 한랭 처리
+            ResourceCost = Cost(
+                Amount(ResourceType.Stone, 50), Amount(ResourceType.FlameHeart, 15),
+                Amount(ResourceType.SnowCrystal, 10)),
             PrerequisiteIds = After("tower_range_1", "tower_firerate_1"),
             EffectAssetName = "RE_TowerArmor",
             NameEn = "[TBD] Armored Tower", NameKo = "[미정] 중갑 타워",
@@ -236,8 +392,11 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "tower_elemental_master", AssetName = "RN_TowerElementalMaster",
-            Branch = ResearchBranch.Tower, Tier = 5, ResearchPointCost = 150,
-            ResourceCost = Array.Empty<ResourceAmount>(),
+            Branch = ResearchBranch.Tower, Tier = 5, ResearchPointCost = 100,
+            // 모든 속성을 다룬다 - 특화 3종
+            ResourceCost = Cost(
+                Amount(ResourceType.FlameHeart, 30), Amount(ResourceType.TimeSand, 20),
+                Amount(ResourceType.SnowCrystal, 20)),
             PrerequisiteIds = After(
                 "tower_reverse_engineering", "tower_fire_damage", "tower_ice_damage",
                 "tower_stone_damage"),
@@ -253,7 +412,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "grass_cultivation", AssetName = "RN_GrassCultivation",
             Branch = ResearchBranch.Production, Tier = 1, ResearchPointCost = 10,
-            ResourceCost = Cost(Amount(ResourceType.Food, 10)),
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_GrassYieldMultiplier",
             NameEn = "[TBD] Grassland Cultivation", NameKo = "[미정] 초원 경작",
@@ -263,7 +421,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "production_outer_basic", AssetName = "RN_ProductionOuterBasic",
             Branch = ResearchBranch.Production, Tier = 3, ResearchPointCost = 10,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
             PrerequisiteIds = After("grass_cultivation"),
             EffectAssetName = "RE_OuterBasicResourceUnlock",
             NameEn = "[TBD] Outer Basic Harvesting", NameKo = "[미정] 외곽 기초자원 채집",
@@ -276,7 +433,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "production_food_1", AssetName = "RN_ProductionFood1",
             Branch = ResearchBranch.Production, Tier = 2, Rank = 1, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Food, 20)),
             PrerequisiteIds = After("grass_cultivation"),
             EffectAssetName = "RE_FoodManpowerReduction",
             NameEn = "[TBD] Food Production I", NameKo = "[미정] 식량 생산 강화 I",
@@ -287,7 +443,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "production_wood_1", AssetName = "RN_ProductionWood1",
             Branch = ResearchBranch.Production, Tier = 2, Rank = 1, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 20)),
             PrerequisiteIds = After("grass_cultivation"),
             EffectAssetName = "RE_WoodManpowerReduction",
             NameEn = "[TBD] Lumber Production I", NameKo = "[미정] 목재 생산 강화 I",
@@ -298,7 +453,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "production_stone_1", AssetName = "RN_ProductionStone1",
             Branch = ResearchBranch.Production, Tier = 2, Rank = 1, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 20)),
             PrerequisiteIds = After("grass_cultivation"),
             EffectAssetName = "RE_StoneManpowerReduction",
             NameEn = "[TBD] Stone Production I", NameKo = "[미정] 석재 생산 강화 I",
@@ -311,7 +465,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "production_food_2", AssetName = "RN_ProductionFood2",
             Branch = ResearchBranch.Production, Tier = 3, Rank = 2, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Food, 40)),
             PrerequisiteIds = After("production_food_1"),
             EffectAssetName = "RE_FoodYieldMultiplier",
             NameEn = "[TBD] Food Production II", NameKo = "[미정] 식량 생산 강화 II",
@@ -321,7 +474,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "production_wood_2", AssetName = "RN_ProductionWood2",
             Branch = ResearchBranch.Production, Tier = 3, Rank = 2, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 40)),
             PrerequisiteIds = After("production_wood_1"),
             EffectAssetName = "RE_WoodYieldMultiplier",
             NameEn = "[TBD] Lumber Production II", NameKo = "[미정] 목재 생산 강화 II",
@@ -331,7 +483,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "production_stone_2", AssetName = "RN_ProductionStone2",
             Branch = ResearchBranch.Production, Tier = 3, Rank = 2, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("production_stone_1"),
             EffectAssetName = "RE_StoneYieldMultiplier",
             NameEn = "[TBD] Stone Production II", NameKo = "[미정] 석재 생산 강화 II",
@@ -342,8 +493,11 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "production_specialized", AssetName = "RN_ProductionSpecialized",
-            Branch = ResearchBranch.Production, Tier = 4, ResearchPointCost = 90,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 특화 다량 - 기획 [미정]
+            Branch = ResearchBranch.Production, Tier = 4, ResearchPointCost = 70,
+            // 특화 자원 시설이라 기초 자원 없이 특화 3종
+            ResourceCost = Cost(
+                Amount(ResourceType.PhilosopherStone, 20), Amount(ResourceType.FlameHeart, 10),
+                Amount(ResourceType.SnowCrystal, 10)),
             PrerequisiteIds = After("production_outer_basic"),
             EffectAssetName = "RE_SpecializedYieldMultiplier",
             NameEn = "[TBD] Specialized Facilities", NameKo = "[미정] 특화 생산 시설",
@@ -353,8 +507,11 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "production_resource_mastery", AssetName = "RN_ProductionResourceMastery",
-            Branch = ResearchBranch.Production, Tier = 4, Rank = 1, ResearchPointCost = 90,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 30), Amount(ResourceType.Stone, 30)),
+            Branch = ResearchBranch.Production, Tier = 4, Rank = 1, ResearchPointCost = 70,
+            // 목재·석재 증산이라 그 둘을 그대로 요구
+            ResourceCost = Cost(
+                Amount(ResourceType.Wood, 45), Amount(ResourceType.Stone, 45),
+                Amount(ResourceType.SnowCrystal, 10)),
             PrerequisiteIds = After("production_wood_2", "production_stone_2"),
             EffectAssetName = "RE_WoodStoneYieldMultiplier",
             NameEn = "[TBD] Resource Mastery I", NameKo = "[미정] 자원 생산 강화 I",
@@ -364,8 +521,11 @@ public static class ResearchTreeAssetGenerator
         {
             // 선행 production_specialized가 같은 티어다(같은 칸 안 간선).
             NodeId = "production_slime_farm", AssetName = "RN_ProductionSlimeFarm",
-            Branch = ResearchBranch.Production, Tier = 4, ResearchPointCost = 90,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 특화×2종 - 기획 [미정]
+            Branch = ResearchBranch.Production, Tier = 4, ResearchPointCost = 70,
+            // 사육 - 먹이(식량)가 주재료
+            ResourceCost = Cost(
+                Amount(ResourceType.Food, 50), Amount(ResourceType.PhilosopherStone, 15),
+                Amount(ResourceType.SnowCrystal, 10)),
             PrerequisiteIds = After("production_specialized", "production_food_2"),
             EffectAssetName = "RE_SlimeYieldMultiplier",
             NameEn = "[TBD] Slime Farming", NameKo = "[미정] 슬라임 양식",
@@ -377,8 +537,11 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "production_resource_mastery_2", AssetName = "RN_ProductionResourceMastery2",
-            Branch = ResearchBranch.Production, Tier = 5, Rank = 2, ResearchPointCost = 150,
-            ResourceCost = Array.Empty<ResourceAmount>(),
+            Branch = ResearchBranch.Production, Tier = 5, Rank = 2, ResearchPointCost = 100,
+            // 특화 자원 효율이라 특화 3종
+            ResourceCost = Cost(
+                Amount(ResourceType.PhilosopherStone, 35), Amount(ResourceType.FlameHeart, 20),
+                Amount(ResourceType.SnowCrystal, 20)),
             PrerequisiteIds = After("production_food_2", "production_resource_mastery"),
             EffectAssetName = "RE_SpecializedYieldMultiplier2",
             NameEn = "[TBD] Resource Mastery II", NameKo = "[미정] 자원 생산 강화 II",
@@ -389,8 +552,11 @@ public static class ResearchTreeAssetGenerator
         {
             // 선행 production_resource_mastery_2가 같은 티어다(같은 칸 안 간선).
             NodeId = "production_optimize", AssetName = "RN_ProductionOptimize",
-            Branch = ResearchBranch.Production, Tier = 5, ResearchPointCost = 150,
-            ResourceCost = Array.Empty<ResourceAmount>(),
+            Branch = ResearchBranch.Production, Tier = 5, ResearchPointCost = 100,
+            // 설비 전면 개편 - 석재 대량
+            ResourceCost = Cost(
+                Amount(ResourceType.Stone, 60), Amount(ResourceType.PhilosopherStone, 30),
+                Amount(ResourceType.SnowCrystal, 20)),
             PrerequisiteIds = After("production_slime_farm", "production_resource_mastery_2"),
             EffectAssetName = "RE_ProductionManpowerReduction",
             NameEn = "[TBD] Production Optimization", NameKo = "[미정] 생산 최적화",
@@ -404,7 +570,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "convenience_scout_1", AssetName = "RN_ConvenienceScout1",
             Branch = ResearchBranch.Convenience, Tier = 1, Rank = 1, ResearchPointCost = 10,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 15)),
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_ScoutRadius1",
             NameEn = "[TBD] Scouting I", NameKo = "[미정] 정찰 I",
@@ -418,7 +583,6 @@ public static class ResearchTreeAssetGenerator
             NodeId = "convenience_tower_regeneration_unlock",
             AssetName = "RN_ConvenienceTowerRegenerationUnlock",
             Branch = ResearchBranch.Convenience, Tier = 1, ResearchPointCost = 10,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 20)),
             PrerequisiteIds = Array.Empty<string>(),
             EffectAssetName = "RE_TowerCombatRepairUnlock",
             NameEn = "[TBD] Tower Repair", NameKo = "[미정] 타워 수리",
@@ -431,7 +595,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "convenience_lab_expand_1", AssetName = "RN_ConvenienceLabExpand1",
             Branch = ResearchBranch.Convenience, Tier = 2, Rank = 1, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 20), Amount(ResourceType.Stone, 20)),
             PrerequisiteIds = After("convenience_scout_1"),
             EffectAssetName = "RE_LabCapacityExpand1",
             NameEn = "[TBD] Lab Expansion I", NameKo = "[미정] 연구소 증축 I",
@@ -441,8 +604,8 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_tower_move", AssetName = "RN_ConvenienceTowerMove",
-            Branch = ResearchBranch.Convenience, Tier = 2, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 30)),
+            // 해금 노드 - tower_elemental_unlock과 같은 이유로 티어 곡선보다 싸다.
+            Branch = ResearchBranch.Convenience, Tier = 2, ResearchPointCost = 20,
             PrerequisiteIds = After("convenience_tower_regeneration_unlock"),
             EffectAssetName = "RE_MoveAllowance",
             NameEn = "[TBD] Tower Relocation", NameKo = "[미정] 타워 이동 해금",
@@ -453,7 +616,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "convenience_castle_regen_1", AssetName = "RN_ConvenienceCastleRegen1",
             Branch = ResearchBranch.Convenience, Tier = 2, Rank = 1, ResearchPointCost = 25,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 20)),
             PrerequisiteIds = After("convenience_tower_regeneration_unlock"),
             EffectAssetName = "RE_CastleDailyRegen",
             NameEn = "[TBD] Castle Regeneration I", NameKo = "[미정] 성 자동 회복 I",
@@ -466,7 +628,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "convenience_lab_expand_2", AssetName = "RN_ConvenienceLabExpand2",
             Branch = ResearchBranch.Convenience, Tier = 3, Rank = 2, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
             PrerequisiteIds = After("convenience_lab_expand_1"),
             EffectAssetName = "RE_LabBuildLimitExpand",
             NameEn = "[TBD] Lab Expansion II", NameKo = "[미정] 연구소 증축 II",
@@ -477,7 +638,6 @@ public static class ResearchTreeAssetGenerator
         {
             NodeId = "convenience_expedition_logistics", AssetName = "RN_ConvenienceExpeditionLogistics",
             Branch = ResearchBranch.Convenience, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Wood, 40), Amount(ResourceType.Food, 20)),
             PrerequisiteIds = After("convenience_scout_1"),
             EffectAssetName = "RE_ExpeditionLogistics",
             NameEn = "[TBD] Expedition Logistics", NameKo = "[미정] 원정 물류",
@@ -490,7 +650,6 @@ public static class ResearchTreeAssetGenerator
             // (PortalSealManager·SealStone) 해금 접점 ISealStoneUnlockQuery만 비어 있었다.
             NodeId = "convenience_seal_stone", AssetName = "RN_ConvenienceSealStone",
             Branch = ResearchBranch.Convenience, Tier = 3, ResearchPointCost = 50,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 60)),
             PrerequisiteIds = After("convenience_castle_regen_1"),
             EffectAssetName = "RE_SealStoneUnlock",
             NameEn = "[TBD] Seal Stone Research", NameKo = "[미정] 봉인석 연구",
@@ -502,8 +661,11 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_castle_regen_2", AssetName = "RN_ConvenienceCastleRegen2",
-            Branch = ResearchBranch.Convenience, Tier = 4, Rank = 2, ResearchPointCost = 90,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            Branch = ResearchBranch.Convenience, Tier = 4, Rank = 2, ResearchPointCost = 70,
+            // 성벽 보수 - 석재 중심
+            ResourceCost = Cost(
+                Amount(ResourceType.Stone, 50), Amount(ResourceType.TimeSand, 10),
+                Amount(ResourceType.SnowCrystal, 10)),
             PrerequisiteIds = After("convenience_seal_stone"),
             EffectAssetName = "RE_CastleDailyRegen2",
             NameEn = "[TBD] Castle Regeneration II", NameKo = "[미정] 성 자동 회복 II",
@@ -513,8 +675,11 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_lab_expand_3", AssetName = "RN_ConvenienceLabExpand3",
-            Branch = ResearchBranch.Convenience, Tier = 4, Rank = 3, ResearchPointCost = 90,
-            ResourceCost = Cost(Amount(ResourceType.Stone, 40)),
+            Branch = ResearchBranch.Convenience, Tier = 4, Rank = 3, ResearchPointCost = 70,
+            // 증축 - 목재 중심
+            ResourceCost = Cost(
+                Amount(ResourceType.Wood, 40), Amount(ResourceType.TimeSand, 15),
+                Amount(ResourceType.SnowCrystal, 15)),
             PrerequisiteIds = After("convenience_lab_expand_2"),
             EffectAssetName = "RE_LabCapacityExpand3",
             NameEn = "[TBD] Lab Expansion III", NameKo = "[미정] 연구소 증축 III",
@@ -524,8 +689,11 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_scout_2", AssetName = "RN_ConvenienceScout2",
-            Branch = ResearchBranch.Convenience, Tier = 4, Rank = 2, ResearchPointCost = 90,
-            ResourceCost = Array.Empty<ResourceAmount>(), // 鑛30 - 대응 자원 없음
+            Branch = ResearchBranch.Convenience, Tier = 4, Rank = 2, ResearchPointCost = 70,
+            // 시야 - 시간의 모래 비중이 크다
+            ResourceCost = Cost(
+                Amount(ResourceType.Wood, 30), Amount(ResourceType.TimeSand, 20),
+                Amount(ResourceType.SnowCrystal, 10)),
             PrerequisiteIds = After("convenience_expedition_logistics"),
             EffectAssetName = "RE_ScoutRadius2",
             NameEn = "[TBD] Scouting II", NameKo = "[미정] 정찰 II",
@@ -535,8 +703,11 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_expedition_master", AssetName = "RN_ConvenienceExpeditionMaster",
-            Branch = ResearchBranch.Convenience, Tier = 4, ResearchPointCost = 90,
-            ResourceCost = Cost(Amount(ResourceType.Food, 40)),
+            Branch = ResearchBranch.Convenience, Tier = 4, ResearchPointCost = 70,
+            // 원정 보급 - 식량 중심
+            ResourceCost = Cost(
+                Amount(ResourceType.Food, 50), Amount(ResourceType.TimeSand, 15),
+                Amount(ResourceType.SnowCrystal, 10)),
             PrerequisiteIds = After("convenience_expedition_logistics", "convenience_tower_move"),
             EffectAssetName = "RE_ExpeditionMaster",
             NameEn = "[TBD] Expert Expedition Corps", NameKo = "[미정] 전문 원정대",
@@ -548,8 +719,11 @@ public static class ResearchTreeAssetGenerator
         new NodeSpec
         {
             NodeId = "convenience_expedition_conqueror", AssetName = "RN_ConvenienceExpeditionConqueror",
-            Branch = ResearchBranch.Convenience, Tier = 5, ResearchPointCost = 150,
-            ResourceCost = Array.Empty<ResourceAmount>(),
+            Branch = ResearchBranch.Convenience, Tier = 5, ResearchPointCost = 100,
+            // 장기 원정 - 식량 대량
+            ResourceCost = Cost(
+                Amount(ResourceType.Food, 60), Amount(ResourceType.TimeSand, 30),
+                Amount(ResourceType.SnowCrystal, 20)),
             PrerequisiteIds = After(
                 "convenience_lab_expand_3", "convenience_expedition_master",
                 "convenience_castle_regen_2"),
@@ -563,10 +737,17 @@ public static class ResearchTreeAssetGenerator
     [MenuItem("TowerAndDragon/Research/Generate Research Tree Assets")]
     public static void Generate()
     {
+        NodeSpec[] specs = BuildNodeSpecs();
+
+        // 규약이 깨진 채로 에셋 38개를 덮어쓰면 되돌리기 번거로우므로 먼저 막는다.
+        if (!ValidateCostTables(specs))
+        {
+            Debug.LogError("[ResearchTreeAssetGenerator] 코스트 검증에 실패해 생성을 중단합니다.");
+            return;
+        }
+
         _locRows.Clear();
         EnsureFolder(DATA_FOLDER);
-
-        NodeSpec[] specs = BuildNodeSpecs();
 
         // 1. 노드 27개 생성(선행은 아직 비워 둔다 - 서로를 참조하므로 2패스로 채운다)
         var nodesById = new Dictionary<string, ResearchNodeData>();
@@ -647,13 +828,15 @@ public static class ResearchTreeAssetGenerator
             so.FindProperty("_requiredLandmark").objectReferenceValue =
                 ResolveRequiredLandmark(spec.RequiredLandmarkAssetName);
 
+            ResourceAmount[] resourceCost = ResolveResourceCost(spec);
+
             SerializedProperty costProp = so.FindProperty("_resourceCost");
-            costProp.arraySize = spec.ResourceCost.Length;
-            for (int i = 0; i < spec.ResourceCost.Length; i++)
+            costProp.arraySize = resourceCost.Length;
+            for (int i = 0; i < resourceCost.Length; i++)
             {
                 SerializedProperty element = costProp.GetArrayElementAtIndex(i);
-                element.FindPropertyRelative("Type").intValue = (int)spec.ResourceCost[i].Type;
-                element.FindPropertyRelative("Amount").intValue = spec.ResourceCost[i].Amount;
+                element.FindPropertyRelative("Type").intValue = (int)resourceCost[i].Type;
+                element.FindPropertyRelative("Amount").intValue = resourceCost[i].Amount;
             }
         });
 
