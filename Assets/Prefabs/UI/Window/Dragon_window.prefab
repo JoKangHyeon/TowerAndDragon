@@ -1503,6 +1503,7 @@ MonoBehaviour:
   _motherIcon: {fileID: 2596790650145491083}
   _motherNameText: {fileID: 5247512709621394747}
   _motherInfoText: {fileID: 8626466652259656581}
+  _motherInfoLinks: {fileID: 8680194886661532360}
   _motherSprites:
   - {fileID: 21300000, guid: db9fc06a85fc64fe48629aebea2100ac, type: 3}
   - {fileID: 21300000, guid: 92a9590114b424908a5b28e0a59e3d62, type: 3}
@@ -5376,6 +5377,7 @@ GameObject:
   - component: {fileID: 4620232010640954471}
   - component: {fileID: 5780678942287522902}
   - component: {fileID: 8626466652259656581}
+  - component: {fileID: 8680194886661532360}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -5502,6 +5504,22 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8680194886661532360
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5718699382703973106}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58fcde05b25fc2f42b29b02201e1222e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI_SkillNameLinkTooltip
+  _text: {fileID: 8626466652259656581}
+  _dragonTreeManager: {fileID: 0}
+  _tooltipPresenter: {fileID: 0}
+  _linkColor: {r: 1, g: 0.82, b: 0.35, a: 1}
 --- !u!1 &5805292036508461493
 GameObject:
   m_ObjectHideFlags: 0

@@ -60,6 +60,20 @@ public class UI_SkillNameLinkTooltip : MonoBehaviour,
 
     private void InvalidateIndex() => _indexBuilt = false;
 
+    /// <summary>스킬 이름 사전의 출처를 코드에서 준다. 이 컴포넌트는 중첩 프리팹 안에 있어
+    /// 씬 오브젝트인 DragonTreeManager를 인스펙터로 직접 볼 수 없다 - 이미 매니저를 들고 있는
+    /// 소유 창이 대신 넘긴다. 인스펙터로 이어 둔 곳은 그대로 두면 된다(같은 값을 덮어쓸 뿐).</summary>
+    public void SetDragonTreeManager(DragonTreeManager dragonTreeManager)
+    {
+        if (_dragonTreeManager == dragonTreeManager)
+        {
+            return;
+        }
+
+        _dragonTreeManager = dragonTreeManager;
+        InvalidateIndex();
+    }
+
     /// <summary>지역화된 원문을 받아, 알려진 스킬 이름을 감싼 [스킬명] 대괄호만 링크 마크업으로
     /// 바꾼다. 컴포넌트가 배선되지 않았거나 아는 스킬이 없으면 원문을 그대로 돌려준다.</summary>
     public string Decorate(string localizedText)

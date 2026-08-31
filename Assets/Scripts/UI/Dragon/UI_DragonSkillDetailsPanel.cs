@@ -79,6 +79,8 @@ public class UI_DragonSkillDetailsPanel : MonoBehaviour
         _resourceManager = resourceManager;
         _onChanged = onChanged;
 
+        _skillNameLinks?.SetDragonTreeManager(dragonTreeManager);
+
         if (_upgradeButtonText != null)
         {
             _upgradeButtonText.text = StringTable.GetString(DragonLocKeys.UPGRADE_BUTTON);

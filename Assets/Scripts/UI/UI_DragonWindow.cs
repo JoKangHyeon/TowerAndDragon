@@ -90,6 +90,9 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private TextMeshProUGUI _motherNameText;
     [Tooltip("Panel_Info/Text (TMP). 현재 속성에 대한 설명 문구를 표시한다.")]
     [SerializeField] private TextMeshProUGUI _motherInfoText;
+    [Tooltip("어미용 설명문 안의 [스킬명]을 호버 가능한 링크로 바꾼다. 비우면 대괄호가 원문 그대로 보인다.")]
+    [WiringOptional]
+    [SerializeField] private UI_SkillNameLinkTooltip _motherInfoLinks;
     [Tooltip("어미용 속성별 스프라이트 - DragonType 선언 순서(Ice, Fire, Time, Stone, Life). 빈 칸은 새끼용 카탈로그 스프라이트로 대체한다.")]
     [SerializeField] private Sprite[] _motherSprites;
     [Tooltip("_motherSprites 칸이 비었을 때 대신 쓸 새끼용 스프라이트 카탈로그. 새끼용/알 리스트의 데이터 조회에도 쓴다.")]
@@ -208,6 +211,8 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         {
             _changeButton.onClick.AddListener(ToggleChangePopup);
         }
+
+        _motherInfoLinks?.SetDragonTreeManager(_dragonTreeManager);
 
         CreateSlotPools();
 
@@ -679,11 +684,7 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         // 토스트를 쓰지 않는 이유: UI_NotificationToast는 튜토리얼 오버레이 전용이라 본 게임 씬에 없다.
         if (IsTypeChangeCycleLimitReached)
         {
-            if (_motherInfoText != null)
-            {
-                _motherInfoText.text =
-                    StringTable.GetString(Defines.DRAGON_TYPE_CHANGE_CYCLE_LIMIT_LOC_KEY);
-            }
+            SetMotherInfoText(StringTable.GetString(Defines.DRAGON_TYPE_CHANGE_CYCLE_LIMIT_LOC_KEY));
 
             return;
         }
@@ -724,6 +725,18 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         RenderBabyInfo();
     }
 
+    // _motherInfoText에 쓰는 모든 자리가 이 하나를 거친다 - 그래야 설명문 안의 [스킬명]이
+    // 어디서 세팅되든 빠짐없이 링크로 바뀐다(UI_DragonSkillDetailsPanel.Refresh와 같은 규약).
+    private void SetMotherInfoText(string localizedText)
+    {
+        if (_motherInfoText == null)
+        {
+            return;
+        }
+
+        _motherInfoText.text = _motherInfoLinks != null ? _motherInfoLinks.Decorate(localizedText) : localizedText;
+    }
+
     // 좌측 프레임에 현재 어미용을 반영한다.
     // 어미용에는 고유 이름 데이터가 없으므로(RunData.Dragon은 CurrentType만 들고 있다)
     // 표시 이름 = 로컬라이즈된 속성명이다(UI_MainCastleWindow.RenderPortrait와 동일 규칙).
@@ -746,10 +759,7 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
                 _motherNameText.text = string.Empty;
             }
 
-            if (_motherInfoText != null)
-            {
-                _motherInfoText.text = string.Empty;
-            }
+            SetMotherInfoText(string.Empty);
 
             if (_motherIcon != null)
             {
@@ -766,10 +776,7 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
             _motherNameText.text = StringTable.GetString(DragonLocKeys.AttributeLocKey(type));
         }
 
-        if (_motherInfoText != null)
-        {
-            _motherInfoText.text = StringTable.GetString(DragonLocKeys.MotherInfoLocKey(type));
-        }
+        SetMotherInfoText(StringTable.GetString(DragonLocKeys.MotherInfoLocKey(type)));
 
         if (!WiringGuard.Require(_motherIcon, nameof(_motherIcon), this))
         {
