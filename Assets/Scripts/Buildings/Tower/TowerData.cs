@@ -29,6 +29,16 @@ public class TowerData : ScriptableObject
     [SerializeField] private float _maxHealth;
     [SerializeField] private float _reviveDelay;
 
+    // 초기화값이 1인 것이 중요하다. 이미 만들어 둔 TowerData 애셋의 YAML에는 이 항목이 없어
+    // 역직렬화가 이 C# 초기화값을 그대로 남기므로, 애셋을 하나도 손대지 않아도 "밤에 1회"가 된다.
+    // 0을 기본값으로 두면 프로젝트의 모든 타워가 조용히 밤 중 부활 불가가 된다.
+    [Tooltip("하룻밤에 부활 게이지로 다시 서는 횟수. 밤이 시작될 때마다 초기화된다. "
+        + "0이면 스스로는 다시 가동되지 않는다. "
+        + "아침 복구와 시간 어미용 액티브 스킬은 이 값의 적용을 받지 않는다.")]
+    [SerializeField]
+    [Min(0)]
+    private int _maxNightRevives = 1;
+
     [Header("Attack")]
     [SerializeField] private AttackSO _attack;
 
@@ -84,6 +94,7 @@ public class TowerData : ScriptableObject
     public IReadOnlyList<ResourceAmount> BuildCost => _buildCost ?? System.Array.Empty<ResourceAmount>();
     public float MaxHealth => _maxHealth;
     public float ReviveDelay => _reviveDelay;
+    public int MaxNightRevives => _maxNightRevives;
     public AttackSO Attack => _attack;
     public bool CanAttack => _attack != null;
     public TargetMovementFilter TargetMovementFilter => _targetMovementFilter;

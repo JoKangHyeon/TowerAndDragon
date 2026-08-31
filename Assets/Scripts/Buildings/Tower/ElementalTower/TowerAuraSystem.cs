@@ -308,7 +308,9 @@ public sealed class TowerAuraSystem : MonoBehaviour
 
         // 부활 가속은 쓰러져 있는 동안에만 의미가 있다. 상시로 치면 공격 없는 타워에도
         // 시간 오라 구체가 계속 떠 있게 되는데, 그건 대부분의 시간 동안 거짓 신호다.
-        if (aura.ReviveSpeedMultiplier > 1f && target.IsReviving)
+        // IsReviving이 아니라 IsReviveInProgress를 보는 이유: 이번 밤의 재활성화 횟수를 다 쓴 타워는
+        // 게이지가 아예 돌지 않으므로, 가속 구체를 띄우면 역시 거짓 신호가 된다.
+        if (aura.ReviveSpeedMultiplier > 1f && target.IsReviveInProgress)
         {
             return true;
         }
