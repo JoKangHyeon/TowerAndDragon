@@ -1,10 +1,17 @@
 using UnityEngine;
 
 /// <summary>
-/// 아침(낮 시작)마다 모든 타워를 만피로 회복시키고, 부활 대기 중인 타워를 즉시 재활성화한다.
-/// 복구 자체는 이미 있는 Tower.RestoreAtMorning()이 담당한다 - 새 복구 경로를 만들지 않는다.
+/// 타워의 낮·밤 경계 처리를 모두 소유한다.
+/// (a) 아침(낮 시작)마다 모든 타워를 만피로 회복시키고, 부활 대기 중인 타워를 즉시 재활성화한다.
+/// (b) 밤 시작마다 타워의 "하룻밤 재활성화 횟수"를 되돌린다.
+/// 복구·초기화 자체는 이미 있는 Tower.RestoreAtMorning() / Tower.ResetNightReviveBudget()이 담당한다 -
+/// 새 복구 경로를 만들지 않는다.
 /// CastleRegenSystem과 같은 독립 시스템 컴포넌트 스타일을 따른다 -
 /// Tower에 CycleManager 참조를 새로 넣지 않는다.
+///
+/// <b>밤 예산 초기화를 위해 컴포넌트를 새로 만들지 않은 이유</b>: 이 오브젝트가 이미 CycleManager와
+/// GridMap을 들고 타워를 순회한다. 새 MonoBehaviour는 게임 씬마다 손으로 배선해야 하는데,
+/// 씬에 아예 없는 컴포넌트는 와이어링 체커가 오류 0건으로 통과시켜 조용히 죽는다.
 ///
 /// <b>이 컴포넌트가 no_morning_restore(긴 밤) 뮤테이터의 두 절반을 모두 소유한다.</b>
 /// (a) 아침 복구를 건너뛰고, (b) <see cref="ITowerReviveGateQuery"/>로 낮 동안 부활 게이지를 멈춘다.
@@ -39,6 +46,11 @@ public sealed class TowerMorningRestoreSystem : MonoBehaviour, ITowerReviveGateQ
         if (WiringGuard.Require(_cycleManager, nameof(_cycleManager), this))
         {
             _cycleManager.OnDayStart.AddListener(RestoreAll);
+
+            // 아침 복구(RestoreAll)에 얹지 않고 밤 시작에 따로 붙인다 - RestoreAll은 긴 밤
+            // 뮤테이터에서 통째로 건너뛰어지므로, 거기서 예산을 되돌리면 그 런의 타워는
+            // 첫 밤에 부활 횟수를 쓴 뒤 런이 끝날 때까지 영구히 불능이 된다.
+            _cycleManager.OnNightStart.AddListener(ResetNightReviveBudgets);
         }
 
         // 런 도중에 지어진 타워에도 관문을 물려야 한다 - 이미 있는 타워는 Start에서 한 번 순회한다.
@@ -54,6 +66,7 @@ public sealed class TowerMorningRestoreSystem : MonoBehaviour, ITowerReviveGateQ
         if (_cycleManager != null)
         {
             _cycleManager.OnDayStart.RemoveListener(RestoreAll);
+            _cycleManager.OnNightStart.RemoveListener(ResetNightReviveBudgets);
         }
 
         if (_gridMap == null)
@@ -117,6 +130,25 @@ public sealed class TowerMorningRestoreSystem : MonoBehaviour, ITowerReviveGateQ
             if (building is Tower tower)
             {
                 tower.RestoreAtMorning();
+            }
+        }
+    }
+
+    // 일차 인자는 쓰지 않는다 - 재활성화 횟수는 날짜와 무관하게 매일 밤 같은 값으로 돌아간다.
+    // 긴 밤 뮤테이터에서도 그대로 실행한다. 이 뮤테이터가 막는 것은 아침 복구와 낮 동안의 게이지
+    // 진행이지, 밤마다 주어지는 재활성화 기회가 아니다.
+    private void ResetNightReviveBudgets(int _)
+    {
+        if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
+        {
+            return;
+        }
+
+        foreach (Building building in _gridMap.Buildings)
+        {
+            if (building is Tower tower)
+            {
+                tower.ResetNightReviveBudget();
             }
         }
     }

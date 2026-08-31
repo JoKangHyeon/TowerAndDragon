@@ -35,6 +35,14 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     private float _disabledAtTime;
     private float _reviveProgress;
 
+    // 이번 밤에 몇 번 다시 가동됐는가. 밤이 시작될 때마다 TowerMorningRestoreSystem이 0으로 되돌린다.
+    // 아침 복구 시점에 되돌리지 않는 이유: RestoreAll은 긴 밤(no_morning_restore) 뮤테이터에서
+    // 통째로 건너뛰어지므로, 그 런에서는 첫 밤에 예산을 쓴 타워가 런이 끝날 때까지 영구히 불능이 된다.
+    //
+    // 세이브에 넣지 않는다. 저장은 낮에만 가능하고(SaveService.IsSaveablePhase가 CycleState.Day를 본다)
+    // 예산은 밤 시작마다 0으로 초기화되므로, 저장하든 안 하든 다음 밤의 시작 상태가 똑같다.
+    private int _nightRevivesUsed;
+
     // 세이브 복원이 맡긴 체력·부활 진행도. Setup 이전에 도착하는 경우가 있어 값을 받아 두고
     // Setup 끝에서 적용한다(RestoreHealth 주석 참고).
     private HealthRestoreRequest? _pendingHealthRestore;
@@ -94,11 +102,27 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     public bool IsParalyzed => _isParalyzed;
 
     // 체력바 UI가 부활 게이지를 그리는 데 쓴다 - _isDisabled로 판정하므로 별도 상태 추가가 필요 없다.
+    //
+    // <b>"이번 밤에 다시 가동될 수 있는가"를 여기에 섞지 않는다.</b> SaveCapture가 이 값을 그대로
+    // BuildingPlacementDto.IsDisabled로 저장하는데, 예산이 바닥난 타워를 여기서 false로 만들면
+    // "IsDisabled=false인데 CurrentHealth=0"으로 저장되고, 그 조합은 RestoreHealth가 "기록 없음"으로
+    // 읽어 만피·활성으로 되살린다. 게이지가 실제로 도는지는 IsReviveInProgress로 묻는다.
     public bool IsReviving => _isDisabled;
+
+    /// <summary>부활 게이지가 실제로 차오르는 중인가. <see cref="IsReviving"/>과 달리 이번 밤의
+    /// 재활성화 예산까지 본다. "부서져 있는가"를 묻는 곳(세이브 캡처·회복 차단·연출 정리)은
+    /// 반드시 <see cref="IsReviving"/> 쪽을 쓴다.</summary>
+    public bool IsReviveInProgress => _isDisabled && HasNightReviveBudget;
+
     public float ReviveProgress =>
         _isDisabled
             ? Mathf.Clamp01(_reviveProgress)
             : 0f;
+
+    // 이번 밤에 다시 가동될 여지가 남았는가. 데이터가 없으면 판정할 수 없으므로 막는다
+    // (Setup 이전에는 어차피 부활 경로가 전부 _isInitialized에서 걸린다).
+    private bool HasNightReviveBudget =>
+        _towerData != null && _nightRevivesUsed < _towerData.MaxNightRevives;
 
     protected static readonly int HIT_ANIM_KEY = Animator.StringToHash("Hit");
     protected static readonly int BROKEN_ANIM_KEY = Animator.StringToHash("Broken");
@@ -223,7 +247,12 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         RefreshAttackEnabled();
 
         Debug.Log(
-            $"[Tower] {name}이 비활성화되었습니다. 재활성화 대기시간: {_towerData.ReviveDelay}초",
+            HasNightReviveBudget
+                ? $"[Tower] {name}이 비활성화되었습니다. 재활성화 대기시간: {_towerData.ReviveDelay}초"
+                    + $" (이번 밤 사용: {_nightRevivesUsed}/{_towerData.MaxNightRevives})"
+                : $"[Tower] {name}이 비활성화되었습니다. 이번 밤의 재활성화 횟수"
+                    + $"({_towerData.MaxNightRevives}회)를 모두 써서 스스로는 다시 서지 않습니다"
+                    + " (시간 어미용 스킬로는 복구 가능).",
             this);
 
         TryStartCombatRevive();
@@ -241,7 +270,23 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         }
 
         CancelRevive();
-        RestoreAndReactivate();
+        RestoreAndReactivate(ReactivationCause.MorningRestore);
+    }
+
+    /// <summary>밤이 시작될 때 재활성화 예산을 되돌린다(<see cref="TowerMorningRestoreSystem"/>이 부른다).
+    ///
+    /// <b>예산만 되돌리면 안 된다.</b> 예산이 없어 시작되지 않았던 부활 루프를 여기서 다시 띄운다 -
+    /// <see cref="TryStartCombatRevive"/>를 부르는 곳은 <see cref="HandleDisabled"/>와
+    /// <see cref="SetCombatRepairUnlockQuery"/>뿐이라, 이미 부서진 채 밤을 맞은 타워는
+    /// 아무도 다시 시작해 주지 않아 예산이 있어도 영영 게이지가 돌지 않는다.</summary>
+    public void ResetNightReviveBudget()
+    {
+        _nightRevivesUsed = 0;
+
+        if (_isDisabled)
+        {
+            TryStartCombatRevive();
+        }
     }
 
     /// <summary>세이브 복원 전용. Setup의 Initialize가 만피·활성으로 세팅한 상태를 저장값으로 되돌린다.
@@ -312,6 +357,12 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         }
     }
 
+    /// <summary>시간 어미용 액티브 스킬(RepairTowersSkill)의 즉시 수리. 이 스킬의 유일한 진입점이다.
+    ///
+    /// <b>하룻밤 재활성화 횟수(<see cref="TowerData.MaxNightRevives"/>)의 적용을 받지 않는다.</b>
+    /// 예산이 바닥난 타워도 이 경로로는 다시 세울 수 있고, 세운다고 예산이 깎이지도 않는다 -
+    /// 스킬은 자기 쿨다운으로 이미 제한되며, 그 제한을 뚫는 것이 시간 어미용의 값어치다.
+    /// 밤 전투 중이라는 조건(편의 연구 해금)만 기존대로 따른다.</summary>
     public bool TryRestoreDuringCombat()
     {
         if (!_isInitialized || !IsDead || !CanUseCombatRepair)
@@ -320,7 +371,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         }
 
         CancelRevive();
-        RestoreAndReactivate();
+        RestoreAndReactivate(ReactivationCause.SkillRepair);
         return true;
     }
 
@@ -362,7 +413,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
                 _towerData.ReviveDelay;
         }
 
-        RestoreAndReactivate();
+        RestoreAndReactivate(ReactivationCause.NightRevive);
     }
 
     public void SetAuraSystem(TowerAuraSystem auraSystem)
@@ -393,7 +444,7 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
 
     private void TryStartCombatRevive()
     {
-        if (!CanUseCombatRepair || _reviveCts != null)
+        if (!CanUseCombatRepair || !HasNightReviveBudget || _reviveCts != null)
         {
             return;
         }
@@ -426,7 +477,23 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         _reviveCts = null;
     }
 
-    private void RestoreAndReactivate()
+    // 재활성화가 어느 경로로 일어났는가. 이번 밤의 예산을 소모하는지가 여기서 갈린다.
+    // 호출부에서 카운터를 올리지 않고 합류점 하나에서만 올리려고 두는 값이다 -
+    // 네 번째 복구 경로가 생겨도 인자를 고르는 순간 예산 처리를 함께 정하게 된다.
+    private enum ReactivationCause
+    {
+        // 부활 게이지 완주. 이번 밤의 예산을 소모하는 유일한 경로다.
+        NightRevive,
+
+        // 시간 어미용 액티브 스킬의 즉시 수리. 예산에 걸리지도, 예산을 깎지도 않는다
+        // (TryRestoreDuringCombat 주석 참고).
+        SkillRepair,
+
+        // 아침 일괄 복구. 밤 예산과 무관하다.
+        MorningRestore,
+    }
+
+    private void RestoreAndReactivate(ReactivationCause cause)
     {
         // 자연 완료로 부활한 경우에도 CTS를 반드시 비운다. 남겨 두면 TryStartCombatRevive의
         // "_reviveCts != null" 가드에 걸려 그 타워는 두 번째 자동 부활을 하지 못하고,
@@ -449,6 +516,12 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
         if (!wasDisabled)
         {
             return;
+        }
+
+        // 실제로 부서져 있던 타워만 예산을 소모한다(위 가드를 통과한 경우가 그렇다).
+        if (cause == ReactivationCause.NightRevive)
+        {
+            _nightRevivesUsed++;
         }
 
         RefreshBrokenAnimation();
