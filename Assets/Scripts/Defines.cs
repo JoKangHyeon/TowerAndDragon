@@ -21,4 +21,8 @@ public static class Defines
     // 스킬트리 상세 패널의 상태 줄과 튜토리얼 토스트가 같은 문구를 쓴다 - 어느 경로로 막혔든
     // 플레이어가 읽는 이유는 하나여야 한다.
     public const string DRAGON_TUTORIAL_LOCKED_LOC_KEY = "dragon_state_tutorial_locked";
+
+    // 저장된 언어 설정의 PlayerPrefs 키. SettingsService(읽기/쓰기)와 StringTable(첫 lazy 로드 시
+    // 기본 언어 대신 저장된 언어를 바로 읽기 위함)이 같은 키를 써야 시작 시 언어가 두 번 로드되지 않는다.
+    public const string SETTINGS_LANGUAGE_PREF_KEY = "settings_language";
 }

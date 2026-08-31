@@ -68,7 +68,7 @@ public static class StringTable
     {
         if (table == null)
         {
-            LoadLanguage(c_DefaultLanguage);
+            LoadLanguage(ResolveInitialLanguage());
         }
 
         if (string.IsNullOrEmpty(key))
@@ -78,6 +78,16 @@ public static class StringTable
             return key;
 
         return table[key];
+    }
+
+    // OnEnable 단계의 어떤 LocalizedText가 SettingsService.Start()보다 먼저 문자열을 요청하면
+    // 여기서 언어가 처음 정해진다. 무조건 기본 언어(en_us)를 넣으면 SettingsService.ApplyLanguage()가
+    // Start에서 곧바로 실제 저장된 언어로 다시 로드해 CSV 파싱과 사전 빌드를 시작마다 두 번 한다 -
+    // 저장된 언어를 먼저 읽어 맞춰두면 ApplyLanguage의 "이미 같은 언어면 스킵" 가드에 걸려 한 번만 돈다.
+    private static string ResolveInitialLanguage()
+    {
+        string saved = PlayerPrefs.GetString(Defines.SETTINGS_LANGUAGE_PREF_KEY, c_DefaultLanguage);
+        return LocalizationList.Contains(saved) ? saved : c_DefaultLanguage;
     }
 
     public static void LoadLanguage(string lang)

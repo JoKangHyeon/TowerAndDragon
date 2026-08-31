@@ -21,7 +21,6 @@ public class SettingsService : MonoBehaviour
     private const string RESOLUTION_WIDTH_PREF_KEY = "settings_resolution_width";
     private const string RESOLUTION_HEIGHT_PREF_KEY = "settings_resolution_height";
     private const string FULL_SCREEN_PREF_KEY = "settings_full_screen";
-    private const string LANGUAGE_PREF_KEY = "settings_language";
     private const string KEY_BINDINGS_PREF_KEY = "settings_key_bindings";
     private const string GUIDE_LEVEL_PREF_KEY = "settings_guide_level";
 
@@ -191,7 +190,7 @@ public class SettingsService : MonoBehaviour
         }
 
         string language = languages[WrapIndex(index, languages.Count)];
-        PlayerPrefs.SetString(LANGUAGE_PREF_KEY, language);
+        PlayerPrefs.SetString(Defines.SETTINGS_LANGUAGE_PREF_KEY, language);
 
         if (language != StringTable.CurrentLanguage)
         {
@@ -382,7 +381,7 @@ public class SettingsService : MonoBehaviour
 
     private void ApplyLanguage()
     {
-        string saved = PlayerPrefs.GetString(LANGUAGE_PREF_KEY, StringTable.c_DefaultLanguage);
+        string saved = PlayerPrefs.GetString(Defines.SETTINGS_LANGUAGE_PREF_KEY, StringTable.c_DefaultLanguage);
 
         // 저장된 언어의 csv가 사라졌을 수 있으므로 목록에 있는지 확인하고, 없으면 기본 언어로 되돌린다.
         string language =
