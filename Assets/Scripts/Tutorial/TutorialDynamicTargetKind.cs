@@ -18,4 +18,14 @@ public enum TutorialDynamicTargetKind
 
     /// <summary>첫 새끼용 슬롯의 위치 표시/신발 버튼.</summary>
     BabyDragonFocusButton,
+
+    /// <summary>
+    /// 인구 패널에서 타워의 공격속도·초당피해 두 행을 함께 덮는 영역.
+    ///
+    /// 앵커로 잡을 수 없는 이유: 산출 행은 건물 종류마다 개수도 뜻도 달라 런타임에 풀에서 만들어지고,
+    /// 체력·공격력 행이 빠지는 타워도 있어 <b>행 번호가 고정되지 않는다</b>.
+    /// <see cref="GuideAnchorId.PopulationOutputRow"/>는 정의상 첫 산출 행(타워면 가동률)이라
+    /// "인구를 채우면 공격이 빨라진다"를 가리키기에 맞지 않는다.
+    /// </summary>
+    TowerAttackSpeedRows,
 }

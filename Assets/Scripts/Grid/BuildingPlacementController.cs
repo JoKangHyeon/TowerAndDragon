@@ -203,12 +203,16 @@ public class BuildingPlacementController : MonoBehaviour
 
         _gridMap.OnCellChanged.AddListener(HandleCellChanged);
         _clickCycle = new BuildingClickCycle(_gridMap);
+        _mouseSelectController.SetBuildingPlacementController(this);
     }
 
     private void OnDestroy()
     {
         if (_gridMap != null)
             _gridMap.OnCellChanged.RemoveListener(HandleCellChanged);
+
+        if (_mouseSelectController != null)
+            _mouseSelectController.ClearBuildingPlacementController(this);
     }
 
     private void HandleCellChanged(GridCell cell) => RefreshOccupiedOverlay();
@@ -651,6 +655,45 @@ public class BuildingPlacementController : MonoBehaviour
         return true;
     }
 
+    public bool CanPlaceBuildingAt(Building prefab, Vector3Int anchor)
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (!query.CanPlaceBuildingAt(prefab, anchor))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // 막힌 자리를 실제로 눌렀을 때만 부른다. 어느 질의가 막았는지 여기서는 알 수 없으므로 전부에게 알리고,
+    // 자기가 막은 것이 맞는지는 각자 판단한다.
+    private void NotifyPlacementBlocked(Building prefab, Vector3Int anchor)
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            query.NotifyPlacementBlocked(prefab, anchor);
+        }
+    }
+
+    public bool TryGetPlacementGuideAnchors(
+        Building prefab,
+        out IReadOnlyList<Vector3Int> anchors)
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            if (query.TryGetPlacementGuideAnchors(prefab, out anchors))
+            {
+                return true;
+            }
+        }
+
+        anchors = null;
+        return false;
+    }
+
     public void ConfirmAtPointer()
     {
         if (_selectedBuilding != null)
@@ -721,6 +764,12 @@ public class BuildingPlacementController : MonoBehaviour
         // 풋프린트를 한 번만 계산해 판정과 경고가 같은 칸 목록을 보게 한다(MouseSelectController.Update와 같은 형태).
         List<Vector3Int> footprint =
             _gridMap.GetFootprintCoords(anchor, _mouseSelectController.CurrentFootprintShape);
+
+        if (!CanPlaceBuildingAt(_selectedBuilding, anchor))
+        {
+            NotifyPlacementBlocked(_selectedBuilding, anchor);
+            return false;
+        }
 
         if (!_gridMap.CanConstructBuildingFootprint(footprint, _selectedBuilding, null))
         {

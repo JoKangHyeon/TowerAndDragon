@@ -172,6 +172,10 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     private bool _built;
     private bool _isOpen;
 
+    // 튜토리얼이 배선한다 - 배선되지 않은 씬에서는 null로 남아 빈 곳 클릭이 그대로 상세 패널을 닫는다
+    // (기존 동작 유지). ConquestModeController.UnreachableSelectQuery와 같은 주입 방식.
+    public IResearchDetailsCloseQuery DetailsCloseQuery { get; set; }
+
     private struct EdgeView
     {
         public UI_ResearchEdge View;
@@ -189,7 +193,7 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
 
         if (_blockerButton != null)
         {
-            _blockerButton.onClick.AddListener(Close);
+            _blockerButton.onClick.AddListener(CloseFromBlocker);
         }
 
         if (_windowBackgroundButton != null)
@@ -434,9 +438,41 @@ public class UI_ResearchWindow : MonoBehaviour, IExclusiveMode
     // 창 안쪽 빈 곳 클릭 - 상세 패널만 닫는다.
     // 상세 패널은 닫기 버튼이 없고 트리의 오른쪽을 덮으므로, 그 아래 노드를 고르려면
     // 패널을 물릴 방법이 필요하다(Esc 말고 마우스로도).
+    //
+    // 질의가 걸린 씬(튜토리얼의 노드 해금 단계)에서는 거절될 수 있다 - 그 단계의 딤 구멍은
+    // 트리와 상세 패널 사이의 공백까지 함께 뚫려 있어, 안내를 따라 누른 클릭이 그 공백에 떨어지면
+    // 방금 연 패널이 닫히고 눌러야 할 해금 버튼이 사라진다.
+    // Esc는 이 관문을 거치지 않는다(OnCloseActionPerformed가 Clear를 직접 부른다) - 막힌 단계에도
+    // 키보드 탈출구는 남겨 둔다.
     private void CloseDetailsPanel()
     {
+        if (DetailsCloseQuery != null && !DetailsCloseQuery.CanCloseResearchDetails())
+        {
+            return;
+        }
+
         _detailsPanel?.Clear();
+    }
+
+    /// <summary>
+    /// 창 밖(전체 화면 블로커)을 눌러 닫는 경로. Esc와 <b>같은 관문을 거친다</b> -
+    /// 그냥 Close()를 걸어 두면 안내가 "이 창에서 무언가 하라"고 시키는 중에도 창이 닫힌다.
+    ///
+    /// 실제로 그랬다: 연구 노드 해금 단계의 딤 구멍은 창 밖으로 삐져나온 상세 패널까지 덮느라
+    /// 창 경계를 넘어가는데, 그 자리에 있는 것이 이 블로커라 <b>안내를 따라 누른 클릭이 창을 닫았다</b>.
+    /// 구멍이 창 밖으로 나가는 것 자체는 <see cref="ResearchContentsGuideAnchor"/>가 줄였고,
+    /// 이 관문은 그래도 남는 가장자리를 받아 낸다.
+    ///
+    /// 안내가 없는 일반 플레이에서는 질의가 걸리지 않아 예전처럼 그대로 닫힌다.
+    /// </summary>
+    private void CloseFromBlocker()
+    {
+        if (_uiManager != null && !_uiManager.CanCloseExclusive(this))
+        {
+            return;
+        }
+
+        Close();
     }
 
     public void Close()
