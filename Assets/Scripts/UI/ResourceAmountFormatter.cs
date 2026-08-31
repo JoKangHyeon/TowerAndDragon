@@ -58,4 +58,23 @@ public static class ResourceAmountFormatter
             ColorUtility.ToHtmlStringRGB(lossColor),
             Mathf.Abs(netChange));
     }
+
+    /// <summary>
+    /// "원본(+추가분)" 표기. 자원 증가와 같은 연두색을 써서 "강화로 붙은 몫"이 화면마다 다른 색으로
+    /// 보이지 않게 한다(새끼용 관리창의 버프 반경·배율이 이 형태를 쓴다).
+    /// 추가분이 비어 있으면 원본만 낸다.
+    /// </summary>
+    public static string FormatWithBonus(string baseText, string bonusText, Color gainColor)
+    {
+        if (string.IsNullOrEmpty(bonusText))
+        {
+            return baseText;
+        }
+
+        return string.Format(
+            RESOURCE_WITH_GAIN_FORMAT,
+            baseText,
+            ColorUtility.ToHtmlStringRGB(gainColor),
+            bonusText);
+    }
 }
