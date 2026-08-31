@@ -108,11 +108,14 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
     [Header("항상 존재하는 행 - 값만 갱신한다")]
     [SerializeField] private UI_ConquestInfoSlot _populationRow;
 
+    [Tooltip("가동 상태 행(StatusRow). 타워에만 있는 값이라 타워가 아닌 건물에서는 통째로 숨긴다.")]
+    [SerializeField] private UI_ConquestInfoSlot _statusRow;
+
     [Tooltip("인구 행 아이콘. 인구는 자원이 아니라 ResourceData가 없어 별도 지정한다.")]
     [SerializeField] private Sprite _populationIcon;
 
-    [Tooltip("타워 가동 행 아이콘.")]
-    [SerializeField] private Sprite _operationIcon;
+    // 가동 행 아이콘은 여기서 지정하지 않는다 - StatusRow는 타워 전용 고정 행이라 아이콘이 바뀌지 않고,
+    // 프리팹의 Icon 오브젝트가 스프라이트를 들고 있다(_statusRow의 _iconImage도 비워 둔다).
 
     [Tooltip("연구소 연구 포인트 행 아이콘.")]
     [SerializeField] private Sprite _researchPointIcon;
@@ -335,6 +338,8 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
         int usedCount = 0;
 
+        RefreshStatusRow();
+
         if (_selectedBuilding is Factory factory)
         {
             foreach (ResourceType resourceType in
@@ -375,17 +380,36 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         }
         else if (_selectedBuilding is Tower tower)
         {
-            SetOutputRow(
-                usedCount++,
-                _operationIcon,
-                Color.white,
-                StringTable.GetString(OPERATION_LABEL_LOC_KEY),
-                ResolveTowerOperationText());
-
             usedCount = AppendTowerStatRows(tower, usedCount);
         }
 
         _outputRowPool.DeactivateFrom(usedCount);
+    }
+
+    // 가동 여부는 InfoZone의 산출 행이 아니라 창 위쪽 고정 행에 낸다 - 건물마다 개수가 달라지는
+    // 풀링 행과 달리 자리가 고정이라, 어떤 타워를 골라도 늘 같은 위치에서 읽힌다.
+    // 타워에만 있는 값이므로 생산시설·연구소에서는 행 자체를 숨긴다.
+    private void RefreshStatusRow()
+    {
+        if (_statusRow == null)
+        {
+            return;
+        }
+
+        bool isTower = _selectedBuilding is Tower;
+        _statusRow.gameObject.SetActive(isTower);
+
+        if (!isTower)
+        {
+            return;
+        }
+
+        // 아이콘은 null로 넘긴다 - Setup은 null 아이콘을 무시하므로 프리팹에 박아 둔 고정 아이콘이 그대로 남는다.
+        _statusRow.Setup(
+            null,
+            Color.white,
+            StringTable.GetString(OPERATION_LABEL_LOC_KEY),
+            ResolveTowerOperationText());
     }
 
     // 지금 이 타워에 실제로 적용되는 수치를 낸다 - 데이터 원본이 아니라 인구 충원율·연구·어미용
