@@ -9,9 +9,10 @@ using UnityEngine.UI;
 // 아이콘과 속성명을 표시한다. IExclusiveMode(UIManager.OpenExclusive) 조정을 겸한다.
 //
 // 닫을 때 이 오브젝트가 아니라 자식 _windowRoot만 끈다 - 스크립트 호스트가 계속 활성이어야
-// Update가 돌아 성(Castle) 클릭을 감지할 수 있기 때문이다.
-// UI_MainCastleWindow / UI_PopulationAllocationWindow / UI_BabyDragonManageWindow와 같은 구조다
-// (HUD 버튼으로만 여는 UI_ResearchWindow 계열은 반대로 자기 자신을 끈다).
+// OnEnable에서 건 구독(ESC 닫기 입력·주기 변화·어미용 트리)이 창을 닫아 둔 동안에도 살아 있다.
+// UI_PopulationAllocationWindow / UI_BabyDragonManageWindow와 같은 구조다.
+// (예전에는 성(Castle) 클릭 감지가 이 구조의 이유였다 - 그 진입점은 제거됐고, 남은 구독들이
+// 여전히 같은 요구를 하므로 구조는 그대로 둔다.)
 // 속성 변경 규칙·속성 색·아이콘 원본은 여기서 재구현하지 않는다
 // - DragonTreeManager / DragonAttributePalette / BabyDragonDataCatalog에 위임한다.
 // Button_change는 UI_DragonChangePopup을 열기만 하고, 실제 변경 로직은 그 팝업이 갖고 있다.
@@ -47,10 +48,8 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 
     [Header("Window")]
     [Tooltip("창 콘텐츠 전체를 담은 자식(Content). 닫을 때 이것만 끈다 - " +
-        "이 스크립트가 붙은 오브젝트는 계속 활성이어야 성 클릭 구독이 살아 있어 창을 다시 열 수 있다.")]
+        "이 스크립트가 붙은 오브젝트는 계속 활성이어야 ESC·주기 구독이 살아 있다.")]
     [SerializeField] private GameObject _windowRoot;
-    [Tooltip("성(Castle) 클릭 감지용. 없으면 성을 눌러도 창이 열리지 않는다.")]
-    [SerializeField] private BuildingPlacementController _buildingPlacementController;
     [SerializeField] private Button _exitButton;
     [Tooltip("창 바깥 클릭 닫기용 전용 blocker Button. 반드시 창 콘텐츠와 별개의(자손이 아닌) 오브젝트여야 한다 - " +
         "콘텐츠의 조상에 붙은 Button을 넣으면 EventSystem이 자손 클릭을 부모로 버블링시켜 창 안을 클릭할 때마다 닫힌다. " +
@@ -220,8 +219,8 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         // 이 호출이 그 상태를 정상화하는 유일한 지점이므로 Awake에서 한 번 확정한다.
         SelectTab(_currentTab);
 
-        // 시작 시 콘텐츠만 끈다. 스크립트 호스트는 계속 활성이라 Update가 돌고,
-        // 그래야 창이 닫혀 있는 동안에도 성 클릭을 감지할 수 있다.
+        // 시작 시 콘텐츠만 끈다. 스크립트 호스트는 계속 활성이라 창이 닫혀 있는 동안에도
+        // OnEnable에서 건 구독(ESC·주기·어미용 트리)이 유지된다.
         //
         // _isOpen 가드는 방어용이다 - 인스턴스가 비활성으로 저장돼 Awake가 첫 Open()의
         // SetActive(true) 안에서 실행되는 경우, 무조건 닫으면 방금 연 창을 스스로 닫아버린다
@@ -232,32 +231,8 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
-    // 성을 클릭할 때마다 열린다. SelectedBuilding 폴링이 아니라 이벤트를 쓰는 이유는, 창을 닫은 뒤
-    // 성이 계속 선택된 상태에서 성을 다시 눌러도 열려야 하기 때문이다 - 그 경우 SelectedBuilding은
-    // 계속 Castle이라 폴링으로는 변화가 관측되지 않는다.
-    private void HandleBuildingSelected(Building building)
-    {
-        if (building is not Castle)
-        {
-            return;
-        }
-
-        // 점령·건설 모드 등이 클릭을 점유한 동안에는 그쪽 창이 같은 자리를 쓰므로 열지 않는다.
-        if (_buildingPlacementController.InputSuppressed)
-        {
-            return;
-        }
-
-        OpenAtMotherTab();
-    }
-
     private void OnEnable()
     {
-        if (_buildingPlacementController != null)
-        {
-            _buildingPlacementController.BuildingSelected.AddListener(HandleBuildingSelected);
-        }
-
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.ActiveAttributeChanged.AddListener(HandleActiveAttributeChanged);
@@ -298,11 +273,6 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
 
     private void OnDisable()
     {
-        if (_buildingPlacementController != null)
-        {
-            _buildingPlacementController.BuildingSelected.RemoveListener(HandleBuildingSelected);
-        }
-
         if (_dragonTreeManager != null)
         {
             _dragonTreeManager.ActiveAttributeChanged.RemoveListener(HandleActiveAttributeChanged);
@@ -483,9 +453,12 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
-    // 성(Castle) 클릭처럼 "어미용 화면을 보여달라"는 진입점.
-    // ToggleFromEntryPoint와 달리 토글하지 않는다 - 이미 열려 있는데 닫아버리면
-    // 성을 클릭했는데 창이 사라지는 셈이라, 그때는 탭만 어미용으로 맞춘다.
+    // "어미용 화면을 보여달라"는 진입점. ToggleFromEntryPoint와 달리 토글하지 않는다 -
+    // 이미 열려 있는데 닫아버리면 보여달라고 했는데 창이 사라지는 셈이라, 그때는 탭만 어미용으로 맞춘다.
+    //
+    // 유일한 호출자였던 성(Castle) 클릭이 제거돼 지금은 호출자가 없다. 남겨 두는 이유는 HUD 버튼
+    // (ToggleFromEntryPoint)이 마지막으로 본 탭을 그대로 열기 때문이다 - 어미용 탭을 보장해야 하는
+    // 진입점이 다시 필요해지면 이것을 쓴다. 필요 없다고 판단되면 지워도 된다.
     public void OpenAtMotherTab()
     {
         SelectTab(DragonTab.Mother);

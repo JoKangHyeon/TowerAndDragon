@@ -22,6 +22,12 @@ public class Castle : Building, IAttackTarget
     private Health _health;
     private Vector2Int _homeChunkCoord;
     private bool _hasHomeChunk;
+
+    // 성은 클릭으로 골라지지 않는다. 눌러도 열리는 창이 없고(어미용 창은 HUD [드래곤] 버튼으로 연다),
+    // 스프라이트가 3x3 풋프린트보다 훨씬 높고 넓게 그려져 뒤쪽 타워를 통째로 가리기 때문이다 -
+    // 후보에 남겨 두면 가려진 타워를 고르려면 같은 자리를 두 번 눌러야 한다.
+    // 호버 반투명(SpriteHoverFade)은 그대로 둔다. 가려진 타워를 보여주는 것이 그 연출의 목적이다.
+    public override bool IsClickSelectable => false;
     public bool IsDead => _health == null || _health.IsDead;
     public float CurrentHealth => _health == null ? 0 : _health.CurrentHealth;
     public float MaxHealth => _health == null ? 0 : _health.MaxHealth;

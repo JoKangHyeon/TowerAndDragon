@@ -132,8 +132,9 @@ public sealed class HoverOutlineDriver : MonoBehaviour
             ? null
             : MonsterPicker.FindUnderPointer(pointerWorldPoint, LayerMasks.Enemy);
 
-    // 클릭 후보(BuildingClickCycle)와 같은 집합·같은 비교자를 쓴다 - "눌리는 것"과 "아웃라인이 뜨는
-    // 것"이 갈라지지 않는다.
+    // 클릭 후보(BuildingClickCycle)와 같은 집합·같은 비교자·같은 제외 규칙(IsClickSelectable)을 쓴다 -
+    // "눌리는 것"과 "아웃라인이 뜨는 것"이 갈라지지 않는다. 그래서 성 위에서는 성이 아니라 성에
+    // 가려진 뒤쪽 건물에 아웃라인이 뜨고, 클릭도 같은 건물을 잡는다.
     private Building ResolveHoveredBuilding(Vector3 pointerWorldPoint)
     {
         if (!WiringGuard.Require(_gridMap, nameof(_gridMap), this))
@@ -145,7 +146,7 @@ public sealed class HoverOutlineDriver : MonoBehaviour
 
         foreach (Building candidate in _gridMap.Buildings)
         {
-            if (!candidate.ContainsWorldPoint(pointerWorldPoint))
+            if (!candidate.IsClickSelectable || !candidate.ContainsWorldPoint(pointerWorldPoint))
             {
                 continue;
             }

@@ -16,7 +16,6 @@ GameObject:
   - component: {fileID: 7326584911238567401}
   - component: {fileID: 400603131680481513}
   - component: {fileID: 2770693859267587870}
-  - component: {fileID: 856431459898682751}
   - component: {fileID: 2591212041676167361}
   m_Layer: 0
   m_Name: Castle
@@ -269,58 +268,6 @@ MonoBehaviour:
   _transitionDuration: 3
   _duskColor: {r: 1, g: 0.55, b: 0.25, a: 1}
   _duskWeight: 0.6
---- !u!114 &856431459898682751
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 807521685231827806}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3fe91dc294731a9428c0941ea7579110, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: EPO::EPOOutline.Outlinable
-  complexMaskingMode: 0
-  drawingMode: 1
-  outlineLayer: 0
-  outlineTargets:
-  - CutoutMask: 8
-    renderer: {fileID: 3376259054367252278}
-    SubmeshIndex: 0
-    BoundsMode: 0
-    Bounds:
-      m_Center: {x: 0, y: 0, z: 0}
-      m_Extent: {x: 0.5, y: 0.5, z: 0.5}
-    CutoutThreshold: 0.5
-    CullMode: 0
-    cutoutTextureName: 
-    cutoutTextureIndex: 0
-  renderStyle: 1
-  outlineParameters:
-    enabled: 1
-    color: {r: 0.016616056, g: 0.7956049, b: 1.0592737, a: 1}
-    dilateShift: 1
-    blurShift: 0
-    fillPass:
-      shader: {fileID: 0}
-      serializedProperties: []
-  backParameters:
-    enabled: 1
-    color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-    dilateShift: 1
-    blurShift: 1
-    fillPass:
-      shader: {fileID: 0}
-      serializedProperties: []
-  frontParameters:
-    enabled: 1
-    color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-    dilateShift: 1
-    blurShift: 1
-    fillPass:
-      shader: {fileID: 0}
-      serializedProperties: []
 --- !u!114 &2591212041676167361
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -929,7 +929,11 @@ public class BuildingPlacementController : MonoBehaviour
     // 순환 리셋을 넣으면 안 된다.
     private void ApplySelectionAt(Vector3Int coord)
     {
-        Building building = _gridMap.GetBuildingAt(coord);
+        Building occupant = _gridMap.GetBuildingAt(coord);
+
+        // 클릭으로 골라지지 않는 건물(성)이 점유한 칸은 빈 땅처럼 다룬다 - 클릭 후보(BuildingClickCycle)
+        // 에서만 빼면, 후보가 없어 지면 셀로 되짚는 이 경로에서 그 건물이 다시 선택된다.
+        Building building = occupant != null && occupant.IsClickSelectable ? occupant : null;
 
         CancelBuildMode();
         CancelMove();

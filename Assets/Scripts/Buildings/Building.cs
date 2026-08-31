@@ -245,6 +245,18 @@ public class Building : MonoBehaviour
         _spriteRenderer.sortingOrder = sortingOrder;
     }
 
+    /// <summary>클릭으로 고를 수 있는 건물인지. false면 클릭 후보에서 아예 빠지므로, 이 건물에
+    /// 완전히 가려진 뒤쪽 건물을 <b>첫 클릭에</b> 고를 수 있다(순환을 한 번 더 돌 필요가 없다).
+    ///
+    /// 이 값을 보는 곳은 셋이며 전부 봐야 한다 - 하나라도 빠지면 그 경로로 다시 선택된다.
+    /// 클릭 후보 수집(BuildingClickCycle.Collect) · 좌표 기준 선택(BuildingPlacementController.
+    /// ApplySelectionAt: 후보가 없을 때 지면 셀로 되짚는 경로) · 호버 아웃라인(HoverOutlineDriver).
+    ///
+    /// 호버 반투명(SpriteHoverFade)은 이 값과 무관하다 - 가려진 뒤쪽을 보여주는 것이 목적이라
+    /// 클릭되지 않는 건물에도 그대로 필요하다. 그래서 성은 "반투명해지지만 눌리지는 않는" 건물이고,
+    /// 이것은 ContainsWorldPoint 주석이 말하는 "반투명해진 곳 = 눌리는 곳"의 의도된 예외다.</summary>
+    public virtual bool IsClickSelectable => true;
+
     /// <summary>월드 좌표가 이 건물의 스프라이트 몸통 안인지. 클릭 판정은 기본적으로 그리드 셀 기준이라
     /// (GridMap.PickCellAtWorldPoint) 스프라이트가 자기 footprint보다 훨씬 높게 그려진 건물은
     /// 몸통을 눌러도 빈 땅으로 판정된다. 그 몸통까지 클릭 후보로 잡기 위한 판정이며

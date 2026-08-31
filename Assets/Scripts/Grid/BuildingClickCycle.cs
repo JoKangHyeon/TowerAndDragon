@@ -81,12 +81,14 @@ public sealed class BuildingClickCycle
         // 지면 셀 점유 건물을 먼저 담아 둔다 - 아래 정렬에서 동점이 나도 예전 기준이 살아 있도록.
         Building occupant = _gridMap.GetBuildingAt(groundCell);
 
-        if (occupant != null)
+        // IsClickSelectable이 false인 건물(성)은 후보에서 뺀다 - 순환 목록에 남겨 두면 그 건물에
+        // 가려진 뒤쪽 건물을 고르려고 같은 자리를 한 번 더 눌러야 한다.
+        if (occupant != null && occupant.IsClickSelectable)
             _collectBuffer.Add(occupant);
 
         foreach (Building building in _gridMap.Buildings)
         {
-            if (building == null || building == occupant)
+            if (building == null || building == occupant || !building.IsClickSelectable)
                 continue;
 
             if (building.ContainsWorldPoint(pointerWorldPoint))
