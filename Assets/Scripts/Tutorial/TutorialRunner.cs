@@ -63,6 +63,11 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     [Tooltip("건설 패널 슬롯을 가리키는 단계에 필요하다. 슬롯은 런타임 생성이라 GuideAnchor로 잡을 수 없다.")]
     [SerializeField] private UI_BuildModeWindow _buildModeWindow;
 
+    [Tooltip("타워의 공격속도·초당피해 행을 가리키는 단계가 쓴다(TowerAttackSpeedRows). " +
+        "비면 그 단계는 문구만 뜬다.")]
+    [WiringOptional]
+    [SerializeField] private UI_PopulationAllocationWindow _populationWindow;
+
     [Header("안내 중 막을 HUD 조작")]
     [Tooltip("배타 창도 밤 시작도 아니라 기존 관문에 걸리지 않는 것들. 비우면 막지 않는다.")]
     [WiringOptional]
@@ -1301,25 +1306,27 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         return GuideAnchorRegistry.TryGet(step.AnchorId, out RectTransform anchor) ? anchor : null;
     }
 
+    // 창별로 물어보는 곳이 다르므로 창이 비었는지는 각 갈래에서 확인한다 -
+    // 위에서 한 창만 보고 일찍 돌아가면 다른 창을 쓰는 종류까지 함께 죽는다.
     private bool TryResolveDynamicTarget(TutorialDynamicTargetKind kind, out RectTransform slotRect)
     {
         slotRect = null;
 
-        if (_dragonWindow == null)
-        {
-            return false;
-        }
-
         switch (kind)
         {
             case TutorialDynamicTargetKind.DragonEggSlot:
-                return _dragonWindow.TryGetFirstEggSlotRect(out slotRect);
+                return _dragonWindow != null && _dragonWindow.TryGetFirstEggSlotRect(out slotRect);
 
             case TutorialDynamicTargetKind.BabyDragonSlot:
-                return _dragonWindow.TryGetFirstBabyDragonSlotRect(out slotRect);
+                return _dragonWindow != null && _dragonWindow.TryGetFirstBabyDragonSlotRect(out slotRect);
 
             case TutorialDynamicTargetKind.BabyDragonFocusButton:
-                return _dragonWindow.TryGetFirstBabyDragonFocusButtonRect(out slotRect);
+                return _dragonWindow != null &&
+                       _dragonWindow.TryGetFirstBabyDragonFocusButtonRect(out slotRect);
+
+            case TutorialDynamicTargetKind.TowerAttackSpeedRows:
+                return _populationWindow != null &&
+                       _populationWindow.TryGetAttackSpeedRowsRect(out slotRect);
 
             default:
                 return false;

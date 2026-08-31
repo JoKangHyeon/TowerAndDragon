@@ -19,6 +19,13 @@ using UnityEngine.UI;
 public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 {
     private const int POPULATION_STEP = 1;
+    private const float HALF = 0.5f;
+    private const int RECT_CORNER_COUNT = 4;
+
+    // 안내가 공격속도~초당피해를 함께 가리킬 때 쓰는 런타임 전용 빈 오브젝트의 이름(디버깅용).
+    private const string ATTACK_ROWS_GUIDE_NAME = "AttackRowsGuideRect";
+
+    private static readonly Vector2 CENTER_PIVOT = new Vector2(HALF, HALF);
     private const float PERCENT_MULTIPLIER = 100f;
     private const string VALUE_FORMAT = "{0} / {1}";
 
@@ -134,7 +141,19 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
     // 선택한 건물의 체력. 타워 체력 행에만 쓰며, 체력이 없는 건물에서는 null로 남는다.
     private Health _selectedHealth;
+    private readonly Vector3[] _guideCornerBuffer = new Vector3[RECT_CORNER_COUNT];
+
     private ComponentPool<UI_ConquestInfoSlot> _outputRowPool;
+
+    // 이번 갱신에서 공격속도·초당피해 행이 실제로 놓인 자리. 행 번호는 건물마다 달라지고
+    // 체력·공격력이 빠지는 타워도 있어 고정할 수 없으므로, 채우면서 그때그때 붙잡아 둔다.
+    private RectTransform _attackSpeedRowRect;
+    private RectTransform _dpsRowRect;
+
+    // 위 두 행을 함께 덮는 안내용 사각형. 안내는 RectTransform 하나만 가리킬 수 있는데
+    // 두 행을 아우르는 오브젝트가 계층에 없어 여기서 만들어 쓴다
+    // (UI_GuideOverlay가 구멍 차단막을 만드는 것과 같은 방식).
+    private RectTransform _attackRowsGuideRect;
     private bool _wasInputSuppressed;
     private float _nextRefreshTime;
 
@@ -307,6 +326,10 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
     // BabyDragonTower도 Tower 파생이므로 Factory·ResearchLab을 먼저 확인한다.
     private void RefreshOutputRows()
     {
+        // 지난 건물의 자리를 물려주지 않는다 - 타워가 아니면 이 행들은 아예 그려지지 않는다.
+        _attackSpeedRowRect = null;
+        _dpsRowRect = null;
+
         int usedCount = 0;
 
         if (_selectedBuilding is Factory factory)
@@ -402,26 +425,26 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
         if (hasInterval)
         {
-            SetOutputRow(
+            _attackSpeedRowRect = SetOutputRow(
                 usedCount++,
                 _attackIntervalIcon,
                 Color.white,
                 StringTable.GetString(ATTACK_INTERVAL_LABEL_LOC_KEY),
                 string.Format(
                     StringTable.GetString(INTERVAL_VALUE_LOC_KEY),
-                    interval));
+                    interval)).transform as RectTransform;
         }
 
         // 초당 피해는 적용되는 값이 아니라 위 둘에서 파생한 표시용 수치라 여기서 나눈다.
         // 간격이 0인 데이터는 나눗셈이 무한대가 되므로 행을 내지 않는다.
         if (hasDamage && hasInterval && interval > 0f)
         {
-            SetOutputRow(
+            _dpsRowRect = SetOutputRow(
                 usedCount++,
                 _dpsIcon,
                 Color.white,
                 StringTable.GetString(DPS_LABEL_LOC_KEY),
-                string.Format(NUMBER_FORMAT, damage / interval));
+                string.Format(NUMBER_FORMAT, damage / interval)).transform as RectTransform;
         }
 
         if (tower.Data != null && tower.Data.CanAttack)
@@ -437,9 +460,94 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         return usedCount;
     }
 
-    private void SetOutputRow(int index, Sprite icon, Color iconColor, string label, string value)
+    /// <summary>
+    /// 튜토리얼이 "인구를 채우면 공격이 빨라진다"를 가리킬 자리 - 공격속도 행과 초당피해 행을 함께 덮는다.
+    /// 두 행은 언제나 붙어 있어 사각형 하나로 덮인다.
+    ///
+    /// 지금 고른 건물이 타워가 아니거나 그 행들이 그려지지 않았으면 false를 준다 -
+    /// 그때 빈 사각형을 돌려주면 안내가 엉뚱한 자리에 구멍을 뚫는다.
+    /// </summary>
+    public bool TryGetAttackSpeedRowsRect(out RectTransform rowsRect)
     {
-        _outputRowPool.Get(index).Setup(icon, iconColor, label, value);
+        rowsRect = null;
+
+        RectTransform first = _attackSpeedRowRect;
+        RectTransform last = _dpsRowRect != null ? _dpsRowRect : _attackSpeedRowRect;
+
+        if (first == null || last == null || !first.gameObject.activeInHierarchy)
+        {
+            return false;
+        }
+
+        RectTransform parent = EnsureAttackRowsGuideRect();
+        if (parent == null)
+        {
+            return false;
+        }
+
+        Vector2 min = new Vector2(float.MaxValue, float.MaxValue);
+        Vector2 max = new Vector2(float.MinValue, float.MinValue);
+
+        Encapsulate(first, ref min, ref max);
+        Encapsulate(last, ref min, ref max);
+
+        _attackRowsGuideRect.anchoredPosition = (min + max) * HALF;
+        _attackRowsGuideRect.sizeDelta = max - min;
+
+        rowsRect = _attackRowsGuideRect;
+        return true;
+    }
+
+    private void Encapsulate(RectTransform target, ref Vector2 min, ref Vector2 max)
+    {
+        target.GetWorldCorners(_guideCornerBuffer);
+
+        foreach (Vector3 corner in _guideCornerBuffer)
+        {
+            Vector2 local = _attackRowsGuideRect.parent.InverseTransformPoint(corner);
+            min = Vector2.Min(min, local);
+            max = Vector2.Max(max, local);
+        }
+    }
+
+    /// <summary>
+    /// 두 행을 아우르는 빈 사각형을 만들어 둔다. 계층에 그런 오브젝트가 없어 런타임에 만든다.
+    /// <see cref="LayoutElement.ignoreLayout"/>을 켜는 이유: 산출 행 컨테이너는 레이아웃 그룹이 배치하므로,
+    /// 그냥 자식으로 넣으면 이 빈 칸이 한 줄을 차지해 행들이 밀린다.
+    /// </summary>
+    private RectTransform EnsureAttackRowsGuideRect()
+    {
+        if (_attackRowsGuideRect != null)
+        {
+            return _attackRowsGuideRect;
+        }
+
+        if (_outputRowContainer is not RectTransform container)
+        {
+            return null;
+        }
+
+        var holder = new GameObject(ATTACK_ROWS_GUIDE_NAME, typeof(RectTransform), typeof(LayoutElement));
+        holder.GetComponent<LayoutElement>().ignoreLayout = true;
+
+        _attackRowsGuideRect = (RectTransform)holder.transform;
+        _attackRowsGuideRect.SetParent(container, false);
+        _attackRowsGuideRect.anchorMin = container.pivot;
+        _attackRowsGuideRect.anchorMax = container.pivot;
+        _attackRowsGuideRect.pivot = CENTER_PIVOT;
+
+        return _attackRowsGuideRect;
+    }
+
+    // 만든 행을 돌려준다 - 안내가 특정 행을 가리켜야 해서 그 자리를 붙잡아 둘 곳이 필요하다.
+    // 대부분의 호출부는 반환값을 쓰지 않는다.
+    private UI_ConquestInfoSlot SetOutputRow(
+        int index, Sprite icon, Color iconColor, string label, string value)
+    {
+        UI_ConquestInfoSlot slot = _outputRowPool.Get(index);
+        slot.Setup(icon, iconColor, label, value);
+
+        return slot;
     }
 
     private int ResolveResearchPointsPerDay(
