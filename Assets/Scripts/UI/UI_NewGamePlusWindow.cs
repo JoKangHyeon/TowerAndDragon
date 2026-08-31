@@ -2,7 +2,6 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -82,6 +81,9 @@ public sealed class UI_NewGamePlusWindow : MonoBehaviour
 
     // UI_TitleWindow가 Construct로 넣어 준다(UI_LoadGameWindow·UI_TutorialPromptPanel과 같은 주입 방식).
     private string _gameSceneName;
+
+    // 그 씬을 여는 동안 덮을 로딩 화면. UI_TitleWindow가 _gameSceneName과 함께 넣어 준다.
+    private SceneLoadOverlay _loadOverlay;
 
     // 마지막 조작의 실패 사유. null이면 상태 줄이 비어 있다(UI_LoadGameWindow.RenderStatus와 같은 처리).
     private string _statusLocKey;
@@ -172,10 +174,11 @@ public sealed class UI_NewGamePlusWindow : MonoBehaviour
         _statusLocKey = null;
     }
 
-    /// <summary>시작 버튼으로 열 씬을 지정한다. 타이틀 화면이 한 번 호출한다.</summary>
-    public void Construct(string gameSceneName)
+    /// <summary>시작 버튼으로 열 씬과 그 동안 덮을 로딩 화면을 지정한다. 타이틀 화면이 한 번 호출한다.</summary>
+    public void Construct(string gameSceneName, SceneLoadOverlay loadOverlay)
     {
         _gameSceneName = gameSceneName;
+        _loadOverlay = loadOverlay;
     }
 
     public void Open()
@@ -385,6 +388,6 @@ public sealed class UI_NewGamePlusWindow : MonoBehaviour
             + $" 난이도 점수 {_selection.DifficultyScore}");
 
         NewGamePlusRequest.Request(_selection.BuildRequest());
-        SceneManager.LoadScene(_gameSceneName);
+        SceneLoadOverlay.LoadOrFallback(_loadOverlay, _gameSceneName, nameof(_loadOverlay), this);
     }
 }

@@ -1,6 +1,4 @@
-using Cysharp.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -122,12 +120,6 @@ public sealed class UI_TutorialQuitPanel : MonoBehaviour
         SoundManager.Play(SoundId.UiButtonClick);
         Debug.Log("[UI_TutorialQuitPanel] 튜토리얼을 중도 포기하고 본게임으로 넘어갑니다.", this);
 
-        if (!WiringGuard.Optional(_loadOverlay, nameof(_loadOverlay), this))
-        {
-            SceneManager.LoadScene(SceneNames.SAMPLE_GAME);
-            return;
-        }
-
-        _loadOverlay.LoadAsync(SceneNames.SAMPLE_GAME).Forget();
+        SceneLoadOverlay.LoadOrFallback(_loadOverlay, SceneNames.SAMPLE_GAME, nameof(_loadOverlay), this);
     }
 }

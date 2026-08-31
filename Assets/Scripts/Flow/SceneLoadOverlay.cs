@@ -102,6 +102,21 @@ public sealed class SceneLoadOverlay : MonoBehaviour
         Hide();
     }
 
+    /// <summary>오버레이가 배선돼 있으면 로딩 화면을 띄워 씬을 열고, 없으면 경고만 남기고 동기 로드로
+    /// 바로 연다. 배선이 빠졌다고 진입 자체가 막히면 안 된다(WiringGuard.Optional의 계약).
+    /// 여러 호출부(타이틀 → 본게임 4경로, 튜토리얼 → 본게임 2경로)가 같은 패턴을 반복해 여기로 모았다.</summary>
+    public static void LoadOrFallback(
+        SceneLoadOverlay overlay, string sceneName, string memberName, Object context)
+    {
+        if (!WiringGuard.Optional(overlay, memberName, context))
+        {
+            SceneManager.LoadScene(sceneName);
+            return;
+        }
+
+        overlay.LoadAsync(sceneName).Forget();
+    }
+
     /// <summary>
     /// 로딩 화면을 띄우고 씬을 연다. 씬 로드는 되돌릴 수 없으므로 두 번 불려도 한 번만 나간다.
     /// 완료를 기다릴 곳이 없으면 <c>.Forget()</c>으로 부른다.

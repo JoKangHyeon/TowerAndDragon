@@ -1,6 +1,4 @@
-using Cysharp.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 /// <summary>
 /// 엔딩이 끝나면 본게임으로 넘긴다. 정적 상태를 아무것도 세팅하지 않는 것이 핵심이다 -
@@ -50,12 +48,6 @@ public sealed class TutorialToGameHandoff : MonoBehaviour
 
         // 시퀀서가 컷씬 패널을 걷은 뒤에 이 이벤트가 오므로, 여기서 덮기 전까지 튜토리얼 맵이 잠깐 보인다.
         // 그 깜빡임을 줄이려면 씬의 오버레이 인스턴스에서 페이드 인 시간을 0으로 둔다.
-        if (!WiringGuard.Optional(_loadOverlay, nameof(_loadOverlay), this))
-        {
-            SceneManager.LoadScene(SceneNames.SAMPLE_GAME);
-            return;
-        }
-
-        _loadOverlay.LoadAsync(SceneNames.SAMPLE_GAME).Forget();
+        SceneLoadOverlay.LoadOrFallback(_loadOverlay, SceneNames.SAMPLE_GAME, nameof(_loadOverlay), this);
     }
 }

@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -43,6 +42,9 @@ public class UI_TitleWindow : MonoBehaviour
     [Tooltip("새 게임·이어하기로 진입할 씬. Build Settings에 등록돼 있어야 한다.")]
     [SerializeField] private string _gameSceneName = SceneNames.SAMPLE_GAME;
 
+    [Tooltip("본게임 씬을 여는 동안 화면을 덮는 로딩 화면. 비어 있으면 로딩 화면 없이 바로 넘어간다.")]
+    [SerializeField] private SceneLoadOverlay _loadOverlay;
+
     private void Awake()
     {
         if (_newGameButton != null)
@@ -77,17 +79,19 @@ public class UI_TitleWindow : MonoBehaviour
 
         if (_loadGameWindow != null)
         {
-            _loadGameWindow.Construct(_gameSceneName);
+            _loadGameWindow.Construct(_gameSceneName, _loadOverlay);
         }
 
         if (_tutorialPromptPanel != null)
         {
+            // 로딩 화면은 넘기지 않는다 - 이 창은 이미 자기 _loadOverlay를 씬에서
+            // 같은 인스턴스로 직접 배선받고 있다(건너뛰기·진행 두 경로가 그걸 그대로 쓴다).
             _tutorialPromptPanel.Construct(_gameSceneName);
         }
 
         if (_newGamePlusWindow != null)
         {
-            _newGamePlusWindow.Construct(_gameSceneName);
+            _newGamePlusWindow.Construct(_gameSceneName, _loadOverlay);
         }
     }
 
@@ -226,6 +230,6 @@ public class UI_TitleWindow : MonoBehaviour
             return;
         }
 
-        SceneManager.LoadScene(_gameSceneName);
+        SceneLoadOverlay.LoadOrFallback(_loadOverlay, _gameSceneName, nameof(_loadOverlay), this);
     }
 }

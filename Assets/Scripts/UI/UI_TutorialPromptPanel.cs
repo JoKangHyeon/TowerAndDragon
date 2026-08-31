@@ -1,7 +1,5 @@
-using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -33,7 +31,8 @@ public sealed class UI_TutorialPromptPanel : MonoBehaviour
     [Tooltip("창을 닫는 키 - 보통 Esc.")]
     [SerializeField] private InputActionReference _closeAction;
 
-    [Tooltip("튜토리얼 씬으로 넘어가는 동안 화면을 덮는 로딩 화면. 비어 있으면 로딩 화면 없이 바로 넘어간다.")]
+    [Tooltip("씬을 여는 동안 화면을 덮는 로딩 화면. 진행(튜토리얼)·건너뛰기(본게임) 양쪽 다 이 인스턴스를 쓴다. " +
+             "비어 있으면 로딩 화면 없이 바로 넘어간다.")]
     [SerializeField] private SceneLoadOverlay _loadOverlay;
 
     [Header("라벨")]
@@ -142,8 +141,8 @@ public sealed class UI_TutorialPromptPanel : MonoBehaviour
         CloseSilently();
     }
 
-    // 튜토리얼 씬은 콜드 진입에 3.8초가 걸려(측정치) 그동안 화면이 얼어붙는다. 로딩 화면으로 덮는다.
-    // 건너뛰기 쪽은 아직 동기 로드다 - 로딩 화면 확장은 팀 동의 후 별건으로 한다.
+    // 씬 콜드 진입에 3.8초가 걸려(측정치) 그동안 화면이 얼어붙는다. 진행·건너뛰기 둘 다 같은
+    // 오버레이 인스턴스로 로딩 화면을 덮는다.
     public void ProceedToTutorial()
     {
         if (!TryBeginSceneRequest())
@@ -151,13 +150,7 @@ public sealed class UI_TutorialPromptPanel : MonoBehaviour
             return;
         }
 
-        if (!WiringGuard.Optional(_loadOverlay, nameof(_loadOverlay), this))
-        {
-            SceneManager.LoadScene(SceneNames.TUTORIAL);
-            return;
-        }
-
-        _loadOverlay.LoadAsync(SceneNames.TUTORIAL).Forget();
+        SceneLoadOverlay.LoadOrFallback(_loadOverlay, SceneNames.TUTORIAL, nameof(_loadOverlay), this);
     }
 
     public void SkipToGame()
@@ -168,7 +161,12 @@ public sealed class UI_TutorialPromptPanel : MonoBehaviour
             return;
         }
 
-        LoadSceneOnce(_gameSceneName);
+        if (!TryBeginSceneRequest())
+        {
+            return;
+        }
+
+        SceneLoadOverlay.LoadOrFallback(_loadOverlay, _gameSceneName, nameof(_loadOverlay), this);
     }
 
     // Awake의 안전망 닫기가 창 닫는 소리를 내지 않게 소리 없는 경로를 따로 둔다.
@@ -216,15 +214,5 @@ public sealed class UI_TutorialPromptPanel : MonoBehaviour
         _hasRequested = true;
         SoundManager.Play(SoundId.UiButtonClick);
         return true;
-    }
-
-    private void LoadSceneOnce(string sceneName)
-    {
-        if (!TryBeginSceneRequest())
-        {
-            return;
-        }
-
-        SceneManager.LoadScene(sceneName);
     }
 }

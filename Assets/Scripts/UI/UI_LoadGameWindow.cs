@@ -3,7 +3,6 @@ using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -68,6 +67,10 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
     // 슬롯을 고른 뒤 열 씬. 타이틀 화면이 Construct로 넣어 준다(UI_VolumeRow와 같은 주입 방식) -
     // 창 프리팹이 특정 씬 이름을 직렬화해 들고 있지 않도록.
     private string _gameSceneName;
+
+    // 그 씬을 여는 동안 덮을 로딩 화면. 타이틀 화면이 Construct로 함께 넣어 준다.
+    // 인게임 모드(_saveService != null)에서는 쓰이지 않는다 - null로 남는다.
+    private SceneLoadOverlay _loadOverlay;
 
     // 인게임 설정 창이 Construct로 넣어 준다. 타이틀 화면에서는 null이고, 그 값이 곧
     // "여기는 인게임인가"의 판정이 된다.
@@ -142,10 +145,11 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
         ReleaseThumbnails();
     }
 
-    /// <summary>슬롯을 골랐을 때 열 씬을 지정한다. 타이틀 화면이 한 번 호출한다.</summary>
-    public void Construct(string gameSceneName)
+    /// <summary>슬롯을 골랐을 때 열 씬과 그 동안 덮을 로딩 화면을 지정한다. 타이틀 화면이 한 번 호출한다.</summary>
+    public void Construct(string gameSceneName, SceneLoadOverlay loadOverlay)
     {
         _gameSceneName = gameSceneName;
+        _loadOverlay = loadOverlay;
     }
 
     /// <summary>저장·인게임 로드에 쓸 서비스를 지정한다. 인게임 설정 창이 한 번 호출한다.</summary>
@@ -411,7 +415,7 @@ public class UI_LoadGameWindow : MonoBehaviour, IExclusiveMode
         }
 
         SaveLoadRequest.Request(slotIndex);
-        SceneManager.LoadScene(_gameSceneName);
+        SceneLoadOverlay.LoadOrFallback(_loadOverlay, _gameSceneName, nameof(_loadOverlay), this);
     }
 
     // 삭제 버튼은 지우지 않고 확인만 띄운다. 실제 삭제는 팝업이 YES를 돌려줄 때 DeleteSlot이 한다.
