@@ -1,3 +1,4 @@
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -142,6 +143,17 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
     [SerializeField] private TMP_Text _unassignAllButtonText;
     [SerializeField] private TMP_Text _closeButtonText;
 
+    // 같은 자리에 뜨는 새끼용 관리창(UI_BabyDragonManageWindow)과 같은 연출을 쓴다 -
+    // 두 창이 건물 종류에 따라 번갈아 뜨는데 한쪽만 슬라이드하면 서로 다른 창처럼 읽힌다.
+    [Header("패널 슬라이드 연출")]
+    [SerializeField] private float _slideDuration = 0.4f;
+
+    [Tooltip("열릴 때 시작 오프셋(홈 기준). 여기서 홈으로 슬라이드 인.")]
+    [SerializeField] private Vector2 _openFromOffset = new Vector2(100f, 0f);
+
+    [Tooltip("닫힐 때 도착 오프셋(홈 기준). 홈에서 여기로 슬라이드 아웃 후 비활성화.")]
+    [SerializeField] private Vector2 _closeToOffset = new Vector2(500f, 0f);
+
     private Building _selectedBuilding;
     private IPopulationAllocationTarget _selectedTarget;
 
@@ -163,6 +175,14 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
     private bool _wasInputSuppressed;
     private float _nextRefreshTime;
 
+    private RectTransform _windowRect;
+    private Vector2 _homePos;
+    private Tween _windowTween;
+
+    // 닫히는 애니메이션이 도는 동안에도 _windowRoot는 아직 활성이므로 activeSelf로는 열림을 판정할 수 없다.
+    // 상태는 이 플래그가 들고 있는다(UI_BabyDragonManageWindow._isOpen과 같은 이유).
+    private bool _isOpen;
+
     private bool IsDay =>
         _cycleManager != null &&
         _cycleManager.CurrentCycle == CycleManager.CycleState.Day;
@@ -178,6 +198,9 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 
         if (_windowRoot != null)
         {
+            // 홈 위치는 비활성화 전에 잡아 둔다 - 슬라이드는 이 자리를 기준으로 오간다.
+            _windowRect = _windowRoot.GetComponent<RectTransform>();
+            _homePos = _windowRect.anchoredPosition;
             _windowRoot.SetActive(false);
         }
     }
@@ -234,6 +257,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
     private void OnDestroy()
     {
         RemoveButtonListeners();
+        _windowTween?.Kill();
     }
 
     // BuildingPlacementController에는 선택 변경 이벤트가 없어(SelectedBuilding은 파생 getter)
@@ -283,15 +307,49 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
             _selectedTarget.IsInitialized &&
             !_wasInputSuppressed;
 
-        if (_windowRoot != null)
-        {
-            _windowRoot.SetActive(hasTarget);
-        }
-
         if (hasTarget)
         {
+            OpenPanel();
             Refresh();
         }
+        else
+        {
+            ClosePanel();
+        }
+    }
+
+    private void OpenPanel()
+    {
+        _isOpen = true;
+
+        if (_windowRoot == null)
+        {
+            return;
+        }
+
+        _windowTween?.Kill();
+
+        _windowRoot.SetActive(true);
+        _windowRect.anchoredPosition = _homePos + _openFromOffset;
+        _windowTween = _windowRect.DOAnchorPos(_homePos, _slideDuration)
+            .SetEase(Ease.OutBack)
+            .SetLink(_windowRoot);
+    }
+
+    private void ClosePanel()
+    {
+        _isOpen = false;
+
+        if (_windowRoot == null)
+        {
+            return;
+        }
+
+        _windowTween?.Kill();
+        _windowTween = _windowRect.DOAnchorPos(_homePos + _closeToOffset, _slideDuration)
+            .SetEase(Ease.InCubic)
+            .SetLink(_windowRoot)
+            .OnComplete(() => _windowRoot.SetActive(false));
     }
 
     private void Refresh()
@@ -834,7 +892,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         return string.Empty;
     }
 
-    private bool IsWindowOpen => _windowRoot != null && _windowRoot.activeSelf;
+    private bool IsWindowOpen => _isOpen;
 
     public void OnCloseActionPerformed(InputAction.CallbackContext context)
     {
