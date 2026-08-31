@@ -794,6 +794,51 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
+--- !u!1 &292702387
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 292702389}
+  - component: {fileID: 292702388}
+  m_Layer: 0
+  m_Name: Test
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &292702388
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 292702387}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 124faeb4a8cc2564fa6cffb624900ab1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WaveDebugSkipController
+  _waveManager: {fileID: 704850239}
+--- !u!4 &292702389
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 292702387}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 521.7029, y: 248.10342, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &313449541 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7475151901225264468, guid: 2511087c0ee302e419f4975d006f2ae6, type: 3}
@@ -2641,6 +2686,8 @@ MonoBehaviour:
     Amount: 350
   - Type: 4
     Amount: 350
+  - Type: -1
+    Amount: 350
   _economyBalance: {fileID: 11400000, guid: edbb8724b1ad88942bce289ad90fecfb, type: 2}
   ResourceChanged:
     m_PersistentCalls:
@@ -4193,7 +4240,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3528785940027225038, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.000016480604
+      value: -0.000059120925
       objectReference: {fileID: 0}
     - target: {fileID: 3543463496763922537, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMax.y
@@ -5449,14 +5496,6 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7779274323016822514, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7779274323016822514, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-      propertyPath: m_SizeDelta.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7779274323016822514, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
-      propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7779274323016822514, guid: 66aa456d27ceb4a49926683410368a5e, type: 3}
@@ -8004,3 +8043,4 @@ SceneRoots:
   - {fileID: 1955283872}
   - {fileID: 386325292}
   - {fileID: 1874300189}
+  - {fileID: 292702389}

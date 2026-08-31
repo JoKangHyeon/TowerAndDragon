@@ -16,6 +16,13 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     private const string BUFF_RADIUS_FORMAT = "{0:0.#}";
     private const string BUFF_MULTIPLIER_FORMAT = BabyDragonLocKeys.BUFF_MULTIPLIER_FORMAT;
 
+    // 추가분은 원본과 서식이 갈린다 - 배율 원본은 "×1.2"지만 추가분에 ×를 붙이면
+    // 곱셈이 두 번 걸린 것처럼 읽히므로 "(+0.18)"로 낸다. 반경은 원본과 같은 서식을 쓴다.
+    private const string BUFF_MULTIPLIER_BONUS_FORMAT = "{0:0.##}";
+
+    // 부동소수 오차로 생긴 미세한 차이를 "강화됨"으로 오인해 (+0)을 붙이지 않기 위한 하한.
+    private const float MIN_VISIBLE_BONUS = 0.01f;
+
     // 툴팁(BabyDragonTooltipBuilder)과 같은 라벨을 쓰는 키는 공용 클래스에 둔다 (커밋규칙 §3.2).
     private const string TITLE_FORMAT_LOC_KEY = BabyDragonLocKeys.TITLE_FORMAT;
     private const string STATUS_LABEL_LOC_KEY = BabyDragonLocKeys.STATUS_LABEL;
@@ -60,13 +67,20 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     [SerializeField] private Sprite _statusIcon;
     [SerializeField] private Sprite _buffIcon;
 
-    // 모드 버튼은 Focus/Default 오브젝트 없이, "지금 그 모드인 버튼은 비활성화(회색)"로 현재 모드를
-    // 나타낸다 - 데이터상 못 쓰는 모드도 같은 이유(interactable=false)로 비활성화되므로 조건을 합친다.
+    [Tooltip("어미용 강화로 붙은 추가분 글씨 색. 자원 증가 표기(UI_IngameWindow)와 같은 연두색을 기본값으로 둔다.")]
+    [SerializeField] private Color _bonusColor = ResourceAmountFormatter.GAIN_COLOR_DEFAULT;
+
+    // 모드 버튼은 "지금 그 모드인 버튼 위에 활성 스프라이트(button_active)를 켠다"로 현재 모드를 나타낸다.
+    // interactable은 순수하게 "지금 누를 수 있는가"(데이터상 사용 가능 + 낮)만 뜻한다 - 선택 표시까지
+    // interactable로 겸하면 선택된 버튼이 UI_ButtonInteractableFade로 흐려져 활성 스프라이트가 죽는다.
     [Header("모드 버튼 - 공격/버프")]
     [SerializeField] private Button _attackModeButton;
     [SerializeField] private Button _buffModeButton;
     [SerializeField] private TMP_Text _attackModeButtonText;
     [SerializeField] private TMP_Text _buffModeButtonText;
+    [Tooltip("해당 모드일 때만 켜지는 활성 스프라이트(버튼 아래 button_active).")]
+    [SerializeField] private GameObject _attackModeActiveMark;
+    [SerializeField] private GameObject _buffModeActiveMark;
 
     [Header("행동 버튼")]
     [SerializeField] private Button _skillTreeButton;
@@ -337,6 +351,31 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
             ? _buffSystem.GetEffectiveYieldMultiplier(data)
             : BabyDragonBuffFormula.ResolveYieldMultiplier(data, BabyDragonBuffFormula.NO_KIN_BONUS_RATIO);
 
+    // 반경도 배율과 같은 이유로 실효값이 필요하다 - 혈족 반경 강화(KinBuffRadiusEffectSO)를 찍으면
+    // 땅에 그려지는 버프 범위와 건설 해제 범위는 넓어지는데 이 숫자만 원본에 머물러 있었다.
+    private float ResolveDisplayRadius(BabyDragonData data) =>
+        WiringGuard.Optional(_buffSystem, nameof(_buffSystem), this)
+            ? _buffSystem.GetEffectiveBuffRadius(_boundTower)
+            : data.BuffRadius;
+
+    // "원본(+강화분)"을 만든다. 강화가 없으면 원본만 남으므로, 강화 전후로 표기가 자연스럽게 이어진다.
+    private string BuildValueWithBonus(
+        float baseValue, float effectiveValue, string baseFormat, string bonusFormat)
+    {
+        string baseText = string.Format(baseFormat, baseValue);
+        float bonus = effectiveValue - baseValue;
+
+        if (bonus < MIN_VISIBLE_BONUS)
+        {
+            return baseText;
+        }
+
+        return ResourceAmountFormatter.FormatWithBonus(
+            baseText,
+            string.Format(bonusFormat, bonus),
+            _bonusColor);
+    }
+
     // 버프 반경이 없는 속성(순수 공격형)은 버프 관련 행을 아예 숨긴다 - 값이 0인 채로 보여주면
     // "버프가 있는데 반경만 0"으로 오해할 수 있다.
     //
@@ -358,7 +397,11 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
                     _buffIcon,
                     attributeColor,
                     StringTable.GetString(BUFF_RADIUS_LABEL_LOC_KEY),
-                    string.Format(BUFF_RADIUS_FORMAT, data.BuffRadius));
+                    BuildValueWithBonus(
+                        data.BuffRadius,
+                        ResolveDisplayRadius(data),
+                        BUFF_RADIUS_FORMAT,
+                        BUFF_RADIUS_FORMAT));
             }
         }
 
@@ -371,7 +414,11 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
                     _buffIcon,
                     attributeColor,
                     StringTable.GetString(BUFF_MULTIPLIER_LABEL_LOC_KEY),
-                    string.Format(BUFF_MULTIPLIER_FORMAT, ResolveDisplayMultiplier(data)));
+                    BuildValueWithBonus(
+                        data.BuffYieldMultiplier,
+                        ResolveDisplayMultiplier(data),
+                        BUFF_MULTIPLIER_FORMAT,
+                        BUFF_MULTIPLIER_BONUS_FORMAT));
             }
         }
     }
@@ -403,8 +450,16 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
 
         // 모드는 낮에 정한 것으로 밤을 보낸다 - 밤에 바꿀 수 있으면 밤 방어를 공격 모드로 치른 뒤
         // 아침 정산 직전에 버프 모드로 돌려 양쪽 이득을 다 챙길 수 있다(이슈 173).
-        SetModeButtonState(_attackModeButton, _boundTower.Mode == BabyDragonMode.Attack, _boundTower.CanUseAttackMode);
-        SetModeButtonState(_buffModeButton, _boundTower.Mode == BabyDragonMode.Buff, _boundTower.CanUseBuffMode);
+        SetModeButtonState(
+            _attackModeButton,
+            _attackModeActiveMark,
+            _boundTower.Mode == BabyDragonMode.Attack,
+            _boundTower.CanUseAttackMode);
+        SetModeButtonState(
+            _buffModeButton,
+            _buffModeActiveMark,
+            _boundTower.Mode == BabyDragonMode.Buff,
+            _boundTower.CanUseBuffMode);
 
         // 버튼이 회색인 이유(밤)를 알려준다(UI_PopulationAllocationWindow._nightLockedText와 동일한 이유).
         // 시간 새끼용 공격 모드는 밤에도 재배치가 되므로, 그 경우엔 재배치까지 잠긴 것처럼 말하지 않는다.
@@ -419,14 +474,19 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
         }
     }
 
-    // 지금 그 모드인 버튼은 눌러도 의미가 없어 비활성화한다 - 데이터상 쓸 수 없는 모드(isAvailable == false)와
-    // 밤(모드 잠금)도 같은 방식으로 비활성화되므로, 결과적으로
-    // "회색 버튼 = 지금 이 모드이거나, 애초에 못 쓰거나, 밤이라 잠김"이 된다.
-    private void SetModeButtonState(Button modeButton, bool isSelected, bool isAvailable)
+    // 현재 모드는 활성 스프라이트로, 누를 수 없는 사정(못 쓰는 모드거나 밤이라 잠김)은 회색으로 나눠 보여준다.
+    // 지금 그 모드인 버튼은 눌러도 SetMode가 early-return하므로 굳이 막지 않는다.
+    // RefreshButtons는 열려 있는 동안 매 프레임 돌기 때문에, 값이 바뀔 때만 SetActive를 부른다.
+    private void SetModeButtonState(Button modeButton, GameObject activeMark, bool isSelected, bool isAvailable)
     {
         if (modeButton != null)
         {
-            modeButton.interactable = isAvailable && !isSelected && IsDay;
+            modeButton.interactable = isAvailable && IsDay;
+        }
+
+        if (activeMark != null && activeMark.activeSelf != isSelected)
+        {
+            activeMark.SetActive(isSelected);
         }
     }
 
