@@ -19,13 +19,16 @@ using UnityEngine.UI;
 public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
 {
     private const int POPULATION_STEP = 1;
-    private const float HALF = 0.5f;
     private const int RECT_CORNER_COUNT = 4;
+
+    // 두 끝값의 가운데를 잡는 비율. 피벗을 사각형 한가운데에 두는 데도, 안내 사각형의 중심을
+    // 위·아래 행의 중점으로 잡는 데도 같은 뜻으로 쓴다.
+    private const float CENTER_RATIO = 0.5f;
 
     // 안내가 공격속도~초당피해를 함께 가리킬 때 쓰는 런타임 전용 빈 오브젝트의 이름(디버깅용).
     private const string ATTACK_ROWS_GUIDE_NAME = "AttackRowsGuideRect";
 
-    private static readonly Vector2 CENTER_PIVOT = new Vector2(HALF, HALF);
+    private static readonly Vector2 CENTER_PIVOT = new Vector2(CENTER_RATIO, CENTER_RATIO);
     private const float PERCENT_MULTIPLIER = 100f;
     private const string VALUE_FORMAT = "{0} / {1}";
 
@@ -432,7 +435,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
                 StringTable.GetString(ATTACK_INTERVAL_LABEL_LOC_KEY),
                 string.Format(
                     StringTable.GetString(INTERVAL_VALUE_LOC_KEY),
-                    interval)).transform as RectTransform;
+                    interval));
         }
 
         // 초당 피해는 적용되는 값이 아니라 위 둘에서 파생한 표시용 수치라 여기서 나눈다.
@@ -444,7 +447,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
                 _dpsIcon,
                 Color.white,
                 StringTable.GetString(DPS_LABEL_LOC_KEY),
-                string.Format(NUMBER_FORMAT, damage / interval)).transform as RectTransform;
+                string.Format(NUMBER_FORMAT, damage / interval));
         }
 
         if (tower.Data != null && tower.Data.CanAttack)
@@ -491,7 +494,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         Encapsulate(first, ref min, ref max);
         Encapsulate(last, ref min, ref max);
 
-        _attackRowsGuideRect.anchoredPosition = (min + max) * HALF;
+        _attackRowsGuideRect.anchoredPosition = Vector2.Lerp(min, max, CENTER_RATIO);
         _attackRowsGuideRect.sizeDelta = max - min;
 
         rowsRect = _attackRowsGuideRect;
@@ -539,15 +542,18 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         return _attackRowsGuideRect;
     }
 
-    // 만든 행을 돌려준다 - 안내가 특정 행을 가리켜야 해서 그 자리를 붙잡아 둘 곳이 필요하다.
+    // 만든 행의 자리를 돌려준다 - 안내가 특정 행을 가리켜야 해서 붙잡아 둘 곳이 필요하다.
     // 대부분의 호출부는 반환값을 쓰지 않는다.
-    private UI_ConquestInfoSlot SetOutputRow(
+    //
+    // as가 아니라 캐스트인 이유: 행 프리팹의 루트가 RectTransform이 아니게 되면 조용히 null이 되어
+    // 안내만 말없이 빠지는 대신, 그 자리에서 예외로 드러나야 한다.
+    private RectTransform SetOutputRow(
         int index, Sprite icon, Color iconColor, string label, string value)
     {
         UI_ConquestInfoSlot slot = _outputRowPool.Get(index);
         slot.Setup(icon, iconColor, label, value);
 
-        return slot;
+        return (RectTransform)slot.transform;
     }
 
     private int ResolveResearchPointsPerDay(

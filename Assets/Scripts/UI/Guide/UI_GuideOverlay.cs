@@ -1032,6 +1032,12 @@ public class UI_GuideOverlay : MonoBehaviour, IDayEndBlockQuery, IDayEndConfirmB
 
     private void Layout()
     {
+        // 자리를 스스로 계산하는 앵커는 우리가 읽기 직전에 갱신시킨다 - LateUpdate끼리의 순서는 보장되지 않아
+        // 앵커가 우리 뒤에 돌면 그 프레임의 구멍이 한 컷 옛 크기로 뚫린다(IGuideAnchorRectSource 참고).
+        IGuideAnchorRectSource rectSource =
+            _target == null ? null : _target.GetComponent<IGuideAnchorRectSource>();
+        rectSource?.RefreshAnchorRect();
+
         KeepTargetInsideMask(_target);
 
         Rect hole = ResolveLocalRect(_target);

@@ -17,6 +17,10 @@ using UnityEngine;
 /// 가리킬 자리를 스스로 계산해 자기 사각형에 담아 두고, 안내는 그것을 앵커로 가리킬 뿐이다.
 /// 그 둘과 달리 대상이 같은 캔버스의 UI라 화면 좌표를 거치지 않고 부모의 로컬 좌표로 바로 옮긴다.
 ///
+/// 계산 시점도 그 둘과 다르다 - 스스로 LateUpdate를 돌지 않고 안내가 그리기 직전에 불러 준다
+/// (<see cref="IGuideAnchorRectSource"/>). 상세 패널이 뜨고 지는 순간 이 사각형은 <b>불연속으로</b>
+/// 커지므로, 순서에 맡기면 그 한 프레임 동안 눌러야 할 연구 버튼이 딤에 막힌다.
+///
 /// 그 둘과 또 하나 다른 점: <see cref="GuideAnchor"/>를 RequireComponent로 걸지 않는다.
 /// 이 앵커는 <see cref="GuideAnchorBinder"/>가 런타임에 붙이므로, 여기서 강제하면 id가 None인
 /// 앵커가 씬에 하나 더 저장돼 앵커 검증 창에 빈 항목으로 잡힌다.
@@ -27,7 +31,8 @@ using UnityEngine;
 /// 두 판단이 같은 조건("안내가 지금 이 앵커를 가리키는가")을 쓰므로 컴포넌트를 나누지 않는다 -
 /// 나누면 같은 상태를 두 곳에서 보게 되어 서로 어긋날 수 있다.
 /// </summary>
-public sealed class ResearchContentsGuideAnchor : MonoBehaviour, IResearchDetailsCloseQuery
+public sealed class ResearchContentsGuideAnchor :
+    MonoBehaviour, IResearchDetailsCloseQuery, IGuideAnchorRectSource
 {
     private const float HALF = 0.5f;
     private const int RECT_CORNER_COUNT = 4;
@@ -41,8 +46,8 @@ public sealed class ResearchContentsGuideAnchor : MonoBehaviour, IResearchDetail
         "연구 버튼이 딤에 막힌다.")]
     [SerializeField] private UI_ResearchDetailsPanel _detailsPanel;
 
-    [Tooltip("이 앵커를 가리키는 안내가 떠 있을 때만 자리를 다시 계산한다. 비우면 매 프레임 계산한다. " +
-        "비면 상세 패널 닫기도 막지 않는다 - 판단할 근거가 없는데 막으면 패널을 영영 못 닫는다.")]
+    [Tooltip("안내가 이 앵커를 가리키는 동안 상세 패널이 빈 곳 클릭으로 닫히지 않게 막을 오버레이. " +
+        "비면 막지 않는다 - 판단할 근거가 없는데 막으면 패널을 영영 못 닫는다.")]
     [WiringOptional]
     [SerializeField] private UI_GuideOverlay _overlay;
 
@@ -53,10 +58,12 @@ public sealed class ResearchContentsGuideAnchor : MonoBehaviour, IResearchDetail
     private RectTransform _rect;
     private RectTransform _parentRect;
 
-    // 오버레이를 배선하지 않았으면 판단할 근거가 없으므로 매 프레임 계산한다
-    // (WorldRectGuideAnchor와 같은 규칙 - 성능을 위해 안내가 어긋나는 쪽을 택하지 않는다).
+    // 상세 패널 닫기를 막을지 판단하는 데만 쓴다 - 자리 계산은 안내가 불러 주므로 스스로 묻지 않는다.
+    //
+    // 오버레이가 비면 거짓이다 - 가리키는 주체가 없으면 가리켜지지도 않는다.
+    // 여기서 참을 돌려주면 이름과 반대되는 답이 되어, 이걸 읽는 곳마다 자기 쪽에서 다시 뒤집어야 한다.
     private bool IsTargetedByGuide =>
-        _overlay == null || ReferenceEquals(_overlay.CurrentTarget, _rect);
+        _overlay != null && ReferenceEquals(_overlay.CurrentTarget, _rect);
 
     private void Awake()
     {
@@ -88,10 +95,18 @@ public sealed class ResearchContentsGuideAnchor : MonoBehaviour, IResearchDetail
         _rect.pivot = CENTER_PIVOT;
     }
 
-    // 안내가 구멍을 다시 그리는 것이 LateUpdate라, 여기서 갱신해야 같은 프레임에 반영된다.
-    private void LateUpdate()
+    /// <summary>
+    /// 안내가 구멍을 그리기 직전에 불린다. 스스로 LateUpdate를 돌지 않는다 - 상세 패널이 뜨고 지는 순간
+    /// 이 사각형은 불연속으로 커지므로, 순서에 맡기면 그 한 프레임 동안 구멍이 연구 버튼을 빼고 뚫려
+    /// <b>누르라고 지시한 바로 그 버튼이 딤에 막힌다</b>.
+    ///
+    /// 안내가 이 앵커를 가리킬 때만 불리므로 <see cref="IsTargetedByGuide"/>를 여기서 다시 보지 않는다.
+    /// </summary>
+    void IGuideAnchorRectSource.RefreshAnchorRect()
     {
-        if (!IsTargetedByGuide || !TryGetLocalRect(_treeArea, out Rect area))
+        // Awake가 배선 문제로 스스로를 껐을 수 있다. LateUpdate는 그때 돌지 않았지만 이 호출은
+        // 꺼져 있어도 도달하므로 여기서 직접 막는다 - _parentRect가 없으면 좌표 변환에서 터진다.
+        if (!enabled || !TryGetLocalRect(_treeArea, out Rect area))
         {
             return;
         }
@@ -111,11 +126,10 @@ public sealed class ResearchContentsGuideAnchor : MonoBehaviour, IResearchDetail
     /// 안내가 이 앵커를 가리키는 동안에는 빈 곳 클릭으로 상세 패널을 닫지 않는다 -
     /// 그 클릭이 떨어지는 공백은 안내가 뚫어 준 구멍의 일부라, 플레이어에게는 "누르라고 뚫어 둔 자리"로 읽힌다.
     ///
-    /// 오버레이를 배선하지 않았으면 <b>막지 않는다</b>. 이 경우 <see cref="IsTargetedByGuide"/>가 항상
-    /// 참이라, 그대로 쓰면 안내가 없는데도 패널을 영영 닫을 수 없게 된다.
+    /// 오버레이를 배선하지 않았으면 <b>막지 않는다</b> - <see cref="IsTargetedByGuide"/>가 그때 거짓이므로
+    /// 여기서 따로 걸러낼 것이 없다.
     /// </summary>
-    bool IResearchDetailsCloseQuery.CanCloseResearchDetails() =>
-        _overlay == null || !IsTargetedByGuide;
+    bool IResearchDetailsCloseQuery.CanCloseResearchDetails() => !IsTargetedByGuide;
 
     private void OnEnable()
     {

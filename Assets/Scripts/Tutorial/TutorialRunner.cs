@@ -116,6 +116,7 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
     // "타워는 충분합니다. 인구를 배치해 정원을 채우세요."
     private const string FREE_BUILD_CAP_LOC_KEY = "tutorial_free_build_cap";
+    private const string PLACEMENT_ANCHOR_ONLY_LOC_KEY = "tutorial_placement_anchor_only";
 
     // 이번 프레임에 이 단계가 가리킬 곳. Update가 갱신하고 TryGetRequest는 읽기만 한다 -
     // 그리는 자리에서 찾으면 오버레이의 해석 패스가 앵커 구독을 걸고 UniTask를 만들게 된다.
@@ -209,6 +210,9 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     // Start는 이미 지나갔으므로 여기서 복구하지 않으면 튜토리얼이 되살아나지 않는다.
     private void OnEnable()
     {
+        // static 이벤트라 OnDisable에서 반드시 푼다 - 안 풀면 파괴된 러너가 계속 불려 나온다.
+        GuideAnchorRegistry.AnchorRegistered += HandleAnchorRegistered;
+
         if (_buildModeWindow != null)
         {
             _buildModeWindow.AddInteractionQuery(this);
@@ -580,7 +584,26 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         return Reject();
     }
 
-    bool IBuildModeInteractionQuery.CanPlaceBuildingAt(Building prefab, Vector3Int anchor)
+    bool IBuildModeInteractionQuery.CanPlaceBuildingAt(Building prefab, Vector3Int anchor) =>
+        IsPlacementAnchorAllowed(prefab, anchor);
+
+    /// <summary>
+    /// 지정한 자리 밖을 실제로 눌렀을 때만 사유를 낸다 - 미리보기는 배치 가능 여부만 초록/빨강으로
+    /// 보여주므로, 이 안내가 없으면 하이라이트 밖을 찍은 플레이어에게는 클릭이 그냥 먹지 않는 것으로만 보인다.
+    /// </summary>
+    void IBuildModeInteractionQuery.NotifyPlacementBlocked(Building prefab, Vector3Int anchor)
+    {
+        // 집계가 false여도 막은 것이 이쪽이 아닐 수 있으므로(나중에 다른 질의가 붙는 경우) 같은 판정을 다시 본다.
+        if (IsPlacementAnchorAllowed(prefab, anchor))
+        {
+            return;
+        }
+
+        NotifyPlacementAnchorOnly();
+    }
+
+    /// <summary>이 단계가 자리를 고정했는지, 고정했다면 이 자리가 그중 하나인지.</summary>
+    private bool IsPlacementAnchorAllowed(Building prefab, Vector3Int anchor)
     {
         if (!IsWaitingForAction || _activeStep.AllowedPlacementAnchors.Count == 0 ||
             !MatchesBuilding(prefab, _activeStep))
@@ -659,6 +682,8 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
     private void OnDisable()
     {
+        GuideAnchorRegistry.AnchorRegistered -= HandleAnchorRegistered;
+
         if (_buildModeWindow != null)
         {
             _buildModeWindow.RemoveInteractionQuery(this);
@@ -1005,9 +1030,49 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
     private bool ShowsConfirmButtonNow => _activeStep != null && _activeStep.ShowsConfirmButton;
 
     /// <summary>
-    /// 이번 프레임에 이 단계가 가리킬 곳과 진행률을 잡아 둔다. <b>Update에서만 부른다</b> -
-    /// 앵커 조회는 창이 열리는 순간을 폴링으로 잡는 것이 전부라 부작용이 없지만, 그리는 자리에서
-    /// 부르면 오버레이의 해석 패스가 한 프레임에 여러 번 도는 만큼 반복된다.
+    /// 지금 단계가 가리키는 앵커가 뒤늦게 등록되면 그 자리에서 다시 조준한다.
+    ///
+    /// 없어도 <see cref="Update"/>의 폴링이 결국 잡지만 <b>정확히 한 프레임 늦다</b> - 그 한 프레임 동안
+    /// 말풍선은 떠 있는데 딤 구멍만 없어, 안내가 뚫려야 할 자리가 뒤늦게 뚫리는 것이 눈에 띈다
+    /// (<see cref="UI_GuideOverlay"/>의 _drawnExpectsTarget이 진입 시점의 대상 유무로 정해지기 때문).
+    ///
+    /// 앵커 등록은 창의 OnEnable, 즉 SetActive(true) 안에서 동기로 일어나므로 이 호출은 그 프레임의
+    /// LateUpdate보다 앞선다. 창을 여는 것이 곧 앞 단계의 완료 조건인 자리들이 이 경로로 구제된다
+    /// (인구 패널을 여는 BuildingSelectedOnGrid 계열이 특히 그렇다 - 창에 열림 훅이 따로 없어
+    /// 러너 전진과 창 열림이 같은 이벤트에 매달려 있고, 리스너 순서는 보장되지 않는다).
+    /// </summary>
+    private void HandleAnchorRegistered(GuideAnchorId id)
+    {
+        if (!_isRunning || _activeStep == null)
+        {
+            return;
+        }
+
+        // 창 하나가 열리면 그 안의 앵커가 전부 등록되므로, 거르지 않으면 상관없는 등록마다 대상 해석이 돈다.
+        // 다만 id로는 다 거를 수 없다 - DynamicTarget·건설 슬롯·용 스킬 노드로 가리키는 단계는 AnchorId가
+        // None이라(ResolveAnchor가 그쪽을 먼저 본다) 어떤 등록이 자기 대상인지 알 길이 없고, None은 애초에
+        // 등록되지 않아 이 콜백이 영영 오지 않았다. 그래서 "가리킬 곳을 지정했는데 아직 못 잡은" 동안에는
+        // 어떤 등록에도 다시 조준한다 - 대상을 잡으면 이 문은 다시 닫힌다.
+        bool isOwnAnchor = _activeStep.AnchorId == id;
+        bool isWaitingForTarget = _resolvedTarget == null && DeclaresTarget(_activeStep);
+
+        // 이미 잡아 둔 대상이 있어도 자기 id면 다시 훑는다 - 같은 id의 새 후보가 우선하는 것이
+        // Update의 폴링과 같은 결과다.
+        if (!isOwnAnchor && !isWaitingForTarget)
+        {
+            return;
+        }
+
+        ResolveStepTarget();
+    }
+
+    /// <summary>
+    /// 이번 프레임에 이 단계가 가리킬 곳과 진행률을 잡아 둔다. <b>그리는 자리에서는 부르지 않는다</b> -
+    /// 앵커 조회는 창이 열리는 순간을 폴링으로 잡는 것이 전부라 부작용이 없지만, 오버레이의 해석 패스가
+    /// 한 프레임에 여러 번 도는 만큼 반복된다.
+    ///
+    /// 부르는 곳은 셋뿐이고 모두 LateUpdate 이전이다 - <see cref="EnterStep"/>(새 단계의 첫 조준),
+    /// <see cref="Update"/>(폴링), <see cref="HandleAnchorRegistered"/>(뒤늦게 등록된 앵커).
     /// </summary>
     private void ResolveStepTarget()
     {
@@ -1519,6 +1584,19 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
 
     // 상한에 닿았다는 말은 따로 한다 - 기본 차단 문구("안내를 먼저 따라와 주세요")는 여기서 거짓말이 된다.
     // 플레이어는 안내를 따르는 중이고, 남은 일은 이미 지은 타워에 인구를 넣는 것이다.
+
+    /// <summary>자리를 고정한 단계에서 그 밖을 눌렀을 때. 잠금 시간은 다른 사유들과 함께 쓴다.</summary>
+    private void NotifyPlacementAnchorOnly()
+    {
+        if (!_isRunning || _overlay == null ||
+            Time.unscaledTime - _lastBlockedHintTime < BLOCKED_HINT_COOLDOWN_SECONDS)
+        {
+            return;
+        }
+
+        _lastBlockedHintTime = Time.unscaledTime;
+        _overlay.ShowHint(this, PLACEMENT_ANCHOR_ONLY_LOC_KEY, BLOCKED_HINT_DURATION_SECONDS);
+    }
 
     private void NotifyFreeBuildCapReached()
     {

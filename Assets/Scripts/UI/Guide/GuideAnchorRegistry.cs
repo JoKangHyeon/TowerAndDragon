@@ -36,6 +36,17 @@ public static class GuideAnchorRegistry
             _anchorsById[id] = anchors = new List<RectTransform>();
         }
 
+        // OnDisable을 타지 못하고 파괴된 항목이 남아있을 수 있다(씬 전환 등). 지금까지는 TryGet만 이것을
+        // 걷어냈는데, 아래 경고가 먼저 그 항목의 name을 읽으면 MissingReferenceException이 GuideAnchor.OnEnable
+        // 안에서 터져 등록도 알림도 없이 끊긴다 - 그러면 그 앵커는 조용히 사라지고 안내가 아무 데도 못 가리킨다.
+        for (int i = anchors.Count - 1; i >= 0; i--)
+        {
+            if (anchors[i] == null)
+            {
+                anchors.RemoveAt(i);
+            }
+        }
+
         // 같은 대상이 두 번 들어오면(재활성화 등) 한 칸만 차지하게 한다.
         if (anchors.Contains(anchor))
         {

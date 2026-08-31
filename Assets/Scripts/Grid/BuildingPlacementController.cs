@@ -668,6 +668,16 @@ public class BuildingPlacementController : MonoBehaviour
         return true;
     }
 
+    // 막힌 자리를 실제로 눌렀을 때만 부른다. 어느 질의가 막았는지 여기서는 알 수 없으므로 전부에게 알리고,
+    // 자기가 막은 것이 맞는지는 각자 판단한다.
+    private void NotifyPlacementBlocked(Building prefab, Vector3Int anchor)
+    {
+        foreach (IBuildModeInteractionQuery query in _interactionQueries)
+        {
+            query.NotifyPlacementBlocked(prefab, anchor);
+        }
+    }
+
     public bool TryGetPlacementGuideAnchors(
         Building prefab,
         out IReadOnlyList<Vector3Int> anchors)
@@ -757,6 +767,7 @@ public class BuildingPlacementController : MonoBehaviour
 
         if (!CanPlaceBuildingAt(_selectedBuilding, anchor))
         {
+            NotifyPlacementBlocked(_selectedBuilding, anchor);
             return false;
         }
 

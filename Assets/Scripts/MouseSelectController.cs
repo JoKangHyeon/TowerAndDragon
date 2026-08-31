@@ -118,7 +118,11 @@ public class MouseSelectController : MonoBehaviour
     // 리컴파일로 초기화된 뒤 EnsureRuntimeState가 그 바뀐 템플릿에서 "원본"을 다시 잡아,
     // 그 판 이후 모든 하이라이트(초록·빨강·노랑)가 불투명 판으로 그려진다.
     // 직렬화 필드는 도메인 리로드를 넘겨 살아남으므로 그 경로가 막힌다.
-    [Tooltip("런타임에 자동으로 채워진다 - 인스펙터에서 비워 두면 된다. 리컴파일을 넘겨 값을 잃지 않으려고 직렬화한다.")]
+    //
+    // 인스펙터에서는 숨긴다 - 손으로 넣은 값이 들어오면 EnsureRuntimeState가 템플릿에서 다시 잡은 뒤에도
+    // 그 값이 하이라이트 전체의 스프라이트가 되어, 템플릿 스프라이트를 교체해도 옛 판이 계속 그려진다.
+    // 채우는 주체는 언제나 EnsureRuntimeState 한 곳뿐이어야 한다.
+    [HideInInspector]
     [WiringOptional]
     [SerializeField]
     private Sprite _defaultHighlightSprite;
@@ -207,8 +211,19 @@ public class MouseSelectController : MonoBehaviour
 
         // 템플릿이 안내 판을 들고 있으면 잡지 않는다 - 리컴파일 복구 경로에서는 풀 0번(=템플릿)이
         // 마지막으로 그린 안내 칸의 스프라이트를 그대로 들고 있다. 그때는 이미 직렬화된 값이 살아 있다.
-        if (_defaultHighlightSprite == null && _selectionHighlightRenderer != null &&
-            !ReferenceEquals(_selectionHighlightRenderer.sprite, _placementGuideSprite))
+        //
+        // 안내 판이 배선되지 않은 씬에서는 이 판단을 건너뛴다 - 스프라이트를 바꿔 끼우는 일 자체가 없어
+        // 템플릿이 안내 판을 들고 있을 수가 없는데, null끼리 맞아떨어져 "안내 판을 들고 있다"로 읽히면
+        // 원본을 영영 못 잡는다.
+        bool templateHoldsGuideSprite =
+            _placementGuideSprite != null &&
+            _selectionHighlightRenderer != null &&
+            ReferenceEquals(_selectionHighlightRenderer.sprite, _placementGuideSprite);
+
+        // 비어 있을 때만이 아니라 풀을 지을 때마다 다시 잡는다(위 조기 반환 탓에 도메인 리로드당 한 번).
+        // "비었을 때만"으로 두면 직렬화된 옛 값이 영영 남아, 템플릿의 스프라이트를 교체해도
+        // 모든 하이라이트가 예전 판으로 그려진다.
+        if (_selectionHighlightRenderer != null && !templateHoldsGuideSprite)
         {
             _defaultHighlightSprite = _selectionHighlightRenderer.sprite;
         }
@@ -527,16 +542,31 @@ public class MouseSelectController : MonoBehaviour
         HighlightCells(coords, color, _selectionHighlightPool);
     }
 
+    /// <summary>
+    /// 안내 판을 끼웠을지 모르는 렌더러를 원래 판으로 되돌린다.
+    ///
+    /// 원본을 못 잡았으면 <b>아무것도 하지 않는다</b> - null을 그대로 넣으면 그 칸이 통째로 사라진다.
+    /// 이 경로는 건설 미리보기뿐 아니라 인구 배치·워커 모드의 그룹 하이라이트도 함께 쓰므로,
+    /// 안내 판 배선이 어긋난 씬 하나 때문에 공용 하이라이트가 전부 안 보이는 일이 없어야 한다.
+    /// </summary>
+    private void RestoreDefaultSprite(SpriteRenderer highlight)
+    {
+        if (_defaultHighlightSprite != null)
+        {
+            highlight.sprite = _defaultHighlightSprite;
+        }
+    }
+
     private void HighlightCells(List<Vector3Int> coords, Color color, ComponentPool<SpriteRenderer> pool)
     {
+        bool isSelectionPool = ReferenceEquals(pool, _selectionHighlightPool);
+
         // 선택 풀을 통째로 다시 칠하면 안내 칸이 쓰던 렌더러도 다른 뜻으로 넘어간다 - 캐시를 비우지 않으면
         // 안내가 끝난 뒤에도 평범한 풋프린트 칸이 계속 깜빡인다. 점유 표시 풀은 별개라 건드리지 않는다.
-        if (ReferenceEquals(pool, _selectionHighlightPool))
+        if (isSelectionPool)
         {
             _pulsingGuideHighlights.Clear();
         }
-
-        bool isSelectionPool = ReferenceEquals(pool, _selectionHighlightPool);
 
         for (int i = 0; i < coords.Count; i++)
         {
@@ -546,7 +576,7 @@ public class MouseSelectController : MonoBehaviour
 
             if (isSelectionPool)
             {
-                highlight.sprite = _defaultHighlightSprite;
+                RestoreDefaultSprite(highlight);
             }
         }
 
@@ -580,9 +610,15 @@ public class MouseSelectController : MonoBehaviour
                 SpriteRenderer highlight = _selectionHighlightPool.Get(index);
                 highlight.transform.position = _gridMap.GetCellSurfaceWorld(coord);
                 highlight.color = group.Color;
-                highlight.sprite = isGuideCell && _placementGuideSprite != null
-                    ? _placementGuideSprite
-                    : _defaultHighlightSprite;
+
+                if (isGuideCell && _placementGuideSprite != null)
+                {
+                    highlight.sprite = _placementGuideSprite;
+                }
+                else
+                {
+                    RestoreDefaultSprite(highlight);
+                }
 
                 if (isGuideCell)
                 {
