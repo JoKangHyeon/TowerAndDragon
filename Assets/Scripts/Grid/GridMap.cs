@@ -656,7 +656,9 @@ public class GridMap : MonoBehaviour
     public TerrainType GetTerrainType(Vector3Int coord) =>
         _cells.TryGetValue(coord, out GridCell cell) ? cell.TerrainType : TerrainType.Default;
 
-    public IEnumerable<Vector3Int> EnumerateAllCoords() => _cells.Keys;
+    // IEnumerable로 좁히면 foreach가 인터페이스 열거자를 매번 박싱한다 - Buildings 프로퍼티와 같은 이유로
+    // 실제 반환 타입(KeyCollection)을 그대로 노출한다.
+    public Dictionary<Vector3Int, GridCell>.KeyCollection EnumerateAllCoords() => _cells.Keys;
 
     public bool IsNaturallyConstructible (Vector3Int coord) =>
         _cells.TryGetValue(coord, out GridCell cell) && cell.CanConstruct;

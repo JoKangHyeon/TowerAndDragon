@@ -42,6 +42,12 @@ public class FogOfWarRenderer : MonoBehaviour
     private readonly Dictionary<Vector3Int, Color> _overlayTints = new();
     private readonly HashSet<Vector3Int> _overlayRepaintBuffer = new();
 
+    // 그라데이션 이웃 오프셋(dx, dy, 체비셰프 거리) - _gradientBandWidth로 정해지는 모양은 게임 내내
+    // 바뀌지 않으므로, 셀마다 Mathf.Abs/Max를 다시 계산하지 않고 한 번만 만들어 재사용한다.
+    // dx 바깥/dy 안쪽 순회 순서를 그대로 보존해야 한다 - GetGradientTintColor의 동률 처리(같은 거리에서
+    // 나중에 검사한 이웃이 이긴다)가 이 순서에 의존한다.
+    private (int dx, int dy, int distance)[] _gradientOffsets;
+
     private void Awake()
     {
         _gridMap = GetComponent<GridMap>();
@@ -72,13 +78,47 @@ public class FogOfWarRenderer : MonoBehaviour
 
     private void PaintAllCells()
     {
+        HashSet<Vector3Int> scanNeeded = BuildScanNeededCells();
+
         foreach (Chunk chunk in _gridMap.GetAllChunks())
         {
             foreach (GridCell cell in chunk.Cells)
             {
-                PaintCell(cell);
+                _terrainTilemap.SetColor(cell.Coord, GetGradientTintColor(cell.Coord, scanNeeded));
             }
         }
+    }
+
+    // PaintAllCells 전용 사전 필터 - 시작 시점엔 정복·가시 셀(밝은 쪽)이 극소수이고 나머지 수만 셀은
+    // 전부 Hidden이다. 그 밝은 셀들만 밴드 폭만큼 부풀려("dilate") 닿는 좌표만 모으면, 그 밖의 셀은
+    // 밴드 안이 전부 자기와 같거나 더 어두운 상태뿐이라는 뜻이 되어 원래 25칸 탐색도 항상
+    // "이웃 없음"으로 끝난다 - 그 결론을 미리 알고 있으니 탐색 자체를 건너뛴다.
+    // 과다 포함(밝은 셀 옆의 밝은 셀 등)은 안전하다 - 그 좌표는 원래 알고리즘대로 다시 스캔될 뿐이다.
+    private HashSet<Vector3Int> BuildScanNeededCells()
+    {
+        var scanNeeded = new HashSet<Vector3Int>();
+        if (_gradientBandWidth <= 0)
+            return scanNeeded;
+
+        EnsureGradientOffsets();
+
+        foreach (Chunk chunk in _gridMap.GetAllChunks())
+        {
+            foreach (GridCell cell in chunk.Cells)
+            {
+                // HIDDEN_FOG_ORDER보다 옅은 셀(Conquered·Visible)만 누군가에게 빛을 줄 수 있다.
+                if (GetFogOrder(cell.CurrentState) >= HIDDEN_FOG_ORDER)
+                    continue;
+
+                for (int i = 0; i < _gradientOffsets.Length; i++)
+                {
+                    (int dx, int dy, _) = _gradientOffsets[i];
+                    scanNeeded.Add(cell.Coord + new Vector3Int(dx, dy, 0));
+                }
+            }
+        }
+
+        return scanNeeded;
     }
 
     // 점령 등으로 셀 상태가 바뀔 때마다 GridMap이 즉시 호출 - 바뀐 셀 주변 그라데이션 폭만큼도
@@ -98,45 +138,44 @@ public class FogOfWarRenderer : MonoBehaviour
         }
     }
 
-    private void PaintCell(GridCell cell) => PaintCellAt(cell.Coord);
-
+    // 지형 타일 색상 전용 - 이 타일들은 LockColor 플래그가 없어(확인 완료) SetTileFlags 없이도
+    // SetColor가 바로 먹는다. 매 셀 SetTileFlags를 부르지 않는 것 자체가 절반의 API 호출을 없앤다.
     private void PaintCellAt(Vector3Int coord)
     {
-        _terrainTilemap.SetTileFlags(coord, TileFlags.None);
-        _terrainTilemap.SetColor(coord, GetGradientTintColor(coord));
+        _terrainTilemap.SetColor(coord, GetGradientTintColor(coord, null));
     }
 
-    // 지형 타일 전용 - 경계 근처 셀은 가장 가까운 "더 옅은" 이웃 셀의 색으로 부드럽게 섞는다.
-    private Color GetGradientTintColor(Vector3Int coord)
+    // scanNeeded가 null이면(증분 갱신 경로 - 셀 몇 개뿐이라 사전 필터링이 필요 없다) 항상 이웃을
+    // 탐색한다. scanNeeded가 있는데 coord가 그 안에 없으면(PaintAllCells 경로) BuildScanNeededCells가
+    // 이미 "밴드 안에 더 옅은 이웃이 있을 수 없다"고 확인한 것이므로 25칸 탐색 없이 곧장 평평한 알파를 쓴다.
+    private Color GetGradientTintColor(Vector3Int coord, HashSet<Vector3Int> scanNeeded)
     {
         ChunkState state = _gridMap.GetCellState(coord);
         int order = GetFogOrder(state);
         float alpha = GetOrderAlpha(order);
 
-        if (_gradientBandWidth > 0 && order > CONQUERED_FOG_ORDER)
+        bool mayHaveLighterNeighbor = scanNeeded == null || scanNeeded.Contains(coord);
+
+        if (mayHaveLighterNeighbor && _gradientBandWidth > 0 && order > CONQUERED_FOG_ORDER)
         {
+            EnsureGradientOffsets();
+
             int bestDistance = int.MaxValue;
             int bestOrder = order;
 
-            for (int dx = -_gradientBandWidth; dx <= _gradientBandWidth; dx++)
+            for (int i = 0; i < _gradientOffsets.Length; i++)
             {
-                for (int dy = -_gradientBandWidth; dy <= _gradientBandWidth; dy++)
+                (int dx, int dy, int distance) = _gradientOffsets[i];
+                if (distance >= bestDistance)
+                    continue;
+
+                Vector3Int neighborCoord = coord + new Vector3Int(dx, dy, 0);
+                int neighborOrder = GetFogOrder(_gridMap.GetCellState(neighborCoord));
+
+                if (neighborOrder < order)
                 {
-                    if (dx == 0 && dy == 0)
-                        continue;
-
-                    int distance = Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy));
-                    if (distance >= bestDistance)
-                        continue;
-
-                    Vector3Int neighborCoord = coord + new Vector3Int(dx, dy, 0);
-                    int neighborOrder = GetFogOrder(_gridMap.GetCellState(neighborCoord));
-
-                    if (neighborOrder < order)
-                    {
-                        bestDistance = distance;
-                        bestOrder = neighborOrder;
-                    }
+                    bestDistance = distance;
+                    bestOrder = neighborOrder;
                 }
             }
 
@@ -153,6 +192,26 @@ public class FogOfWarRenderer : MonoBehaviour
         // 안개는 밝기(그레이스케일)만 쓰므로 색조는 비어 있다 - 등록된 색조를 곱하면 안개가 전달하는
         // 밝기는 그대로 보존되고 색만 바뀐다.
         return _overlayTints.TryGetValue(coord, out Color overlayTint) ? fogColor * overlayTint : fogColor;
+    }
+
+    private void EnsureGradientOffsets()
+    {
+        if (_gradientOffsets != null)
+            return;
+
+        var offsets = new List<(int, int, int)>();
+        for (int dx = -_gradientBandWidth; dx <= _gradientBandWidth; dx++)
+        {
+            for (int dy = -_gradientBandWidth; dy <= _gradientBandWidth; dy++)
+            {
+                if (dx == 0 && dy == 0)
+                    continue;
+
+                offsets.Add((dx, dy, Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dy))));
+            }
+        }
+
+        _gradientOffsets = offsets.ToArray();
     }
 
     // 지형 타일 색상은 이 렌더러가 단독으로 쓴다(프로젝트 내 SetColor 호출부가 여기뿐).

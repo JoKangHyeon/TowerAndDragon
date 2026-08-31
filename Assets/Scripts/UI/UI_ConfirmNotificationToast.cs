@@ -1117,6 +1117,15 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
         return MeasureBodyHeight(message) > availableBodyHeight;
     }
 
+    // MeasureBodyHeight의 마지막 결과 캐시 - 카드 하나를 만드는 동안 MeasureCardHeight(2군데)와
+    // LayoutChoiceBody(2군데)가 같은 메시지를 최대 4~6번 다시 잰다. TMP.GetPreferredValues는 호출마다
+    // CalculatePreferredValues·SetArraySizes를 다시 돌리고(폴백 머티리얼을 새로 만드는 경우도 있어
+    // 프로파일러에서 두드러졌다), 같은 텍스트·폭이면 결과가 항상 같으므로 직전 결과만 재사용한다.
+    private string _cachedBodyHeightText;
+    private float _cachedBodyHeightWidth;
+    private float _cachedBodyHeightValue;
+    private bool _hasCachedBodyHeight;
+
     // 템플릿 글상자에 물어본다. 복제본은 아직 없고, 폰트·크기는 어차피 템플릿에서 물려받는다.
     private float MeasureBodyHeight(Message message)
     {
@@ -1125,7 +1134,24 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
             return _cardHeight;
         }
 
-        return _messageText.GetPreferredValues(message.Resolve(), BodyWidth(message), 0f).y;
+        string resolvedText = message.Resolve();
+        float width = BodyWidth(message);
+
+        if (_hasCachedBodyHeight
+            && _cachedBodyHeightText == resolvedText
+            && Mathf.Approximately(_cachedBodyHeightWidth, width))
+        {
+            return _cachedBodyHeightValue;
+        }
+
+        float height = _messageText.GetPreferredValues(resolvedText, width, 0f).y;
+
+        _cachedBodyHeightText = resolvedText;
+        _cachedBodyHeightWidth = width;
+        _cachedBodyHeightValue = height;
+        _hasCachedBodyHeight = true;
+
+        return height;
     }
 
     private void MeasureTemplateButton()

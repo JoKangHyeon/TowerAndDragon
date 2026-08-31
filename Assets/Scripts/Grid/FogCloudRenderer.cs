@@ -98,21 +98,37 @@ public class FogCloudRenderer : MonoBehaviour
     // 낮/밤이 바뀌면 현재 Hidden인 셀 전체를 다른 구름 타일로 다시 칠한다.
     private void HandleCycleChanged(CycleManager.CycleState _) => PaintAllCells();
 
+    // 셀 집합은 GridMap.Awake 이후 바뀌지 않으므로 좌표 배열은 최초 1회만 만들고, 타일 배열은
+    // 재사용한다 - 낮밤 전환마다 List를 새로 키우고 ToArray로 복사하면 맵 전체 크기의 할당이
+    // 호출마다 두 번씩 생긴다.
+    private Vector3Int[] _allCoords;
+    private TileBase[] _cloudTileBuffer;
+
+    private void EnsurePaintBuffers()
+    {
+        if (_allCoords != null)
+            return;
+
+        Dictionary<Vector3Int, GridCell>.KeyCollection allCoords = _gridMap.EnumerateAllCoords();
+        _allCoords = new Vector3Int[allCoords.Count];
+        allCoords.CopyTo(_allCoords, 0);
+        _cloudTileBuffer = new TileBase[_allCoords.Length];
+    }
+
     // 맵 전체를 훑을 때는 SetTile을 셀마다 부르지 않고 배열로 모아 한 번에 넘긴다 -
     // 타일맵이 갱신 범위를 한 번만 다시 계산하므로 초기 도색·낮밤 전환의 프레임 스파이크가 줄어든다.
     private void PaintAllCells()
     {
-        var coords = new List<Vector3Int>();
-        var tiles = new List<TileBase>();
+        EnsurePaintBuffers();
+
         TileBase cloudTile = CurrentCloudTile;
 
-        foreach (Vector3Int coord in _gridMap.EnumerateAllCoords())
+        for (int i = 0; i < _allCoords.Length; i++)
         {
-            coords.Add(coord);
-            tiles.Add(_gridMap.GetCellState(coord) == ChunkState.Hidden ? cloudTile : null);
+            _cloudTileBuffer[i] = _gridMap.GetCellState(_allCoords[i]) == ChunkState.Hidden ? cloudTile : null;
         }
 
-        _cloudTilemap.SetTiles(coords.ToArray(), tiles.ToArray());
+        _cloudTilemap.SetTiles(_allCoords, _cloudTileBuffer);
     }
 
     private TileBase CurrentCloudTile =>
