@@ -50,6 +50,41 @@ public class FootprintShape
     }
     public bool IsOccupied(int x, int y) => _cells[y * _width + x];
 
+    // 정렬 순서 계산용 - 점유한 칸 중 화면 기준 가장 앞쪽(x+y 최소)의 오프셋. 점유 칸이 없으면 0.
+    // 값이 0보다 크다는 것은 바운딩박스 좌하단(앵커 칸 자체)이 구멍이라는 뜻이다(예: 벌목장·채석장의
+    // ㄱ자 모양) - IsometricMath.ComputeDepthSortOrder가 앵커 한 점 대신 이 값을 더해, 그 구멍에
+    // 들어온 다른 건물(새끼용 등)보다 한 칸 더 뒤로 밀리게 한다.
+    //
+    // GetOccupiedOffsets()는 프레임마다 도는 고스트 미리보기에서도 읽히므로, 이터레이터 할당 없이
+    // 이중 for 루프로 직접 훑는다.
+    public int DepthSortOffset
+    {
+        get
+        {
+            bool hasOccupied = false;
+            int minOffset = 0;
+
+            for (int y = 0; y < _height; y++)
+            {
+                for (int x = 0; x < _width; x++)
+                {
+                    if (!IsOccupied(x, y))
+                        continue;
+
+                    int offset = x + y;
+
+                    if (!hasOccupied || offset < minOffset)
+                    {
+                        minOffset = offset;
+                        hasOccupied = true;
+                    }
+                }
+            }
+
+            return hasOccupied ? minOffset : 0;
+        }
+    }
+
     public IEnumerable<Vector2Int> GetOccupiedOffsets()
     {
         for (int y = 0; y < _height; y++)

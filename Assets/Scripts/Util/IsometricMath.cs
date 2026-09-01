@@ -16,6 +16,13 @@ public static class IsometricMath
     // (x+y)가 커질수록 화면 위쪽(카메라에서 먼 뒤쪽)이므로, 앞쪽 건물이 위에 그려지도록 부호를 뒤집는다.
     public static int ComputeDepthSortOrder(Vector3Int cellCoord) => -(cellCoord.x + cellCoord.y);
 
+    // 건물용 - footprint를 아는 호출부 전용 오버로드. 앵커(바운딩박스 좌하단) 한 점만 보면, 그 칸이
+    // 구멍인 ㄱ자 건물(벌목장·채석장 등)과 그 구멍에 들어온 다른 건물(새끼용 등)의 정렬값이 같아져
+    // 렌더 순서가 임의로 결정된다 - shape.DepthSortOffset(실제 점유한 칸 중 가장 앞쪽)을 더해 바로잡는다.
+    // shape가 null이면(FootprintShape가 배선되지 않은 테스트 씬 등) 기존 단일 인자 버전과 동일하다.
+    public static int ComputeDepthSortOrder(Vector3Int anchor, FootprintShape shape) =>
+        -(anchor.x + anchor.y + (shape?.DepthSortOffset ?? 0));
+
     // 이동 유닛용 - 고저차를 뺀 평면 좌표(MonsterMovement.GroundPlanePosition)의 월드 Y를 같은 행 눈금으로 환산한다.
     public static int ComputeDepthSortOrder(float groundPlaneWorldY) =>
         -Mathf.RoundToInt(groundPlaneWorldY / ROW_WORLD_HEIGHT);

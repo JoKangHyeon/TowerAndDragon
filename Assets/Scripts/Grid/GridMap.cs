@@ -967,7 +967,7 @@ public class GridMap : MonoBehaviour
             GetFootprintCenterWorld(anchor, building.FootprintShape)
             + ComputeRotationCompensation(building.BaseFootprintShape, building.RotationSteps)
             + CellSurfaceOffset);
-        building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor));
+        building.SetDepthSortOrder(IsometricMath.ComputeDepthSortOrder(anchor, building.FootprintShape));
     }
 
     // 프리팹을 배치 위치·회전으로 인스턴스화하는 부분만 떼어낸 것 - 일반 건설과 세이브 복원이 공유한다.

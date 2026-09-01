@@ -662,7 +662,7 @@ public class MouseSelectController : MonoBehaviour
             return;
 
         _ghostRenderer.transform.position = GetPreviewWorldPosition(anchor);
-        _ghostRenderer.sortingOrder = IsometricMath.ComputeDepthSortOrder(anchor);
+        _ghostRenderer.sortingOrder = IsometricMath.ComputeDepthSortOrder(anchor, _footprintShape);
 
         Color color = canConstruct ? Color.white : _ghostBlockedTint;
         color.a = _ghostAlpha;
