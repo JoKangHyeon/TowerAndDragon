@@ -492,6 +492,13 @@ public sealed class UI_ConfirmNotificationToast : MonoBehaviour
         return _messageRoot != null && _messageText != null && _confirmButton != null && _cardsParent != null;
     }
 
+    /// <summary>
+    /// 지금 알림을 받아 줄 수 있는가. Show 계열이 메시지를 조용히 버리는 두 조건과 같은 판정이다 -
+    /// 부르는 쪽이 "띄웠다"를 기록하기 전에 이 값을 확인하면 기록만 남고 알림이 사라지는 일을 막는다.
+    /// 대기열이 가득 찬 경우는 포함하지 않는다 - 그건 유실이 아니라 _pendingMessages에 줄을 서는 것이다.
+    /// </summary>
+    public bool CanShow => isActiveAndEnabled && HasRequiredReferences();
+
     private void TryFillVisibleCards()
     {
         TrimOverflowingCards();

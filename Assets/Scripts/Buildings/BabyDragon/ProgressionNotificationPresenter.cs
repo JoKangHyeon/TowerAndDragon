@@ -20,10 +20,22 @@ public class ProgressionNotificationPresenter : MonoBehaviour
     [SerializeField] private ResearchManager _researchManager;
     [SerializeField] private CycleManager _cycleManager;
 
+    // 프리팹 자산에는 씬 오브젝트(SaveService)를 꽂을 수 없어 항상 미배선으로 남는다 -
+    // EnsureProgressionSystems가 런타임에 씬에서 찾는다(_landmarkManager 등과 같은 사정).
+    [WiringOptional]
+    [SerializeField] private SaveService _saveService;
+
     private readonly HashSet<string> _pendingArtifactIds = new();
     private readonly List<LandmarkDataSO> _pendingArtifacts = new();
-    private readonly HashSet<TowerData> _notifiedTowers = new();
+
+    // "알렸다"가 아니라 "이미 해금돼 있어 알릴 필요가 없다"가 기준이다 - RebuildTowerBaseline이
+    // 비우기와 재수립을 항상 함께 하므로, 이 집합을 다른 곳에서 단독으로 비우지 말 것(이슈 #286).
+    private readonly HashSet<TowerData> _acknowledgedTowers = new();
     private readonly List<TowerData> _unlockedTowerBuffer = new();
+
+    // RebuildTowerBaseline을 한 번도 돌리지 못한 상태에서는 토스트를 내지 않는다(fail-closed) -
+    // 어떤 경로로 기준선이 비어도 이미 해금된 타워가 새 해금으로 되살아나지 않게 하는 마지막 방어선.
+    private bool _hasTowerBaseline;
 
     /// <summary>부화 알림을 확인해 카드가 화면 밖으로 나간 뒤 발화한다.</summary>
     public event Action<DragonType> HatchNotificationDismissed;
@@ -54,6 +66,11 @@ public class ProgressionNotificationPresenter : MonoBehaviour
         {
             _cycleManager.OnDayStart.AddListener(HandleDayStart);
         }
+
+        if (_saveService != null)
+        {
+            _saveService.LoadCompleted.AddListener(HandleLoadCompleted);
+        }
     }
 
     private void OnDisable()
@@ -79,6 +96,18 @@ public class ProgressionNotificationPresenter : MonoBehaviour
         {
             _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
         }
+
+        if (_saveService != null)
+        {
+            _saveService.LoadCompleted.RemoveListener(HandleLoadCompleted);
+        }
+    }
+
+    private void Start()
+    {
+        // 새 런의 기준선(아직 해금된 특수 타워가 없다). 구독은 OnEnable, 첫 발화는 Start 이후라는
+        // 규칙에 맞춘다. 이어하기라면 이 직후에 오는 HandleLoadCompleted가 다시 세운다.
+        RebuildTowerBaseline();
     }
 
     private void HandleEggGranted(DragonType type)
@@ -142,13 +171,13 @@ public class ProgressionNotificationPresenter : MonoBehaviour
         }
     }
 
-    private void HandleDayStart(int _)
+    private void HandleDayStart(int dayNumber)
     {
-        if (_ == CycleManager.FIRST_DAY_NUMBER)
+        if (dayNumber == CycleManager.FIRST_DAY_NUMBER)
         {
             _pendingArtifactIds.Clear();
             _pendingArtifacts.Clear();
-            _notifiedTowers.Clear();
+            RebuildTowerBaseline();
         }
 
         FlushArtifactNotifications();
@@ -167,9 +196,29 @@ public class ProgressionNotificationPresenter : MonoBehaviour
 
     private void HandleResearchProgressRestored()
     {
-        // 복원된 해금은 과거에 이미 알림을 보낸 상태로 취급한다. 이후 실제 연구가
-        // 완료됐을 때 새 타워만 토스트를 띄우도록 현재 상태를 기준선으로 삼는다.
-        _notifiedTowers.Clear();
+        // 이 시점(세이브 복원 4단계)은 랜드마크 수령 이력 복원(7단계)보다 먼저 발화해, 유적
+        // 조건이 걸린 타워는 전부 "미해금"으로 보인다(이슈 #286). 그래서 여기서 세우는 기준선은
+        // 잠정치이고, 권위 있는 재수립은 복원이 모두 끝난 뒤 발화하는 HandleLoadCompleted가
+        // 맡는다. SaveService가 없는 씬(튜토리얼 등)에 대한 보험으로 남겨 둔다.
+        RebuildTowerBaseline();
+    }
+
+    // 세이브 복원 13단계와 ResumeDay가 모두 끝난 뒤 1회 발화한다(SaveService.LoadCompleted).
+    // 유적 수령 이력까지 반영된 상태이므로 이 기준선이 권위를 가진다.
+    private void HandleLoadCompleted()
+    {
+        RebuildTowerBaseline();
+    }
+
+    /// <summary>
+    /// "이미 해금돼 있어 알릴 필요가 없는" 타워 기준선을 지금 상태로 다시 세운다.
+    /// 비우기와 다시 채우기를 반드시 한 메서드 안에서 함께 한다 - 둘을 나누면 그 사이(또는
+    /// 비우기만 도는 경로)에서 이미 해금된 타워가 새 해금으로 되살아난다(이슈 #286).
+    /// </summary>
+    private void RebuildTowerBaseline()
+    {
+        _acknowledgedTowers.Clear();
+        _hasTowerBaseline = true;
 
         if (_researchManager == null)
         {
@@ -182,14 +231,14 @@ public class ProgressionNotificationPresenter : MonoBehaviour
         {
             if (tower != null)
             {
-                _notifiedTowers.Add(tower);
+                _acknowledgedTowers.Add(tower);
             }
         }
     }
 
     private void FlushArtifactNotifications()
     {
-        if (_toast == null || !_toast.isActiveAndEnabled || _landmarkManager == null)
+        if (_toast == null || !_toast.CanShow || _landmarkManager == null)
         {
             return;
         }
@@ -208,21 +257,39 @@ public class ProgressionNotificationPresenter : MonoBehaviour
 
     private void NotifyNewlyUnlockedTowers()
     {
-        if (_toast == null || !_toast.isActiveAndEnabled || _researchManager == null)
+        if (_researchManager == null)
         {
             return;
         }
+
+        // 기준선을 한 번도 세우지 못한 상태에서는 절대 토스트를 내지 않는다 - 지금 해금된 것을
+        // 전부 "이미 알고 있음"으로 접어 넣는 것이 유일하게 안전한 동작이다(이슈 #286 fail-closed).
+        if (!_hasTowerBaseline)
+        {
+            RebuildTowerBaseline();
+            return;
+        }
+
+        bool canShow = _toast != null && _toast.CanShow;
 
         _researchManager.CollectUnlockedLandmarkTowers(_unlockedTowerBuffer);
 
         foreach (TowerData tower in _unlockedTowerBuffer)
         {
             if (tower == null || string.IsNullOrWhiteSpace(tower.NameLocKey) ||
-                !_notifiedTowers.Add(tower))
+                _acknowledgedTowers.Contains(tower))
             {
                 continue;
             }
 
+            // 못 띄우는 상황이면 기록하지 않는다 - 여기서 먼저 기록하면 토스트가 꺼져 있던
+            // 그 타워의 알림은 다시 뜰 기회 없이 영영 사라진다.
+            if (!canShow)
+            {
+                continue;
+            }
+
+            _acknowledgedTowers.Add(tower);
             _toast.ShowWithLocalizedArgument(TOWER_UNLOCKED_LOC_KEY, tower.Icon, tower.NameLocKey);
         }
     }
@@ -268,6 +335,11 @@ public class ProgressionNotificationPresenter : MonoBehaviour
         if (_cycleManager == null)
         {
             _cycleManager = FindFirstObjectByType<CycleManager>();
+        }
+
+        if (_saveService == null)
+        {
+            _saveService = FindFirstObjectByType<SaveService>();
         }
     }
 }

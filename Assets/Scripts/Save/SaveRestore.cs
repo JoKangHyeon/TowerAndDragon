@@ -38,7 +38,9 @@ public static class SaveRestore
             context.PopulationManager.RestoreMaxPopulation(dto.Population.MaxPopulation);
         }
 
-        // 4. 연구.
+        // 4. 연구. 이 시점의 ProgressRestored 구독자는 랜드마크 수령 이력(7번)을 아직 보지 못한다 -
+        //    유적 조건이 걸린 해금 여부를 여기서 파생시키면 전부 "미해금"으로 읽힌다(이슈 #286).
+        //    복원이 모두 끝난 뒤가 필요한 소비자는 SaveService.LoadCompleted를 구독할 것.
         if (context.ResearchManager != null)
         {
             context.ResearchManager.RestoreProgress(
