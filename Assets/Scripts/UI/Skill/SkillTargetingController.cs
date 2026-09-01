@@ -243,8 +243,19 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
     // 발동 경로 세 곳이 반드시 지나는 관문. 여기서만 SkillUsed를 발화한다.
     private void ActivateSkill(Skill skill, SkillCastContext context)
     {
-        skill.Activate(context);
+        bool hasTakenEffect = skill.Activate(context);
+
+        // ⚠️ SkillUsed는 효과 여부와 무관하게 "눌렀다"를 알리는 신호다. 조건 안으로 옮기지 않는다 -
+        // GuideQuestController가 TutorialConditionType.SkillUsed 판정에 쓰고 6개 씬에 배선돼 있어,
+        // 안으로 옮기면 "밤에 용 스킬을 써 봤는가" 단계가 통과되지 않는다.
         SkillUsed.Invoke(skill);
+
+        // 시전 연출은 반대로 실제 효과가 있었을 때만 띄운다. 몬스터가 0마리인데 화면 전체가
+        // 얼어붙거나, 성이 만피인데 회복 연출이 뜨면 거짓 신호가 된다.
+        if (hasTakenEffect)
+        {
+            SkillCastOverlayHost.PlayForActiveAttribute();
+        }
     }
 
     private Vector3 GetMouseWorldPoint()

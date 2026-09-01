@@ -35,6 +35,20 @@ public class SkillSO:ScriptableObject
     [Tooltip("설치될 방벽 프리팹 (StoneBarricade 컴포넌트 포함)")]
     public GameObject BarricadePrefab;
 
+    // 새끼용 회복 파동(TA_BD_TowerHealEffect)이 쓰는 값과 같게 뒀다 - 같은 프리팹을 재사용하므로
+    // 재생 길이도 같아야 화면에서 같은 연출로 읽힌다.
+    private const float DEFAULT_TARGET_VFX_LIFETIME_SECONDS = 1.1f;
+
+    [Header("시전 연출 - 대상별(B계층)")]
+    [Tooltip("스킬이 실제로 효과를 준 대상 위에 재생할 이펙트. 비우면 생략한다. " +
+        "화면 전체에 깔리는 배경 오버레이(A계층)는 이것과 별개로 SkillCastOverlayHost가 담당한다.")]
+    [WiringOptional]
+    public GameObject TargetVfxPrefab;
+
+    [Tooltip("위 이펙트를 띄워 둘 시간(초).")]
+    [Min(0f)]
+    public float TargetVfxLifetimeSeconds = DEFAULT_TARGET_VFX_LIFETIME_SECONDS;
+
     public Skill GetSkill()
     {
         switch (Type)
