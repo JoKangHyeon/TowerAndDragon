@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using Unity.Profiling;
 using UnityEngine.Events;
 using UnityEngine.Tilemaps;
-using UnityEngine.Rendering;
 
 public class GridMap : MonoBehaviour
 {

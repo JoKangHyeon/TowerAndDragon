@@ -1,5 +1,3 @@
-using System;
-
 /// <summary>
 /// 자원 예측 표기가 공유하는 순수 계산 규칙이다. UI(UI_IngameWindow)와 툴팁 빌더가 같은 판정을 쓰도록
 /// 한곳에 모은다. MonoBehaviour 의존이 없어 EditMode 테스트로 검증한다

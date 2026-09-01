@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 /// <summary>
 /// 생명 타워 등, 범위 내 체력이 깎인 아군 타워를 찾아 회복(공격)을 발사하는 컴포넌트.
