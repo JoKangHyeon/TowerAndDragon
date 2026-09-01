@@ -1,4 +1,5 @@
-using System.Collections;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Splines;
 
@@ -18,14 +19,19 @@ public class MonsterSpawnTester : MonoBehaviour
     [SerializeField] private int _spawnCount = 1;
     [SerializeField] private float _spawnInterval = 1f;
 
-    private IEnumerator Start()
+    private void Start()
     {
-        WaitForSeconds wait = new WaitForSeconds(_spawnInterval);
+        SpawnLoopAsync().Forget();
+    }
+
+    private async UniTaskVoid SpawnLoopAsync()
+    {
+        CancellationToken token = this.GetCancellationTokenOnDestroy();
 
         for (int i = 0; i < _spawnCount; i++)
         {
             SpawnOne();
-            yield return wait;
+            await UniTask.WaitForSeconds(_spawnInterval, cancellationToken: token);
         }
     }
 
