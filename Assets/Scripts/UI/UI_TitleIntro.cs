@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -76,9 +78,6 @@ public class UI_TitleIntro : MonoBehaviour
     private Tween _blinkTween;
     private Sequence _revealSequence;
 
-    // 클릭을 이미 받았는지. 연출 도중 다시 눌려 시퀀스가 겹치는 것을 막는다.
-    private bool _isRevealed;
-
     private void Awake()
     {
         // 씬에 어떤 활성 상태로 저장돼 있든 인트로는 항상 같은 화면에서 시작한다.
@@ -107,19 +106,18 @@ public class UI_TitleIntro : MonoBehaviour
     private void Start()
     {
         StartBlink();
+        WaitForFirstClickAsync(this.GetCancellationTokenOnDestroy()).Forget();
     }
 
-    private void Update()
+    // 클릭은 한 번만 받으면 되는 1회성 대기다 - 이것 하나 때문에 타이틀이 떠 있는 내내
+    // Update를 돌리지 않는다.
+    private async UniTaskVoid WaitForFirstClickAsync(CancellationToken cancellationToken)
     {
-        if (_isRevealed || Mouse.current == null)
-        {
-            return;
-        }
+        await UniTask.WaitUntil(
+            () => Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame,
+            cancellationToken: cancellationToken);
 
-        if (Mouse.current.leftButton.wasPressedThisFrame)
-        {
-            PlayReveal();
-        }
+        PlayReveal();
     }
 
     private void StartBlink()
@@ -138,7 +136,6 @@ public class UI_TitleIntro : MonoBehaviour
 
     private void PlayReveal()
     {
-        _isRevealed = true;
         SoundManager.Play(SoundId.UiButtonClick);
 
         // 사라지는 동안 문구가 계속 깜빡이지 않도록 먼저 끊는다.

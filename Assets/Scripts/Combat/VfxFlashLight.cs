@@ -12,6 +12,11 @@ using UnityEngine.Rendering.Universal;
 /// 조준 표시이고, 이쪽은 한 발마다 터지는 섬광이라 파티클과 수명을 공유해야 한다.
 /// <see cref="_durationSeconds"/>를 그 이펙트의 반납 시간과 같게 두는 것이 기본이다 -
 /// 그래야 빛과 입자가 같은 순간에 사라진다.
+///
+/// Update를 UniTask로 옮기지 않는다: 반납은 SetActive(false)라(<see cref="PrefabPool{T}.Release"/>)
+/// 유휴 상태에서는 Update 자체가 호출되지 않는다. 즉 이 Update가 도는 구간은 섬광이 타는
+/// 0.3초뿐이라 옮겨도 줄어드는 호출이 없고, 오히려 파괴가 아닌 비활성 반납이라
+/// OnEnable마다 CTS를 새로 할당해야 해 발사·명중마다 GC만 늘어난다.
 /// </summary>
 [RequireComponent(typeof(Light2D))]
 public sealed class VfxFlashLight : MonoBehaviour
