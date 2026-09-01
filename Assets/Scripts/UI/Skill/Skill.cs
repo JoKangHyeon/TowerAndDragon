@@ -591,31 +591,8 @@ public class HealCastleSkill : Skill
         //
         // 앵커는 발밑이 아니라 <b>성 스프라이트 중앙</b>이다 - 성을 감싸는 크기의 연출이라
         // 발밑에 두면 아래쪽으로 치우쳐 절반이 지면에 묻힌다.
-        PlayTargetVfx(ResolveCastleCenter(castle));
+        PlayTargetVfx(ResolveBuildingCenter(castle));
         return true;
-    }
-
-    // 스프라이트 경계(월드 AABB)의 중앙을 쓴다. transform.position은 피벗이라 성 스프라이트의
-    // 시각적 중앙과 다르고, 성이 커질 때 함께 따라오지 않는다.
-    private static Vector3 ResolveCastleCenter(Castle castle)
-    {
-        SpriteRenderer renderer = castle.GetComponent<SpriteRenderer>();
-
-        if (renderer == null)
-        {
-            renderer = castle.GetComponentInChildren<SpriteRenderer>(true);
-        }
-
-        if (renderer == null)
-        {
-            return castle.transform.position;
-        }
-
-        Bounds bounds = renderer.bounds;
-
-        // z는 성의 것을 그대로 쓴다 - 경계의 z는 스프라이트 두께라 정렬 기준이 되지 못한다
-        // (MonsterStatusVfx.ResolveAnchors와 같은 이유).
-        return new Vector3(bounds.center.x, bounds.center.y, castle.transform.position.z);
     }
 }
 
