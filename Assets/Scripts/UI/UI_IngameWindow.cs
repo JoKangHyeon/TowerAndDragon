@@ -21,11 +21,6 @@ public class UI_IngameWindow : MonoBehaviour
     private const string POPULATION_WITH_LOSS_FORMAT =
         "{0}/{1}<color=#{2}>(-{3})</color>";
 
-    // 날짜 표기 형식은 스트링테이블에서 가져온다(언어별 문구·{0} 위치가 다름).
-    // 값 예) en_us: "DAY {0}" / ko_kr: "{0} 일"
-    private const string DAY_LOC_KEY = "main_day";
-    private static string DayFormat => StringTable.GetString(DAY_LOC_KEY);
-
     // 밤 진입 확인 문구. 해당하는 경고만 골라 순서대로 이어 붙이고, 마지막에 질문 줄을 붙인다.
     // 서식은 확인창(UI_ConfirmPopup)이 채우므로 여기서는 key만 지목한다.
     // {0} = 모자란 식량, {1} = 굶어 죽을 시민 수.
@@ -40,8 +35,12 @@ public class UI_IngameWindow : MonoBehaviour
     private static readonly Color PRODUCTION_COLOR_DEFAULT = ResourceAmountFormatter.GAIN_COLOR_DEFAULT;
     private static readonly Color LOSS_COLOR_DEFAULT = ResourceAmountFormatter.LOSS_COLOR_DEFAULT;
 
-    // 웨이브 진행 바가 가득 찰 때까지의 일수. 이 값째 클리어에 슬라이더가 가득 찬다.
-    private const int WAVE_FILL_LENGTH = 6;
+    // 한 주기의 길이(일). 날짜 표기(주기/일차)와 진행 바 리셋이 어긋나지 않도록 같은 값을 쓴다.
+    private const int DAYS_PER_CYCLE = CycleCalendar.DAYS_PER_CYCLE;
+
+    // 웨이브 진행 바가 가득 찰 때까지의 일수. 이 값째 클리어에 슬라이더가 가득 차고,
+    // 그 다음 날(보스 격파 다음 날, 새 주기의 첫날)에 시작점으로 되돌아간다.
+    private const int WAVE_FILL_LENGTH = DAYS_PER_CYCLE - 1;
 
     // 자원 표시 1칸: 자원 종류 ↔ 수량 텍스트(+ 선택적으로 아이콘).
     [System.Serializable]
@@ -187,10 +186,6 @@ public class UI_IngameWindow : MonoBehaviour
 
     private Vector2 _wavePointStartPos;
 
-    // 가득 찬 다음 날(보스 격파 다음 날)에는 진행 바를 시작점으로 되돌린다. 즉 실제 한 주기는
-    // '가득 찬 뒤 되돌아가는 하루'까지 포함해 WAVE_FILL_LENGTH + 1일이다.
-    private int _resetInterval;
-
     // 진행 바가 마지막으로 반영한 클리어 수. 낮 진입(OnDayReady)마다 일차로부터 유도한 값과 비교해,
     // 이미 같은 값이면 아무것도 하지 않는다 - 밤 종료 트윈이 도는 중에 이어서 오는 낮 진입이
     // 트윈을 끊고 순간이동시키지 않게 하기 위한 캐시다.
@@ -207,8 +202,6 @@ public class UI_IngameWindow : MonoBehaviour
         {
             _wavePointStartPos = _wavePoint.anchoredPosition;
         }
-
-        _resetInterval = WAVE_FILL_LENGTH + 1;
 
         // '다음 밤으로' 버튼: 누르면 낮을 종료하고 밤을 시작한다.
         if (_buttonNextNight != null)
@@ -523,13 +516,16 @@ public class UI_IngameWindow : MonoBehaviour
     }
 
     // HandleDayReady(day) / 언어 변경으로 갱신된다.
+    // 누적 일차(day)를 "몇 번째 주기의 몇 일차"로 나눠 표기한다(CycleCalendar).
     private void RenderDay(int day)
     {
         _currentDay = day;
-        if (_dayText != null)
+        if (_dayText == null)
         {
-            _dayText.text = string.Format(DayFormat, day);
+            return;
         }
+
+        _dayText.text = CycleCalendar.FormatDayLabel(day);
     }
 
     // 언어가 바뀌면(StringTable.OnLanguageChanged) 이 창의 로컬라이즈된 텍스트를 현재 값으로 다시 그린다.
@@ -780,7 +776,7 @@ public class UI_IngameWindow : MonoBehaviour
     private void HandleWaveCleared(int wave)
     {
         // cleared==0은 Day8(리셋) → 진행도 0, Point는 시작 칸(인덱스 0).
-        ApplyWaveBar(wave % _resetInterval, animate: true);
+        ApplyWaveBar(wave % DAYS_PER_CYCLE, animate: true);
     }
 
     // 이어하기(세이브 로드)는 OnNightEnd를 재생하지 않으므로 밤마다 전진하는 것만으로는 바가 복원되지 않는다.
@@ -798,7 +794,7 @@ public class UI_IngameWindow : MonoBehaviour
     }
 
     // day일차의 낮에는 그 전날 밤까지 day-1회를 클리어한 상태다. HandleWaveCleared가 쓰는
-    // "방금 끝난 밤의 일차 % _resetInterval"과 같은 값이 되도록 같은 주기로 접는다.
+    // "방금 끝난 밤의 일차 % DAYS_PER_CYCLE"과 같은 값이 되도록 같은 주기로 접는다.
     private int ClearedWavesForDay(int day)
     {
         if (day <= 0)
@@ -806,7 +802,7 @@ public class UI_IngameWindow : MonoBehaviour
             return 0;
         }
 
-        return (day - 1) % _resetInterval;
+        return (day - 1) % DAYS_PER_CYCLE;
     }
 
     // 진행 바(슬라이더 + Point)를 클리어 수에 맞춘다. animate면 트윈, 아니면 즉시 반영한다.
