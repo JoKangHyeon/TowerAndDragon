@@ -1,6 +1,21 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-1691660310795308632
+--- !u!114 &-3669338512313447925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b1c0db70b3c2ff47ada96b18e68a50a, type: 3}
+  m_Name: RME_rockfall_tier3
+  m_EditorClassIdentifier: Assembly-CSharp::RunTerrainPenaltyEffectSO
+  _terrain: 1
+  _kind: 3
+  _penaltyScale: 3
+--- !u!114 &-3627258306021227939
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -34,16 +49,16 @@ MonoBehaviour:
   - _difficultyScore: 1
     _descLocKey: mutator_rockfall_tier1_desc
     _effects:
-    - {fileID: 7361420656558070236}
+    - {fileID: 3122775278944715633}
   - _difficultyScore: 2
     _descLocKey: mutator_rockfall_tier2_desc
     _effects:
-    - {fileID: -1691660310795308632}
+    - {fileID: -3627258306021227939}
   - _difficultyScore: 3
     _descLocKey: mutator_rockfall_tier3_desc
     _effects:
-    - {fileID: 7899606886958509642}
---- !u!114 &7361420656558070236
+    - {fileID: -3669338512313447925}
+--- !u!114 &3122775278944715633
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -58,18 +73,3 @@ MonoBehaviour:
   _terrain: 1
   _kind: 3
   _penaltyScale: 1.5
---- !u!114 &7899606886958509642
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6b1c0db70b3c2ff47ada96b18e68a50a, type: 3}
-  m_Name: RME_rockfall_tier3
-  m_EditorClassIdentifier: Assembly-CSharp::RunTerrainPenaltyEffectSO
-  _terrain: 1
-  _kind: 3
-  _penaltyScale: 3

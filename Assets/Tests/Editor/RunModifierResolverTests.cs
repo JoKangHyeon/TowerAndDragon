@@ -109,7 +109,7 @@ public class RunModifierResolverTests
         RunMutatorSO leanHarvest = CreateTieredMultiplierMutator(
             "lean_harvest",
             RunModifierChannel.ChunkYield,
-            new[] { 0.9f, 0.75f, 0.6f },
+            new[] { 0.9f, 0.8f, 0.7f },
             new[] { 2, 4, 6 });
 
         RunModifierSnapshot tier1 = RunModifierResolver.Resolve(new List<RunMutatorSelection>
@@ -122,7 +122,7 @@ public class RunModifierResolverTests
         });
 
         Assert.That(tier1.GetMultiplier(RunModifierChannel.ChunkYield), Is.EqualTo(0.9f).Within(0.0001f));
-        Assert.That(tier3.GetMultiplier(RunModifierChannel.ChunkYield), Is.EqualTo(0.6f).Within(0.0001f));
+        Assert.That(tier3.GetMultiplier(RunModifierChannel.ChunkYield), Is.EqualTo(0.7f).Within(0.0001f));
     }
 
     [Test]
@@ -131,7 +131,7 @@ public class RunModifierResolverTests
         RunMutatorSO leanHarvest = CreateTieredMultiplierMutator(
             "lean_harvest",
             RunModifierChannel.ChunkYield,
-            new[] { 0.9f, 0.75f, 0.6f },
+            new[] { 0.9f, 0.8f, 0.7f },
             new[] { 2, 4, 6 });
 
         int tier1Score = RunModifierResolver.ResolveDifficultyScore(new List<RunMutatorSelection>

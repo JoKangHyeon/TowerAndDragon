@@ -1,6 +1,20 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-6276221337223079550
+--- !u!114 &-4270994868284689722
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fdab90ddca86194b83bfac68634be30, type: 3}
+  m_Name: RME_weak_ground_tier3
+  m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
+  _channel: 3
+  _multiplier: 0.4
+--- !u!114 &-4256829944184790469
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -14,20 +28,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
   _channel: 3
   _multiplier: 0.8
---- !u!114 &-69936821953964284
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9fdab90ddca86194b83bfac68634be30, type: 3}
-  m_Name: RME_weak_ground_tier2
-  m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
-  _channel: 3
-  _multiplier: 0.6
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -47,16 +47,16 @@ MonoBehaviour:
   - _difficultyScore: 2
     _descLocKey: mutator_weak_ground_tier1_desc
     _effects:
-    - {fileID: -6276221337223079550}
+    - {fileID: -4256829944184790469}
   - _difficultyScore: 4
     _descLocKey: mutator_weak_ground_tier2_desc
     _effects:
-    - {fileID: -69936821953964284}
+    - {fileID: 7117676096795981484}
   - _difficultyScore: 6
     _descLocKey: mutator_weak_ground_tier3_desc
     _effects:
-    - {fileID: 2370108495171392344}
---- !u!114 &2370108495171392344
+    - {fileID: -4270994868284689722}
+--- !u!114 &7117676096795981484
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -66,7 +66,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9fdab90ddca86194b83bfac68634be30, type: 3}
-  m_Name: RME_weak_ground_tier3
+  m_Name: RME_weak_ground_tier2
   m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
   _channel: 3
-  _multiplier: 0.4
+  _multiplier: 0.6

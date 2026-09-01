@@ -56,4 +56,22 @@ public static class StartingResourceRules
 
         return Math.Max(food, Math.Max(0, floor));
     }
+
+    /// <summary>
+    /// <see cref="ApplyFoodFloor"/>에 넘길 하한값을 계산한다 - "1일차 유지비 × 며칠치"라는
+    /// 공식으로, 최대 인구나 대식가 배율이 바뀌어도 자동으로 따라간다(고정 상수는 그 값들이
+    /// 바뀌는 순간 조용히 틀려진다).
+    ///
+    /// <b>배율 적용 전 시작 식량을 절대 넘지 않는다</b> - 하드 모드가 표준 모드보다 후해지는
+    /// 것을 막는 상한이다. 곱셈은 long으로 올려서 계산한다
+    /// (<see cref="PopulationUpkeepRules.GetRequiredFood(int, int)"/>와 같은 이유로,
+    /// int 곱셈의 오버플로가 음수 하한을 만드는 것을 막는다).
+    /// </summary>
+    public static int ResolveFoodFloor(int unscaledFoodAmount, int dailyFoodUpkeep, int bufferDays)
+    {
+        long required = (long)Math.Max(0, dailyFoodUpkeep) * Math.Max(0, bufferDays);
+        int cappedRequired = required > int.MaxValue ? int.MaxValue : (int)required;
+
+        return Math.Min(Math.Max(0, unscaledFoodAmount), cappedRequired);
+    }
 }

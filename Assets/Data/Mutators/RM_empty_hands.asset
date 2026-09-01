@@ -1,5 +1,33 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-5782989132484324795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fdab90ddca86194b83bfac68634be30, type: 3}
+  m_Name: RME_empty_hands_tier2
+  m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
+  _channel: 2
+  _multiplier: 0.5
+--- !u!114 &-4116017910217525825
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fdab90ddca86194b83bfac68634be30, type: 3}
+  m_Name: RME_empty_hands_tier1
+  m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
+  _channel: 2
+  _multiplier: 0.75
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19,16 +47,16 @@ MonoBehaviour:
   - _difficultyScore: 1
     _descLocKey: mutator_empty_hands_tier1_desc
     _effects:
-    - {fileID: 7955077455170055582}
+    - {fileID: -4116017910217525825}
   - _difficultyScore: 2
     _descLocKey: mutator_empty_hands_tier2_desc
     _effects:
-    - {fileID: 8427246990912769667}
+    - {fileID: -5782989132484324795}
   - _difficultyScore: 3
     _descLocKey: mutator_empty_hands_tier3_desc
     _effects:
-    - {fileID: 7024211936863093445}
---- !u!114 &7024211936863093445
+    - {fileID: 5809615636005315019}
+--- !u!114 &5809615636005315019
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -42,31 +70,3 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
   _channel: 2
   _multiplier: 0.25
---- !u!114 &7955077455170055582
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9fdab90ddca86194b83bfac68634be30, type: 3}
-  m_Name: RME_empty_hands_tier1
-  m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
-  _channel: 2
-  _multiplier: 0.75
---- !u!114 &8427246990912769667
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9fdab90ddca86194b83bfac68634be30, type: 3}
-  m_Name: RME_empty_hands_tier2
-  m_EditorClassIdentifier: Assembly-CSharp::RunMultiplierEffectSO
-  _channel: 2
-  _multiplier: 0.5

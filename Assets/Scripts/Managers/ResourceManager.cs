@@ -22,6 +22,11 @@ public class ResourceManager : MonoBehaviour
     [WiringOptional]
     [SerializeField] private EconomyBalanceData _economyBalance;
 
+    [Tooltip("시작 식량 하한 공식(1일 유지비 × 며칠치)이 최대 인구를 읽는 곳. 미연결이면 " +
+        "하한 보정을 건너뛴다 - _economyBalance와 같은 이유로 뮤테이터가 없는 씬에서는 비워 둬도 된다.")]
+    [WiringOptional]
+    [SerializeField] private PopulationManager _populationManager;
+
     private readonly Dictionary<ResourceType, int> _amounts = new();
 
     /// <summary>자원 보유량 변경 시 (종류, 변경 후 보유량). UI가 구독한다.</summary>
@@ -40,21 +45,25 @@ public class ResourceManager : MonoBehaviour
     {
         SeedCatalog();
 
-        float startingMultiplier = RunModifiers
-            .SnapshotOf(gameManager != null ? gameManager.RunModifierService : null)
-            .GetMultiplier(RunModifierChannel.StartingResource);
+        RunModifierSnapshot snapshot = RunModifiers
+            .SnapshotOf(gameManager != null ? gameManager.RunModifierService : null);
+        float startingMultiplier = snapshot.GetMultiplier(RunModifierChannel.StartingResource);
 
         foreach (ResourceAmount initial in _initialResources)
         {
             AddInitial(initial.Type, StartingResourceRules.Scale(initial.Amount, startingMultiplier));
         }
 
-        ApplyStartingFoodFloor(startingMultiplier);
+        float foodUpkeepMultiplier = snapshot.GetMultiplier(RunModifierChannel.FoodUpkeep);
+        ApplyStartingFoodFloor(startingMultiplier, foodUpkeepMultiplier);
     }
 
     // 조합 안전장치. 배율이 항등원이면 StartingResourceRules가 그대로 되돌려주므로
     // 표준 모드에서는 이 메서드가 보유량을 건드리지 않는다(회귀 보호).
-    private void ApplyStartingFoodFloor(float startingMultiplier)
+    //
+    // 하한값은 "1일차 유지비 × 며칠치"로 계산한다(StartingResourceRules.ResolveFoodFloor) -
+    // 최대 인구·대식가 배율이 바뀌어도 자동으로 따라가는 값이라, 고정 상수보다 재발에 강하다.
+    private void ApplyStartingFoodFloor(float startingMultiplier, float foodUpkeepMultiplier)
     {
         if (StartingResourceRules.IsNeutral(startingMultiplier))
         {
@@ -62,21 +71,45 @@ public class ResourceManager : MonoBehaviour
         }
 
         // 배율이 걸린 런에서만 배선을 요구한다 - 뮤테이터가 없는 씬에서 경고를 내지 않기 위함.
-        if (!WiringGuard.Optional(_economyBalance, nameof(_economyBalance), this))
+        // 두 가드를 따로 평가해, 둘 다 비어 있으면 둘 다 경고를 남긴다(단락 평가로 하나만 남기지 않는다).
+        bool hasEconomyBalance = WiringGuard.Optional(_economyBalance, nameof(_economyBalance), this);
+        bool hasPopulationManager = WiringGuard.Optional(_populationManager, nameof(_populationManager), this);
+
+        if (!hasEconomyBalance || !hasPopulationManager)
         {
             return;
         }
 
+        int unscaledFood = GetInitialAmount(ResourceType.Food);
+        float effectiveFoodPerPopulation = PopulationUpkeepRules.GetEffectiveFoodPerPopulation(
+            _economyBalance.FoodUpkeepPerPopulation, foodUpkeepMultiplier);
+        int dailyFoodUpkeep = PopulationUpkeepRules.GetRequiredFood(
+            _populationManager.MaxPopulation, effectiveFoodPerPopulation);
+        int floor = StartingResourceRules.ResolveFoodFloor(
+            unscaledFood, dailyFoodUpkeep, _economyBalance.StartingFoodBufferDaysUnderMutators);
+
         int currentFood = GetAmount(ResourceType.Food);
-        int flooredFood = StartingResourceRules.ApplyFoodFloor(
-            currentFood,
-            _economyBalance.StartingFoodFloorUnderMutators,
-            startingMultiplier);
+        int flooredFood = StartingResourceRules.ApplyFoodFloor(currentFood, floor, startingMultiplier);
 
         if (flooredFood > currentFood)
         {
             Add(ResourceType.Food, flooredFood - currentFood);
         }
+    }
+
+    // 하한 공식의 상한(배율 적용 전 시작량)에 쓸 배율 적용 전 지급량을 찾는다.
+    // Food는 단일 자원 항목으로만 지급되므로(복합 플래그 대상이 아님) 단순 조회로 충분하다.
+    private int GetInitialAmount(ResourceType type)
+    {
+        foreach (ResourceAmount initial in _initialResources)
+        {
+            if (initial.Type == type)
+            {
+                return Math.Max(0, initial.Amount);
+            }
+        }
+
+        return 0;
     }
 
     /// <summary>

@@ -8,7 +8,7 @@ using UnityEngine;
 // 손으로 만들지 않는 이유는 두 가지다.
 //   1) enemy_ferocity / enemy_tide의 EnemyEnhancementRule은 MonsterData 참조로 대상을 지정한다 -
 //      몬스터 종류가 추가될 때마다 규칙이 조용히 빠진다. 이 스크립트를 다시 돌리면 전 종류가 다시 채워진다.
-//   2) 13종의 단계 점수와 프리셋 3종의 합계를 손으로 맞추면 반드시 틀린다.
+//   2) 13종의 단계 점수 합계를 손으로 맞추면 반드시 틀린다.
 //      여기서는 저작 직후 합계를 검산하고 어긋나면 에러를 남긴다.
 //
 // 수치 출처: Docs/새게임플러스_설계.md §6.0(점수 체계) / §6.1(수치 계열) / §6.2(규칙 계열).
@@ -47,10 +47,14 @@ public static class RunMutatorAssetAuthoring
     private static readonly float[] WEAK_GROUND_MULTIPLIER = { 0.8f, 0.6f, 0.4f };
     private static readonly int[] WEAK_GROUND_SCORE = { 2, 4, 6 };
 
-    private static readonly float[] LEAN_HARVEST_MULTIPLIER = { 0.9f, 0.75f, 0.6f };
+    // 흉년·대식가는 점수 모델상 독립이지만, 실제로는 "인구 중 몇 %가 식량 생산에 묶이는가"라는
+    // 하나의 합성량(대식가 배율 ÷ 흉년 배율)으로 곱해진다. 종전 값(0.6 / 3)은 이 비가 표준 대비
+    // 5배가 되어 최고 단계를 함께 켜면 인구 전원을 농장에 넣어도 유지비를 못 채웠다(심연 65점 완주 불가).
+    // 두 뮤테이터에 나눠 완화해 각자의 3단계 계단은 유지하면서 합성 배율만 낮춘다(약 2.1배로).
+    private static readonly float[] LEAN_HARVEST_MULTIPLIER = { 0.9f, 0.8f, 0.7f };
     private static readonly int[] LEAN_HARVEST_SCORE = { 2, 4, 6 };
 
-    private static readonly float[] BIG_APPETITE_MULTIPLIER = { 1.5f, 2f, 3f };
+    private static readonly float[] BIG_APPETITE_MULTIPLIER = { 1.2f, 1.35f, 1.5f };
     private static readonly int[] BIG_APPETITE_SCORE = { 2, 4, 6 };
 
     private static readonly float[] EMPTY_HANDS_MULTIPLIER = { 0.75f, 0.5f, 0.25f };
@@ -76,41 +80,7 @@ public static class RunMutatorAssetAuthoring
     private const int EXPECTED_NUMERIC_TOTAL = 45;
     private const int EXPECTED_RULE_TOTAL = 20;
 
-    // 설계서 §6.0의 기록 마일스톤. QA·밸런스 보증은 이 세 조합에만 한다 -
-    // 자유 조합은 수치 8종 × 4상태 × 규칙 5종 × 2상태 = 200만 가지가 넘어 검증할 방법이 없다.
-    private const int PRESET_LOW_SCORE = 20;
-    private const int PRESET_MID_SCORE = 40;
-    private const int PRESET_HIGH_SCORE = 65;
-
-    private const string PRESET_LOW_LOC_KEY = "ngplus_preset_20_name";
-    private const string PRESET_MID_LOC_KEY = "ngplus_preset_40_name";
-    private const string PRESET_HIGH_LOC_KEY = "ngplus_preset_65_name";
-
-    // 세 프리셋은 "전부 한 단계씩 더 조인다"로 겹쳐 둔다. 마일스톤끼리 포함 관계가 되어
-    // 플레이테스트에서 무엇이 달라졌는지가 단계 하나로 설명된다.
-    private static readonly (string Id, int Tier)[] PRESET_LOW =
-    {
-        (ID_ENEMY_FEROCITY, 1), (ID_ENEMY_TIDE, 1), (ID_WEAK_GROUND, 1), (ID_LEAN_HARVEST, 1),
-        (ID_BIG_APPETITE, 1), (ID_EMPTY_HANDS, 1), (ID_HARSH_WINTER, 1), (ID_ROCKFALL, 1),
-        (ID_SWORN_ELEMENT, 1), (ID_HEAVY_GRAVITY, 1),
-    };
-
-    private static readonly (string Id, int Tier)[] PRESET_MID =
-    {
-        (ID_ENEMY_FEROCITY, 2), (ID_ENEMY_TIDE, 2), (ID_WEAK_GROUND, 2), (ID_LEAN_HARVEST, 2),
-        (ID_BIG_APPETITE, 2), (ID_EMPTY_HANDS, 2), (ID_HARSH_WINTER, 2), (ID_ROCKFALL, 2),
-        (ID_LAST_STAND, 1), (ID_SWORN_ELEMENT, 1), (ID_HEAVY_GRAVITY, 1),
-    };
-
-    private static readonly (string Id, int Tier)[] PRESET_HIGH =
-    {
-        (ID_ENEMY_FEROCITY, 3), (ID_ENEMY_TIDE, 3), (ID_WEAK_GROUND, 3), (ID_LEAN_HARVEST, 3),
-        (ID_BIG_APPETITE, 3), (ID_EMPTY_HANDS, 3), (ID_HARSH_WINTER, 3), (ID_ROCKFALL, 3),
-        (ID_NO_MORNING_RESTORE, 1), (ID_LAST_STAND, 1), (ID_IRONMAN, 1),
-        (ID_SWORN_ELEMENT, 1), (ID_HEAVY_GRAVITY, 1),
-    };
-
-    [MenuItem("Tools/NewGamePlus/뮤테이터 에셋 일괄 저작 (13종 + 프리셋 3종)")]
+    [MenuItem("Tools/NewGamePlus/뮤테이터 에셋 일괄 저작 (13종)")]
     public static void Execute()
     {
         EnsureFolder(MUTATOR_FOLDER);
@@ -186,37 +156,6 @@ public static class RunMutatorAssetAuthoring
             Debug.LogError("[RunMutatorAssetAuthoring] 점수 합계가 설계서 §6.0과 다릅니다 - " +
                 $"기대 {EXPECTED_NUMERIC_TOTAL}+{EXPECTED_RULE_TOTAL}, 실제 {numericTotal}+{ruleTotal}.");
         }
-
-        VerifyPreset(all, PRESET_LOW_LOC_KEY, PRESET_LOW, PRESET_LOW_SCORE);
-        VerifyPreset(all, PRESET_MID_LOC_KEY, PRESET_MID, PRESET_MID_SCORE);
-        VerifyPreset(all, PRESET_HIGH_LOC_KEY, PRESET_HIGH, PRESET_HIGH_SCORE);
-    }
-
-    private static void VerifyPreset(
-        List<RunMutatorSO> all, string nameLocKey, (string Id, int Tier)[] preset, int expected)
-    {
-        int total = 0;
-
-        foreach ((string id, int tier) in preset)
-        {
-            RunMutatorSO mutator = all.FirstOrDefault(entry => entry.Id == id);
-
-            if (mutator == null || !mutator.TryGetTier(tier, out RunMutatorTier resolved))
-            {
-                Debug.LogError($"[RunMutatorAssetAuthoring] 프리셋 '{nameLocKey}' 항목이 카탈로그에 없습니다: {id} {tier}단계");
-                return;
-            }
-
-            total += resolved.DifficultyScore;
-        }
-
-        if (total == expected)
-        {
-            Debug.Log($"[RunMutatorAssetAuthoring] 프리셋 검산 통과: {nameLocKey} = 항목 {preset.Length}개 {total}점");
-            return;
-        }
-
-        Debug.LogError($"[RunMutatorAssetAuthoring] 프리셋 '{nameLocKey}' 점수 불일치 - 기대 {expected}점, 실제 {total}점");
     }
 
     private static MonsterData[] LoadAllMonsterData()
@@ -440,7 +379,9 @@ public static class RunMutatorAssetAuthoring
         modifier.FindPropertyRelative("_multiplierBonus").floatValue = multiplierBonus;
     }
 
-    // 목록과 프리셋을 통째로 다시 쓴다 - 이어 붙이기만 하면 순서가 실행 이력에 따라 달라진다.
+    // 목록을 통째로 다시 쓴다 - 이어 붙이기만 하면 순서가 실행 이력에 따라 달라진다.
+    // 프리셋(_presets)은 더 이상 이 도구가 저작하지 않는다 - 항상 빈 배열로 정리해 둔다
+    // (예시 조합 시스템 제거. 자유 조합만 남는다).
     private static void RegisterInCatalog(List<RunMutatorSO> ordered)
     {
         RunMutatorCatalogSO catalog = AssetDatabase.LoadAssetAtPath<RunMutatorCatalogSO>(CATALOG_PATH);
@@ -461,35 +402,11 @@ public static class RunMutatorAssetAuthoring
             mutators.GetArrayElementAtIndex(i).objectReferenceValue = ordered[i];
         }
 
-        SerializedProperty presets = serialized.FindProperty("_presets");
-        presets.ClearArray();
-
-        WritePreset(presets, 0, PRESET_LOW_LOC_KEY, PRESET_LOW);
-        WritePreset(presets, 1, PRESET_MID_LOC_KEY, PRESET_MID);
-        WritePreset(presets, 2, PRESET_HIGH_LOC_KEY, PRESET_HIGH);
+        serialized.FindProperty("_presets").ClearArray();
 
         serialized.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(catalog);
         AssetDatabase.SaveAssetIfDirty(catalog);
-    }
-
-    private static void WritePreset(
-        SerializedProperty presets, int index, string nameLocKey, (string Id, int Tier)[] entries)
-    {
-        presets.InsertArrayElementAtIndex(index);
-        SerializedProperty preset = presets.GetArrayElementAtIndex(index);
-        preset.FindPropertyRelative("_nameLocKey").stringValue = nameLocKey;
-
-        SerializedProperty list = preset.FindPropertyRelative("_entries");
-        list.ClearArray();
-
-        for (int i = 0; i < entries.Length; i++)
-        {
-            list.InsertArrayElementAtIndex(i);
-            SerializedProperty entry = list.GetArrayElementAtIndex(i);
-            entry.FindPropertyRelative("_id").stringValue = entries[i].Id;
-            entry.FindPropertyRelative("_tier").intValue = entries[i].Tier;
-        }
     }
 
     // 최고 단계 점수만 더한다 - 한 뮤테이터는 단계 하나만 켤 수 있으므로 이것이 이론상 최대치다.

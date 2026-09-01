@@ -19,9 +19,9 @@ public class RunFoodUpkeepConsistencyTests
     private const int POPULATION = 50;
 
     private const float NEUTRAL = 1f;
-    private const float TIER1 = 1.5f;
-    private const float TIER2 = 2f;
-    private const float TIER3 = 3f;
+    private const float TIER1 = 1.2f;
+    private const float TIER2 = 1.35f;
+    private const float TIER3 = 1.5f;
 
     // 예측(GetRequiredFood)과 정산·표시(Calculate)가 같은 필요 식량을 내야 한다.
     [TestCase(NEUTRAL)]
@@ -58,12 +58,12 @@ public class RunFoodUpkeepConsistencyTests
             Is.EqualTo(PopulationUpkeepRules.GetRequiredFood(population, basePerPopulation)));
     }
 
-    // 1명당 값을 정수로 반올림하면 x1.5와 x2가 둘 다 2가 되어 1단계와 2단계가 같아진다.
+    // 1명당 값을 정수로 반올림하면 x1.2와 x1.35가 둘 다 2가 되어 1단계와 2단계가 같아진다.
     // 총액에서 한 번만 올림하면 세 단계가 전부 구분된다 - 그게 이 설계의 이유다.
     [TestCase(NEUTRAL, 50)]
-    [TestCase(TIER1, 75)]
-    [TestCase(TIER2, 100)]
-    [TestCase(TIER3, 150)]
+    [TestCase(TIER1, 60)]
+    [TestCase(TIER2, 68)]
+    [TestCase(TIER3, 75)]
     public void EveryTier_ProducesDistinctUpkeep(float runMultiplier, int expectedRequiredFood)
     {
         float effective = PopulationUpkeepRules.GetEffectiveFoodPerPopulation(
@@ -75,7 +75,7 @@ public class RunFoodUpkeepConsistencyTests
     }
 
     // 1단계가 반올림에 먹히지 않는지 - 인구가 1명이어도 유지비는 반드시 늘어야 한다.
-    // (내림을 골랐다면 1명 x 1.5 = 1로 깎여 3점짜리 뮤테이터가 0점이 된다.)
+    // (내림을 골랐다면 1명 x 1.2 = 1로 깎여 2점짜리 뮤테이터가 0점이 된다.)
     [Test]
     public void Tier1_IncreasesUpkeepEvenForSinglePopulation()
     {

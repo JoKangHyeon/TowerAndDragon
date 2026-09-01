@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-9140985530234662628
+--- !u!114 &-2336586621540154708
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8a2cc9a5ce934ae46b17a27fbf48d107, type: 3}
-  m_Name: RME_EEP_enemy_ferocity_tier1
+  m_Name: RME_EEP_enemy_ferocity_tier2
   m_EditorClassIdentifier: Assembly-CSharp::RunEnemyProfileEffectSO
-  _profile: {fileID: 11400000, guid: 4717682bd0ad421479b073c5e94b01a0, type: 2}
+  _profile: {fileID: 11400000, guid: 22212862eb1e9f349b66dd573c6ba553, type: 2}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -32,16 +32,16 @@ MonoBehaviour:
   - _difficultyScore: 3
     _descLocKey: mutator_enemy_ferocity_tier1_desc
     _effects:
-    - {fileID: -9140985530234662628}
+    - {fileID: 6555656654905507825}
   - _difficultyScore: 6
     _descLocKey: mutator_enemy_ferocity_tier2_desc
     _effects:
-    - {fileID: 2746464827053335128}
+    - {fileID: -2336586621540154708}
   - _difficultyScore: 9
     _descLocKey: mutator_enemy_ferocity_tier3_desc
     _effects:
-    - {fileID: 4935972636558163852}
---- !u!114 &2746464827053335128
+    - {fileID: 7092677920426055049}
+--- !u!114 &6555656654905507825
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -51,10 +51,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8a2cc9a5ce934ae46b17a27fbf48d107, type: 3}
-  m_Name: RME_EEP_enemy_ferocity_tier2
+  m_Name: RME_EEP_enemy_ferocity_tier1
   m_EditorClassIdentifier: Assembly-CSharp::RunEnemyProfileEffectSO
-  _profile: {fileID: 11400000, guid: 22212862eb1e9f349b66dd573c6ba553, type: 2}
---- !u!114 &4935972636558163852
+  _profile: {fileID: 11400000, guid: 4717682bd0ad421479b073c5e94b01a0, type: 2}
+--- !u!114 &7092677920426055049
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
