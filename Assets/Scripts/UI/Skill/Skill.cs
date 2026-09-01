@@ -218,6 +218,78 @@ public abstract class Skill
     // 설치형 스킬(방벽)처럼 SkillSO 수치가 아닌 값을 강화해야 하는 스킬이 매니저를 직접 조회한다.
     protected DragonTreeManager DragonTree => _dragonTreeManager;
 
+    /// <summary>
+    /// 효과를 실제로 준 대상 위에 시전 연출(B계층)을 띄운다. 프리팹이 비어 있으면 아무 일도 하지 않는다.
+    ///
+    /// <b>ApplyEffect가 성공을 확정한 뒤에만 부른다.</b> 화면 전체 배경 오버레이(A계층)는
+    /// SkillTargetingController가 Activate의 반환값을 보고 따로 띄우므로, 여기서 A를 신경 쓰지 않는다.
+    ///
+    /// 여러 대상에 거는 스킬(전역 화염 등)은 대상마다 부른다 - 풀에서 꺼내 쓰므로
+    /// 인스턴스가 쌓이지 않는다.
+    /// </summary>
+    protected void PlayTargetVfx(Vector3 position)
+    {
+        if (_skillData.TargetVfxPrefab == null)
+        {
+            return;
+        }
+
+        ProjectilePool.PlayForSeconds(
+            _skillData.TargetVfxPrefab,
+            position,
+            Quaternion.identity,
+            _skillData.TargetVfxLifetimeSeconds);
+    }
+
+    /// <summary>
+    /// 건물(성·타워)의 스프라이트 경계 중앙. <b>대상을 감싸는 크기</b>의 연출은 발밑이 아니라
+    /// 여기에 띄운다 - 발밑에 두면 아래로 치우쳐 절반이 지면에 묻힌다.
+    ///
+    /// `transform.position`을 쓰지 않는 이유: 그것은 피벗이라 스프라이트의 시각적 중앙과 다르고,
+    /// 건물마다 피벗 위치가 갈린다.
+    ///
+    /// (몬스터에는 쓰지 않는다 - 그쪽은 <see cref="PlayTargetVfxOnMonster"/>가 발밑을 쓴다.)
+    /// </summary>
+    protected static Vector3 ResolveBuildingCenter(Building building)
+    {
+        SpriteRenderer renderer = building.GetComponent<SpriteRenderer>();
+
+        if (renderer == null)
+        {
+            renderer = building.GetComponentInChildren<SpriteRenderer>(true);
+        }
+
+        if (renderer == null)
+        {
+            return building.transform.position;
+        }
+
+        Bounds bounds = renderer.bounds;
+
+        // z는 건물의 것을 그대로 쓴다 - 경계의 z는 스프라이트 두께라 정렬 기준이 되지 못한다
+        // (MonsterStatusVfx.ResolveAnchors와 같은 이유).
+        return new Vector3(bounds.center.x, bounds.center.y, building.transform.position.z);
+    }
+
+    /// <summary>
+    /// 몬스터 발밑에 시전 연출을 띄운다. 앵커를 <see cref="AttackVfxPlacement.ResolveGroundY"/>로
+    /// 구하는 것이 핵심이다 - <b>`SpriteRenderer.bounds`로 잡으면 안 된다.</b> 스프라이트 사각형의
+    /// 밑변과 실제 발 피벗이 셀 높이의 18~25%까지 어긋나고, 보스에서 −0.8 월드 단위까지 벌어진
+    /// 전례가 있다(설계 §6 / 그쪽 주석 참고).
+    /// </summary>
+    protected void PlayTargetVfxOnMonster(BaseMonster monster)
+    {
+        if (monster == null)
+        {
+            return;
+        }
+
+        Vector3 body = monster.transform.position;
+        float groundY = AttackVfxPlacement.ResolveGroundY(monster.gameObject);
+
+        PlayTargetVfx(new Vector3(body.x, groundY, body.z));
+    }
+
     private float PowerBonus => _dragonTreeManager != null
         ? _dragonTreeManager.GetSkillPowerMultiplierBonus(_skillData)
         : 0f;
@@ -252,16 +324,19 @@ public abstract class Skill
         }
     }
 
-    /// <summary>스킬 발동 진입점. 사용 가능할 때만 효과를 적용하고 쿨타임/사용횟수를 소비한다.</summary>
-    public void Activate(in SkillCastContext context)
+    /// <summary>스킬 발동 진입점. 사용 가능할 때만 효과를 적용하고 쿨타임/사용횟수를 소비한다.
+    /// 반환값은 <b>실제로 무슨 일이 일어났는가</b>다 - 시전 연출을 띄울지 판단하는 데 쓴다
+    /// (SkillCastOverlayHost). 쓸 수 없는 상태였거나 대상이 없어 아무 효과도 없었으면 false다.</summary>
+    public bool Activate(in SkillCastContext context)
     {
         if (!CanUse)
-            return;
+            return false;
 
-        if (ApplyEffect(in context))
-        {
-            SpendResources();
-        }
+        if (!ApplyEffect(in context))
+            return false;
+
+        SpendResources();
+        return true;
     }
 
     /// <summary>타겟팅 모드 중 커서 위치에 따른 스킬의 가시적 프리뷰(실루엣 등)를 업데이트한다.</summary>
@@ -393,14 +468,19 @@ public class FreezeAllSkill : Skill
         if (AppliedStatus == null || context.AllMonsters == null)
             return false;
 
+        // 실제로 얼린 마릿수를 센다 - 0마리에 true를 돌려주면 쿨타임이 돌고 시전 연출도 뜬다.
+        // 밤이 끝나갈 때 남은 적이 없는 상태로 눌러 보면 바로 드러난다.
+        bool hasFrozenAny = false;
+
         foreach (BaseMonster monster in context.AllMonsters)
         {
             if (monster != null && !monster.IsDead)
             {
                 monster.ApplyStatus(AppliedStatus);
+                hasFrozenAny = true;
             }
         }
-        return true;
+        return hasFrozenAny;
     }
 }
 
@@ -419,6 +499,9 @@ public class GlobalCurrentHealthDamageSkill : Skill
         if (context.AllMonsters == null)
             return false;
 
+        // 빙결과 같은 이유로 실제 타격 여부를 센다 - FreezeAllSkill.ApplyEffect 주석 참고.
+        bool hasHitAny = false;
+
         foreach (BaseMonster monster in context.AllMonsters)
         {
             if (monster == null || monster.IsDead)
@@ -430,8 +513,14 @@ public class GlobalCurrentHealthDamageSkill : Skill
             {
                 monster.ApplyStatus(AppliedStatus);
             }
+
+            // 상태이상 파이프라인이 아니라 여기서 직접 띄운다 - "화상이 걸려 있다"가 아니라
+            // "지금 막 타격했다"는 신호다. DS_FireBurn의 지속 연출과는 별개다(설계 §2-2).
+            PlayTargetVfxOnMonster(monster);
+
+            hasHitAny = true;
         }
-        return true;
+        return hasHitAny;
     }
 }
 
@@ -454,9 +543,18 @@ public class RepairTowersSkill : Skill
         bool restoredAny = false;
         foreach (Building building in context.AllBuildings)
         {
-            if (building is Tower tower && tower.IsDead)
+            if (building is Tower tower && tower.IsDead && tower.TryRestoreDuringCombat())
             {
-                restoredAny |= tower.TryRestoreDuringCombat();
+                restoredAny = true;
+
+                // ⚠️ Tower.RestoreAndReactivate에 걸지 않는다. 그 메서드는 세 경로가 공유한다 -
+                // 부활 게이지 완주(NightRevive)·이 스킬(SkillRepair)·아침 일괄 복구(MorningRestore).
+                // 거기 걸면 자연 부활과 아침 복구에도 연출이 뜬다(설계 §2-3). 스킬에서 직접 띄우면
+                // 분기가 필요 없다.
+                //
+                // 앵커는 발밑이 아니라 스프라이트 중앙이다 - 성벽 재생과 같은 "대상을 감싸는"
+                // 연출이라 발밑에 두면 아래로 치우쳐 절반이 지면에 묻힌다.
+                PlayTargetVfx(ResolveBuildingCenter(tower));
             }
         }
         return restoredAny;
@@ -475,12 +573,49 @@ public class HealCastleSkill : Skill
 
     protected override bool ApplyEffect(in SkillCastContext context)
     {
-        if (context.TargetCastle != null)
+        Castle castle = context.TargetCastle;
+
+        if (castle == null)
+            return false;
+
+        // 만피·사망이면 Health.Heal이 조용히 아무 일도 하지 않는다. 그때 true를 돌려주면
+        // 쿨타임만 태우고 시전 연출까지 뜨므로, 회복할 여지가 있는지 여기서 판정한다.
+        if (castle.IsDead || castle.CurrentHealth >= castle.MaxHealth)
+            return false;
+
+        castle.Repair(HealAmount);
+
+        // ⚠️ Castle.Repair가 아니라 여기서 띄운다. Repair는 연구 convenience_castle_regen_1의
+        // 매일 낮 자동 회복과 convenience_castle_repair의 즉시 수리도 지나는 공유 경로라,
+        // 그쪽에 걸면 스킬을 쓰지 않은 아침에도 회복 연출이 뜬다.
+        //
+        // 앵커는 발밑이 아니라 <b>성 스프라이트 중앙</b>이다 - 성을 감싸는 크기의 연출이라
+        // 발밑에 두면 아래쪽으로 치우쳐 절반이 지면에 묻힌다.
+        PlayTargetVfx(ResolveCastleCenter(castle));
+        return true;
+    }
+
+    // 스프라이트 경계(월드 AABB)의 중앙을 쓴다. transform.position은 피벗이라 성 스프라이트의
+    // 시각적 중앙과 다르고, 성이 커질 때 함께 따라오지 않는다.
+    private static Vector3 ResolveCastleCenter(Castle castle)
+    {
+        SpriteRenderer renderer = castle.GetComponent<SpriteRenderer>();
+
+        if (renderer == null)
         {
-            context.TargetCastle.Repair(HealAmount);
-            return true;
+            renderer = castle.GetComponentInChildren<SpriteRenderer>(true);
         }
-        return false;
+
+        if (renderer == null)
+        {
+            return castle.transform.position;
+        }
+
+        Bounds bounds = renderer.bounds;
+
+        // z는 성의 것을 그대로 쓴다 - 경계의 z는 스프라이트 두께라 정렬 기준이 되지 못한다
+        // (MonsterStatusVfx.ResolveAnchors와 같은 이유).
+        return new Vector3(bounds.center.x, bounds.center.y, castle.transform.position.z);
     }
 }
 
@@ -621,6 +756,9 @@ public class MeteorBarricadeSkill : Skill
         foreach (BaseMonster monster in targets)
         {
             monster.TakeDamage(new DamageInfo(FlatDamage));
+
+            // 반경 1.5라 대상이 한 자리 수다 - 전역 화염과 달리 수를 걱정할 필요가 없다.
+            PlayTargetVfxOnMonster(monster);
         }
 
         // 3. [설치 파트] 데미지 부여 후 방벽 설치를 마저 진행합니다.

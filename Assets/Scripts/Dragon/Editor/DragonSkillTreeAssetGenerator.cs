@@ -37,6 +37,12 @@ public static class DragonSkillTreeAssetGenerator
     private const string SHEET_EXPORT_FOLDER = "Docs";
     private const string BARRICADE_PREFAB_PATH = "Assets/Prefabs/Building/StoneBarricade.prefab";
 
+    // 성벽 재생의 대상별 연출(B계층). 새끼용 생명 타워 힐(TA_BD_TowerHealEffect)과 같은 프리팹을
+    // 일부러 재사용한다 - 어미용은 성에, 새끼용은 타워에 뜨고 어미용에는 화면 전체 초록 오버레이가
+    // 함께 붙으므로 화면에서 구분된다. 파생본을 따로 만들 이유가 없다.
+    private const string CASTLE_HEAL_VFX_PATH =
+        "Assets/Imported/Prefabs/BabyDragonEffect/Combat/FX_BD_LifeHealWave.prefab";
+
     // 슬롯당 랭크 - 2랭크로 두고 개당 효과를 키운다(3랭크 × 소폭%는 클릭만 늘고 결정이 안 된다).
     private const int RANK_SINGLE = 1;
     private const int RANK_BRANCH = 2;
@@ -584,6 +590,10 @@ public static class DragonSkillTreeAssetGenerator
                 so.FindProperty("DefaultCooltime").floatValue = SKILL_DEFAULT_COOLTIME;
                 so.FindProperty("DefaultUsePerDay").intValue = SKILL_UNLIMITED_USE_PER_DAY;
                 so.FindProperty("HealAmount").floatValue = CASTLE_HEAL_AMOUNT;
+
+                // 비어 있어도 스킬은 동작한다(연출만 생략). PlayTargetVfx가 널을 그냥 넘긴다.
+                so.FindProperty("TargetVfxPrefab").objectReferenceValue =
+                    AssetDatabase.LoadAssetAtPath<GameObject>(CASTLE_HEAL_VFX_PATH);
             });
 
         AddLocRow("dragon_skill_freeze_all_name", "[TBD] Freeze All", "[미정] 전역 빙결");
