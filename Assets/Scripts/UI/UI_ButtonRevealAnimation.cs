@@ -2,8 +2,11 @@ using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
-/// 버튼이 제자리에서 살짝 커지며 나타나는 등장 연출. 움직일 버튼 자신에게 붙인다.
+/// 제자리에서 살짝 커지며 나타나는 등장 연출. 움직일 대상 자신에게 붙인다.
 /// 자리를 옮기지 않으므로 레이아웃이 잡아 준 위치를 그대로 쓰고, 배율과 알파만 건드린다.
+/// 버튼용으로 만들었지만 Button에 의존하지 않는다 - 패배 창의 결과 묶음(Result: 라벨 + 최종 버틴 날짜)처럼
+/// "제자리에서 뿅 하고 나타난다"가 필요한 곳이면 어디든 붙일 수 있다. 그런 곳에서는 _playIdlePulse를 끈다
+/// (누를 데가 아닌데 계속 맥박이 뛰면 시선을 뺏는다).
 ///
 /// 알파를 Image가 아니라 CanvasGroup으로 조절하는 이유: 이 버튼들은 ColorTint 트랜지션이라
 /// Button이 상태가 바뀔 때마다 targetGraphic의 색을 직접 덮어쓴다. Image에 페이드를 걸면 둘이 싸운다.
@@ -15,6 +18,7 @@ using UnityEngine;
 ///   0.30s ~ 1.00s  날개가 펼쳐진다        (UI_WingUnfoldAnimation)
 ///   0.95s ~        버튼이 제자리에서 나타난다 (이 컴포넌트)
 /// 앞 박자의 길이를 바꾸면 뒤 박자의 시작 지연도 같이 밀어야 한다.
+/// 패배 창의 타임라인은 <see cref="UI_ArrowImpactAnimation"/>의 주석에 정리돼 있다.
 ///
 /// 시간을 unscaled로 도는 이유: 이 창은 GameSpeedManager가 Time.timeScale을 0으로 못박은 뒤에 열린다.
 /// SetUpdate(true)를 빼면 트윈이 한 프레임도 진행하지 않는다.
