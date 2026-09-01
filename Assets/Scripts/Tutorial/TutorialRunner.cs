@@ -844,6 +844,17 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
         if (_activeStep.TargetMode != TutorialExclusiveModeKind.None)
         {
             _unlockedModes.Add(_activeStep.TargetMode);
+
+            // 용 창은 마지막으로 본 탭을 기억한다 - 앞서 새끼용 탭을 보고 닫았으면 어미용을 시키는
+            // 단계가 새끼용 화면에서 시작한다. 창이 이미 열려 있어 이 단계를 건너뛰는 경우
+            // (SkipIfModeOpen)까지 덮으려면 IsConditionAlreadySatisfied보다 앞에서 맞춰야 한다.
+            // 닫으라고 시키는 단계는 건드리지 않는다 - 닫기 직전에 탭이 바뀌면 그게 더 이상하다.
+            if (_activeStep.TargetMode == TutorialExclusiveModeKind.DragonSkill &&
+                _activeStep.Condition != TutorialConditionType.ExclusiveModeClosed &&
+                _dragonWindow != null)
+            {
+                _dragonWindow.ForceMotherTab();
+            }
         }
 
         CaptureConditionBaseline(_activeStep);

@@ -478,6 +478,24 @@ public class UI_DragonWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
+    // 창을 열지 않고 탭만 어미용으로 맞춘다. 어미용 화면을 시키는 튜토리얼 단계에 들어갈 때 쓴다 -
+    // HUD 드래곤 버튼(ToggleFromEntryPoint)은 마지막으로 본 탭을 그대로 열기 때문에,
+    // 새끼용 탭을 본 뒤 창을 닫았으면 그 단계가 새끼용 화면에서 시작한다.
+    //
+    // 닫혀 있으면 SelectTab을 부르지 않는다 - 보이지도 않는 탭 전환으로 OnTabDisplayed가 나가면
+    // 그걸 듣는 쪽(도움말 발견 처리 등)이 플레이어가 누른 것으로 받아들인다.
+    // 다음 Open()의 SelectTab(_currentTab)이 어미용을 펴 준다.
+    public void ForceMotherTab()
+    {
+        if (_isOpen)
+        {
+            SelectTab(DragonTab.Mother);
+            return;
+        }
+
+        _currentTab = DragonTab.Mother;
+    }
+
     // 선택된 탭의 패널만 켜고, 두 탭 버튼의 시각 상태를 갱신한다.
     // 탭 선택은 창을 닫아도 유지된다(다시 열면 마지막 탭이 보인다).
     private void SelectTab(DragonTab tab)
