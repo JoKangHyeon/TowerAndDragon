@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Unity.Profiling;
 using UnityEngine;
 
 // Props(장식물)를 자신이 선 셀의 ChunkState에 맞춰 FogOfWarRenderer와 같은 밝기로 어둡게 틴트한다.
@@ -8,11 +9,17 @@ using UnityEngine;
 // 셀 좌표를 계산해 캐싱하고 GridMap.OnCellChanged(셀 상태가 바뀔 때만) 갱신한다.
 public class PropFogTintController : MonoBehaviour
 {
+    // [임시 계측] 밤→낮 전환 프리즈 조사용. CycleManager.cs의 TND. 명명 규칙을 그대로 따른다.
+    private const string REFRESH_ALL_MARKER_NAME = "TND.PropFogTint.RefreshAll";
+    private static readonly ProfilerMarker REFRESH_ALL_MARKER = new(REFRESH_ALL_MARKER_NAME);
+
     [SerializeField]
     private GridMap _gridMap;
 
     private FogOfWarRenderer _fogOfWarRenderer;
     private readonly List<(SpriteRenderer Renderer, Vector3Int Coord)> _props = new();
+
+    private bool _isRefreshQueued;
 
     private void Awake()
     {
@@ -41,10 +48,10 @@ public class PropFogTintController : MonoBehaviour
     // FogOfWarRenderer와 동일한 이유로 한 프레임 뒤로 미뤄 초기 도색한다.
     private void Start()
     {
-        RefreshNextFrameAsync(this.GetCancellationTokenOnDestroy()).Forget();
+        InitializeNextFrameAsync(this.GetCancellationTokenOnDestroy()).Forget();
     }
 
-    private async UniTaskVoid RefreshNextFrameAsync(CancellationToken cancellationToken)
+    private async UniTaskVoid InitializeNextFrameAsync(CancellationToken cancellationToken)
     {
         await UniTask.Yield(cancellationToken);
 
@@ -61,13 +68,37 @@ public class PropFogTintController : MonoBehaviour
             _gridMap.OnCellChanged.RemoveListener(HandleCellChanged);
     }
 
-    private void HandleCellChanged(GridCell cell) => RefreshAll();
+    private void HandleCellChanged(GridCell cell) => QueueRefresh();
+
+    // 청크 하나가 열리면 셀 이벤트가 청크 크기만큼 연달아 오고, 밤 정산에서는 주변 청크까지 합쳐
+    // 수백~수천 번 온다 - 실제 도색은 프레임당 한 번만 한다(PropVisibilityController.QueueRefresh와
+    // 같은 이유). Defines.FOG_REPAINT_COALESCE_TIMING(렌더링 직전)에서 처리해, 안개·구름과 한 프레임도
+    // 어긋나지 않게 한다.
+    private void QueueRefresh()
+    {
+        if (_isRefreshQueued)
+            return;
+
+        _isRefreshQueued = true;
+        RefreshQueuedAsync(this.GetCancellationTokenOnDestroy()).Forget();
+    }
+
+    private async UniTaskVoid RefreshQueuedAsync(CancellationToken cancellationToken)
+    {
+        await UniTask.Yield(Defines.FOG_REPAINT_COALESCE_TIMING, cancellationToken);
+
+        _isRefreshQueued = false;
+        RefreshAll();
+    }
 
     private void RefreshAll()
     {
-        foreach ((SpriteRenderer renderer, Vector3Int coord) in _props)
+        using (REFRESH_ALL_MARKER.Auto())
         {
-            renderer.color = _fogOfWarRenderer.GetTintColor(_gridMap.GetCellState(coord));
+            foreach ((SpriteRenderer renderer, Vector3Int coord) in _props)
+            {
+                renderer.color = _fogOfWarRenderer.GetTintColor(_gridMap.GetCellState(coord));
+            }
         }
     }
 }

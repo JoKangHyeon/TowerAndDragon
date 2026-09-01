@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Unity.Profiling;
 using UnityEngine;
 
 // 인접한 Conquered 청크들을 하나의 영역으로 보고 바깥 경계에만 녹색 테두리를, 원정 중인(점령
@@ -29,6 +30,11 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
     private const int TURN_PRIORITY_STRAIGHT = 1;
     private const int TURN_PRIORITY_RIGHT = 2;
     private const int TURN_PRIORITY_REVERSE = 3;
+
+    // [임시 계측] 밤→낮 전환 프리즈 조사용. 점령 확정마다 OnChunkStateChanged를 통해
+    // 맵 전체 재추적이 몇 번·얼마나 도는지 확인한다.
+    private const string REFRESH_BORDERS_MARKER_NAME = "TND.ChunkBorder.Refresh";
+    private static readonly ProfilerMarker REFRESH_BORDERS_MARKER = new(REFRESH_BORDERS_MARKER_NAME);
 
     [SerializeField]
     private LineRenderer _borderLineRendererPrefab;
@@ -146,19 +152,22 @@ public class ConqueredChunkBorderRenderer : MonoBehaviour
 
     private void RefreshBorders()
     {
-        List<List<Vector2Int>> loops = BuildBorderLoops(CollectConqueredCells());
-        Color borderColor = ResolveConqueredBorderColor();
-
-        for (int i = 0; i < loops.Count; i++)
+        using (REFRESH_BORDERS_MARKER.Auto())
         {
-            LineRenderer lineRenderer = _borderPool.Get(i);
+            List<List<Vector2Int>> loops = BuildBorderLoops(CollectConqueredCells());
+            Color borderColor = ResolveConqueredBorderColor();
 
-            // 점령지 선만 인셋 없이 실제 영토 경계에 얹는다 - 나머지 선들이 이 선을 기준으로 비켜난다.
-            SetLoopPositions(lineRenderer, loops[i], borderColor, CONQUERED_BORDER_SORTING_ORDER, null);
+            for (int i = 0; i < loops.Count; i++)
+            {
+                LineRenderer lineRenderer = _borderPool.Get(i);
+
+                // 점령지 선만 인셋 없이 실제 영토 경계에 얹는다 - 나머지 선들이 이 선을 기준으로 비켜난다.
+                SetLoopPositions(lineRenderer, loops[i], borderColor, CONQUERED_BORDER_SORTING_ORDER, null);
+            }
+
+            _borderPool.DeactivateFrom(loops.Count);
+            _activeConqueredLoopCount = loops.Count;
         }
-
-        _borderPool.DeactivateFrom(loops.Count);
-        _activeConqueredLoopCount = loops.Count;
     }
 
     // 점령 모드에 들어가고 나올 때 내 영토 테두리 색을 바꾼다.

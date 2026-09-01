@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -34,6 +35,10 @@ public class FogOfWarRenderer : MonoBehaviour
     private const int VISIBLE_FOG_ORDER = 1;
     private const int HIDDEN_FOG_ORDER = 2;
 
+    // [임시 계측] 밤→낮 전환 프리즈 조사용. CycleManager.cs의 TND. 명명 규칙을 그대로 따른다.
+    private const string REPAINT_MARKER_NAME = "TND.Fog.Repaint";
+    private static readonly ProfilerMarker REPAINT_MARKER = new(REPAINT_MARKER_NAME);
+
     private GridMap _gridMap;
     private Tilemap _terrainTilemap;
 
@@ -47,6 +52,13 @@ public class FogOfWarRenderer : MonoBehaviour
     // dx 바깥/dy 안쪽 순회 순서를 그대로 보존해야 한다 - GetGradientTintColor의 동률 처리(같은 거리에서
     // 나중에 검사한 이웃이 이긴다)가 이 순서에 의존한다.
     private (int dx, int dy, int distance)[] _gradientOffsets;
+
+    // 증분 갱신 전용 버퍼. 오버레이 갱신(_overlayRepaintBuffer)과는 반드시 분리한다 - 같은 프레임에
+    // 섞이면 서로의 대상 집합을 지운다. 둘 다 최종적으로 GetGradientTintColor가 "현재 상태 + 현재
+    // 오버레이"를 다시 계산해 수렴하므로 처리 순서가 뒤바뀌어도 최종 색은 항상 같다.
+    private readonly HashSet<Vector3Int> _dirtyCells = new();
+    private readonly HashSet<Vector3Int> _repaintTargets = new();
+    private bool _isRepaintQueued;
 
     private void Awake()
     {
@@ -121,20 +133,61 @@ public class FogOfWarRenderer : MonoBehaviour
         return scanNeeded;
     }
 
-    // 점령 등으로 셀 상태가 바뀔 때마다 GridMap이 즉시 호출 - 바뀐 셀 주변 그라데이션 폭만큼도
-    // 다시 칠한다(이웃 셀의 그라데이션이 바뀐 셀의 상태를 참조하므로 함께 갱신해야 함).
-    private void HandleCellChanged(GridCell cell) => RepaintAround(cell.Coord);
-
-    private void RepaintAround(Vector3Int center)
+    // 점령 등으로 셀 상태가 바뀔 때마다 GridMap이 즉시 호출된다 - 바뀐 셀 주변 그라데이션 폭만큼도
+    // 다시 칠해야 하지만(이웃 셀의 그라데이션이 바뀐 셀의 상태를 참조), 청크 하나가 열리면 이 이벤트가
+    // 청크 크기만큼(많게는 수백 회) 연달아 온다. 셀마다 즉시 9x9 창을 다시 칠하면 인접한 변경 셀끼리
+    // 창이 크게 겹쳐 같은 좌표를 수십 번 다시 칠하게 되므로, 좌표만 모아 두고 프레임당 한 번만 처리한다.
+    private void HandleCellChanged(GridCell cell)
     {
-        for (int dx = -_gradientBandWidth; dx <= _gradientBandWidth; dx++)
+        _dirtyCells.Add(cell.Coord);
+        QueueRepaint();
+    }
+
+    private void QueueRepaint()
+    {
+        if (_isRepaintQueued)
+            return;
+
+        _isRepaintQueued = true;
+        RepaintQueuedAsync(this.GetCancellationTokenOnDestroy()).Forget();
+    }
+
+    // Defines.FOG_REPAINT_COALESCE_TIMING(렌더링 직전)에서 처리한다 - 다음 프레임으로 미루면
+    // "점령 직후 한 프레임 옛 안개가 보인다"는 시각 지연이 생기지만, 같은 프레임 렌더링 전에
+    // 처리하면 합치기 이득은 그대로 유지하면서 지연은 없다.
+    private async UniTaskVoid RepaintQueuedAsync(CancellationToken cancellationToken)
+    {
+        await UniTask.Yield(Defines.FOG_REPAINT_COALESCE_TIMING, cancellationToken);
+
+        _isRepaintQueued = false;
+        FlushDirtyCells();
+    }
+
+    // 이번 프레임에 바뀐 셀들의 9x9 창을 합집합으로 모아 좌표당 딱 한 번씩만 칠한다.
+    private void FlushDirtyCells()
+    {
+        if (_dirtyCells.Count == 0)
+            return;
+
+        using (REPAINT_MARKER.Auto())
         {
-            for (int dy = -_gradientBandWidth; dy <= _gradientBandWidth; dy++)
+            EnsureGradientOffsets();
+            _repaintTargets.Clear();
+
+            foreach (Vector3Int coord in _dirtyCells)
             {
-                Vector3Int coord = center + new Vector3Int(dx, dy, 0);
-                if (_terrainTilemap.HasTile(coord))
-                    PaintCellAt(coord);
+                // _gradientOffsets에는 (0,0)이 없으므로 변경된 셀 자신은 별도로 더한다.
+                _repaintTargets.Add(coord);
+
+                for (int i = 0; i < _gradientOffsets.Length; i++)
+                {
+                    (int dx, int dy, _) = _gradientOffsets[i];
+                    _repaintTargets.Add(coord + new Vector3Int(dx, dy, 0));
+                }
             }
+
+            _dirtyCells.Clear();
+            RepaintCells(_repaintTargets);
         }
     }
 

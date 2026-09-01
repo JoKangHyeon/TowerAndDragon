@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
@@ -33,6 +34,19 @@ public sealed class SaveService : MonoBehaviour
     // 연속 실패가 이 횟수에 이르면 자동저장을 끈다. 디스크가 가득 찼거나 권한이 없을 때
     // 낮마다 같은 예외 로그가 쌓이는 것을 막는다.
     private const int AUTO_SAVE_FAILURE_LIMIT = 3;
+
+    // 썸네일 캡처(맵 전체 재렌더 + GPU 리드백 + PNG 인코딩)를 본문 저장 프레임에서 몇 프레임
+    // 뒤로 미룰지. 밤→낮 전환처럼 이미 무거운 프레임과 겹치지 않을 정도면 충분하다.
+    private const int THUMBNAIL_CAPTURE_DELAY_FRAMES = 3;
+
+    // [임시 계측] 밤→낮 전환 프리즈 조사용. CycleManager.cs의 TND. 명명 규칙을 그대로 따른다.
+    private const string SAVE_CAPTURE_MARKER_NAME = "TND.Save.Capture";
+    private const string SAVE_SERIALIZE_MARKER_NAME = "TND.Save.Serialize";
+    private const string SAVE_THUMBNAIL_MARKER_NAME = "TND.Save.Thumbnail";
+
+    private static readonly ProfilerMarker SAVE_CAPTURE_MARKER = new(SAVE_CAPTURE_MARKER_NAME);
+    private static readonly ProfilerMarker SAVE_SERIALIZE_MARKER = new(SAVE_SERIALIZE_MARKER_NAME);
+    private static readonly ProfilerMarker SAVE_THUMBNAIL_MARKER = new(SAVE_THUMBNAIL_MARKER_NAME);
 
     [SerializeField] private GameManager _gameManager;
     [SerializeField] private CycleManager _cycleManager;
@@ -84,6 +98,12 @@ public sealed class SaveService : MonoBehaviour
     private int _pendingLoadSlotIndex = SavePaths.INVALID_SLOT_INDEX;
     private int _consecutiveAutoSaveFailures;
     private bool _isSaving;
+
+    // 지연된 썸네일 캡처가 겹치지 않게 막는 별도 가드. _isSaving과 분리한 이유: 썸네일 캡처는
+    // 본문 저장이 끝난 뒤(디스크 쓰기 스레드가 아니라 메인 스레드가 자유로워진 뒤) 몇 프레임 지나
+    // 진행되므로, 그동안 _isSaving을 계속 잡고 있으면 그 사이의 수동 저장이 AlreadyRunning으로
+    // 거부된다.
+    private bool _isThumbnailCapturing;
 
     // 복원 중에는 저장하지 않는다. ResumeDay는 OnDaySettled를 발화하지 않으므로 이 플래그가
     // 없어도 자동저장이 돌지 않지만, 복원 도중 다른 경로로 저장이 시작되는 것을 막는 이중 방어로 남긴다.
@@ -271,19 +291,23 @@ public sealed class SaveService : MonoBehaviour
         {
             // 캡처와 직렬화는 메인 스레드에서 동기로 한다 - GridMap 등 Unity API를 만지고,
             // 저장 시점의 상태를 한 프레임 안에서 원자적으로 고정해야 한다.
-            SaveGameDto dto = SaveCapture.Capture(context, slotIndex, isAutoSave);
-
-            if (!SaveJson.TrySerialize(dto, out string saveJson, out string serializeError) ||
-                !SaveJson.TrySerialize(dto.Meta, out string metaJson, out serializeError))
+            SaveGameDto dto;
+            using (SAVE_CAPTURE_MARKER.Auto())
             {
-                Debug.LogError($"[SaveService] 직렬화 실패: {serializeError}");
-                return Fail(SaveFailureReason.SerializationFailed, slotIndex);
+                dto = SaveCapture.Capture(context, slotIndex, isAutoSave);
             }
 
-            // 썸네일도 캡처와 같은 이유로 메인 스레드에서 찍는다(카메라·텍스처를 만진다).
-            // 실패는 무시한다 - 메타 파일과 같은 파생물이라 없어도 세이브는 온전하다.
-            byte[] thumbnailPng = null;
-            _thumbnailCapturer?.TryCapturePng(out thumbnailPng);
+            string saveJson;
+            string metaJson;
+            using (SAVE_SERIALIZE_MARKER.Auto())
+            {
+                if (!SaveJson.TrySerialize(dto, out saveJson, out string serializeError) ||
+                    !SaveJson.TrySerialize(dto.Meta, out metaJson, out serializeError))
+                {
+                    Debug.LogError($"[SaveService] 직렬화 실패: {serializeError}");
+                    return Fail(SaveFailureReason.SerializationFailed, slotIndex);
+                }
+            }
 
             // 경로는 반드시 메인 스레드에서 만든다 - SavePaths.RootDirectory가
             // Application.persistentDataPath를 읽는데, 이건 메인 스레드 전용 Unity API다.
@@ -293,12 +317,15 @@ public sealed class SaveService : MonoBehaviour
 
             // 디스크 쓰기만 스레드풀로 뺀다. 페이로드는 수 KB지만 백신 실시간 검사나 동기화 폴더가
             // 걸리면 수십~수백 ms 블록될 수 있고, 이 저장은 낮 전환 프레임에 걸려 있다.
+            // 썸네일은 여기서 찍지 않는다 - 본문은 저장 시점 상태를 원자적으로 고정해야 하는 계약
+            // 대상이지만, 썸네일은 실패해도 세이브가 온전한 파생물이라(WriteSlotFiles 주석 참고)
+            // 이 프레임 밖으로 미뤄도 계약을 깨지 않는다(CaptureAndWriteThumbnailDelayedAsync).
             string writeError;
 
             try
             {
                 writeError = await UniTask.RunOnThreadPool(
-                    () => WriteSlotFiles(savePath, metaPath, thumbnailPath, saveJson, metaJson, thumbnailPng),
+                    () => WriteSlotFiles(savePath, metaPath, thumbnailPath, saveJson, metaJson, null),
                     cancellationToken: cancellationToken);
             }
             catch (System.OperationCanceledException)
@@ -329,13 +356,70 @@ public sealed class SaveService : MonoBehaviour
                 Debug.Log($"[SaveService] 철인 모드 - 이 런의 세이브 슬롯을 {slotIndex}번으로 고정합니다.");
             }
 
-            SaveSlotInfo info = SaveSlotInfo.FromMeta(dto.Meta, slotIndex, false, thumbnailPng != null);
+            // 본문 저장이 끝난 뒤(아래 finally에서 _isSaving이 풀린 뒤) 별도로 썸네일을 캡처한다.
+            // 지금 시점엔 아직 파일이 없으므로 hasThumbnail은 정직하게 false로 보고한다 - 슬롯 목록을
+            // 다시 열면 SaveSlotQuery가 디스크에서 존재 여부를 새로 읽으므로 그때는 정확히 반영된다.
+            CaptureAndWriteThumbnailDelayedAsync(
+                thumbnailPath,
+                _cycleManager != null ? _cycleManager.CurrentCycle : CycleManager.CycleState.Day,
+                this.GetCancellationTokenOnDestroy()).Forget();
+
+            SaveSlotInfo info = SaveSlotInfo.FromMeta(dto.Meta, slotIndex, false, false);
             _saveCompleted.Invoke(info);
             return SaveResult.Success(info);
         }
         finally
         {
             _isSaving = false;
+        }
+    }
+
+    // 썸네일은 맵 전체를 다시 렌더 + GPU 리드백 + PNG 인코딩하는 무거운 파생물이다. 밤→낮 전환처럼
+    // 이미 무거운 프레임과 겹치면 그 프레임만 눈에 띄게 멈추므로, 본문 저장 성공 뒤 몇 프레임
+    // 지나 한가해진 시점에 캡처한다.
+    private async UniTaskVoid CaptureAndWriteThumbnailDelayedAsync(
+        string thumbnailPath,
+        CycleManager.CycleState expectedCycle,
+        CancellationToken cancellationToken)
+    {
+        // 같은 슬롯에 자동저장이 연달아 걸리는 극단적인 경우에도 지연 캡처끼리 겹치지 않게 한다.
+        if (_isThumbnailCapturing)
+            return;
+
+        _isThumbnailCapturing = true;
+
+        try
+        {
+            await UniTask.DelayFrame(THUMBNAIL_CAPTURE_DELAY_FRAMES, cancellationToken: cancellationToken);
+
+            // 지연된 프레임 사이 낮/밤이 바뀌었으면(철인 모드의 밤 진입 직전 저장 등) 캡처를 건너뛴다 -
+            // 그렇지 않으면 "낮 스냅샷을 저장했는데 밤 화면이 찍힌" 썸네일이 생긴다.
+            if (_cycleManager != null && _cycleManager.CurrentCycle != expectedCycle)
+                return;
+
+            if (_thumbnailCapturer == null)
+                return;
+
+            byte[] thumbnailPng;
+            using (SAVE_THUMBNAIL_MARKER.Auto())
+            {
+                if (!_thumbnailCapturer.TryCapturePng(out thumbnailPng))
+                    return;
+            }
+
+            // 본문과 같은 이유로 디스크 쓰기만 스레드풀로 뺀다. 실패는 무시한다 - 메타 파일과 같은
+            // 파생물이라 없어도 세이브는 온전하다(WriteSlotFiles 주석과 같은 계약).
+            await UniTask.RunOnThreadPool(
+                () => SaveFileStore.TryWriteBytesAtomic(thumbnailPath, thumbnailPng, out _),
+                cancellationToken: cancellationToken);
+        }
+        catch (System.OperationCanceledException)
+        {
+            // 씬 언로드 등으로 취소된 경우 - 썸네일은 파생물이라 조용히 포기한다.
+        }
+        finally
+        {
+            _isThumbnailCapturing = false;
         }
     }
 

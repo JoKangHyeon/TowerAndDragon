@@ -1,3 +1,4 @@
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -36,6 +37,17 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
     // 세로 반범위 기준이므로 가로로는 이 값의 THUMBNAIL_ASPECT배까지 보인다.
     private const float MIN_HALF_HEIGHT = 4f;
 
+    // [임시 계측] 밤→낮 전환 프리즈 조사용. CycleManager.cs의 TND. 명명 규칙을 그대로 따른다.
+    private const string RESOLVE_FRAME_MARKER_NAME = "TND.Thumb.ResolveFrame";
+    private const string RENDER_MARKER_NAME = "TND.Thumb.Render";
+    private const string READBACK_MARKER_NAME = "TND.Thumb.Readback";
+    private const string ENCODE_MARKER_NAME = "TND.Thumb.Encode";
+
+    private static readonly ProfilerMarker RESOLVE_FRAME_MARKER = new(RESOLVE_FRAME_MARKER_NAME);
+    private static readonly ProfilerMarker RENDER_MARKER = new(RENDER_MARKER_NAME);
+    private static readonly ProfilerMarker READBACK_MARKER = new(READBACK_MARKER_NAME);
+    private static readonly ProfilerMarker ENCODE_MARKER = new(ENCODE_MARKER_NAME);
+
     [SerializeField] private GridMap _gridMap;
     [SerializeField] private ConquestManager _conquestManager;
 
@@ -59,7 +71,15 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
             return false;
         }
 
-        if (!TryResolveFrame(out Vector3 center, out float halfHeight))
+        bool hasFrame;
+        Vector3 center;
+        float halfHeight;
+        using (RESOLVE_FRAME_MARKER.Auto())
+        {
+            hasFrame = TryResolveFrame(out center, out halfHeight);
+        }
+
+        if (!hasFrame)
         {
             return false;
         }
@@ -90,14 +110,24 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
                 return false;
             }
 
-            RenderPipeline.SubmitRenderRequest(camera, request);
+            using (RENDER_MARKER.Auto())
+            {
+                RenderPipeline.SubmitRenderRequest(camera, request);
+            }
 
-            RenderTexture.active = renderTexture;
-            texture = new Texture2D(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, TextureFormat.RGB24, false);
-            texture.ReadPixels(new Rect(0f, 0f, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT), 0, 0);
-            texture.Apply();
+            using (READBACK_MARKER.Auto())
+            {
+                RenderTexture.active = renderTexture;
+                texture = new Texture2D(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, TextureFormat.RGB24, false);
+                texture.ReadPixels(new Rect(0f, 0f, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT), 0, 0);
+                texture.Apply();
+            }
 
-            pngBytes = texture.EncodeToPNG();
+            using (ENCODE_MARKER.Auto())
+            {
+                pngBytes = texture.EncodeToPNG();
+            }
+
             return pngBytes != null;
         }
         catch (System.Exception exception)
@@ -210,14 +240,31 @@ public sealed class SaveThumbnailCapturer : MonoBehaviour
         return Mathf.Clamp(desiredPos, mapCenterAxis - availableHalfRange, mapCenterAxis + availableHalfRange);
     }
 
+    // 맵 경계는 GridMap.Awake 이후 게임 내내 바뀌지 않으므로 최초 1회만 계산해 캐시한다 -
+    // 저장할 때마다(하루에 한 번 이상) 맵 전체 셀을 좌표 변환하는 비용을 없앤다.
+    private bool _hasMapBoundsCache;
+    private Bounds _mapBoundsCache;
+
     private bool TryResolveMapBounds(out Bounds bounds)
     {
+        if (_hasMapBoundsCache)
+        {
+            bounds = _mapBoundsCache;
+            return true;
+        }
+
         bounds = default;
         bool hasAny = false;
 
         foreach (Chunk chunk in _gridMap.GetAllChunks())
         {
             EncapsulateChunk(chunk, ref bounds, ref hasAny);
+        }
+
+        if (hasAny)
+        {
+            _mapBoundsCache = bounds;
+            _hasMapBoundsCache = true;
         }
 
         return hasAny;

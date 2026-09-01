@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine.Events;
 
 public class ConquestManager : MonoBehaviour
@@ -8,6 +9,17 @@ public class ConquestManager : MonoBehaviour
     private const int MINIMUM_DAYS_REQUIRED = 1;
     private const int DEFAULT_BASE_DAYS_AT_INNER_RING = 1;
     private const int DEFAULT_DAYS_PER_DISTANCE_STEP = 1;
+
+    // [임시 계측] 밤→낮 전환 프리즈 조사용. CycleManager.cs의 TND. 명명 규칙을 그대로 따른다.
+    private const string SETTLEMENT_MARKER_NAME = "TND.Conquest.Settlement";
+    private const string SET_CHUNK_STATE_MARKER_NAME = "TND.Conquest.SetChunkState";
+    private const string EXPAND_VISIBILITY_MARKER_NAME = "TND.Conquest.ExpandVisibility";
+    private const string ANNEX_MARKER_NAME = "TND.Conquest.Annex";
+
+    private static readonly ProfilerMarker SETTLEMENT_MARKER = new(SETTLEMENT_MARKER_NAME);
+    private static readonly ProfilerMarker SET_CHUNK_STATE_MARKER = new(SET_CHUNK_STATE_MARKER_NAME);
+    private static readonly ProfilerMarker EXPAND_VISIBILITY_MARKER = new(EXPAND_VISIBILITY_MARKER_NAME);
+    private static readonly ProfilerMarker ANNEX_MARKER = new(ANNEX_MARKER_NAME);
 
     // 코디네이터(ConquestResearchCoordinator)가 배선한다 - 배선되지 않은 씬에서는 null로 남아
     // 할인·인구/기간 감소가 적용되지 않는다(기존 동작 유지).
@@ -233,16 +245,19 @@ public class ConquestManager : MonoBehaviour
 
     private void OnSettlement(int currentCycle)
     {
-        for (int i = _activeExpeditions.Count - 1; i >= 0; i--)
+        using (SETTLEMENT_MARKER.Auto())
         {
-            ConquestExpedition expedition = _activeExpeditions[i];
-            expedition.AdvanceDay();
+            for (int i = _activeExpeditions.Count - 1; i >= 0; i--)
+            {
+                ConquestExpedition expedition = _activeExpeditions[i];
+                expedition.AdvanceDay();
 
-            if (!expedition.IsComplete)
-                continue;
+                if (!expedition.IsComplete)
+                    continue;
 
-            CompleteConquest(expedition.TargetChunkCoord);
-            _activeExpeditions.RemoveAt(i);
+                CompleteConquest(expedition.TargetChunkCoord);
+                _activeExpeditions.RemoveAt(i);
+            }
         }
 
         OnExpeditionsChanged?.Invoke();
@@ -250,9 +265,21 @@ public class ConquestManager : MonoBehaviour
 
     private void CompleteConquest(Vector2Int targetChunkCoord)
     {
-        _gridMap.SetChunkState(targetChunkCoord, ChunkState.Conquered);
-        ExpandVisibility(targetChunkCoord);
-        AnnexUnregisteredLandNeighbors(targetChunkCoord);
+        using (SET_CHUNK_STATE_MARKER.Auto())
+        {
+            _gridMap.SetChunkState(targetChunkCoord, ChunkState.Conquered);
+        }
+
+        using (EXPAND_VISIBILITY_MARKER.Auto())
+        {
+            ExpandVisibility(targetChunkCoord);
+        }
+
+        using (ANNEX_MARKER.Auto())
+        {
+            AnnexUnregisteredLandNeighbors(targetChunkCoord);
+        }
+
         ApplyEnemyEnhancement(targetChunkCoord);
         OnConquestCompleted?.Invoke(targetChunkCoord);
     }

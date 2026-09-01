@@ -1,12 +1,21 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine.Events;
 using UnityEngine.Tilemaps;
 using UnityEngine.Rendering;
 
 public class GridMap : MonoBehaviour
 {
+    // [임시 계측] 밤→낮 전환 프리즈 조사용. SetChunkState와 SetChunkStatesBulk의 셀 이벤트 루프가
+    // 같은 이름을 공유해, 프로파일러에서 두 경로의 비용이 합산되어 보이게 한다.
+    private const string CELL_EVENTS_MARKER_NAME = "TND.Grid.CellEvents";
+    private const string CHUNK_STATE_EVENT_MARKER_NAME = "TND.Grid.ChunkStateEvent";
+
+    private static readonly ProfilerMarker CELL_EVENTS_MARKER = new(CELL_EVENTS_MARKER_NAME);
+    private static readonly ProfilerMarker CHUNK_STATE_EVENT_MARKER = new(CHUNK_STATE_EVENT_MARKER_NAME);
+
     [SerializeField]
     private Tilemap _tilemap;
 
@@ -783,16 +792,24 @@ public class GridMap : MonoBehaviour
         ChunkState previousState = chunk.CurrentState;
         chunk.SetState(newState);
 
-        foreach (GridCell cell in chunk.Cells)
+        using (CELL_EVENTS_MARKER.Auto())
         {
-            OnCellChanged?.Invoke(cell);
+            foreach (GridCell cell in chunk.Cells)
+            {
+                OnCellChanged?.Invoke(cell);
+            }
         }
 
         // 점령 여부와 무관한 상태 전환(예: Hidden -> Visible)은 점령 테두리 등
         // Conquered 집합에 의존하는 구독자에게 무의미하므로 이벤트를 생략한다.
         bool affectsConqueredSet = previousState == ChunkState.Conquered || newState == ChunkState.Conquered;
         if (affectsConqueredSet)
-            OnChunkStateChanged?.Invoke();
+        {
+            using (CHUNK_STATE_EVENT_MARKER.Auto())
+            {
+                OnChunkStateChanged?.Invoke();
+            }
+        }
     }
 
     // [테스트/일괄 처리 전용] 여러 청크의 상태를 한 번에 바꾼다.
@@ -811,16 +828,24 @@ public class GridMap : MonoBehaviour
             ChunkState previousState = chunk.CurrentState;
             chunk.SetState(newState);
 
-            foreach (GridCell cell in chunk.Cells)
+            using (CELL_EVENTS_MARKER.Auto())
             {
-                OnCellChanged?.Invoke(cell);
+                foreach (GridCell cell in chunk.Cells)
+                {
+                    OnCellChanged?.Invoke(cell);
+                }
             }
 
             affectsConqueredSet |= previousState == ChunkState.Conquered || newState == ChunkState.Conquered;
         }
 
         if (affectsConqueredSet)
-            OnChunkStateChanged?.Invoke();
+        {
+            using (CHUNK_STATE_EVENT_MARKER.Auto())
+            {
+                OnChunkStateChanged?.Invoke();
+            }
+        }
     }
 
     public void SetChunkState(Vector3Int cellCoord, ChunkState newState)

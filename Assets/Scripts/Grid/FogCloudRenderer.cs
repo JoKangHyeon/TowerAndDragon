@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
@@ -11,6 +12,12 @@ using UnityEngine.Tilemaps;
 [RequireComponent(typeof(GridMap))]
 public class FogCloudRenderer : MonoBehaviour
 {
+    // [임시 계측] 밤→낮 전환 프리즈 조사용. CycleManager.cs의 TND. 명명 규칙을 그대로 따른다.
+    private const string CELL_PAINT_MARKER_NAME = "TND.Cloud.CellPaint";
+    private const string PAINT_ALL_MARKER_NAME = "TND.Cloud.PaintAll";
+    private static readonly ProfilerMarker CELL_PAINT_MARKER = new(CELL_PAINT_MARKER_NAME);
+    private static readonly ProfilerMarker PAINT_ALL_MARKER = new(PAINT_ALL_MARKER_NAME);
+
     [Tooltip("구름 타일을 그릴 타일맵 - 정렬 레이어 Fog, 지형 타일맵과 같은 Grid 아래 자식이어야 한다.")]
     [SerializeField]
     private Tilemap _cloudTilemap;
@@ -89,10 +96,64 @@ public class FogCloudRenderer : MonoBehaviour
             _gridMap.OnCellChanged.RemoveListener(HandleCellChanged);
     }
 
-    // 셀 하나가 바뀌면 그 셀 한 칸만 다시 칠한다 - 청크를 되짚어 조회할 필요가 없다.
+    // 청크 하나가 열리면 이 이벤트가 청크 크기만큼 연달아 오고, 밤 정산에서는 주변 청크까지 합쳐
+    // 수백~수천 번 온다 - 좌표만 모아 두고 프레임당 SetTiles 한 번으로 처리한다(개별 SetTile을
+    // 그만큼 부르면 타일맵이 매번 갱신 범위를 다시 계산한다).
+    private readonly HashSet<Vector3Int> _dirtyCoords = new();
+    private bool _isCellPaintQueued;
+
     private void HandleCellChanged(GridCell cell)
     {
-        _cloudTilemap.SetTile(cell.Coord, cell.CurrentState == ChunkState.Hidden ? CurrentCloudTile : null);
+        _dirtyCoords.Add(cell.Coord);
+        QueueCellPaint();
+    }
+
+    private void QueueCellPaint()
+    {
+        if (_isCellPaintQueued)
+            return;
+
+        _isCellPaintQueued = true;
+        CellPaintQueuedAsync(this.GetCancellationTokenOnDestroy()).Forget();
+    }
+
+    // Defines.FOG_REPAINT_COALESCE_TIMING(렌더링 직전)에서 처리한다 - FogOfWarRenderer·
+    // PropFogTintController와 같은 타이밍을 써야 안개·구름·장식물 밝기가 같은 프레임에 함께 바뀐다.
+    private async UniTaskVoid CellPaintQueuedAsync(CancellationToken cancellationToken)
+    {
+        await UniTask.Yield(Defines.FOG_REPAINT_COALESCE_TIMING, cancellationToken);
+
+        _isCellPaintQueued = false;
+        FlushDirtyCoords();
+    }
+
+    // 같은 좌표가 한 프레임에 여러 번 바뀌어도 중복 없이 한 번만 담기도록 HashSet에 모았다가,
+    // 개별 SetTile 대신 SetTiles 한 번으로 넘긴다.
+    private void FlushDirtyCoords()
+    {
+        if (_dirtyCoords.Count == 0)
+            return;
+
+        using (CELL_PAINT_MARKER.Auto())
+        {
+            var coords = new Vector3Int[_dirtyCoords.Count];
+            var tiles = new TileBase[_dirtyCoords.Count];
+            TileBase cloudTile = CurrentCloudTile;
+
+            int i = 0;
+            foreach (Vector3Int coord in _dirtyCoords)
+            {
+                coords[i] = coord;
+
+                // 타일은 이벤트가 들어온 시점이 아니라 지금 다시 조회한다 - 같은 프레임에 같은 좌표가
+                // 두 번 바뀔 수 있어, 이벤트 시점 상태를 저장해 두면 최신 상태를 놓친다.
+                tiles[i] = _gridMap.GetCellState(coord) == ChunkState.Hidden ? cloudTile : null;
+                i++;
+            }
+
+            _dirtyCoords.Clear();
+            _cloudTilemap.SetTiles(coords, tiles);
+        }
     }
 
     // 낮/밤이 바뀌면 현재 Hidden인 셀 전체를 다른 구름 타일로 다시 칠한다.
@@ -119,16 +180,19 @@ public class FogCloudRenderer : MonoBehaviour
     // 타일맵이 갱신 범위를 한 번만 다시 계산하므로 초기 도색·낮밤 전환의 프레임 스파이크가 줄어든다.
     private void PaintAllCells()
     {
-        EnsurePaintBuffers();
-
-        TileBase cloudTile = CurrentCloudTile;
-
-        for (int i = 0; i < _allCoords.Length; i++)
+        using (PAINT_ALL_MARKER.Auto())
         {
-            _cloudTileBuffer[i] = _gridMap.GetCellState(_allCoords[i]) == ChunkState.Hidden ? cloudTile : null;
-        }
+            EnsurePaintBuffers();
 
-        _cloudTilemap.SetTiles(_allCoords, _cloudTileBuffer);
+            TileBase cloudTile = CurrentCloudTile;
+
+            for (int i = 0; i < _allCoords.Length; i++)
+            {
+                _cloudTileBuffer[i] = _gridMap.GetCellState(_allCoords[i]) == ChunkState.Hidden ? cloudTile : null;
+            }
+
+            _cloudTilemap.SetTiles(_allCoords, _cloudTileBuffer);
+        }
     }
 
     private TileBase CurrentCloudTile =>

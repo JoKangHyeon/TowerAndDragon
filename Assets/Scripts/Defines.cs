@@ -1,7 +1,16 @@
+using Cysharp.Threading.Tasks;
+
 public static class Defines
 {
     public const string ENEMY_LAYER_NAME = "Enemy";
     public const string BUILDING_SORTING_LAYER_NAME = "Building";
+
+    // 안개·구름·장식물 밝기 프레임 합치기가 공유하는 UniTask.Yield 타이밍(CLAUDE.md 커밋규칙 3.2 -
+    // FogOfWarRenderer·FogCloudRenderer·PropFogTintController 세 곳이 같은 값을 써야 한다).
+    // LastPreLateUpdate는 모든 LateUpdate가 끝난 뒤·렌더링 시작 전이라, 셀 이벤트를 프레임당 1회로
+    // 합쳐도 같은 프레임의 렌더링에 그대로 반영되어 "점령 직후 한 프레임 옛 안개가 보인다" 같은
+    // 시각 지연이 생기지 않는다.
+    public const PlayerLoopTiming FOG_REPAINT_COALESCE_TIMING = PlayerLoopTiming.LastPreLateUpdate;
 
     // 애니메이터 파라미터 이름. PixelWorld 임포트 컨트롤러가 정한 이름이라 바꿀 수 없고,
     // 몬스터와 인구 배치 연출 캐릭터가 같은 컨트롤러를 쓰므로 여기 모은다(CLAUDE.md 커밋규칙 3.2).

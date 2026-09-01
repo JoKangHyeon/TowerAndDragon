@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -29,6 +30,29 @@ public class CycleManager : MonoBehaviour
     // SeedRestoredDay + ResumeDay로 들어와 OnDayStart를 발화하지 않으므로, 이 일차의
     // OnDayStart는 곧 "새 런이 방금 시작됐다"와 같다(DragonEggInventorySystem이 쓴다).
     public const int FIRST_DAY_NUMBER = 1;
+
+    // [임시 계측] 밤→낮 전환 프리즈 조사용 프로파일러 마커 - 이름에 TND. 접두사를 통일해
+    // 프로파일러 Hierarchy 검색창에 "TND."만 치면 전환 단계 전체가 한 화면에 나열되게 한다.
+    private const string END_NIGHT_ON_NIGHT_END_MARKER_NAME = "TND.EndNight.OnNightEnd";
+    private const string END_NIGHT_START_DAY_MARKER_NAME = "TND.EndNight.StartDay";
+    private const string START_DAY_ON_DAY_START_MARKER_NAME = "TND.StartDay.OnDayStart";
+    private const string START_DAY_UPKEEP_MARKER_NAME = "TND.StartDay.Upkeep";
+    private const string START_DAY_ON_DAY_READY_MARKER_NAME = "TND.StartDay.OnDayReady";
+    private const string START_DAY_ON_CYCLE_CHANGED_MARKER_NAME = "TND.StartDay.OnCycleChanged";
+    private const string START_DAY_ON_DAY_SETTLED_MARKER_NAME = "TND.StartDay.OnDaySettled";
+
+    private static readonly ProfilerMarker END_NIGHT_ON_NIGHT_END_MARKER = new(END_NIGHT_ON_NIGHT_END_MARKER_NAME);
+    private static readonly ProfilerMarker END_NIGHT_START_DAY_MARKER = new(END_NIGHT_START_DAY_MARKER_NAME);
+    private static readonly ProfilerMarker START_DAY_ON_DAY_START_MARKER = new(START_DAY_ON_DAY_START_MARKER_NAME);
+    private static readonly ProfilerMarker START_DAY_UPKEEP_MARKER = new(START_DAY_UPKEEP_MARKER_NAME);
+    private static readonly ProfilerMarker START_DAY_ON_DAY_READY_MARKER = new(START_DAY_ON_DAY_READY_MARKER_NAME);
+    private static readonly ProfilerMarker START_DAY_ON_CYCLE_CHANGED_MARKER = new(START_DAY_ON_CYCLE_CHANGED_MARKER_NAME);
+    private static readonly ProfilerMarker START_DAY_ON_DAY_SETTLED_MARKER = new(START_DAY_ON_DAY_SETTLED_MARKER_NAME);
+
+    [Tooltip("켜면 밤→낮 전환(EndNight 시작 ~ StartDay 종료)에 걸린 실제 시간을 로그로 남긴다 - " +
+        "프로파일러를 띄우지 않고도 수정 전/후 숫자를 바로 비교하기 위한 임시 계측이다.")]
+    [SerializeField]
+    private bool _logsCycleTransitionTiming;
 
     private GameManager _gameManager;
 
@@ -80,10 +104,22 @@ public class CycleManager : MonoBehaviour
 
         int day = _gameManager.CurrentRun.CurrentCycle;
 
-        SafeInvoke(OnDayStart, day);          // 생산 정산
-        SafeInvoke(OnDayStartUpkeep, day);    // 소비 정산
+        using (START_DAY_ON_DAY_START_MARKER.Auto())
+        {
+            SafeInvoke(OnDayStart, day);          // 생산 정산
+        }
+
+        using (START_DAY_UPKEEP_MARKER.Auto())
+        {
+            SafeInvoke(OnDayStartUpkeep, day);    // 소비 정산
+        }
+
         EnterDay(day);                        // 파생 상태·연출 + OnCycleChanged
-        SafeInvoke(OnDaySettled, day);        // 관측 전용(자동저장)
+
+        using (START_DAY_ON_DAY_SETTLED_MARKER.Auto())
+        {
+            SafeInvoke(OnDaySettled, day);        // 관측 전용(자동저장)
+        }
     }
 
     /// <summary>
@@ -116,8 +152,15 @@ public class CycleManager : MonoBehaviour
     // StartDay와 ResumeDay가 공유한다.
     private void EnterDay(int day)
     {
-        SafeInvoke(OnDayReady, day);
-        SafeInvoke(OnCycleChanged, CycleState.Day);
+        using (START_DAY_ON_DAY_READY_MARKER.Auto())
+        {
+            SafeInvoke(OnDayReady, day);
+        }
+
+        using (START_DAY_ON_CYCLE_CHANGED_MARKER.Auto())
+        {
+            SafeInvoke(OnCycleChanged, CycleState.Day);
+        }
     }
 
     // 튜토리얼이 등록한다 - 아무도 등록하지 않은 씬에서는 비어 있어 언제나 밤으로 넘어간다(기존 동작 유지).
@@ -297,14 +340,29 @@ public class CycleManager : MonoBehaviour
 
     public void EndNight()
     {
-        SafeInvoke(OnNightEnd, _gameManager.CurrentRun.CurrentCycle);
+        // [임시 계측] 프로파일러 없이도 수정 전/후 전환 소요 시간을 바로 비교하기 위한 스톱워치.
+        System.Diagnostics.Stopwatch transitionStopwatch =
+            _logsCycleTransitionTiming ? System.Diagnostics.Stopwatch.StartNew() : null;
+
+        using (END_NIGHT_ON_NIGHT_END_MARKER.Auto())
+        {
+            SafeInvoke(OnNightEnd, _gameManager.CurrentRun.CurrentCycle);
+        }
 
         if (_gameManager.IsGameEnded)
         {
             return;
         }
-        
-        StartDay();
+
+        using (END_NIGHT_START_DAY_MARKER.Auto())
+        {
+            StartDay();
+        }
+
+        if (transitionStopwatch != null)
+        {
+            Debug.Log($"[CycleManager] 밤→낮 전환 소요 시간: {transitionStopwatch.Elapsed.TotalMilliseconds:F1}ms");
+        }
     }
 
     public void DebugCycle()

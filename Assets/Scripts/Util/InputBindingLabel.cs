@@ -131,6 +131,11 @@ public static class InputBindingLabel
         return builder.ToString();
     }
 
+    // InputControlPath.ToHumanReadableString은 호출마다 리플렉션으로 레이아웃을 새로 읽어
+    // 행 하나당 수백 KB를 할당한다(설정창을 열 때마다 눈에 띄는 GC 스파이크의 원인이었다).
+    // 같은 경로는 항상 같은 표기를 내므로(주석 상단 설명대로 OS 입력기와 무관) 경로별로 캐싱한다.
+    private static readonly Dictionary<string, string> _resolvedByPath = new();
+
     // 매칭된 컨트롤을 넘기지 않는 것이 핵심이다 - 컨트롤을 넘기면 InputControlPath가
     // 그 컨트롤의 displayName(= OS가 준 입력기 글자)을 쓰고, 넘기지 않으면 경로를
     // 레이아웃 정의로 푼다.
@@ -138,9 +143,21 @@ public static class InputBindingLabel
     // UseShortNames는 마우스·패드 표기를 기존 GetBindingDisplayString과 같게 유지한다
     // (없으면 "LMB"가 "Left Button", "X"가 "Button West"로 길어진다).
     // 키보드 키에는 짧은 이름이 없어 "B"·"Tab"·"Space" 그대로다.
-    private static string ToPathBasedString(InputBinding binding) =>
-        InputControlPath.ToHumanReadableString(
-            binding.effectivePath,
+    private static string ToPathBasedString(InputBinding binding)
+    {
+        string path = binding.effectivePath;
+
+        if (_resolvedByPath.TryGetValue(path, out string cached))
+        {
+            return cached;
+        }
+
+        string resolved = InputControlPath.ToHumanReadableString(
+            path,
             InputControlPath.HumanReadableStringOptions.OmitDevice
             | InputControlPath.HumanReadableStringOptions.UseShortNames);
+
+        _resolvedByPath[path] = resolved;
+        return resolved;
+    }
 }
