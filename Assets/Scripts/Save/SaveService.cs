@@ -582,9 +582,9 @@ public sealed class SaveService : MonoBehaviour
             return;
         }
 
-        // 1일차 시작은 저장하지 않는다. 게임오버 후 Restart(UI_GameOverWindow)는 씬을 다시 로드해
-        // 새 런의 1일차를 시작하는데, 여기서 저장하면 직전 런의 이어하기(slot_00)가 아직 아무것도
-        // 진행하지 않은 상태로 덮어써진다. 새 런은 2일차가 시작될 때 처음 기록된다.
+        // 1일차 시작은 저장하지 않는다. 새 게임은 씬을 새로 열어 1일차부터 시작하는데, 여기서
+        // 저장하면 직전 런의 이어하기(slot_00)가 아직 아무것도 진행하지 않은 상태로 덮어써진다.
+        // 새 런은 2일차가 시작될 때 처음 기록된다.
         if (dayNumber <= SaveValidation.FIRST_DAY_NUMBER)
         {
             return;

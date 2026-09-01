@@ -330,6 +330,7 @@ GameObject:
   - component: {fileID: 2782523932631486994}
   - component: {fileID: 5659265566774270596}
   - component: {fileID: 5759878892200623608}
+  - component: {fileID: 1106871191050549243}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -456,6 +457,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1106871191050549243
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3582923081981857766}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73a1ebc4639051d48add1612dddd2737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  _locKey: gameOver_button
 --- !u!1 &4704561218423551533
 GameObject:
   m_ObjectHideFlags: 0
@@ -504,7 +518,7 @@ GameObject:
   - component: {fileID: 2610584453741256138}
   - component: {fileID: 7444739465293417447}
   m_Layer: 5
-  m_Name: Button_Restart
+  m_Name: Button_ToTitle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -687,7 +701,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c43892ca56989fe4286cda6c221d4a04, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI_GameOverWindow
-  _restartButton: {fileID: 2610584453741256138}
+  _toTitleButton: {fileID: 2610584453741256138}
   _survivedDayText: {fileID: 0}
   _cycleManager: {fileID: 0}
   _ironmanDeletedLabel: {fileID: 0}
