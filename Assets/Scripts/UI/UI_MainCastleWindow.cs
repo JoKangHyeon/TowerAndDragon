@@ -4,11 +4,12 @@ using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
 
-// 메인 성(Castle) 클릭 시 화면 우측에 뜨는 어미용 관리창.
-// Castle은 3x3 풋프린트로 그리드에 등록돼 있어 클릭은 이미 BuildingPlacementController.
-// SelectExistingBuildingAt()을 타고 SelectedBuilding으로 돌아온다(새 클릭 배선 불필요) -
-// 선택 변경 이벤트가 없으므로(SelectedBuilding은 파생 getter) UI_PopulationAllocationWindow와
-// 같은 방식으로 매 프레임 폴링한다.
+// 성(Castle)을 선택했을 때 화면 우측에 뜨는 어미용 관리창.
+// BuildingPlacementController.SelectedBuilding이 Castle일 때 열리도록
+// SelectedBuildingChanged/InteractionStateChanged를 구독해 바인딩한다(새 클릭 배선 불필요).
+// 주의: 현재 Castle.IsClickSelectable이 false라(성 클릭 아웃라인 제거 커밋 이후) 그리드 클릭으로는
+// SelectedBuilding이 Castle이 되지 않고, 이 창은 어떤 씬에도 배치돼 있지 않다 - 여는 경로가
+// 되살아나면(다른 진입점으로) 이 이벤트 배선만으로 동작한다.
 // 속성 변경(선택→확정)·5속성 슬라임 현황 표시·용 스킬트리 진입을 담당하고,
 // 연구 진행도/인구(스텁 필드)는 이번 범위에서 다루지 않는다.
 public class UI_MainCastleWindow : MonoBehaviour
@@ -176,6 +177,19 @@ public class UI_MainCastleWindow : MonoBehaviour
             _cycleManager.OnDayReady.AddListener(HandleDayStart);
             _cycleManager.OnCycleChanged.AddListener(HandleCycleChanged);
         }
+
+        // Update 폴링이 하던 일을 이벤트로 옮긴다. 폴링이 없어지면 배선 누락을 매 프레임 확인할
+        // 자리도 없어지므로, 구독을 거는 이 자리에서 한 번 검사한다.
+        if (WiringGuard.Require(_buildingPlacementController, nameof(_buildingPlacementController), this))
+        {
+            _buildingPlacementController.SelectedBuildingChanged.AddListener(HandleSelectedBuildingChanged);
+            _buildingPlacementController.InteractionStateChanged.AddListener(HandleInteractionStateChanged);
+
+            // 구독 직후 현재 값 1회 반영. Bind는 shouldOpen이 false면 Close()를 부르지 않으므로
+            // 이미 닫혀 있는 창에 닫힘 연출이 돌지 않는다.
+            _wasInputSuppressed = _buildingPlacementController.InputSuppressed;
+            Bind(_buildingPlacementController.SelectedBuilding as Castle);
+        }
     }
 
     private void OnDisable()
@@ -190,6 +204,12 @@ public class UI_MainCastleWindow : MonoBehaviour
             _cycleManager.OnDayReady.RemoveListener(HandleDayStart);
             _cycleManager.OnCycleChanged.RemoveListener(HandleCycleChanged);
         }
+
+        if (_buildingPlacementController != null)
+        {
+            _buildingPlacementController.SelectedBuildingChanged.RemoveListener(HandleSelectedBuildingChanged);
+            _buildingPlacementController.InteractionStateChanged.RemoveListener(HandleInteractionStateChanged);
+        }
     }
 
     private void OnDestroy()
@@ -197,26 +217,26 @@ public class UI_MainCastleWindow : MonoBehaviour
         RemoveButtonListeners();
     }
 
-    // BuildingPlacementController에는 선택 변경 이벤트가 없어(SelectedBuilding은 파생 getter)
-    // 매 프레임 확인한다 - UI_PopulationAllocationWindow와 같은 방식이다.
-    private void Update()
+    // 그리드에서 고른 건물이 바뀌었다. 성이 아니면 null로 바인딩해 창을 닫는다.
+    private void HandleSelectedBuildingChanged(Building building)
     {
-        if (!WiringGuard.Require(_buildingPlacementController, nameof(_buildingPlacementController), this))
-        {
-            return;
-        }
+        // 억제 상태도 함께 최신화한다 - Bind가 _wasInputSuppressed를 읽으므로, 두 이벤트가 오는
+        // 순서에 결과가 좌우되지 않게 한다.
+        _wasInputSuppressed = _buildingPlacementController.InputSuppressed;
+        Bind(building as Castle);
+    }
 
-        Castle selectedCastle =
-            _buildingPlacementController.SelectedBuilding as Castle;
+    // 억제 여부만 본다. 이동 모드·이동 예산은 이 창의 표시에 관여하지 않는다.
+    private void HandleInteractionStateChanged()
+    {
         bool inputSuppressed = _buildingPlacementController.InputSuppressed;
-
-        if (_selectedCastle == selectedCastle && _wasInputSuppressed == inputSuppressed)
+        if (_wasInputSuppressed == inputSuppressed)
         {
             return;
         }
 
         _wasInputSuppressed = inputSuppressed;
-        Bind(selectedCastle);
+        Bind(_selectedCastle);
     }
 
     private void Bind(Castle castle)
@@ -271,7 +291,7 @@ public class UI_MainCastleWindow : MonoBehaviour
             .OnComplete(() => _windowRoot.SetActive(false));
     }
 
-    // 닫기 버튼 - 선택을 해제하면 Update가 창을 자동으로 닫는다
+    // 닫기 버튼 - 선택을 해제하면 Deselect의 알림(SelectedBuildingChanged)이 창을 닫는다
     // (UI_PopulationAllocationWindow.CloseWindow와 동일).
     private void CloseWindow()
     {

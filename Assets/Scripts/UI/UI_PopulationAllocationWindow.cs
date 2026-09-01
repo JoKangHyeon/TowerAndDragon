@@ -1,3 +1,6 @@
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -173,7 +176,10 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
     // (UI_GuideOverlay가 구멍 차단막을 만드는 것과 같은 방식).
     private RectTransform _attackRowsGuideRect;
     private bool _wasInputSuppressed;
-    private float _nextRefreshTime;
+
+    // 창이 열려 있는 동안에만 도는 갱신 루프의 수명. 창이 닫히면 다음 간격을 기다리지 않고
+    // 그 자리에서 끊는다 - 닫는 프레임에 마지막 Refresh가 한 번 더 도는 일이 없도록.
+    private CancellationTokenSource _refreshLoopCts;
 
     private RectTransform _windowRect;
     private Vector2 _homePos;
@@ -226,6 +232,17 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
             _closeAction.action.performed += OnCloseActionPerformed;
         }
 
+        if (WiringGuard.Require(_buildingPlacementController, nameof(_buildingPlacementController), this))
+        {
+            _buildingPlacementController.SelectedBuildingChanged.AddListener(HandleSelectedBuildingChanged);
+            _buildingPlacementController.InteractionStateChanged.AddListener(HandleInteractionStateChanged);
+
+            // 구독 직후 현재 값 1회 반영. ClosePanel에 _isOpen 가드가 있어 이미 닫힌 창에
+            // 닫힘 연출이 돌지 않는다.
+            _wasInputSuppressed = _buildingPlacementController.InputSuppressed;
+            Bind(_buildingPlacementController.SelectedBuilding);
+        }
+
         // 구독 직후 현재 언어로 한 번 반영한다 - 창이 닫혀 있는 동안 바뀐 언어를 놓치지 않는다
         // (LocalizedText와 같은 방식).
         StringTable.OnLanguageChanged += HandleLanguageChanged;
@@ -251,43 +268,44 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
             _closeAction.action.performed -= OnCloseActionPerformed;
         }
 
+        if (_buildingPlacementController != null)
+        {
+            _buildingPlacementController.SelectedBuildingChanged.RemoveListener(HandleSelectedBuildingChanged);
+            _buildingPlacementController.InteractionStateChanged.RemoveListener(HandleInteractionStateChanged);
+        }
+
         StringTable.OnLanguageChanged -= HandleLanguageChanged;
+
+        // 이 오브젝트는 늘 활성이지만, 씬 전환이나 계층 비활성화로 여기 닿았을 때 루프가 살아남지
+        // 않게 한다. 파괴 취소(GetCancellationTokenOnDestroy)는 파괴 시점에만 오므로 그것만으로는 부족하다.
+        StopRefreshLoop();
     }
 
     private void OnDestroy()
     {
         RemoveButtonListeners();
+        StopRefreshLoop();
         _windowTween?.Kill();
     }
 
-    // BuildingPlacementController에는 선택 변경 이벤트가 없어(SelectedBuilding은 파생 getter)
-    // 매 프레임 확인한다 - UI_BuildModeWindow 등 기존 소비자들과 같은 방식이다.
-    private void Update()
+    // 그리드에서 고른 건물이 바뀌었다.
+    private void HandleSelectedBuildingChanged(Building building)
     {
-        if (!WiringGuard.Require(_buildingPlacementController, nameof(_buildingPlacementController), this))
+        _wasInputSuppressed = _buildingPlacementController.InputSuppressed;
+        Bind(building);
+    }
+
+    // 억제 여부만 본다. 이동 모드·이동 예산은 이 창의 표시에 관여하지 않는다.
+    private void HandleInteractionStateChanged()
+    {
+        bool inputSuppressed = _buildingPlacementController.InputSuppressed;
+        if (_wasInputSuppressed == inputSuppressed)
         {
             return;
         }
 
-        Building selectedBuilding =
-            _buildingPlacementController.SelectedBuilding;
-        bool inputSuppressed =
-            _buildingPlacementController.InputSuppressed;
-
-        if (_selectedBuilding != selectedBuilding ||
-            _wasInputSuppressed != inputSuppressed)
-        {
-            _wasInputSuppressed = inputSuppressed;
-            Bind(selectedBuilding);
-            return;
-        }
-
-        // 타워 스탯·체력은 이벤트 없이 바뀌므로 창이 열려 있는 동안 주기적으로 다시 그린다.
-        // timeScale이 게임 속도 설정에 따라 달라지므로 unscaledTime으로 잰다.
-        if (IsWindowOpen && Time.unscaledTime >= _nextRefreshTime)
-        {
-            Refresh();
-        }
+        _wasInputSuppressed = inputSuppressed;
+        Bind(_selectedBuilding);
     }
 
     private void Bind(Building building)
@@ -334,11 +352,21 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         _windowTween = _windowRect.DOAnchorPos(_homePos, _slideDuration)
             .SetEase(Ease.OutBack)
             .SetLink(_windowRoot);
+
+        StartRefreshLoop();
     }
 
     private void ClosePanel()
     {
+        // 이미 닫혀 있으면 닫힘 연출을 다시 돌리지 않는다 - 비활성 상태의 창을 홈 밖으로 밀어 두고
+        // 끝나 다음 열기가 엉뚱한 자리에서 시작한다.
+        if (!_isOpen)
+        {
+            return;
+        }
+
         _isOpen = false;
+        StopRefreshLoop();
 
         if (_windowRoot == null)
         {
@@ -352,6 +380,47 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
             .OnComplete(() => _windowRoot.SetActive(false));
     }
 
+    // 체력·오라·용 속성 전환은 선택 변경도 인구 변경도 아니어서 이벤트가 오지 않는다 -
+    // 창이 열려 있는 동안에만 이 간격으로 다시 그린다.
+    private void StartRefreshLoop()
+    {
+        // 열기가 겹쳐 들어와도 루프가 두 벌 돌지 않게 한다(0.5초가 0.25초가 되는 식).
+        StopRefreshLoop();
+
+        _refreshLoopCts = CancellationTokenSource.CreateLinkedTokenSource(
+            this.GetCancellationTokenOnDestroy());
+
+        RunRefreshLoopAsync(_refreshLoopCts.Token).Forget();
+    }
+
+    private void StopRefreshLoop()
+    {
+        if (_refreshLoopCts == null)
+        {
+            return;
+        }
+
+        _refreshLoopCts.Cancel();
+        _refreshLoopCts.Dispose();
+        _refreshLoopCts = null;
+    }
+
+    private async UniTaskVoid RunRefreshLoopAsync(CancellationToken token)
+    {
+        // 연 직후의 첫 그리기는 Bind가 이미 했으므로 기다렸다가 다음 것부터 그린다.
+        while (!token.IsCancellationRequested)
+        {
+            // timeScale이 게임 속도 설정(GameSpeedManager)에 따라 0이 되므로 unscaled로 잰다 -
+            // scaled로 재면 일시정지 중에 창이 영영 갱신되지 않는다(옛 Time.unscaledTime과 같은 이유).
+            await UniTask.Delay(
+                TimeSpan.FromSeconds(REFRESH_INTERVAL_SECONDS),
+                DelayType.UnscaledDeltaTime,
+                cancellationToken: token);
+
+            Refresh();
+        }
+    }
+
     private void Refresh()
     {
         if (_selectedBuilding == null ||
@@ -360,8 +429,6 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         {
             return;
         }
-
-        _nextRefreshTime = Time.unscaledTime + REFRESH_INTERVAL_SECONDS;
 
         if (_buildingNameText != null)
         {
@@ -790,7 +857,7 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         }
     }
 
-    // 선택을 해제하면 Update가 창을 자동으로 닫는다(ResearchLabDebugGUI의 ESC 처리와 동일).
+    // 선택을 해제하면 Deselect의 알림(SelectedBuildingChanged)이 창을 닫는다(ResearchLabDebugGUI의 ESC 처리와 동일).
     private void CloseWindow()
     {
         SoundManager.Play(SoundId.UiWindowClose);
@@ -911,8 +978,9 @@ public class UI_PopulationAllocationWindow : MonoBehaviour, IExclusiveMode
         CloseAndDeselect();
     }
 
-    // CloseWindow는 선택만 해제하고 표시는 다음 Update의 Bind가 끈다. 배타 조정은 닫은 직후
-    // IsOpen을 읽으므로(UIManager.CloseAllExcept), 여기서 Bind(null)까지 불러 같은 프레임에 맞춘다.
+    // CloseWindow의 Deselect()가 SelectedBuildingChanged를 동기 발화해 Bind(null)이 이미 돌았겠지만,
+    // 배타 조정은 닫은 직후 IsOpen을 읽으므로(UIManager.CloseAllExcept) 여기서도 한 번 더 불러
+    // 확실히 한다(멱등이라 중복 호출이 무해하다).
     private void CloseAndDeselect()
     {
         CloseWindow();

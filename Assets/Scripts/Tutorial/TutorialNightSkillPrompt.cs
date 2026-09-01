@@ -32,6 +32,9 @@ public sealed class TutorialNightSkillPrompt : MonoBehaviour, IGuideRequestProvi
     [Tooltip("가리킬 스킬이 지금 쓸 수 있는지 확인하는 데 쓴다.")]
     [SerializeField] private SkillManager _skillManager;
 
+    [Tooltip("스킬을 실제로 썼는지 알려준다. 이 창은 이미 OnEnable/OnDisable 대칭 등록을 쓰므로 같은 짝에 건다.")]
+    [SerializeField] private SkillTargetingController _skillTargetingController;
+
     [Tooltip("써 보게 할 스킬. 비우면 안내가 뜨지 않는다 - 해금하지 않은 칸을 가리키지 않기 위해서다.")]
     [SerializeField] private SkillSO _promptSkill;
 
@@ -46,10 +49,6 @@ public sealed class TutorialNightSkillPrompt : MonoBehaviour, IGuideRequestProvi
 
     // 한 밤에 한 번만 가르친다. 쿨타임이 돌아와도 다시 띄우면 보스전 내내 딤이 깜빡인다.
     private bool _hasCastThisNight;
-
-    // 발동 순간을 직접 알려주는 이벤트가 없어(공용 스크립트를 건드리지 않는다) 사용 가능 여부의
-    // true→false 전이로 읽는다. 쿨타임에 들어갔다는 것은 방금 썼다는 뜻이다.
-    private bool _wasSkillUsable;
 
     private bool IsPromptNight =>
         _cycleManager != null &&
@@ -82,6 +81,11 @@ public sealed class TutorialNightSkillPrompt : MonoBehaviour, IGuideRequestProvi
         {
             _cycleManager.OnNightStart.AddListener(HandleNightStart);
         }
+
+        if (_skillTargetingController != null)
+        {
+            _skillTargetingController.SkillUsed.AddListener(HandleSkillUsed);
+        }
     }
 
     private void OnDisable()
@@ -95,13 +99,18 @@ public sealed class TutorialNightSkillPrompt : MonoBehaviour, IGuideRequestProvi
         {
             _cycleManager.OnNightStart.RemoveListener(HandleNightStart);
         }
+
+        if (_skillTargetingController != null)
+        {
+            _skillTargetingController.SkillUsed.RemoveListener(HandleSkillUsed);
+        }
     }
 
     // 배선이 빠지면 안내가 조용히 영영 뜨지 않는다 - 밤에만 나타나는 것이라 눈으로는 잡기 어렵다.
     private void Start()
     {
         if (_overlay == null || _cycleManager == null || _castle == null ||
-            _skillManager == null || _promptSkill == null)
+            _skillManager == null || _promptSkill == null || _skillTargetingController == null)
         {
             Debug.LogWarning("[TutorialNightSkillPrompt] 참조가 비어 밤 스킬 안내가 뜨지 않습니다.", this);
         }
@@ -110,30 +119,22 @@ public sealed class TutorialNightSkillPrompt : MonoBehaviour, IGuideRequestProvi
     private void HandleNightStart(int _)
     {
         _hasCastThisNight = false;
-        _wasSkillUsable = false;
     }
 
-    // 상태 전이는 여기서만 한다 - TryGetRequest는 오버레이가 한 프레임에 여러 번 부를 수 있어,
-    // 거기서 바꾸면 "누가 그리는가"를 묻는 것만으로 안내가 끝나 버린다.
-    private void Update()
+    // 발동 순간을 직접 받는다. 예전에는 CanUse의 true→false 전이로 추측했는데, 쿨타임에 들어간
+    // 원인이 플레이어의 시전인지 다른 경로인지 가릴 수 없었고 밤이 시작된 첫 프레임 이전의
+    // 시전은 아예 관측되지 않았다.
+    //
+    // 어느 스킬을 썼는지는 가린다 - 이 안내는 _promptSkill의 칸을 가리켰으므로, 다른 스킬을 쓴 것으로
+    // 안내가 사라지면 시킨 것을 하지 않고도 넘어간다.
+    private void HandleSkillUsed(Skill skill)
     {
-        if (!IsPromptNight)
+        if (!IsPromptNight || skill == null || skill.Data != _promptSkill)
         {
             return;
         }
 
-        Skill skill = FindPromptSkill();
-        if (skill == null)
-        {
-            return;
-        }
-
-        if (_wasSkillUsable && !skill.CanUse)
-        {
-            _hasCastThisNight = true;
-        }
-
-        _wasSkillUsable = skill.CanUse;
+        _hasCastThisNight = true;
     }
 
     /// <summary>

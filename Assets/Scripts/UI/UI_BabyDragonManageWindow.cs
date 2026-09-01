@@ -4,12 +4,12 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 그리드에 설치된 새끼용을 선택했을 때 뜨는 관리창. UI_PopulationAllocationWindow와 같은 방식으로
-/// BuildingPlacementController.SelectedBuilding을 매 프레임 폴링해 바인딩하고(선택 변경 이벤트가 없으므로),
-/// 열림/닫힘 연출은 UI_BuildModeWindow의 DOTween 슬라이드 패턴을 따른다.
+/// 그리드에 설치된 새끼용을 선택했을 때 뜨는 관리창. BuildingPlacementController.SelectedBuildingChanged/
+/// InteractionStateChanged를 구독해 바인딩하고, 열림/닫힘 연출은 UI_BuildModeWindow의 DOTween 슬라이드
+/// 패턴을 따른다.
 /// IExclusiveMode는 구현하지 않는다 - 사용자가 열고 닫는 모드형 창이 아니라 그리드 선택에 종속된 정보창이라
 /// UI_PopulationAllocationWindow와 같은 부류다. 단, 스크립트가 붙은 오브젝트 자체는 항상 활성 상태를 유지해
-/// Update 폴링이 멈추지 않게 하고, 실제 여닫히는 것은 자식 _panel뿐이다(BuildMode_window와 다른 점).
+/// 구독이 끊기지 않게 하고, 실제 여닫히는 것은 자식 _panel뿐이다(BuildMode_window와 다른 점).
 /// </summary>
 public class UI_BabyDragonManageWindow : MonoBehaviour
 {
@@ -110,8 +110,8 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     private bool _wasSuppressed;
 
     /// <summary>
-    /// 패널이 열려 있는지. 이 창은 열림 이벤트를 발행하지 않고 Update 폴링으로 여닫히므로,
-    /// 창 안의 버튼을 가리켜야 하는 안내(BabyDragonGuideController)가 상태로 확인한다.
+    /// 패널이 열려 있는지. 이 창은 열림 이벤트를 발행하지 않으므로, 창 안의 버튼을 가리켜야 하는
+    /// 안내(BabyDragonGuideController)가 상태로 확인한다.
     /// </summary>
     public bool IsOpen => _isOpen;
 
@@ -132,6 +132,17 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
             _cycleManager.OnNightStart.AddListener(HandleNightStart);
             _cycleManager.OnDayStartUpkeep.AddListener(HandleDayStart);
         }
+
+        if (WiringGuard.Require(_buildingPlacementController, nameof(_buildingPlacementController), this))
+        {
+            _buildingPlacementController.SelectedBuildingChanged.AddListener(HandleSelectedBuildingChanged);
+            _buildingPlacementController.InteractionStateChanged.AddListener(HandleInteractionStateChanged);
+
+            // 구독 직후 현재 값 1회 반영. ClosePanel에 _isOpen 가드가 있어 이미 닫힌 창에
+            // 닫힘 연출이 돌지 않는다.
+            _wasSuppressed = _buildingPlacementController.InputSuppressed;
+            Bind(_buildingPlacementController.SelectedBuilding as BabyDragonTower);
+        }
     }
 
     private void OnDestroy()
@@ -149,33 +160,40 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
             _boundTower.ModeChanged.RemoveListener(HandleModeChanged);
         }
 
+        if (_buildingPlacementController != null)
+        {
+            _buildingPlacementController.SelectedBuildingChanged.RemoveListener(HandleSelectedBuildingChanged);
+            _buildingPlacementController.InteractionStateChanged.RemoveListener(HandleInteractionStateChanged);
+        }
+
         _panelTween?.Kill();
     }
 
-    // BuildingPlacementController에는 선택 변경 이벤트가 없어(SelectedBuilding은 파생 getter)
-    // 매 프레임 확인한다 - UI_PopulationAllocationWindow와 동일한 방식.
-    private void Update()
+    // 새끼용이 아닌 건물을 골랐으면 null로 바인딩해 창을 닫는다. Bind가 이전 타워의 ModeChanged를
+    // 떼고 새 타워에 붙이는 동적 구독을 겸하므로, 그 경로를 그대로 지나야 한다.
+    private void HandleSelectedBuildingChanged(Building building)
     {
-        if (!WiringGuard.Require(_buildingPlacementController, nameof(_buildingPlacementController), this))
-        {
-            return;
-        }
+        _wasSuppressed = _buildingPlacementController.InputSuppressed;
+        Bind(building as BabyDragonTower);
+    }
 
-        Building selected = _buildingPlacementController.SelectedBuilding;
+    // 예전 Update의 조기 반환 분기를 그대로 옮긴 것이다 - 억제가 바뀌었으면 다시 바인딩하고,
+    // 선택은 그대로고 버튼 가용성만 바뀐 경우(이동 모드 진입/이탈, 낮밤, 이동 예산)는 버튼만 맞춘다.
+    private void HandleInteractionStateChanged()
+    {
         bool suppressed = _buildingPlacementController.InputSuppressed;
-        BabyDragonTower tower = selected as BabyDragonTower;
 
-        if (_boundTower == tower && _wasSuppressed == suppressed)
+        if (_wasSuppressed != suppressed)
         {
-            if (_isOpen)
-            {
-                RefreshButtons();
-            }
+            _wasSuppressed = suppressed;
+            Bind(_boundTower);
             return;
         }
 
-        _wasSuppressed = suppressed;
-        Bind(tower);
+        if (_isOpen)
+        {
+            RefreshButtons();
+        }
     }
 
     private void Bind(BabyDragonTower tower)
@@ -221,6 +239,14 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
 
     private void ClosePanel()
     {
+        // 이미 닫혀 있으면 닫힘 연출을 다시 돌리지 않는다 - 비활성 상태의 창을 홈 밖으로 밀어 두고
+        // 끝나 다음 열기가 엉뚱한 자리에서 시작한다. 새끼용이 아닌 건물 사이를 옮겨 클릭하면
+        // Bind(null)이 반복되므로 이 가드가 없으면 닫힘 트윈이 매번 재시작한다.
+        if (!_isOpen)
+        {
+            return;
+        }
+
         _isOpen = false;
         _panelTween?.Kill();
         _panelTween = _panelRect.DOAnchorPos(_homePos + _closeToOffset, _slideDuration)
@@ -423,8 +449,9 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
         }
     }
 
-    // 매 프레임 바뀔 수 있는 것만 가볍게 동기화한다(UI_BuildModeWindow.Update와 동일한 관례) -
-    // 이동 중 여부, 밤 여부, 모드 가용성은 이 창을 열어 둔 채로도 실시간으로 바뀔 수 있다.
+    // 이동 중 여부, 밤 여부, 모드 가용성처럼 이 창을 열어 둔 채로도 바뀔 수 있는 것만 가볍게
+    // 동기화한다(UI_BuildModeWindow.RefreshActiveButtons와 동일한 관례) - InteractionStateChanged가
+    // 알려줄 때만 돈다.
     private void RefreshButtons()
     {
         if (_boundTower == null)
@@ -476,7 +503,7 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
 
     // 현재 모드는 활성 스프라이트로, 누를 수 없는 사정(못 쓰는 모드거나 밤이라 잠김)은 회색으로 나눠 보여준다.
     // 지금 그 모드인 버튼은 눌러도 SetMode가 early-return하므로 굳이 막지 않는다.
-    // RefreshButtons는 열려 있는 동안 매 프레임 돌기 때문에, 값이 바뀔 때만 SetActive를 부른다.
+    // RefreshButtons가 호출될 때마다 다시 도므로, 값이 바뀔 때만 SetActive를 부른다.
     private void SetModeButtonState(Button modeButton, GameObject activeMark, bool isSelected, bool isAvailable)
     {
         if (modeButton != null)
@@ -532,7 +559,8 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
         _buildingPlacementController?.RemoveSelectedBuilding();
     }
 
-    // 선택을 해제하면 Update가 창을 자동으로 닫는다(UI_PopulationAllocationWindow.CloseWindow와 동일).
+    // 선택을 해제하면 Deselect의 알림(SelectedBuildingChanged)이 창을 닫는다
+    // (UI_PopulationAllocationWindow.CloseWindow와 동일).
     private void HandleCloseClicked()
     {
         SoundManager.Play(SoundId.UiWindowClose);

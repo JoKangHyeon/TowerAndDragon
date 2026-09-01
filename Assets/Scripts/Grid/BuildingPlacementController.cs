@@ -116,6 +116,22 @@ public class BuildingPlacementController : MonoBehaviour
     // 인구 패널은 열림/닫힘 훅이 없어서, 안내가 "건물을 클릭했다"를 잡을 유일한 창구다.
     public UnityEvent<Building> SelectedBuildingChanged = new();
 
+    /// <summary>
+    /// 지금 고른 건물로 무엇을 할 수 있는지(이동/철거 버튼의 표시·활성)가 바뀌었다.
+    ///
+    /// 인자를 두지 않는다 - 구독자가 인자를 캐시하지 않고 매번 현재 상태(CanMoveNow·CanRemoveNow·
+    /// IsMoving·InputSuppressed)를 다시 읽게 하기 위해서다(GameSpeedManager.SpeedChanged와 같은 형태).
+    ///
+    /// 다음이 바뀌면 발화한다: 선택 자체, 이동 모드 진입/이탈, 입력 억제, 낮/밤, 일일 이동 예산 리셋.
+    /// 선택이 바뀐 경우에는 SelectedBuildingChanged가 먼저 나가고 이 이벤트가 뒤따른다 -
+    /// 구독자가 새 대상으로 다시 바인딩한 뒤에 버튼을 맞추는 순서가 되도록.
+    ///
+    /// "실제로 바뀌었나" 가드를 두지 않는다 - 판정이 다섯 갈래로 갈려 있어 캐시해 비교하면
+    /// 그 캐시가 판정과 어긋나는 순간 알림이 조용히 멈춘다. 구독자 쪽 반영은 전부 멱등한 대입이다.
+    /// 필드 초기화 시점에 생성하므로 구독자의 Awake/OnEnable 순서와 무관하게 안전하다.
+    /// </summary>
+    public UnityEvent InteractionStateChanged = new();
+
     // 상태에서 파생시켜 비교하므로 알림이 실제 선택과 어긋날 일이 없다.
     private Building _notifiedSelection;
 
@@ -139,9 +155,30 @@ public class BuildingPlacementController : MonoBehaviour
     public bool CanBuildNow(Building building) =>
         building != null && IsDayForBuildActions && CanAffordBuildCost(building);
 
+    private bool _inputSuppressed;
+
     // 점령 모드 등 다른 모드가 켜져 있을 때 이 컨트롤러의 클릭 처리를 막는다.
     // (컴포넌트를 비활성화하면 공유 입력 액션까지 Disable되므로, 입력만 선택적으로 억제한다.)
-    public bool InputSuppressed { get; set; }
+    //
+    // 참조 카운트가 없는 단일 bool이다 - 두 모드가 겹쳐 켜지면 나중에 끄는 쪽이 아직 켜져 있는
+    // 쪽의 억제까지 풀어버린다. 지금 이것이 성립하는 이유는 억제를 거는 세 모드
+    // (ConquestModeController/WorkerModeController/SkillTargetingController)가 모두 진입 시
+    // CancelAll()로 선택을 걷기 때문이다 - 억제가 잠깐 false로 돌아가도 열릴 창이 없다.
+    // 이 전제가 깨지면 창이 한 프레임 열렸다 닫히는 깜빡임이 눈에 보이게 된다.
+    public bool InputSuppressed
+    {
+        get => _inputSuppressed;
+        set
+        {
+            if (_inputSuppressed == value)
+            {
+                return;
+            }
+
+            _inputSuppressed = value;
+            InteractionStateChanged.Invoke();
+        }
+    }
 
     public void AddInteractionQuery(IBuildModeInteractionQuery query)
     {
@@ -202,6 +239,18 @@ public class BuildingPlacementController : MonoBehaviour
         }
 
         _gridMap.OnCellChanged.AddListener(HandleCellChanged);
+        _gridMap.OnBuildingRemoving.AddListener(HandleBuildingRemoving);
+
+        // 낮/밤이 바뀌면 CanMoveNow·CanRemoveNow의 답이 통째로 바뀐다. 창들이 각자 사이클을
+        // 구독하지 않아도 되도록 판정을 가진 이쪽에서 한 번에 다시 알린다.
+        // OnDayStart를 따로 듣는 이유: 일일 이동 예산(BuildingMoveGrantSystem._usedToday)이
+        // 그 훅에서 리셋되므로, OnCycleChanged만 들으면 리셋 전에 알릴 수 있다.
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnCycleChanged.AddListener(HandleCycleChanged);
+            _cycleManager.OnDayStart.AddListener(HandleDayStart);
+        }
+
         _clickCycle = new BuildingClickCycle(_gridMap);
         _mouseSelectController.SetBuildingPlacementController(this);
     }
@@ -209,13 +258,49 @@ public class BuildingPlacementController : MonoBehaviour
     private void OnDestroy()
     {
         if (_gridMap != null)
+        {
             _gridMap.OnCellChanged.RemoveListener(HandleCellChanged);
+            _gridMap.OnBuildingRemoving.RemoveListener(HandleBuildingRemoving);
+        }
+
+        if (_cycleManager != null)
+        {
+            _cycleManager.OnCycleChanged.RemoveListener(HandleCycleChanged);
+            _cycleManager.OnDayStart.RemoveListener(HandleDayStart);
+        }
 
         if (_mouseSelectController != null)
             _mouseSelectController.ClearBuildingPlacementController(this);
     }
 
     private void HandleCellChanged(GridCell cell) => RefreshOccupiedOverlay();
+
+    // 고른(또는 옮기던) 건물이 그리드에서 사라진다. 우리가 부른 철거(RemoveSelectedBuilding)와
+    // 외부 소멸(StoneBarricade의 자기 철거 등)이 모두 여기를 지난다.
+    //
+    // OnCellChanged가 아니라 이 훅을 쓴다:
+    //  - 철거 1회당 한 번만 온다(OnCellChanged는 풋프린트 칸 수만큼 온다).
+    //  - IsRemoveable 검사를 통과한 뒤에만 온다 - 거절된 철거로 선택이 풀리지 않는다.
+    //  - 셀이 아직 온전해 SelectedBuilding으로 "내 것인가"를 그대로 물을 수 있다.
+    private void HandleBuildingRemoving(Building building)
+    {
+        if (!ReferenceEquals(building, SelectedBuilding))
+        {
+            return;
+        }
+
+        // 후보 하나가 사라지므로 순환 목록을 그대로 둘 수 없다.
+        _clickCycle?.Reset();
+
+        // 상태를 완전히 걷고 알린다 - 이동 중이던 건물이 사라지면 미리보기 고스트도 함께 걷어야 한다.
+        ClearSelectionWithoutNotify();
+        CancelMoveWithoutNotify();
+        NotifySelectedBuildingChanged();
+    }
+
+    private void HandleCycleChanged(CycleManager.CycleState state) => InteractionStateChanged.Invoke();
+
+    private void HandleDayStart(int day) => InteractionStateChanged.Invoke();
 
     private void Update()
     {
@@ -424,6 +509,10 @@ public class BuildingPlacementController : MonoBehaviour
         CancelBuildMode();
         _moveSourceCoord = _selectedExistingBuildingCoord;
         _selectedExistingBuildingCoord = null;
+
+        // 고른 대상 자체는 그대로다(getter가 이동 원본 좌표로 같은 건물을 답한다) - 여기서 나가는 것은
+        // SelectedBuildingChanged가 아니라 InteractionStateChanged다. 이동 버튼을 숨기는 신호가 이것뿐이므로
+        // 없애면 안 된다.
         NotifySelectedBuildingChanged();
 
         _mouseSelectController.BeginRepositionPreview(building);
@@ -431,6 +520,18 @@ public class BuildingPlacementController : MonoBehaviour
     }
 
     public void CancelMove()
+    {
+        if (!_moveSourceCoord.HasValue)
+            return;
+
+        CancelMoveWithoutNotify();
+        NotifySelectedBuildingChanged();
+    }
+
+    // 알림 없이 이동 상태만 걷는다. 곧바로 다른 건물을 고르는 경로(ApplySelectionAt)가 중간 상태까지
+    // 알리면, 선택 해제를 기다리던 쪽이 건물을 바꿔 클릭한 것만으로 넘어가버린다
+    // (ClearSelectionWithoutNotify와 같은 이유의 같은 짝이다).
+    private void CancelMoveWithoutNotify()
     {
         if (!_moveSourceCoord.HasValue)
             return;
@@ -470,20 +571,24 @@ public class BuildingPlacementController : MonoBehaviour
     }
 
     // 값을 따로 들고 다니지 않고 매번 현재 상태에서 계산한다 - 선택이 풀리는 경로가 여러 개라
-    // 각자 알림을 맞춰 넣으면 어긋난다. 실제로 바뀐 경우만 알린다.
+    // 각자 알림을 맞춰 넣으면 어긋난다.
+    //
+    // SelectedBuilding getter를 그대로 읽는다. 예전에는 _selectedExistingBuildingCoord만 보아
+    // 이동 모드 중에는 "고른 것이 없다"고 알렸는데, 같은 상태를 getter는 "그 건물을 고른 채"라고
+    // 답해 폴링하는 쪽과 이벤트를 듣는 쪽이 서로 다른 답을 보고 있었다.
     private void NotifySelectedBuildingChanged()
     {
-        Building current = _selectedExistingBuildingCoord.HasValue
-            ? _gridMap.GetBuildingAt(_selectedExistingBuildingCoord.Value)
-            : null;
+        Building current = SelectedBuilding;
 
-        if (ReferenceEquals(current, _notifiedSelection))
+        if (!ReferenceEquals(current, _notifiedSelection))
         {
-            return;
+            _notifiedSelection = current;
+            SelectedBuildingChanged.Invoke(current);
         }
 
-        _notifiedSelection = current;
-        SelectedBuildingChanged.Invoke(current);
+        // 선택이 그대로여도(이동 모드 진입 등) 버튼 가용성은 바뀌었을 수 있다. 여기에 가드를 두지
+        // 않는 이유는 InteractionStateChanged 선언부 주석 참고.
+        InteractionStateChanged.Invoke();
     }
 
     // _cancelMoveAction(우클릭)으로 새 건물 배치 미리보기, 기존 건물 이동 미리보기, 기존 건물 선택 하이라이트를 모두 취소한다.
@@ -913,6 +1018,10 @@ public class BuildingPlacementController : MonoBehaviour
         _moveSourceCoord = null;
         _mouseSelectController.SetPlacementActive(false);
         _mouseSelectController.ClearHighlights();
+
+        // 이동이 확정되며 고른 것이 없어진다 - 이동 예산 소비(NotifyMoved)도 이 시점에 끝났으므로
+        // 버튼 가용성도 함께 다시 알린다.
+        NotifySelectedBuildingChanged();
         return true;
     }
 
@@ -925,8 +1034,8 @@ public class BuildingPlacementController : MonoBehaviour
     }
 
     // 선택 상태만 바꾼다. 순환 상태는 건드리지 않으므로, 순환 중인 클릭이 자기 기준점을 지우지 않는다.
-    // 이 안에서 부르는 CancelBuildMode/CancelMove/ClearSelectionWithoutNotify에도 같은 이유로
-    // 순환 리셋을 넣으면 안 된다.
+    // 이 안에서 부르는 CancelBuildMode/CancelMoveWithoutNotify/ClearSelectionWithoutNotify에도 같은
+    // 이유로 순환 리셋을 넣으면 안 된다.
     private void ApplySelectionAt(Vector3Int coord)
     {
         Building occupant = _gridMap.GetBuildingAt(coord);
@@ -936,7 +1045,7 @@ public class BuildingPlacementController : MonoBehaviour
         Building building = occupant != null && occupant.IsClickSelectable ? occupant : null;
 
         CancelBuildMode();
-        CancelMove();
+        CancelMoveWithoutNotify();
         ClearSelectionWithoutNotify();
 
         if (building != null)

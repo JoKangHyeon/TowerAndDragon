@@ -341,6 +341,28 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
             BuildResources.ResourceChanged.AddListener(HandleResourceChanged);
         }
 
+        if (WiringGuard.Require(_buildingPlacementController, nameof(_buildingPlacementController), this))
+        {
+            // InteractionStateChanged 하나만 듣는다 - 선택이 바뀌어도 이 이벤트가 뒤따라 오므로
+            // SelectedBuildingChanged를 따로 들 필요가 없다(이 창은 선택 대상 자체를 들고 있지 않다).
+            _buildingPlacementController.InteractionStateChanged.AddListener(HandleInteractionStateChanged);
+        }
+
+        if (_closeAction != null)
+        {
+            // Esc는 여러 창이 함께 쓰는 공유 액션이라 켜는 것은 GlobalInputBootstrap의 몫이다
+            // (UI_PopulationAllocationWindow와 같은 판단). 여기서는 구독만 한다.
+            //
+            // 이 창은 자기 자신을 SetActive(false)로 끄고, 그 끄기가 닫힘 트윈의 OnComplete에서
+            // 0.5초 늦게 일어난다 - OnEnable/OnDisable에 걸면 구독과 해제의 짝이 맞지 않는다.
+            // 그래서 창 수명이 아니라 컴포넌트 수명(EnsureInitialized/OnDestroy)에 건다.
+            // 닫혀 있는 동안 들어오는 Esc는 아래 _isOpen 가드가 걸러낸다.
+            _closeAction.action.performed += OnCloseActionPerformed;
+        }
+
+        // 구독 직후 현재 값 1회 반영.
+        RefreshActiveButtons();
+
         _initialized = true;
     }
 
@@ -359,6 +381,16 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         if (BuildResources != null)
         {
             BuildResources.ResourceChanged.RemoveListener(HandleResourceChanged);
+        }
+
+        if (_buildingPlacementController != null)
+        {
+            _buildingPlacementController.InteractionStateChanged.RemoveListener(HandleInteractionStateChanged);
+        }
+
+        if (_closeAction != null)
+        {
+            _closeAction.action.performed -= OnCloseActionPerformed;
         }
     }
 
@@ -398,6 +430,10 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         }
 
         SelectFilter(_currentFilterIndex);
+
+        // 이 연구가 이동 허용치(BuildingMoveGrantSystem)를 늘렸을 수도 있다 - 별도로 배선을
+        // 받지 않고 이미 구독 중인 이 이벤트를 통해 이동 버튼을 다시 맞춘다.
+        RefreshActiveButtons();
     }
 
     private static bool UnlocksAnyBuildMenuItem(ResearchNodeData node)
@@ -422,13 +458,12 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         }
     }
 
-    private void Update()
+    // 상단 활성 버튼(이동/철거)을 현재 상태에 맞춘다. 예전에는 Update가 매 프레임 했던 일이다 -
+    // 지금은 BuildingPlacementController가 바뀐 시점(선택·이동 모드·억제·낮밤·이동 예산)을 알려준다.
+    private void RefreshActiveButtons()
     {
-        EnsureInitialized();
-
         if (_buildingPlacementController == null)
         {
-            HandleCloseInput();
             return;
         }
 
@@ -437,10 +472,15 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         Building selected = _buildingPlacementController.SelectedBuilding;
         Building target = selected is BabyDragonTower ? null : selected;
 
-        // 이동 모드 진입/종료(클릭 이동, 취소, 우클릭 취소 등)에 맞춰 Move 버튼 표시를 매 프레임 동기화
         if (_activeButtons.Move != null)
         {
-            _activeButtons.Move.gameObject.SetActive(!_buildingPlacementController.IsMoving);
+            // 값이 바뀔 때만 SetActive를 부른다(UI_BabyDragonManageWindow.SetModeButtonState와 같은 관례).
+            bool showsMove = !_buildingPlacementController.IsMoving;
+            if (_activeButtons.Move.gameObject.activeSelf != showsMove)
+            {
+                _activeButtons.Move.gameObject.SetActive(showsMove);
+            }
+
             _activeButtons.Move.interactable = _buildingPlacementController.CanMoveNow(target);
         }
 
@@ -449,18 +489,21 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         {
             _activeButtons.Remove.interactable = _buildingPlacementController.CanRemoveNow(target);
         }
-
-        HandleCloseInput();
     }
 
+    private void HandleInteractionStateChanged() => RefreshActiveButtons();
+
     // ESC 입력 시 빌드모드 패널을 닫고 배치/이동 중이던 상태도 함께 취소한다.
-    private void HandleCloseInput()
+    //
+    // 예전에는 Update가 WasPerformedThisFrame으로 폴링했다. performed 콜백은 Update보다 먼저 도는데,
+    // UIManager.TryOpenEscapeWindow가 이미 그 순서를 전제로 직전 프레임 상태(_wasAnyWindowOpen)까지
+    // 보므로, Esc로 이 창을 닫은 프레임에 설정 창이 대신 열리지 않는다.
+    private void OnCloseActionPerformed(InputAction.CallbackContext context)
     {
         if (!_isOpen)
             return;
 
-        if (_closeAction != null && _closeAction.action.WasPerformedThisFrame() &&
-            (_uiManager == null || _uiManager.CanCloseExclusive(this)))
+        if (_uiManager == null || _uiManager.CanCloseExclusive(this))
         {
             CloseBuildPanel();
         }
@@ -551,6 +594,9 @@ public class UI_BuildModeWindow : MonoBehaviour, IExclusiveMode, IExclusiveModeE
         {
             SelectFilter(_currentFilterIndex);
         }
+
+        // 닫혀 있는 동안에도 이벤트로 최신 상태를 유지하지만, 열리는 순간 한 번 더 맞춰 확실히 한다.
+        RefreshActiveButtons();
     }
 
     private void CloseBuildPanel()

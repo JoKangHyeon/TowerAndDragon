@@ -85,6 +85,7 @@ public class GameSpeedManager : MonoBehaviour
         if (_togglePauseAction != null)
         {
             _togglePauseAction.action.Enable();
+            _togglePauseAction.action.performed += OnTogglePausePerformed;
         }
     }
 
@@ -101,14 +102,24 @@ public class GameSpeedManager : MonoBehaviour
             _cycleManager.OnDayReady.RemoveListener(HandleDayStart);
         }
 
+        // 해제를 먼저 하고 Disable은 부르지 않는다 - 이 액션은 여기서 Enable했지만, 기존 동작을
+        // 그대로 유지하기 위해 Disable은 하지 않는다(씬 재시작 시에도 켜진 채로 남는 것이 기존 동작).
+        if (_togglePauseAction != null)
+        {
+            _togglePauseAction.action.performed -= OnTogglePausePerformed;
+        }
+
         // timeScale은 씬 로드를 넘어 유지되므로, 재시작(SceneManager.LoadScene) 시 정지 상태가
         // 새 씬으로 새어 들어가지 않도록 여기서 복구한다.
         Time.timeScale = NORMAL_SCALE;
     }
 
-    private void Update()
+    // 단축키(Space) 전용. 예전에는 Update가 WasPerformedThisFrame으로 폴링했다 - 아래 가드가 전부
+    // 순수 상태 조건이라 프레임 안에서 언제 판정하든 결과가 같아 콜백으로 옮겨도 안전하다.
+    // (TogglePause 액션은 type=Button이라 performed가 한 번의 누름에 한 번만 성립한다.)
+    private void OnTogglePausePerformed(InputAction.CallbackContext context)
     {
-        if (_togglePauseAction == null || _isSpeedLocked)
+        if (_isSpeedLocked)
         {
             return;
         }
@@ -126,10 +137,7 @@ public class GameSpeedManager : MonoBehaviour
             return;
         }
 
-        if (_togglePauseAction.action.WasPerformedThisFrame())
-        {
-            TogglePause();
-        }
+        TogglePause();
     }
 
     /// <summary>일시정지 버튼.</summary>

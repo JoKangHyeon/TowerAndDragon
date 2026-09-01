@@ -375,6 +375,17 @@ public class UI_ConquestWindow : MonoBehaviour
     private static string FormatDuration(int days) =>
         string.Format(days == 1 ? DURATION_DAY_SINGULAR_FORMAT : DURATION_DAY_PLURAL_FORMAT, days);
 
+    // 목록을 다시 그릴 때 이전 청크에서 내려둔 스크롤 위치가 남지 않도록 맨 위로 되돌린다.
+    // 컨테이너가 곧 ScrollRect의 Content라 anchoredPosition만 0으로 두면 된다
+    // (normalizedPosition은 내용 높이에 의존해 슬롯 생성 전에는 값이 틀어진다).
+    private static void ScrollToTop(Transform container)
+    {
+        if (container is RectTransform content)
+        {
+            content.anchoredPosition = Vector2.zero;
+        }
+    }
+
     private Sprite ResolveTerrainSprite(TerrainType terrain)
     {
         int index = (int)terrain;
@@ -473,6 +484,8 @@ public class UI_ConquestWindow : MonoBehaviour
         if (_rewardSlotPrefab == null || _rewardSlotContainer == null)
             return;
 
+        ScrollToTop(_rewardSlotContainer);
+
         // 랜드마크를 맨 앞에 둔다 - 자원·인구와 달리 그 청크에만 있는 보상이라 선택의 근거가 된다.
         // 아이콘이 아직 없어도 UI_ConquestRewardSlot이 이름 라벨만으로 그려 준다.
         SpawnLandmarkRewardSlot(coord);
@@ -526,6 +539,8 @@ public class UI_ConquestWindow : MonoBehaviour
         {
             return;
         }
+
+        ScrollToTop(_enemyScalingSlotContainer);
 
         foreach (EnemyEnhancementRule rule in profile.Rules)
         {
