@@ -4,21 +4,22 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// 암석 어미용 「메테오 방벽」의 타게팅 이동 펄스와 실제 설치 충격 프리팹을 만든다.
+/// 암석 어미용 「메테오 방벽」의 타게팅 바닥 마커와 실제 설치 충격 프리팹을 만든다.
 ///
-/// 타게팅 이동은 기존 암석 새끼용의 보라색 범위 마커를 짧은 1회성 펄스로 바꾼다.
+/// 타게팅 마커는 기존 암석 새끼용의 보라색 범위 마커를 그대로 쓰되 크기와 정렬만 맞춘다.
 /// 설치 충격은 암석 타워 명중 이펙트를 베이스로 쓰고 기존 트레일 재질로 낙하 잔광을 더한다.
 /// 외부 번들 원본(<c>PREVIEW_SOURCE_PATH</c> 등)은 읽기만 하고 수정하지 않는다.
 ///
 /// 자동 실행은 하지 않는다 - 재생성은 Tools 메뉴에서 명시적으로 한다.
 ///
-/// ⚠️ <b>산출물 위치가 코드와 어긋나 있다.</b> <see cref="TARGET_FOLDER"/>는
-/// <c>Assets/Prefabs/VFX/Dragon/Stone</c>이지만, 스킬 에셋이 실제로 참조하는 프리팹은
-/// <c>Assets/Imported/Prefabs/VFX/Dragon/Stone/</c>에 있다. 후자는 CLAUDE.md가 "수정 금지,
-/// 원본 유지"로 정한 폴더이고 메인 저장소에서 git-ignore되는 별도 중첩 저장소라,
-/// <b>생성물이 거기 있으면 안 된다.</b> 지금 이 메뉴를 실행하면 TARGET_FOLDER 쪽에
-/// <b>새 GUID로</b> 만들어져 스킬 에셋의 참조와 이어지지 않는다.
-/// 프리팹을 Assets/Prefabs 아래로 옮길지(.meta를 함께 옮기면 GUID는 보존된다) 팀 확인이 필요하다.
+/// ⚠️ <b>마커의 파티클 설정(loop·emission·simulationSpace)은 손대지 않는다.</b> 한때 이것을
+/// 1회성 Burst + World 공간으로 개조해 "타일이 바뀔 때마다 한 번 터지는 펄스"로 썼는데,
+/// 겹침을 막으려 넣은 재생 간격 제한 때문에 마커가 커서를 느리게 따라왔다.
+/// 지금은 <c>MeteorBarricadeSkill.UpdatePreviewMarker</c>가 인스턴스 하나를 매 프레임 옮기는
+/// 방식이라, 원본의 루프 재생과 Local 공간이 그대로 필요하다.
+///
+/// 크기(<see cref="PREVIEW_SCALE"/>)는 루트 스케일로만 준다 - 원본이 scalingMode = Hierarchy라
+/// 자식 파티클까지 따라 줄어든다.
 /// </summary>
 public static class BuildStoneBarricadeSkillVfx
 {
@@ -31,13 +32,19 @@ public static class BuildStoneBarricadeSkillVfx
     private const string TRAIL_MATERIAL_PATH =
         "Assets/Imported/Vefects/Anime VFX URP/Shared/Materials/M_VFX_Trail_03.mat";
 
-    private const string TARGET_FOLDER = "Assets/Prefabs/VFX/Dragon/Stone";
+    // 원본과 같은 번들 폴더에 둔다 - 외부 에셋을 가공한 파생본이라 원본 옆에 있어야 출처가 따라간다.
+    // 스킬 에셋이 참조하는 프리팹도 여기 있으므로, 예전처럼 산출물과 참조가 어긋나지 않는다.
+    private const string TARGET_FOLDER = "Assets/Imported/Prefabs/VFX/Dragon/Stone";
+
+    // ⚠️ 이름이 TargetTilePulse에서 바뀌었다 - 1회성 펄스가 아니라 계속 떠 있는 마커다.
+    // 새 파일이므로 GUID도 새로 발급된다. 스킬 에셋(SK_Dragon_Meteor)의
+    // BarricadePreviewMoveVfxPrefab을 이쪽으로 다시 배선해야 한다.
     private const string PREVIEW_TARGET_PATH =
-        TARGET_FOLDER + "/FX_StoneBarricade_TargetTilePulse.prefab";
+        TARGET_FOLDER + "/FX_StoneBarricade_TargetMarker.prefab";
     private const string IMPACT_TARGET_PATH =
         TARGET_FOLDER + "/FX_StoneBarricade_PlacementImpact.prefab";
 
-    private const string PREVIEW_ROOT_NAME = "FX_StoneBarricade_TargetTilePulse";
+    private const string PREVIEW_ROOT_NAME = "FX_StoneBarricade_TargetMarker";
     private const string IMPACT_ROOT_NAME = "FX_StoneBarricade_PlacementImpact";
 
     private const string HIGHLIGHT_SORTING_LAYER = "Highlight";
@@ -47,12 +54,9 @@ public static class BuildStoneBarricadeSkillVfx
     private const int IMPACT_SORTING_ORDER = 5;
     private const int STREAK_SORTING_ORDER = 6;
 
-    private const int PREVIEW_MAX_PARTICLES = 12;
     private const int IMPACT_MAX_PARTICLES = 96;
 
     private const float PREVIEW_SCALE = 0.72f;
-    private const float PREVIEW_DURATION_SECONDS = 0.24f;
-    private const float PREVIEW_LIFETIME_SECONDS = 0.42f;
 
     private const float IMPACT_SCALE_MULTIPLIER = 1.2f;
     private const float IMPACT_EMISSION_SECONDS = 0.65f;
@@ -254,30 +258,10 @@ public static class BuildStoneBarricadeSkillVfx
         {
             ParticleSystem[] systems = instance.GetComponentsInChildren<ParticleSystem>(true);
 
+            // 정렬만 바꾼다. 파티클 모듈(loop·emission·simulationSpace·trails)은 원본 그대로 둔다 -
+            // 이유는 클래스 주석 참고.
             foreach (ParticleSystem particles in systems)
             {
-                ParticleSystem.MainModule main = particles.main;
-                main.loop = false;
-                main.playOnAwake = true;
-                main.duration = PREVIEW_DURATION_SECONDS;
-                main.startLifetime = PREVIEW_LIFETIME_SECONDS;
-                main.startSpeed = 0f;
-                main.maxParticles = PREVIEW_MAX_PARTICLES;
-                main.simulationSpace = ParticleSystemSimulationSpace.World;
-                main.scalingMode = ParticleSystemScalingMode.Hierarchy;
-
-                ParticleSystem.EmissionModule emission = particles.emission;
-                emission.enabled = true;
-                emission.rateOverTime = 0f;
-                emission.rateOverDistance = 0f;
-                emission.SetBursts(new[]
-                {
-                    new ParticleSystem.Burst(0f, ResolvePreviewBurstCount(particles.name))
-                });
-
-                ParticleSystem.TrailModule trails = particles.trails;
-                trails.enabled = false;
-
                 ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
 
                 if (renderer != null)
@@ -289,13 +273,12 @@ public static class BuildStoneBarricadeSkillVfx
 
             PrefabUtility.SaveAsPrefabAsset(instance, PREVIEW_TARGET_PATH);
 
-            report.AppendLine("[타게팅 이동]");
+            report.AppendLine("[타게팅 마커]");
             report.Append("  원본: ").AppendLine(PREVIEW_SOURCE_PATH);
             report.Append("  저장: ").AppendLine(PREVIEW_TARGET_PATH);
             report.Append("  파티클 시스템: ").Append(systems.Length)
-                .Append("개 / 1회성 ").Append(PREVIEW_DURATION_SECONDS.ToString("0.##"))
-                .Append("초 / 잔광 ").Append(PREVIEW_LIFETIME_SECONDS.ToString("0.##"))
-                .AppendLine("초");
+                .Append("개 / 원본 루프 재생 유지 / 크기 ").Append(PREVIEW_SCALE.ToString("0.##"))
+                .AppendLine("배");
 
             return true;
         }
@@ -431,11 +414,6 @@ public static class BuildStoneBarricadeSkillVfx
             });
 
         return new ParticleSystem.MinMaxGradient(gradient);
-    }
-
-    private static short ResolvePreviewBurstCount(string particleName)
-    {
-        return particleName == "Glow" ? (short)2 : (short)1;
     }
 
     private static void EnsureFolder(string path)

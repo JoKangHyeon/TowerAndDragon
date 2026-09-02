@@ -40,7 +40,9 @@ public class SkillSO:ScriptableObject
     private const float DEFAULT_BARRICADE_PLACEMENT_VFX_LIFETIME_SECONDS = 1.2f;
 
     [Header("방벽 연출")]
-    [Tooltip("방벽 프리뷰가 새 설치 가능 타일로 옮겨갈 때 그 타일에서 1회 재생할 펄스. 비우면 생략한다.")]
+    [Tooltip("방벽이 설치될 자리를 가리키며 타게팅 내내 떠 있는 바닥 마커. 비우면 생략한다. " +
+        "⚠️ 루프 재생 · 시뮬레이션 공간 Local인 프리팹이어야 한다 - 1회성 이펙트를 넣으면 " +
+        "첫 프레임에만 보이고, World 공간이면 파티클이 커서 뒤로 끌린다.")]
     [WiringOptional]
     public GameObject BarricadePreviewMoveVfxPrefab;
 
