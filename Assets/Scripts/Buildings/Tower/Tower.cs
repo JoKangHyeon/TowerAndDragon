@@ -362,10 +362,13 @@ public class Tower : Building, IMonsterTarget, IParalyzable, IReviveProgress
     /// <b>하룻밤 재활성화 횟수(<see cref="TowerData.MaxNightRevives"/>)의 적용을 받지 않는다.</b>
     /// 예산이 바닥난 타워도 이 경로로는 다시 세울 수 있고, 세운다고 예산이 깎이지도 않는다 -
     /// 스킬은 자기 쿨다운으로 이미 제한되며, 그 제한을 뚫는 것이 시간 어미용의 값어치다.
-    /// 밤 전투 중이라는 조건(편의 연구 해금)만 기존대로 따른다.</summary>
+    ///
+    /// <b><see cref="CanUseCombatRepair"/>(편의 연구 해금)도 따르지 않는다.</b> 그 연구가 잠그는 것은
+    /// 타워가 스스로 일어서는 자연 부활(<see cref="TryStartCombatRevive"/>)뿐이다 - 어미용 스킬은
+    /// 이미 자기 쿨다운으로 제한되므로 저티어 편의 연구에 다시 종속시킬 이유가 없다.</summary>
     public bool TryRestoreDuringCombat()
     {
-        if (!_isInitialized || !IsDead || !CanUseCombatRepair)
+        if (!_isInitialized || !IsDead)
         {
             return false;
         }
