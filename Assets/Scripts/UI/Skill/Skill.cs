@@ -325,8 +325,15 @@ public abstract class Skill
     }
 
     /// <summary>스킬 발동 진입점. 사용 가능할 때만 효과를 적용하고 쿨타임/사용횟수를 소비한다.
-    /// 반환값은 <b>실제로 무슨 일이 일어났는가</b>다 - 시전 연출을 띄울지 판단하는 데 쓴다
-    /// (SkillCastOverlayHost). 쓸 수 없는 상태였거나 대상이 없어 아무 효과도 없었으면 false다.</summary>
+    /// 반환값은 <b>발동이 성립했는가</b>다 - 시전 연출을 띄울지 판단하는 데 쓴다(SkillCastOverlayHost).
+    ///
+    /// ⚠️ <b>"대상이 없으면 false"가 아니다.</b> 대상이 0마리·만피여도 발동으로 친다 -
+    /// 언제 쓸지는 플레이어의 선택이고, 헛발질이면 쿨타임과 스택을 무는 것까지가 그 선택의 결과다
+    /// (2026-09-02 결정. 마일스톤 "대상 0 판정 철회" 항목).
+    ///
+    /// false가 되는 것은 <see cref="CanUse"/> 실패와 각 스킬의 <b>진짜 실패 경로</b>뿐이다 -
+    /// 방벽을 놓을 자리가 막혔거나, 회복할 성이 없거나, 비활성 타워가 0개인 경우
+    /// (마지막 하나는 master의 원래 동작이라 남겨 둔 의도된 예외다).</summary>
     public bool Activate(in SkillCastContext context)
     {
         if (!CanUse)
@@ -468,19 +475,17 @@ public class FreezeAllSkill : Skill
         if (AppliedStatus == null || context.AllMonsters == null)
             return false;
 
-        // 실제로 얼린 마릿수를 센다 - 0마리에 true를 돌려주면 쿨타임이 돌고 시전 연출도 뜬다.
-        // 밤이 끝나갈 때 남은 적이 없는 상태로 눌러 보면 바로 드러난다.
-        bool hasFrozenAny = false;
-
         foreach (BaseMonster monster in context.AllMonsters)
         {
             if (monster != null && !monster.IsDead)
             {
                 monster.ApplyStatus(AppliedStatus);
-                hasFrozenAny = true;
             }
         }
-        return hasFrozenAny;
+
+        // 얼린 마릿수를 세지 않는다 - 대상이 0마리여도 발동으로 친다. 스킬을 언제 쓸지는
+        // 플레이어의 선택이고, 헛발질이면 쿨타임과 스택을 무는 것까지가 그 선택의 결과다.
+        return true;
     }
 }
 
@@ -499,9 +504,6 @@ public class GlobalCurrentHealthDamageSkill : Skill
         if (context.AllMonsters == null)
             return false;
 
-        // 빙결과 같은 이유로 실제 타격 여부를 센다 - FreezeAllSkill.ApplyEffect 주석 참고.
-        bool hasHitAny = false;
-
         foreach (BaseMonster monster in context.AllMonsters)
         {
             if (monster == null || monster.IsDead)
@@ -517,10 +519,11 @@ public class GlobalCurrentHealthDamageSkill : Skill
             // 상태이상 파이프라인이 아니라 여기서 직접 띄운다 - "화상이 걸려 있다"가 아니라
             // "지금 막 타격했다"는 신호다. DS_FireBurn의 지속 연출과는 별개다(설계 §2-2).
             PlayTargetVfxOnMonster(monster);
-
-            hasHitAny = true;
         }
-        return hasHitAny;
+
+        // 빙결과 같은 이유로 타격 여부를 세지 않는다 - FreezeAllSkill.ApplyEffect 주석 참고.
+        // 대상이 0마리면 대상별 연출만 안 나올 뿐, 발동 자체는 성립한다.
+        return true;
     }
 }
 
@@ -578,11 +581,9 @@ public class HealCastleSkill : Skill
         if (castle == null)
             return false;
 
-        // 만피·사망이면 Health.Heal이 조용히 아무 일도 하지 않는다. 그때 true를 돌려주면
-        // 쿨타임만 태우고 시전 연출까지 뜨므로, 회복할 여지가 있는지 여기서 판정한다.
-        if (castle.IsDead || castle.CurrentHealth >= castle.MaxHealth)
-            return false;
-
+        // 만피·사망 가드를 두지 않는다. 그 구간에서 Health.Heal이 조용히 아무 일도 하지 않는 것은
+        // 맞지만, 그때 발동을 막으면 플레이어가 누른 스킬이 아무 반응 없이 삼켜진다.
+        // 언제 쓸지는 플레이어의 선택이므로 헛발질이어도 발동시키고 쿨타임·스택을 문다.
         castle.Repair(HealAmount);
 
         // ⚠️ Castle.Repair가 아니라 여기서 띄운다. Repair는 연구 convenience_castle_regen_1의
@@ -600,9 +601,22 @@ public class HealCastleSkill : Skill
 public class MeteorBarricadeSkill : Skill
 {
     private const int BARRICADE_SNAP_DISTANCE = 2;
+
+    // 타게팅 펄스는 프리팹 수명이 약 0.42초다. 넉넉히 잡아 반납한다 -
+    // 짧게 잡으면 잔광이 끝나기 전에 풀로 돌아가 뚝 끊긴다.
+    private const float PREVIEW_PULSE_LIFETIME_SECONDS = 0.6f;
+
     private GameObject _previewInstance;
     private GridMap _gridMap;
     private Building _buildingPrefab;
+
+    // ⚠️ 마지막으로 펄스를 띄운 앵커. <b>월드 좌표가 아니라 앵커로 비교한다</b> -
+    // 좌표로 비교하면 같은 타일 안에서 마우스가 조금만 움직여도 매 프레임 재생돼
+    // 한 타일에 파티클이 수십 겹 쌓인다.
+    private Vector3Int? _lastPreviewVfxAnchor;
+
+    // 마지막으로 펄스를 띄운 시각. NegativeInfinity로 시작해 첫 유효 타일에서는 간격 검사를 통과시킨다.
+    private float _lastPreviewVfxTime = float.NegativeInfinity;
 
     private void EnsureCached()
     {
@@ -675,6 +689,8 @@ public class MeteorBarricadeSkill : Skill
                 + _gridMap.ComputeRotationCompensation(_buildingPrefab.BaseFootprintShape, 0);
 
             _previewInstance.transform.position = worldPos;
+
+            PlayPreviewMovePulse(anchor, worldPos);
         }
         else
         {
@@ -682,7 +698,49 @@ public class MeteorBarricadeSkill : Skill
             {
                 _previewInstance.SetActive(false);
             }
+
+            // ⚠️ 여기서 _lastPreviewVfxAnchor를 지우지 않는다. 스냅 반경이 2셀이라 설치 가부가
+            // 갈리는 경계가 넓고 들쭉날쭉해서, 커서를 그 위에 두면 가능/불가능이 프레임마다 뒤집힌다.
+            // 불가능 프레임에서 앵커를 지우면 다음 가능 프레임이 "새 타일"로 보여 같은 타일에
+            // 펄스가 초당 30번 다시 터진다(수명 0.6초라 18겹까지 쌓인다).
+            // 같은 타일로 돌아왔을 때 다시 나오게 하는 것은 아래 최소 간격이 대신 해 준다.
         }
+    }
+
+    /// <summary>
+    /// 프리뷰가 <b>새 설치 가능 타일로 옮겨갈 때만</b> 그 타일에서 펄스를 1회 재생한다.
+    /// 같은 타일 안에서 마우스가 움직이는 동안에는 아무 일도 하지 않는다.
+    ///
+    /// 앵커 비교만으로는 부족하다 - 설치 가부가 경계에서 프레임마다 뒤집히면 앵커가 그대로여도
+    /// 재발화 조건이 성립할 수 있어, <see cref="PREVIEW_PULSE_LIFETIME_SECONDS"/>만큼의
+    /// 최소 간격을 함께 둔다. 앞 펄스가 아직 떠 있는 동안에는 절대 겹쳐 뿌리지 않는다는 뜻이다.
+    /// </summary>
+    private void PlayPreviewMovePulse(Vector3Int anchor, Vector3 worldPosition)
+    {
+        if (Data.BarricadePreviewMoveVfxPrefab == null)
+        {
+            return;
+        }
+
+        if (_lastPreviewVfxAnchor.HasValue && _lastPreviewVfxAnchor.Value == anchor)
+        {
+            return;
+        }
+
+        // 앞 펄스가 아직 살아 있으면 타일이 바뀌었어도 건너뛴다 - 겹침의 상한을 여기서 정한다.
+        if (Time.time - _lastPreviewVfxTime < PREVIEW_PULSE_LIFETIME_SECONDS)
+        {
+            return;
+        }
+
+        _lastPreviewVfxAnchor = anchor;
+        _lastPreviewVfxTime = Time.time;
+
+        ProjectilePool.PlayForSeconds(
+            Data.BarricadePreviewMoveVfxPrefab,
+            worldPosition,
+            Quaternion.identity,
+            PREVIEW_PULSE_LIFETIME_SECONDS);
     }
 
     public override void ClearPreview()
@@ -692,6 +750,10 @@ public class MeteorBarricadeSkill : Skill
             Object.Destroy(_previewInstance);
             _previewInstance = null;
         }
+
+        // 취소 후 다시 타게팅하면 첫 유효 타일에서 펄스가 나와야 한다 - 간격 제한도 함께 푼다.
+        _lastPreviewVfxAnchor = null;
+        _lastPreviewVfxTime = float.NegativeInfinity;
     }
 
     protected override bool ApplyEffect(in SkillCastContext context)
@@ -734,7 +796,10 @@ public class MeteorBarricadeSkill : Skill
         {
             monster.TakeDamage(new DamageInfo(FlatDamage));
 
-            // 반경 1.5라 대상이 한 자리 수다 - 전역 화염과 달리 수를 걱정할 필요가 없다.
+            // ⚠️ 반경 1.5라 대상은 한 자리 수지만, 그렇다고 전역 화염보다 가벼운 것은 아니다.
+            // 배선된 Impact_BD_Stone은 ParticleSystem이 20개(화염 임팩트의 2.2배)이고 수명도
+            // 2.5초(2.5배)라, 9마리만 맞아도 180개가 2.5초 동안 살아 있다 - 화염 20마리와 같은 자릿수다.
+            // "대상 수가 적으니 괜찮다"는 판단으로 여기를 다시 읽지 말 것.
             PlayTargetVfxOnMonster(monster);
         }
 
@@ -767,6 +832,18 @@ public class MeteorBarricadeSkill : Skill
                 barricade.Initialize(healthMultiplier);
                 barricade.RegisterAutoDestroy(Object.FindFirstObjectByType<CycleManager>());
             }
+
+            // ⚠️ 반드시 이 성공 분기 안에서만 띄운다. 설치 실패에 메테오가 떨어지면
+            // 스킬이 소비됐다는 잘못된 신호가 된다(실패 경로는 쿨타임·스택을 차감하지 않는다).
+            if (Data.BarricadePlacementVfxPrefab != null)
+            {
+                ProjectilePool.PlayForSeconds(
+                    Data.BarricadePlacementVfxPrefab,
+                    worldPos,
+                    Quaternion.identity,
+                    Data.BarricadePlacementVfxLifetimeSeconds);
+            }
+
             return true;
         }
         else

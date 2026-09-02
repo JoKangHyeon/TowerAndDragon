@@ -35,12 +35,16 @@ public sealed class SkillCastOverlayHost : MonoBehaviour
 
     private const byte MAX_ALPHA = 255;
 
+    // 인스펙터 기본값. 둘을 더한 2초가 화면에 오버레이가 떠 있는 총 시간이다.
+    private const float DEFAULT_EMIT_SECONDS = 1.5f;
+    private const float DEFAULT_FADE_SECONDS = 0.5f;
+
     [Header("연출 길이")]
     [Tooltip("스킬을 누른 뒤 입자를 계속 뿜는 시간. 이 뒤로는 방출을 멈추고 페이드아웃한다.")]
-    [SerializeField] private float _emitSeconds = 1.5f;
+    [SerializeField] private float _emitSeconds = DEFAULT_EMIT_SECONDS;
 
     [Tooltip("남은 입자의 알파를 0까지 내리는 시간. _emitSeconds와 합쳐 화면에 뜨는 총 시간이 된다.")]
-    [SerializeField] private float _fadeSeconds = 0.5f;
+    [SerializeField] private float _fadeSeconds = DEFAULT_FADE_SECONDS;
 
     [Header("참조")]
     [SerializeField] private DragonTreeManager _dragonTreeManager;

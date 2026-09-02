@@ -250,8 +250,16 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
         // 안으로 옮기면 "밤에 용 스킬을 써 봤는가" 단계가 통과되지 않는다.
         SkillUsed.Invoke(skill);
 
-        // 시전 연출은 반대로 실제 효과가 있었을 때만 띄운다. 몬스터가 0마리인데 화면 전체가
-        // 얼어붙거나, 성이 만피인데 회복 연출이 뜨면 거짓 신호가 된다.
+        // 시전 연출은 발동이 실제로 성립했을 때만 띄운다.
+        //
+        // ⚠️ "대상이 0이면 안 띄운다"가 아니다. 2026-09-02에 그 판정을 걷어냈다 - 스킬을 언제 쓸지는
+        // 플레이어의 선택이라, 몬스터가 0마리인 전역 빙결·화염도 성이 만피인 성벽 재생도 전부
+        // 발동으로 치고 오버레이가 뜬다(마일스톤 "대상 0 판정 철회" 항목).
+        //
+        // 그래서 여기서 false가 되는 경로는 이제 셋뿐이다:
+        //   ① CanUse 실패(쿨타임·스택·자원) ② RepairTowersSkill에 비활성 타워가 0개
+        //   ③ MeteorBarricadeSkill의 설치 실패(막힌 자리) 또는 회복 대상 성이 null
+        // ②는 master의 원래 동작이라 남겨 둔 의도된 예외다.
         if (hasTakenEffect)
         {
             SkillCastOverlayHost.PlayForActiveAttribute();
