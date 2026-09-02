@@ -35,6 +35,25 @@ public class SkillSO:ScriptableObject
     [Tooltip("설치될 방벽 프리팹 (StoneBarricade 컴포넌트 포함)")]
     public GameObject BarricadePrefab;
 
+    // 설치 충격은 방벽 하나당 한 번만 뜬다. TargetVfxLifetimeSeconds와 따로 두는 이유는
+    // 그쪽이 "피해를 입은 몬스터마다" 띄우는 값이라 성격이 다르기 때문이다.
+    private const float DEFAULT_BARRICADE_PLACEMENT_VFX_LIFETIME_SECONDS = 1.2f;
+
+    [Header("방벽 연출")]
+    [Tooltip("방벽 프리뷰가 새 설치 가능 타일로 옮겨갈 때 그 타일에서 1회 재생할 펄스. 비우면 생략한다.")]
+    [WiringOptional]
+    public GameObject BarricadePreviewMoveVfxPrefab;
+
+    [Tooltip("방벽 설치가 실제로 성공한 지점에서 1회 재생할 낙하·충격 연출. 비우면 생략한다. " +
+        "⚠️ TargetVfxPrefab을 재사용하지 말 것 - 그쪽은 범위 안 몬스터마다 뜨는 피격 임팩트다.")]
+    [WiringOptional]
+    public GameObject BarricadePlacementVfxPrefab;
+
+    [Tooltip("위 설치 연출을 띄워 둘 시간(초).")]
+    [Min(0f)]
+    public float BarricadePlacementVfxLifetimeSeconds =
+        DEFAULT_BARRICADE_PLACEMENT_VFX_LIFETIME_SECONDS;
+
     // 새끼용 회복 파동(TA_BD_TowerHealEffect)이 쓰는 값과 같게 뒀다 - 같은 프리팹을 재사용하므로
     // 재생 길이도 같아야 화면에서 같은 연출로 읽힌다.
     private const float DEFAULT_TARGET_VFX_LIFETIME_SECONDS = 1.1f;
