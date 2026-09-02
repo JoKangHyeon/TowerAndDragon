@@ -57,7 +57,8 @@ public sealed class TutorialRunner : MonoBehaviour, IExclusiveModeOpenQuery, IDa
              "슬롯은 런타임 생성이라 앵커로 잡을 수 없다.")]
     [SerializeField] private UI_DragonWindow _dragonWindow;
 
-    [Tooltip("새끼용 알 확인 안내가 끝날 때까지 표시권을 넘겨주는 단계에 필요하다.")]
+    [Tooltip("새끼용 알 확인 안내가 끝날 때까지 표시권을 넘겨주는 단계에 필요하다. 그 단계가 없는 챕터는 비워 둔다.")]
+    [WiringOptional]
     [SerializeField] private BabyDragonGuideController _babyDragonGuideController;
 
     [Tooltip("건설 패널 슬롯을 가리키는 단계에 필요하다. 슬롯은 런타임 생성이라 GuideAnchor로 잡을 수 없다.")]

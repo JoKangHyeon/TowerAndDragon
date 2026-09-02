@@ -22,6 +22,8 @@ public sealed class UI_GuideQuestWindow : MonoBehaviour
     private const int SORT_TODAY = 1;
     private const int SORT_PENDING = 2;
 
+    [Tooltip("없으면 목록을 그리지 않는다 - 강제 안내(TutorialRunner)만 쓰는 튜토리얼 씬이 그렇다.")]
+    [WiringOptional]
     [SerializeField] private GuideQuestController _controller;
 
     [Tooltip("가이드 수준을 읽는다. 없으면 항상 보이는 것으로 친다.")]

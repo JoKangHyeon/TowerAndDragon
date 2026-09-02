@@ -1,16 +1,21 @@
 using UnityEngine;
+
+#if UNITY_EDITOR
 using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
-/// [테스트 전용] 튜토리얼 챕터를 건너뛰거나 원하는 챕터로 곧바로 옮긴다.
+/// [에디터 테스트 전용] 튜토리얼 챕터를 건너뛰거나 원하는 챕터로 곧바로 옮긴다.
 /// 마일스톤이 쌓이면서 뒤쪽 챕터 하나를 보려고 앞을 전부 플레이해야 하는 시간이 길어져서 만들었다.
 /// ResearchLabDebugGUI·DragonTreeDebugGUI와 같은 IMGUI 관례를 따른다.
 ///
 /// F9로 여닫는다 - 항상 떠 있으면 정작 확인하려는 안내 말풍선과 딤을 가린다.
-/// 최종 빌드 전에는 이 컴포넌트를 제거하거나 비활성화한다.
+/// 본문 전체가 #if UNITY_EDITOR 안에 있어 빌드에서는 컴파일되지 않는다
+/// (클래스 껍데기만 남아 씬의 컴포넌트 참조가 Missing Script가 되지 않는다).
 /// </summary>
 public sealed class TutorialChapterDebugGUI : MonoBehaviour
 {
+#if UNITY_EDITOR
     private const float PANEL_MARGIN = 10f;
     private const float PANEL_WIDTH = 380f;
     private const float PANEL_MAX_HEIGHT = 520f;
@@ -154,4 +159,5 @@ public sealed class TutorialChapterDebugGUI : MonoBehaviour
 
         GUI.enabled = true;
     }
+#endif
 }

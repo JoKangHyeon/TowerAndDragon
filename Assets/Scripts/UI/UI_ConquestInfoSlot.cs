@@ -7,6 +7,8 @@ using UnityEngine.UI;
 // 필요한 만큼만 생성해 사용한다. 둘 다 같은 프리팹(ConquestInfoImage)을 쓴다.
 public class UI_ConquestInfoSlot : MonoBehaviour
 {
+    [Tooltip("비우면 프리팹에 배치된 아이콘을 그대로 쓴다. 아이콘이 고정인 행(가동 상태 행)이 그렇다.")]
+    [WiringOptional]
     [SerializeField]
     private Image _iconImage;
 

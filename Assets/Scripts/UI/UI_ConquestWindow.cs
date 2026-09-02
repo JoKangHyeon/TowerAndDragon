@@ -17,13 +17,16 @@ public class UI_ConquestWindow : MonoBehaviour
     private const string MULTIPLIER_VALUE_FORMAT = "×{0}";
     private const string ENEMY_ENHANCEMENT_LABEL_FORMAT = "{0} {1}";
 
-    // TODO: 스트링테이블 도입 시 아래 5개를 _LOC_KEY로 교체. DAY_SINGULAR/PLURAL_FORMAT의
-    // 단/복수 분기(FormatDuration)도 언어별 규칙이 다를 수 있어 그때 같이 재검토 필요.
-    private const string DURATION_LABEL = "Duration";
+    // 소요 기간 표기는 UI_ClaimListSlot 등과 동일한 스트링테이블 키를 공유한다.
+    // 코드베이스 관례상 일수는 단/복수 분기 없이 "{0} 일" / "{0} Day(s)" 한 형태로 쓴다.
+    private const string DURATION_LABEL_LOC_KEY = "claim_panel_duration";
+    private const string DURATION_DAYS_FORMAT_LOC_KEY = "claim_panel_duration_time";
+
+    // TODO: 적 강화 슬롯의 Spawn/Attack 라벨은 스트링테이블 키가 아직 없어 별도 작업으로 남긴다.
     private const string SPAWN_LABEL = "Spawn";
     private const string ATTACK_LABEL = "Attack";
-    private const string DURATION_DAY_SINGULAR_FORMAT = "{0} Day";
-    private const string DURATION_DAY_PLURAL_FORMAT = "{0} Days";
+
+    private static string DurationLabel => StringTable.GetString(DURATION_LABEL_LOC_KEY);
 
     [SerializeField]
     private Button _conquerButton;
@@ -351,7 +354,7 @@ public class UI_ConquestWindow : MonoBehaviour
         if (_durationInfoSlot != null)
         {
             int daysRequired = _conquestManager.GetDaysRequired(coord);
-            _durationInfoSlot.Setup(_durationIcon, Color.white, DURATION_LABEL, FormatDuration(daysRequired));
+            _durationInfoSlot.Setup(_durationIcon, Color.white, DurationLabel, FormatDuration(daysRequired));
         }
 
         if (_terrainImage != null)
@@ -373,7 +376,7 @@ public class UI_ConquestWindow : MonoBehaviour
 
     // 1일이면 단수(Day), 2일 이상이면 복수(Days) 표기.
     private static string FormatDuration(int days) =>
-        string.Format(days == 1 ? DURATION_DAY_SINGULAR_FORMAT : DURATION_DAY_PLURAL_FORMAT, days);
+        string.Format(StringTable.GetString(DURATION_DAYS_FORMAT_LOC_KEY), days);
 
     // 목록을 다시 그릴 때 이전 청크에서 내려둔 스크롤 위치가 남지 않도록 맨 위로 되돌린다.
     // 컨테이너가 곧 ScrollRect의 Content라 anchoredPosition만 0으로 두면 된다

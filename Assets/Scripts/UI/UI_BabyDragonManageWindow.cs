@@ -35,7 +35,6 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     private const string MODE_ATTACK_LOC_KEY = BabyDragonLocKeys.MODE_ATTACK;
     private const string MODE_BUFF_LOC_KEY = BabyDragonLocKeys.MODE_BUFF;
     private const string RELOCATE_LOC_KEY = "baby_dragon_manage_relocate";
-    private const string SKILL_TREE_LOC_KEY = "baby_dragon_manage_skill_tree";
     private const string REMOVE_LOC_KEY = "baby_dragon_manage_remove";
     private const string CLOSE_LOC_KEY = "baby_dragon_manage_close";
     // 밤 잠금 안내는 두 가지다 - 재배치까지 잠긴 일반적인 경우와, 시간 새끼용 공격 모드처럼
@@ -48,8 +47,6 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     [SerializeField] private CycleManager _cycleManager;
     [SerializeField] private GameManager _gameManager;
     [SerializeField] private ResourceCatalog _resourceCatalog;
-    [Tooltip("용 창. 강화 트리는 이 창의 어미용 탭 안에 있다(과거 독립 스킬트리 창은 은퇴).")]
-    [SerializeField] private UI_DragonWindow _dragonWindow;
 
     [Tooltip("배율 표시에 혈족 강화를 반영한다. 비우면 데이터 원본 배율을 그대로 보여준다.")]
     [SerializeField] private BabyDragonBuffSystem _buffSystem;
@@ -64,7 +61,13 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     [SerializeField] private UI_ConquestInfoSlot _feedRow;
     [SerializeField] private UI_ConquestInfoSlot _buffRadiusRow;
     [SerializeField] private UI_ConquestInfoSlot _buffMultiplierRow;
+
+    [Tooltip("가동 상태 행 아이콘. 비우면 프리팹에 배치된 행 아이콘을 그대로 쓴다.")]
+    [WiringOptional]
     [SerializeField] private Sprite _statusIcon;
+
+    [Tooltip("버프 반경·배율 행 아이콘. 비우면 프리팹에 배치된 행 아이콘을 그대로 쓴다.")]
+    [WiringOptional]
     [SerializeField] private Sprite _buffIcon;
 
     [Tooltip("어미용 강화로 붙은 추가분 글씨 색. 자원 증가 표기(UI_IngameWindow)와 같은 연두색을 기본값으로 둔다.")]
@@ -83,11 +86,9 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     [SerializeField] private GameObject _buffModeActiveMark;
 
     [Header("행동 버튼")]
-    [SerializeField] private Button _skillTreeButton;
     [SerializeField] private Button _relocateButton;
     [SerializeField] private Button _removeButton;
     [SerializeField] private Button _closeButton;
-    [SerializeField] private TMP_Text _skillTreeButtonText;
     [SerializeField] private TMP_Text _relocateButtonText;
     [SerializeField] private TMP_Text _removeButtonText;
     [SerializeField] private TMP_Text _closeButtonText;
@@ -543,10 +544,6 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
         _boundTower?.SetMode(BabyDragonMode.Buff);
     }
 
-    // 스킬트리가 용 창의 어미용 탭으로 옮겨갔으므로 용 창을 연다.
-    // 클릭음을 내지 않는다 - 창을 여닫는 제스처라 대상 창(UI_DragonWindow)이 열림/닫힘음을 낸다.
-    private void HandleSkillTreeClicked() => _dragonWindow?.ToggleFromEntryPoint();
-
     private void HandleRelocateClicked()
     {
         SoundManager.Play(SoundId.UiButtonClick);
@@ -571,7 +568,6 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     {
         _attackModeButton?.onClick.AddListener(HandleAttackModeClicked);
         _buffModeButton?.onClick.AddListener(HandleBuffModeClicked);
-        _skillTreeButton?.onClick.AddListener(HandleSkillTreeClicked);
         _relocateButton?.onClick.AddListener(HandleRelocateClicked);
         _removeButton?.onClick.AddListener(HandleRemoveClicked);
         _closeButton?.onClick.AddListener(HandleCloseClicked);
@@ -581,7 +577,6 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     {
         _attackModeButton?.onClick.RemoveListener(HandleAttackModeClicked);
         _buffModeButton?.onClick.RemoveListener(HandleBuffModeClicked);
-        _skillTreeButton?.onClick.RemoveListener(HandleSkillTreeClicked);
         _relocateButton?.onClick.RemoveListener(HandleRelocateClicked);
         _removeButton?.onClick.RemoveListener(HandleRemoveClicked);
         _closeButton?.onClick.RemoveListener(HandleCloseClicked);
@@ -591,7 +586,6 @@ public class UI_BabyDragonManageWindow : MonoBehaviour
     {
         SetLabel(_attackModeButtonText, MODE_ATTACK_LOC_KEY);
         SetLabel(_buffModeButtonText, MODE_BUFF_LOC_KEY);
-        SetLabel(_skillTreeButtonText, SKILL_TREE_LOC_KEY);
         SetLabel(_relocateButtonText, RELOCATE_LOC_KEY);
         SetLabel(_removeButtonText, REMOVE_LOC_KEY);
         SetLabel(_closeButtonText, CLOSE_LOC_KEY);

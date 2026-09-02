@@ -16,12 +16,15 @@ public class ProgressionNotificationPresenter : MonoBehaviour
 
     [SerializeField] private DragonEggInventorySystem _eggInventorySystem;
     [SerializeField] private UI_ConfirmNotificationToast _toast;
-    [SerializeField] private LandmarkManager _landmarkManager;
-    [SerializeField] private ResearchManager _researchManager;
-    [SerializeField] private CycleManager _cycleManager;
 
-    // 프리팹 자산에는 씬 오브젝트(SaveService)를 꽂을 수 없어 항상 미배선으로 남는다 -
-    // EnsureProgressionSystems가 런타임에 씬에서 찾는다(_landmarkManager 등과 같은 사정).
+    // 프리팹 자산에는 씬 오브젝트를 꽂을 수 없어 항상 미배선으로 남는다 -
+    // EnsureProgressionSystems가 OnEnable에서 런타임에 씬에서 찾는다. 씬 오버라이드로 채워도 된다.
+    [WiringOptional]
+    [SerializeField] private LandmarkManager _landmarkManager;
+    [WiringOptional]
+    [SerializeField] private ResearchManager _researchManager;
+    [WiringOptional]
+    [SerializeField] private CycleManager _cycleManager;
     [WiringOptional]
     [SerializeField] private SaveService _saveService;
 

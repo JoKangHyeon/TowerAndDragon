@@ -306,20 +306,33 @@ public abstract class Skill
                 _cooltimeLeft = 0;
         }
 
-        if (!IsUnlimitedUse && _charges < UsePerDay && _chargeRechargeTimer > 0f)
+        if (IsUnlimitedUse || _charges >= UsePerDay)
         {
-            _chargeRechargeTimer -= deltaTime;
-            if (_chargeRechargeTimer <= 0)
+            return;
+        }
+
+        // UsePerDay가 낮 도중에 늘어나는 경로(암석 궁극 해금·어미용 속성 전환·세이브 로드)가 있다.
+        // 그럴 때 _charges는 옛 최대치에 묶인다 - 최대치를 채우는 Reset()은 OnDayStart(하루 1회)에만
+        // 돌고, 아래 재충전 루프는 이미 돌고 있는 타이머를 전제로 하기 때문이다.
+        // 재충전 사이클이 멈춰 있는 동안 최대치가 올라갔다면 늘어난 몫을 즉시 채운다
+        // (평상시 Reset() 직후에는 _charges == UsePerDay라 위에서 빠져나간다).
+        if (_chargeRechargeTimer <= 0f)
+        {
+            _charges = UsePerDay;
+            return;
+        }
+
+        _chargeRechargeTimer -= deltaTime;
+        if (_chargeRechargeTimer <= 0)
+        {
+            _charges++;
+            if (_charges < UsePerDay)
             {
-                _charges++;
-                if (_charges < UsePerDay)
-                {
-                    _chargeRechargeTimer += ChargeCooltime;
-                }
-                else
-                {
-                    _chargeRechargeTimer = 0f;
-                }
+                _chargeRechargeTimer += ChargeCooltime;
+            }
+            else
+            {
+                _chargeRechargeTimer = 0f;
             }
         }
     }

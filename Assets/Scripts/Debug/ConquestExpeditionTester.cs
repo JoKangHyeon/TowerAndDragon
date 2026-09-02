@@ -1,14 +1,19 @@
 using UnityEngine;
+
+#if UNITY_EDITOR
 using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
-/// [테스트 전용] 숫자 0을 누르면 진행 중인 모든 원정을 즉시 완료 처리하고,
+/// [에디터 테스트 전용] 숫자 0을 누르면 진행 중인 모든 원정을 즉시 완료 처리하고,
 /// 숫자 9를 누르면 원정 여부와 무관하게 맵의 모든 땅을 즉시 점령 완료 상태로 만든다.
 /// 며칠 걸리는 점령 대기를 기다리지 않고 완료 후 흐름(보상 등)을 바로 확인할 때 쓴다.
-/// 최종 빌드 전에는 이 컴포넌트를 제거하거나 비활성화하면 된다.
+/// 본문 전체가 #if UNITY_EDITOR 안에 있어 빌드에서는 컴파일되지 않는다
+/// (클래스 껍데기만 남아 프리팹의 컴포넌트 참조가 Missing Script가 되지 않는다).
 /// </summary>
 public class ConquestExpeditionTester : MonoBehaviour
 {
+#if UNITY_EDITOR
     [SerializeField] private ConquestManager _conquestManager;
 
     private void Update()
@@ -28,4 +33,5 @@ public class ConquestExpeditionTester : MonoBehaviour
             _conquestManager.DebugForceConquerAllChunks();
         }
     }
+#endif
 }
