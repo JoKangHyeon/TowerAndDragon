@@ -602,21 +602,13 @@ public class MeteorBarricadeSkill : Skill
 {
     private const int BARRICADE_SNAP_DISTANCE = 2;
 
-    // 타게팅 펄스는 프리팹 수명이 약 0.42초다. 넉넉히 잡아 반납한다 -
-    // 짧게 잡으면 잔광이 끝나기 전에 풀로 돌아가 뚝 끊긴다.
-    private const float PREVIEW_PULSE_LIFETIME_SECONDS = 0.6f;
-
     private GameObject _previewInstance;
+
+    // 타게팅 중 계속 떠 있는 바닥 마커. 방벽 고스트와 수명을 같이한다.
+    private GameObject _previewMarkerInstance;
+
     private GridMap _gridMap;
     private Building _buildingPrefab;
-
-    // ⚠️ 마지막으로 펄스를 띄운 앵커. <b>월드 좌표가 아니라 앵커로 비교한다</b> -
-    // 좌표로 비교하면 같은 타일 안에서 마우스가 조금만 움직여도 매 프레임 재생돼
-    // 한 타일에 파티클이 수십 겹 쌓인다.
-    private Vector3Int? _lastPreviewVfxAnchor;
-
-    // 마지막으로 펄스를 띄운 시각. NegativeInfinity로 시작해 첫 유효 타일에서는 간격 검사를 통과시킨다.
-    private float _lastPreviewVfxTime = float.NegativeInfinity;
 
     private void EnsureCached()
     {
@@ -690,7 +682,7 @@ public class MeteorBarricadeSkill : Skill
 
             _previewInstance.transform.position = worldPos;
 
-            PlayPreviewMovePulse(anchor, worldPos);
+            UpdatePreviewMarker(worldPos);
         }
         else
         {
@@ -699,48 +691,42 @@ public class MeteorBarricadeSkill : Skill
                 _previewInstance.SetActive(false);
             }
 
-            // ⚠️ 여기서 _lastPreviewVfxAnchor를 지우지 않는다. 스냅 반경이 2셀이라 설치 가부가
-            // 갈리는 경계가 넓고 들쭉날쭉해서, 커서를 그 위에 두면 가능/불가능이 프레임마다 뒤집힌다.
-            // 불가능 프레임에서 앵커를 지우면 다음 가능 프레임이 "새 타일"로 보여 같은 타일에
-            // 펄스가 초당 30번 다시 터진다(수명 0.6초라 18겹까지 쌓인다).
-            // 같은 타일로 돌아왔을 때 다시 나오게 하는 것은 아래 최소 간격이 대신 해 준다.
+            if (_previewMarkerInstance != null)
+            {
+                _previewMarkerInstance.SetActive(false);
+            }
         }
     }
 
     /// <summary>
-    /// 프리뷰가 <b>새 설치 가능 타일로 옮겨갈 때만</b> 그 타일에서 펄스를 1회 재생한다.
-    /// 같은 타일 안에서 마우스가 움직이는 동안에는 아무 일도 하지 않는다.
+    /// 설치될 자리를 가리키는 바닥 마커를 그 자리로 옮긴다. 인스턴스를 <b>하나만</b> 두고 매 프레임
+    /// 위치만 갱신한다 - 방벽 고스트와 같은 방식이라 커서에 그대로 붙어 따라온다.
     ///
-    /// 앵커 비교만으로는 부족하다 - 설치 가부가 경계에서 프레임마다 뒤집히면 앵커가 그대로여도
-    /// 재발화 조건이 성립할 수 있어, <see cref="PREVIEW_PULSE_LIFETIME_SECONDS"/>만큼의
-    /// 최소 간격을 함께 둔다. 앞 펄스가 아직 떠 있는 동안에는 절대 겹쳐 뿌리지 않는다는 뜻이다.
+    /// ⚠️ <b>타일이 바뀔 때마다 새로 뿌리는 1회성 펄스로 되돌리지 말 것.</b> 그 형태였을 때는
+    /// 같은 타일에 파티클이 겹쳐 쌓이는 것을 막으려 재생 간격 제한을 둬야 했고, 그 간격만큼 마커가
+    /// 커서를 뒤늦게 따라와 "느리게 따라온다"가 됐다(2026-09-02에 되돌렸다).
+    /// 인스턴스가 하나뿐이면 겹침이 구조적으로 불가능해 간격 제한 자체가 필요 없다.
+    ///
+    /// 풀(ProjectilePool)을 쓰지 않는다 - 풀은 "정해진 시간 뒤에 반납"하는 1회성 연출용이고,
+    /// 이것은 타게팅이 끝날 때까지 사는 물건이라 고스트와 같은 Instantiate/Destroy가 맞다.
+    ///
+    /// 프리팹의 파티클 시뮬레이션 공간은 <b>Local</b>이어야 한다 - World로 두면 마커를 옮겨도
+    /// 이미 나온 파티클이 제자리에 남아 꼬리처럼 끌린다.
     /// </summary>
-    private void PlayPreviewMovePulse(Vector3Int anchor, Vector3 worldPosition)
+    private void UpdatePreviewMarker(Vector3 worldPosition)
     {
         if (Data.BarricadePreviewMoveVfxPrefab == null)
         {
             return;
         }
 
-        if (_lastPreviewVfxAnchor.HasValue && _lastPreviewVfxAnchor.Value == anchor)
+        if (_previewMarkerInstance == null)
         {
-            return;
+            _previewMarkerInstance = Object.Instantiate(Data.BarricadePreviewMoveVfxPrefab);
         }
 
-        // 앞 펄스가 아직 살아 있으면 타일이 바뀌었어도 건너뛴다 - 겹침의 상한을 여기서 정한다.
-        if (Time.time - _lastPreviewVfxTime < PREVIEW_PULSE_LIFETIME_SECONDS)
-        {
-            return;
-        }
-
-        _lastPreviewVfxAnchor = anchor;
-        _lastPreviewVfxTime = Time.time;
-
-        ProjectilePool.PlayForSeconds(
-            Data.BarricadePreviewMoveVfxPrefab,
-            worldPosition,
-            Quaternion.identity,
-            PREVIEW_PULSE_LIFETIME_SECONDS);
+        _previewMarkerInstance.SetActive(true);
+        _previewMarkerInstance.transform.position = worldPosition;
     }
 
     public override void ClearPreview()
@@ -751,9 +737,11 @@ public class MeteorBarricadeSkill : Skill
             _previewInstance = null;
         }
 
-        // 취소 후 다시 타게팅하면 첫 유효 타일에서 펄스가 나와야 한다 - 간격 제한도 함께 푼다.
-        _lastPreviewVfxAnchor = null;
-        _lastPreviewVfxTime = float.NegativeInfinity;
+        if (_previewMarkerInstance != null)
+        {
+            Object.Destroy(_previewMarkerInstance);
+            _previewMarkerInstance = null;
+        }
     }
 
     protected override bool ApplyEffect(in SkillCastContext context)
