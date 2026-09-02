@@ -549,7 +549,10 @@ public sealed class UI_HelpWindow : MonoBehaviour, IExclusiveMode
         {
             title = StringTable.GetString(row.Entry.TitleLocKey);
             body = StringTable.GetString(row.Entry.BodyLocKey);
-            illustration = new MonsterIcon(row.Entry.Illustration, Color.white);
+
+            // 실제 건물·지형·용 그림이 있는 항목만 CodexIllustration이 채워져 있다 - 아이콘으로
+            // 대체한 항목은 에셋 쪽에서 비워 둬서 여기 그대로 null이 내려오고 SetActive(false)로 빠진다.
+            illustration = new MonsterIcon(row.Entry.CodexIllustration, Color.white);
         }
         else if (hasSelection && row.Monster != null)
         {

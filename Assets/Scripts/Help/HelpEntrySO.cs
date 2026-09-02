@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>
 /// 도감 항목 하나. 최초 조우 팝업과 도감 본문이 같은 데이터를 본다 -
 /// 팝업용·도감용 문구를 따로 두면 유지보수가 두 배가 되는데, 팝업 본문이 3줄로 묶여 있어
-/// 어차피 길이 상한이 같다.
+/// 어차피 길이 상한이 같다. 단, 그림은 예외다 - <see cref="CodexIllustration"/> 참고.
 ///
 /// 완료 기록을 에셋 이름과 분리하는 이유는 TutorialObjectiveSO._objectiveId와 같다.
 /// </summary>
@@ -31,6 +31,11 @@ public sealed class HelpEntrySO : ScriptableObject
     [WiringOptional]
     [SerializeField] private Sprite _illustration;
 
+    [Tooltip("도감 본문에만 띄울 그림. 최초 조우 팝업은 이 값을 보지 않는다 - 팝업은 본문이 3줄로 " +
+             "묶여 있어 큰 그림이 붙으면 읽는 흐름이 끊긴다. 비우면 _illustration으로 되돌아간다.")]
+    [WiringOptional]
+    [SerializeField] private Sprite _codexIllustration;
+
     [Tooltip("같은 갈래 안에서의 정렬 순서. 카탈로그 리스트 순서에 기대지 않는다 - " +
              "항목을 중간에 끼울 때마다 리스트를 재정렬하면 머지 충돌이 난다.")]
     [SerializeField] private int _sortOrder;
@@ -50,6 +55,13 @@ public sealed class HelpEntrySO : ScriptableObject
     public string BodyLocKey => _bodyLocKey;
     public Sprite Icon => _icon;
     public Sprite Illustration => _illustration;
+
+    /// <summary>
+    /// 도감 본문에 띄울 그림. 도감 전용 값이 있으면 그것을, 없으면 팝업과 공용인 <see cref="Illustration"/>을
+    /// 쓴다 - 나중에 팝업용 아트가 생겨도 도감이 자동으로 따라간다.
+    /// </summary>
+    public Sprite CodexIllustration => _codexIllustration != null ? _codexIllustration : _illustration;
+
     public int SortOrder => _sortOrder;
     public TutorialTriggerSpec UnlockTrigger => _unlockTrigger;
     public bool UnlockedFromStart => _unlockedFromStart;
