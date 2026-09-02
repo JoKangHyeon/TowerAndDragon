@@ -14,17 +14,15 @@ public class UI_ConquestWindow : MonoBehaviour
 {
     private const string HELD_OVER_REQUIRED_FORMAT = "{0}/{1}";
     private const string PLUS_VALUE_FORMAT = "+{0}";
-    private const string MULTIPLIER_VALUE_FORMAT = "×{0}";
-    private const string ENEMY_ENHANCEMENT_LABEL_FORMAT = "{0} {1}";
 
     // 소요 기간 표기는 UI_ClaimListSlot 등과 동일한 스트링테이블 키를 공유한다.
     // 코드베이스 관례상 일수는 단/복수 분기 없이 "{0} 일" / "{0} Day(s)" 한 형태로 쓴다.
     private const string DURATION_LABEL_LOC_KEY = "claim_panel_duration";
     private const string DURATION_DAYS_FORMAT_LOC_KEY = "claim_panel_duration_time";
 
-    // TODO: 적 강화 슬롯의 Spawn/Attack 라벨은 스트링테이블 키가 아직 없어 별도 작업으로 남긴다.
-    private const string SPAWN_LABEL = "Spawn";
-    private const string ATTACK_LABEL = "Attack";
+    // 점령 시 적 강화는 현재 "특정 몹 스폰 수 +N" 하나뿐이라, 몹 이름과 증가량을 한 줄로 합친다.
+    // 예: "{0} +{1}" → "소환사 +1".
+    private const string ENEMY_SPAWN_BONUS_FORMAT_LOC_KEY = "conquest_panel_enemy_spawn_bonus";
 
     private static string DurationLabel => StringTable.GetString(DURATION_LABEL_LOC_KEY);
 
@@ -98,9 +96,6 @@ public class UI_ConquestWindow : MonoBehaviour
 
     [SerializeField]
     private Sprite _spawnCountIcon;
-
-    [SerializeField]
-    private Sprite _attackPowerIcon;
 
     private readonly List<UI_ConquestInfoSlot> _spawnedEnemyScalingSlots = new();
 
@@ -545,29 +540,21 @@ public class UI_ConquestWindow : MonoBehaviour
 
         ScrollToTop(_enemyScalingSlotContainer);
 
+        string labelFormat = StringTable.GetString(ENEMY_SPAWN_BONUS_FORMAT_LOC_KEY);
+
         foreach (EnemyEnhancementRule rule in profile.Rules)
         {
-            if (rule == null || rule.TargetMonster == null)
+            if (rule == null || rule.TargetMonster == null || rule.SpawnCountBonus == 0)
             {
                 continue;
             }
 
-            string monsterName = StringTable.GetString(rule.TargetMonster.NameLocKey);
+            string label = string.Format(
+                labelFormat,
+                StringTable.GetString(rule.TargetMonster.NameLocKey),
+                rule.SpawnCountBonus);
 
-            if (rule.SpawnCountBonus != 0)
-            {
-                string spawnLabel = string.Format(
-                    ENEMY_ENHANCEMENT_LABEL_FORMAT,
-                    monsterName,
-                    SPAWN_LABEL);
-
-                SpawnEnemyScalingSlot(
-                    _spawnCountIcon,
-                    spawnLabel,
-                    string.Format(PLUS_VALUE_FORMAT, rule.SpawnCountBonus));
-            }
-
-            SpawnAttackEnhancementSlots(monsterName, rule.AttackPower);
+            SpawnEnemyScalingSlot(_spawnCountIcon, label);
         }
     }
 
@@ -584,37 +571,12 @@ public class UI_ConquestWindow : MonoBehaviour
         _spawnedEnemyScalingSlots.Clear();
     }
 
-    private void SpawnAttackEnhancementSlots(
-        string monsterName,
-        EnemyStatModifier attackPower)
-    {
-        string attackLabel = string.Format(
-            ENEMY_ENHANCEMENT_LABEL_FORMAT,
-            monsterName,
-            ATTACK_LABEL);
-
-        if (attackPower.HasAdditiveBonus)
-        {
-            SpawnEnemyScalingSlot(
-                _attackPowerIcon,
-                attackLabel,
-                string.Format(PLUS_VALUE_FORMAT, attackPower.AdditiveBonus));
-        }
-
-        if (attackPower.HasMultiplierBonus)
-        {
-            SpawnEnemyScalingSlot(
-                _attackPowerIcon,
-                attackLabel,
-                string.Format(MULTIPLIER_VALUE_FORMAT, attackPower.Multiplier));
-        }
-    }
-
-    private void SpawnEnemyScalingSlot(Sprite icon, string label, string valueText)
+    // 강화 줄은 "소환사 +1"처럼 한 문장이라 값 칸은 비워 두고 이름 칸만 쓴다.
+    private void SpawnEnemyScalingSlot(Sprite icon, string label)
     {
         // 몬스터 강화 아이콘은 전용 스프라이트라 틴트가 필요 없다.
         UI_ConquestInfoSlot slot = Instantiate(_enemyScalingSlotPrefab, _enemyScalingSlotContainer);
-        slot.Setup(icon, Color.white, label, valueText);
+        slot.Setup(icon, Color.white, label, string.Empty);
         _spawnedEnemyScalingSlots.Add(slot);
     }
 
