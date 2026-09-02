@@ -37,6 +37,22 @@ public static class DragonSkillTreeAssetGenerator
     private const string SHEET_EXPORT_FOLDER = "Docs";
     private const string BARRICADE_PREFAB_PATH = "Assets/Prefabs/Building/StoneBarricade.prefab";
 
+    // 성벽 재생의 대상별 연출(B계층).
+    //
+    // ⚠️ 처음에는 새끼용 생명 타워 힐(FX_BD_LifeHealWave)을 재사용했으나, 그 프리팹은 타워 크기에
+    // 맞춰져 있어 3.2유닛짜리 성에는 작았다. 성 전용으로 만든 FX_CastleHealImpact로 교체했다.
+    // (CoplayScripts/BuildCastleHealImpact.cs가 만든 것이고, 배선은 WireSkillTargetVfx.cs에도 있다.)
+    private const string CASTLE_HEAL_VFX_PATH =
+        "Assets/Imported/Prefabs/SkillCastOverlay/FX_CastleHealImpact.prefab";
+
+    // ⚠️ 이 생성기는 SkillSO의 연출 필드를 전부 쓰지 않는다. 재생성하면 아래가 전부 되돌아간다:
+    //   · TargetVfxLifetimeSeconds — 성벽 재생은 1.2초로 배선돼 있는데 여기서 안 써서 기본값 1.1로 내려간다
+    //   · GlobalDamage · RepairTowers · Meteor의 TargetVfxPrefab / TargetVfxLifetimeSeconds
+    //   · Meteor의 BarricadePreviewMoveVfxPrefab · BarricadePlacementVfxPrefab
+    //     · BarricadePlacementVfxLifetimeSeconds
+    // 지금은 CoplayScripts/WireSkillTargetVfx.cs가 이 배선을 담당한다. 생성기를 다시 돌렸다면
+    // 그 스크립트도 이어서 돌려야 원상복구된다.
+
     // 슬롯당 랭크 - 2랭크로 두고 개당 효과를 키운다(3랭크 × 소폭%는 클릭만 늘고 결정이 안 된다).
     private const int RANK_SINGLE = 1;
     private const int RANK_BRANCH = 2;
@@ -584,6 +600,10 @@ public static class DragonSkillTreeAssetGenerator
                 so.FindProperty("DefaultCooltime").floatValue = SKILL_DEFAULT_COOLTIME;
                 so.FindProperty("DefaultUsePerDay").intValue = SKILL_UNLIMITED_USE_PER_DAY;
                 so.FindProperty("HealAmount").floatValue = CASTLE_HEAL_AMOUNT;
+
+                // 비어 있어도 스킬은 동작한다(연출만 생략). PlayTargetVfx가 널을 그냥 넘긴다.
+                so.FindProperty("TargetVfxPrefab").objectReferenceValue =
+                    AssetDatabase.LoadAssetAtPath<GameObject>(CASTLE_HEAL_VFX_PATH);
             });
 
         AddLocRow("dragon_skill_freeze_all_name", "[TBD] Freeze All", "[미정] 전역 빙결");

@@ -243,8 +243,27 @@ public class SkillTargetingController : MonoBehaviour, IExclusiveMode
     // 발동 경로 세 곳이 반드시 지나는 관문. 여기서만 SkillUsed를 발화한다.
     private void ActivateSkill(Skill skill, SkillCastContext context)
     {
-        skill.Activate(context);
+        bool hasTakenEffect = skill.Activate(context);
+
+        // ⚠️ SkillUsed는 효과 여부와 무관하게 "눌렀다"를 알리는 신호다. 조건 안으로 옮기지 않는다 -
+        // GuideQuestController가 TutorialConditionType.SkillUsed 판정에 쓰고 6개 씬에 배선돼 있어,
+        // 안으로 옮기면 "밤에 용 스킬을 써 봤는가" 단계가 통과되지 않는다.
         SkillUsed.Invoke(skill);
+
+        // 시전 연출은 발동이 실제로 성립했을 때만 띄운다.
+        //
+        // ⚠️ "대상이 0이면 안 띄운다"가 아니다. 2026-09-02에 그 판정을 걷어냈다 - 스킬을 언제 쓸지는
+        // 플레이어의 선택이라, 몬스터가 0마리인 전역 빙결·화염도 성이 만피인 성벽 재생도 전부
+        // 발동으로 치고 오버레이가 뜬다(마일스톤 "대상 0 판정 철회" 항목).
+        //
+        // 그래서 여기서 false가 되는 경로는 이제 셋뿐이다:
+        //   ① CanUse 실패(쿨타임·스택·자원) ② RepairTowersSkill에 비활성 타워가 0개
+        //   ③ MeteorBarricadeSkill의 설치 실패(막힌 자리) 또는 회복 대상 성이 null
+        // ②는 master의 원래 동작이라 남겨 둔 의도된 예외다.
+        if (hasTakenEffect)
+        {
+            SkillCastOverlayHost.PlayForActiveAttribute();
+        }
     }
 
     private Vector3 GetMouseWorldPoint()

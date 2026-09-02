@@ -218,6 +218,78 @@ public abstract class Skill
     // 설치형 스킬(방벽)처럼 SkillSO 수치가 아닌 값을 강화해야 하는 스킬이 매니저를 직접 조회한다.
     protected DragonTreeManager DragonTree => _dragonTreeManager;
 
+    /// <summary>
+    /// 효과를 실제로 준 대상 위에 시전 연출(B계층)을 띄운다. 프리팹이 비어 있으면 아무 일도 하지 않는다.
+    ///
+    /// <b>ApplyEffect가 성공을 확정한 뒤에만 부른다.</b> 화면 전체 배경 오버레이(A계층)는
+    /// SkillTargetingController가 Activate의 반환값을 보고 따로 띄우므로, 여기서 A를 신경 쓰지 않는다.
+    ///
+    /// 여러 대상에 거는 스킬(전역 화염 등)은 대상마다 부른다 - 풀에서 꺼내 쓰므로
+    /// 인스턴스가 쌓이지 않는다.
+    /// </summary>
+    protected void PlayTargetVfx(Vector3 position)
+    {
+        if (_skillData.TargetVfxPrefab == null)
+        {
+            return;
+        }
+
+        ProjectilePool.PlayForSeconds(
+            _skillData.TargetVfxPrefab,
+            position,
+            Quaternion.identity,
+            _skillData.TargetVfxLifetimeSeconds);
+    }
+
+    /// <summary>
+    /// 건물(성·타워)의 스프라이트 경계 중앙. <b>대상을 감싸는 크기</b>의 연출은 발밑이 아니라
+    /// 여기에 띄운다 - 발밑에 두면 아래로 치우쳐 절반이 지면에 묻힌다.
+    ///
+    /// `transform.position`을 쓰지 않는 이유: 그것은 피벗이라 스프라이트의 시각적 중앙과 다르고,
+    /// 건물마다 피벗 위치가 갈린다.
+    ///
+    /// (몬스터에는 쓰지 않는다 - 그쪽은 <see cref="PlayTargetVfxOnMonster"/>가 발밑을 쓴다.)
+    /// </summary>
+    protected static Vector3 ResolveBuildingCenter(Building building)
+    {
+        SpriteRenderer renderer = building.GetComponent<SpriteRenderer>();
+
+        if (renderer == null)
+        {
+            renderer = building.GetComponentInChildren<SpriteRenderer>(true);
+        }
+
+        if (renderer == null)
+        {
+            return building.transform.position;
+        }
+
+        Bounds bounds = renderer.bounds;
+
+        // z는 건물의 것을 그대로 쓴다 - 경계의 z는 스프라이트 두께라 정렬 기준이 되지 못한다
+        // (MonsterStatusVfx.ResolveAnchors와 같은 이유).
+        return new Vector3(bounds.center.x, bounds.center.y, building.transform.position.z);
+    }
+
+    /// <summary>
+    /// 몬스터 발밑에 시전 연출을 띄운다. 앵커를 <see cref="AttackVfxPlacement.ResolveGroundY"/>로
+    /// 구하는 것이 핵심이다 - <b>`SpriteRenderer.bounds`로 잡으면 안 된다.</b> 스프라이트 사각형의
+    /// 밑변과 실제 발 피벗이 셀 높이의 18~25%까지 어긋나고, 보스에서 −0.8 월드 단위까지 벌어진
+    /// 전례가 있다(설계 §6 / 그쪽 주석 참고).
+    /// </summary>
+    protected void PlayTargetVfxOnMonster(BaseMonster monster)
+    {
+        if (monster == null)
+        {
+            return;
+        }
+
+        Vector3 body = monster.transform.position;
+        float groundY = AttackVfxPlacement.ResolveGroundY(monster.gameObject);
+
+        PlayTargetVfx(new Vector3(body.x, groundY, body.z));
+    }
+
     private float PowerBonus => _dragonTreeManager != null
         ? _dragonTreeManager.GetSkillPowerMultiplierBonus(_skillData)
         : 0f;
@@ -252,16 +324,26 @@ public abstract class Skill
         }
     }
 
-    /// <summary>스킬 발동 진입점. 사용 가능할 때만 효과를 적용하고 쿨타임/사용횟수를 소비한다.</summary>
-    public void Activate(in SkillCastContext context)
+    /// <summary>스킬 발동 진입점. 사용 가능할 때만 효과를 적용하고 쿨타임/사용횟수를 소비한다.
+    /// 반환값은 <b>발동이 성립했는가</b>다 - 시전 연출을 띄울지 판단하는 데 쓴다(SkillCastOverlayHost).
+    ///
+    /// ⚠️ <b>"대상이 없으면 false"가 아니다.</b> 대상이 0마리·만피여도 발동으로 친다 -
+    /// 언제 쓸지는 플레이어의 선택이고, 헛발질이면 쿨타임과 스택을 무는 것까지가 그 선택의 결과다
+    /// (2026-09-02 결정. 마일스톤 "대상 0 판정 철회" 항목).
+    ///
+    /// false가 되는 것은 <see cref="CanUse"/> 실패와 각 스킬의 <b>진짜 실패 경로</b>뿐이다 -
+    /// 방벽을 놓을 자리가 막혔거나, 회복할 성이 없거나, 비활성 타워가 0개인 경우
+    /// (마지막 하나는 master의 원래 동작이라 남겨 둔 의도된 예외다).</summary>
+    public bool Activate(in SkillCastContext context)
     {
         if (!CanUse)
-            return;
+            return false;
 
-        if (ApplyEffect(in context))
-        {
-            SpendResources();
-        }
+        if (!ApplyEffect(in context))
+            return false;
+
+        SpendResources();
+        return true;
     }
 
     /// <summary>타겟팅 모드 중 커서 위치에 따른 스킬의 가시적 프리뷰(실루엣 등)를 업데이트한다.</summary>
@@ -400,6 +482,9 @@ public class FreezeAllSkill : Skill
                 monster.ApplyStatus(AppliedStatus);
             }
         }
+
+        // 얼린 마릿수를 세지 않는다 - 대상이 0마리여도 발동으로 친다. 스킬을 언제 쓸지는
+        // 플레이어의 선택이고, 헛발질이면 쿨타임과 스택을 무는 것까지가 그 선택의 결과다.
         return true;
     }
 }
@@ -430,7 +515,14 @@ public class GlobalCurrentHealthDamageSkill : Skill
             {
                 monster.ApplyStatus(AppliedStatus);
             }
+
+            // 상태이상 파이프라인이 아니라 여기서 직접 띄운다 - "화상이 걸려 있다"가 아니라
+            // "지금 막 타격했다"는 신호다. DS_FireBurn의 지속 연출과는 별개다(설계 §2-2).
+            PlayTargetVfxOnMonster(monster);
         }
+
+        // 빙결과 같은 이유로 타격 여부를 세지 않는다 - FreezeAllSkill.ApplyEffect 주석 참고.
+        // 대상이 0마리면 대상별 연출만 안 나올 뿐, 발동 자체는 성립한다.
         return true;
     }
 }
@@ -455,9 +547,18 @@ public class RepairTowersSkill : Skill
         bool restoredAny = false;
         foreach (Building building in context.AllBuildings)
         {
-            if (building is Tower tower && tower.IsDead)
+            if (building is Tower tower && tower.IsDead && tower.TryRestoreDuringCombat())
             {
-                restoredAny |= tower.TryRestoreDuringCombat();
+                restoredAny = true;
+
+                // ⚠️ Tower.RestoreAndReactivate에 걸지 않는다. 그 메서드는 세 경로가 공유한다 -
+                // 부활 게이지 완주(NightRevive)·이 스킬(SkillRepair)·아침 일괄 복구(MorningRestore).
+                // 거기 걸면 자연 부활과 아침 복구에도 연출이 뜬다(설계 §2-3). 스킬에서 직접 띄우면
+                // 분기가 필요 없다.
+                //
+                // 앵커는 발밑이 아니라 스프라이트 중앙이다 - 성벽 재생과 같은 "대상을 감싸는"
+                // 연출이라 발밑에 두면 아래로 치우쳐 절반이 지면에 묻힌다.
+                PlayTargetVfx(ResolveBuildingCenter(tower));
             }
         }
         return restoredAny;
@@ -476,12 +577,24 @@ public class HealCastleSkill : Skill
 
     protected override bool ApplyEffect(in SkillCastContext context)
     {
-        if (context.TargetCastle != null)
-        {
-            context.TargetCastle.Repair(HealAmount);
-            return true;
-        }
-        return false;
+        Castle castle = context.TargetCastle;
+
+        if (castle == null)
+            return false;
+
+        // 만피·사망 가드를 두지 않는다. 그 구간에서 Health.Heal이 조용히 아무 일도 하지 않는 것은
+        // 맞지만, 그때 발동을 막으면 플레이어가 누른 스킬이 아무 반응 없이 삼켜진다.
+        // 언제 쓸지는 플레이어의 선택이므로 헛발질이어도 발동시키고 쿨타임·스택을 문다.
+        castle.Repair(HealAmount);
+
+        // ⚠️ Castle.Repair가 아니라 여기서 띄운다. Repair는 연구 convenience_castle_regen_1의
+        // 매일 낮 자동 회복과 convenience_castle_repair의 즉시 수리도 지나는 공유 경로라,
+        // 그쪽에 걸면 스킬을 쓰지 않은 아침에도 회복 연출이 뜬다.
+        //
+        // 앵커는 발밑이 아니라 <b>성 스프라이트 중앙</b>이다 - 성을 감싸는 크기의 연출이라
+        // 발밑에 두면 아래쪽으로 치우쳐 절반이 지면에 묻힌다.
+        PlayTargetVfx(ResolveBuildingCenter(castle));
+        return true;
     }
 }
 
@@ -489,7 +602,12 @@ public class HealCastleSkill : Skill
 public class MeteorBarricadeSkill : Skill
 {
     private const int BARRICADE_SNAP_DISTANCE = 2;
+
     private GameObject _previewInstance;
+
+    // 타게팅 중 계속 떠 있는 바닥 마커. 방벽 고스트와 수명을 같이한다.
+    private GameObject _previewMarkerInstance;
+
     private GridMap _gridMap;
     private Building _buildingPrefab;
 
@@ -564,6 +682,8 @@ public class MeteorBarricadeSkill : Skill
                 + _gridMap.ComputeRotationCompensation(_buildingPrefab.BaseFootprintShape, 0);
 
             _previewInstance.transform.position = worldPos;
+
+            UpdatePreviewMarker(worldPos);
         }
         else
         {
@@ -571,7 +691,43 @@ public class MeteorBarricadeSkill : Skill
             {
                 _previewInstance.SetActive(false);
             }
+
+            if (_previewMarkerInstance != null)
+            {
+                _previewMarkerInstance.SetActive(false);
+            }
         }
+    }
+
+    /// <summary>
+    /// 설치될 자리를 가리키는 바닥 마커를 그 자리로 옮긴다. 인스턴스를 <b>하나만</b> 두고 매 프레임
+    /// 위치만 갱신한다 - 방벽 고스트와 같은 방식이라 커서에 그대로 붙어 따라온다.
+    ///
+    /// ⚠️ <b>타일이 바뀔 때마다 새로 뿌리는 1회성 펄스로 되돌리지 말 것.</b> 그 형태였을 때는
+    /// 같은 타일에 파티클이 겹쳐 쌓이는 것을 막으려 재생 간격 제한을 둬야 했고, 그 간격만큼 마커가
+    /// 커서를 뒤늦게 따라와 "느리게 따라온다"가 됐다(2026-09-02에 되돌렸다).
+    /// 인스턴스가 하나뿐이면 겹침이 구조적으로 불가능해 간격 제한 자체가 필요 없다.
+    ///
+    /// 풀(ProjectilePool)을 쓰지 않는다 - 풀은 "정해진 시간 뒤에 반납"하는 1회성 연출용이고,
+    /// 이것은 타게팅이 끝날 때까지 사는 물건이라 고스트와 같은 Instantiate/Destroy가 맞다.
+    ///
+    /// 프리팹의 파티클 시뮬레이션 공간은 <b>Local</b>이어야 한다 - World로 두면 마커를 옮겨도
+    /// 이미 나온 파티클이 제자리에 남아 꼬리처럼 끌린다.
+    /// </summary>
+    private void UpdatePreviewMarker(Vector3 worldPosition)
+    {
+        if (Data.BarricadePreviewMoveVfxPrefab == null)
+        {
+            return;
+        }
+
+        if (_previewMarkerInstance == null)
+        {
+            _previewMarkerInstance = Object.Instantiate(Data.BarricadePreviewMoveVfxPrefab);
+        }
+
+        _previewMarkerInstance.SetActive(true);
+        _previewMarkerInstance.transform.position = worldPosition;
     }
 
     public override void ClearPreview()
@@ -580,6 +736,12 @@ public class MeteorBarricadeSkill : Skill
         {
             Object.Destroy(_previewInstance);
             _previewInstance = null;
+        }
+
+        if (_previewMarkerInstance != null)
+        {
+            Object.Destroy(_previewMarkerInstance);
+            _previewMarkerInstance = null;
         }
     }
 
@@ -622,6 +784,12 @@ public class MeteorBarricadeSkill : Skill
         foreach (BaseMonster monster in targets)
         {
             monster.TakeDamage(new DamageInfo(FlatDamage));
+
+            // ⚠️ 반경 1.5라 대상은 한 자리 수지만, 그렇다고 전역 화염보다 가벼운 것은 아니다.
+            // 배선된 Impact_BD_Stone은 ParticleSystem이 20개(화염 임팩트의 2.2배)이고 수명도
+            // 2.5초(2.5배)라, 9마리만 맞아도 180개가 2.5초 동안 살아 있다 - 화염 20마리와 같은 자릿수다.
+            // "대상 수가 적으니 괜찮다"는 판단으로 여기를 다시 읽지 말 것.
+            PlayTargetVfxOnMonster(monster);
         }
 
         // 3. [설치 파트] 데미지 부여 후 방벽 설치를 마저 진행합니다.
@@ -653,6 +821,18 @@ public class MeteorBarricadeSkill : Skill
                 barricade.Initialize(healthMultiplier);
                 barricade.RegisterAutoDestroy(Object.FindFirstObjectByType<CycleManager>());
             }
+
+            // ⚠️ 반드시 이 성공 분기 안에서만 띄운다. 설치 실패에 메테오가 떨어지면
+            // 스킬이 소비됐다는 잘못된 신호가 된다(실패 경로는 쿨타임·스택을 차감하지 않는다).
+            if (Data.BarricadePlacementVfxPrefab != null)
+            {
+                ProjectilePool.PlayForSeconds(
+                    Data.BarricadePlacementVfxPrefab,
+                    worldPos,
+                    Quaternion.identity,
+                    Data.BarricadePlacementVfxLifetimeSeconds);
+            }
+
             return true;
         }
         else
