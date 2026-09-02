@@ -90,6 +90,8 @@ public class FogOfWarRenderer : MonoBehaviour
 
     private void PaintAllCells()
     {
+        UnlockTileColors();
+
         HashSet<Vector3Int> scanNeeded = BuildScanNeededCells();
 
         foreach (Chunk chunk in _gridMap.GetAllChunks())
@@ -131,6 +133,20 @@ public class FogOfWarRenderer : MonoBehaviour
         }
 
         return scanNeeded;
+    }
+
+    // 지형 타일 에셋은 전부 TileFlags.LockColor가 걸려 있어(Imported 타일팩 검수 결과 1260개 중
+    // 1259개), 좌표별로 플래그를 풀지 않으면 SetColor가 경고 없이 무시된다. 플래그는 좌표별 상태로
+    // 남고 런타임에 이 타일맵에 SetTile을 하는 코드가 없으므로, 매 재도색마다 부르지 않고 시작 시
+    // 한 번만 풀어 둔다. 청크 셀만이 아니라 cellBounds 전체를 도는 이유는, 증분 갱신 경로(9x9 창,
+    // ApplyOverlayTints)가 청크 밖 좌표도 HasTile을 통과하면 칠하기 때문이다.
+    private void UnlockTileColors()
+    {
+        foreach (Vector3Int coord in _terrainTilemap.cellBounds.allPositionsWithin)
+        {
+            if (_terrainTilemap.HasTile(coord))
+                _terrainTilemap.SetTileFlags(coord, TileFlags.None);
+        }
     }
 
     // 점령 등으로 셀 상태가 바뀔 때마다 GridMap이 즉시 호출된다 - 바뀐 셀 주변 그라데이션 폭만큼도
@@ -191,8 +207,8 @@ public class FogOfWarRenderer : MonoBehaviour
         }
     }
 
-    // 지형 타일 색상 전용 - 이 타일들은 LockColor 플래그가 없어(확인 완료) SetTileFlags 없이도
-    // SetColor가 바로 먹는다. 매 셀 SetTileFlags를 부르지 않는 것 자체가 절반의 API 호출을 없앤다.
+    // 지형 타일 색상 전용 - PaintAllCells의 UnlockTileColors()가 시작 시 이미 좌표별 LockColor를
+    // 풀어 뒀으므로, 여기서 매 셀 SetTileFlags를 다시 부르지 않아도 SetColor가 바로 먹는다.
     private void PaintCellAt(Vector3Int coord)
     {
         _terrainTilemap.SetColor(coord, GetGradientTintColor(coord, null));
