@@ -9,36 +9,39 @@ public class UI_ClaimListSlot : MonoBehaviour
     private const string DAYS_LOC_KEY = "slot_claimList";
     private static string DaysFormat => StringTable.GetString(DAYS_LOC_KEY);
 
+    private const float APPEAR_SLIDE_OFFSET_X = 100f;
+    private const float APPEAR_DURATION = 0.5f;
+    private const Ease APPEAR_EASE = Ease.OutQuad;
+
     [Tooltip("지형 아이콘.")]
     [SerializeField] private Image _terrainIcon;
 
     [Tooltip("남은 일수 텍스트.")]
     [SerializeField] private TMP_Text _daysText;
 
-    [Tooltip("Slot appear animation component.")]
-    [SerializeField] private DOTweenAnimation _appearAnimation;
+    [Tooltip("등장 시 우측에서 슬라이드인시킬 대상.")]
+    [SerializeField] private RectTransform _appearTarget;
 
     private void Awake()
     {
-        if (_appearAnimation == null)
+        if (_appearTarget == null)
         {
-            _appearAnimation = GetComponent<DOTweenAnimation>();
-        }
-
-        if (_appearAnimation == null)
-        {
-            _appearAnimation = GetComponentInChildren<DOTweenAnimation>(true);
+            _appearTarget = transform as RectTransform;
         }
     }
 
     public void PlayAppearAnimation()
     {
-        if (_appearAnimation == null)
+        if (_appearTarget == null)
         {
             return;
         }
 
-        _appearAnimation.RecreateTweenAndPlay();
+        _appearTarget.DOKill();
+        _appearTarget.DOAnchorPos(new Vector2(APPEAR_SLIDE_OFFSET_X, 0f), APPEAR_DURATION)
+            .From(isRelative: true)
+            .SetEase(APPEAR_EASE)
+            .SetLink(gameObject);
     }
 
     public void Setup(Sprite terrainIcon, int remainingDays)
