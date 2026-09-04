@@ -8,6 +8,9 @@ public class GridCell
     public ChunkState CurrentState { get; private set; }
     public bool CanConstruct { get; }
 
+    // 물은 맵 경계 장식이라 어떤 해금(연구·새끼용)으로도 건설을 허용하지 않는다.
+    public bool IsWater => TerrainType == TerrainType.Water;
+
     // 이 셀에서 지을 수 있는 자원 생산시설의 종류(복수 플래그) - 터레인 기본값 + 수기 지정 영역이 누적된다.
     public ResourceType AvailableResourceNodes { get; private set; }
 

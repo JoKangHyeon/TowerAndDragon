@@ -8,6 +8,7 @@ public enum TerrainType
     Volcano, // 화산 지대
     Desert, // 사막 지대
     Snow, // 설원 지대
-    Default, // 물 - 맵 경계 장식
-    Road // 몬스터 스폰 경로 등 지형 자원이 없는 통행로
+    Default, // 지형 없음 - 터레인 타일맵에 등록되지 않은 타일과 그리드 밖 좌표
+    Road, // 몬스터 스폰 경로 등 지형 자원이 없는 통행로
+    Water // 물 - 맵 경계 장식이며 어떤 해금으로도 건설할 수 없다
 }

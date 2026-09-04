@@ -630,11 +630,13 @@ public class GridMap : MonoBehaviour
     // 전장의 안개(FogOfWarRenderer)가 지형 타일 자체를 SetColor로 어둡게 틴트하기 위해 참조한다.
     public Tilemap TerrainTilemap => _tilemap;
 
-    // 지형상 건설 불가 셀이라도 해제 조회원이 허용하면 건설 가능으로 취급한다
+    // 지형상 건설 불가 셀이라도 해제 조회원이 허용하면 건설 가능으로 취급한다.
+    // 물만은 예외 - 어떤 해금으로도 뚫리지 않는다.
     private bool IsCellConstructible(GridCell cell) =>
-        cell.CanConstruct ||
+        !cell.IsWater &&
+        (cell.CanConstruct ||
         (ConstructionOverrideQuery != null &&
-        ConstructionOverrideQuery.IsConstructionAllowed(cell.Coord, cell.TerrainType));
+        ConstructionOverrideQuery.IsConstructionAllowed(cell.Coord, cell.TerrainType)));
 
     // 판정과 실패 사유 진단을 GetCellBlockReason 한 곳에서 낸다 - 조건을 양쪽에 따로 쓰면
     // 한쪽에만 조건이 추가됐을 때 안내가 조용히 엉뚱한 사유를 가리킨다.
@@ -660,7 +662,7 @@ public class GridMap : MonoBehaviour
         _cells.TryGetValue(coord, out var cell) ? cell.AvailableResourceNodes : ResourceType.None;
 
     // 셀 하나의 지형. 지역 페널티(TerrainPenaltySystem)가 건물 풋프린트를 지형별로 세는 데 쓴다.
-    // 그리드 밖 좌표는 물(Default)로 취급한다 - 지형이 없는 곳이므로 어떤 지역 효과도 받지 않는다.
+    // 그리드 밖 좌표는 지형 없음(Default)으로 취급한다 - 어떤 지역 효과도 받지 않는다.
     public TerrainType GetTerrainType(Vector3Int coord) =>
         _cells.TryGetValue(coord, out GridCell cell) ? cell.TerrainType : TerrainType.Default;
 
@@ -1224,7 +1226,7 @@ public class GridMap : MonoBehaviour
             if (!_cells.TryGetValue(coord, out GridCell cell))
                 return false;
 
-            if (!IsFactoryCellConstructible(cell, requiredResourceNode))
+            if (!IsCellConstructible(cell))
                 return false;
 
             if (cell.ExistTypeOnCell != ExistTypeOnCell.None && cell.OccupantBuilding != ignoreBuilding)
@@ -1240,10 +1242,9 @@ public class GridMap : MonoBehaviour
         return true;
     }
 
-    private bool IsFactoryCellConstructible(GridCell cell, ResourceType requiredResourceNode) =>
-        IsCellConstructible(cell) ||
-        IsResearchUnlockedResourceRequirement(cell, requiredResourceNode);
-
+    // 연구가 해금하는 것은 "이 칸에서 그 자원을 캘 수 있는가"뿐이고, "이 지형에 지을 수 있는가"는 바꾸지 않는다.
+    // (여기서 지형 판정까지 덮으면 화산 청크에 외곽 기초자원 연구 하나만 찍고 얼음 새끼용 없이 용암 위에
+    //  생산시설을 세울 수 있어, 얼음 새끼용의 용암 해금이 무의미해진다.)
     // 어느 청크에도 속하지 않은 셀은 청크 단위 연구 해금을 조회할 근거가 없으므로 정적 자원 플래그만 본다.
     private bool SatisfiesResourceRequirement(GridCell cell, ResourceType requiredResourceNode) =>
         cell.HasResourceNode(requiredResourceNode) ||
@@ -1342,13 +1343,11 @@ public class GridMap : MonoBehaviour
 
         Factory factory = building as Factory;
 
-        // 새끼용은 지형 건설 가능 여부를 무시하지만 길(Road)만은 막힌다
+        // 새끼용은 지형 건설 가능 여부를 무시하지만 길(Road)과 물만은 막힌다
         // (CanConstructBabyDragonFootprint와 같은 기준). 이 예외를 빼면 미점령 청크의 길에서
         // "먼저 점령하라"고 안내하게 되는데, 점령해도 끝내 놓을 수 없는 자리라 헛수고를 시킨다.
         bool terrainBlocks = ignoresTerrain
-            ? cell.TerrainType == TerrainType.Road
-            : factory != null
-            ? !IsFactoryCellConstructible(cell, factory.RequiredResourceNode)
+            ? cell.TerrainType == TerrainType.Road || cell.IsWater
             : !IsCellConstructible(cell);
 
         if (terrainBlocks)
@@ -1367,7 +1366,7 @@ public class GridMap : MonoBehaviour
     }
 
     // 새끼용은 비행 개체이므로 지형의 일반 건설 가능 여부를 무시한다.
-    // 다만 플레이어에게 보이는 통행로(Road), 맵 밖 좌표, 다른 건물 점유, 미점령 청크는 제한한다.
+    // 다만 플레이어에게 보이는 통행로(Road)와 물, 맵 밖 좌표, 다른 건물 점유, 미점령 청크는 제한한다.
     // 몬스터 스플라인은 실제 이동 중심선이라 화면의 넓은 길 타일과 일치하지 않을 수 있으므로
     // 새끼용 배치 금지 기준으로 사용하지 않는다. MonsterPathQuery는 임시 방벽 판정에서만 사용한다.
     private bool CanConstructBabyDragonFootprint(List<Vector3Int> footprint, Building ignoreBuilding)
@@ -1377,7 +1376,7 @@ public class GridMap : MonoBehaviour
             if (!_cells.TryGetValue(coord, out GridCell cell))
                 return false;
 
-            if (cell.TerrainType == TerrainType.Road)
+            if (cell.TerrainType == TerrainType.Road || cell.IsWater)
                 return false;
 
             if (cell.ExistTypeOnCell != ExistTypeOnCell.None && cell.OccupantBuilding != ignoreBuilding)

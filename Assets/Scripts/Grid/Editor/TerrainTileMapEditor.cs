@@ -28,6 +28,7 @@ public class TerrainTileMapEditor : Editor
         { TerrainType.Desert, ResourceType.TimeSand | ResourceType.DesertSlime },
         { TerrainType.Snow, ResourceType.SnowCrystal | ResourceType.SnowSlime },
         { TerrainType.Default, ResourceType.None },
+        { TerrainType.Water, ResourceType.None },
     };
 
     public override void OnInspectorGUI()

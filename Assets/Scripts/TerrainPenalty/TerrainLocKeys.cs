@@ -20,6 +20,7 @@ public static class TerrainLocKeys
         TerrainType.Desert => NAME_DESERT,
         TerrainType.Snow => NAME_SNOW,
         TerrainType.Road => NAME_ROAD,
+        TerrainType.Water => NAME_WATER,
         _ => NAME_WATER,
     };
 }

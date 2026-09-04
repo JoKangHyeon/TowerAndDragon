@@ -19,9 +19,9 @@ public class ChunkLayoutEditorWindow : EditorWindow
     private const string CELL_COORDS_PROPERTY = "CellCoords";
     private const string TERRAIN_TILE_MAP_PROPERTY = "_terrainTileMap";
 
-    // 물은 맵 경계 장식이라 어느 청크에도 속하지 않는다 - TerrainType.Default가 곧 물이다
-    // (TerrainTileMap에 Default로 등록된 타일은 물 오토타일 둘뿐이고, 흙은 Road로 간다).
-    private const TerrainType WATER_TERRAIN = TerrainType.Default;
+    // 물은 맵 경계 장식이라 어느 청크에도 속하지 않는다
+    // (TerrainTileMap에 Water로 등록된 타일은 물 오토타일 둘뿐이고, 흙은 Road로 간다).
+    private const TerrainType WATER_TERRAIN = TerrainType.Water;
 
     // 길은 바이옴이 아니다 - 청크를 가르는 기준에서 빼고, 다 만든 뒤 인접 청크에 흡수시킨다.
     private const TerrainType ROAD_TERRAIN = TerrainType.Road;
