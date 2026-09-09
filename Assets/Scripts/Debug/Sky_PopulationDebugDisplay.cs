@@ -1,10 +1,16 @@
-using TMPro;
 using UnityEngine;
 
-// 인구/자원 보유량 실시간 디버그 표시. 점령(인구 배치/반환/보상)과 생산시설 배치로 인한
+#if UNITY_EDITOR
+using TMPro;
+#endif
+
+// [에디터 테스트 전용] 인구/자원 보유량 실시간 디버그 표시. 점령(인구 배치/반환/보상)과 생산시설 배치로 인한
 // 수량 변화를 텍스트로 바로 확인하기 위한 용도(PopulationDebugPanel 전용).
+// 본문 전체가 #if UNITY_EDITOR 안에 있어 빌드에서는 컴파일되지 않는다
+// (클래스 껍데기만 남아 씬/프리팹의 컴포넌트 참조가 Missing Script가 되지 않는다).
 public class PopulationDebugDisplay : MonoBehaviour
 {
+#if UNITY_EDITOR
     [SerializeField] private PopulationManager _populationManager;
     [SerializeField] private ResourceManager _resourceManager;
 
@@ -75,4 +81,5 @@ public class PopulationDebugDisplay : MonoBehaviour
         if (text != null)
             text.text = $"{type}: {amount}";
     }
+#endif
 }

@@ -1,15 +1,19 @@
-using System.Collections.Generic;
 using UnityEngine;
+
+#if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
-/// Canvas와 무관하게 새끼용 알 지급/배치를 조작하는 IMGUI 디버그 도구다(구 BabyDragonDebugGUI).
-/// 원래 타워/생산시설 인구 조작도 여기 있었으나, 정식 건물 창(UI_PopulationAllocationWindow,
-/// 이슈 #110)이 그 역할을 대체하면서 제거했다 - 연구소용은 ResearchLabDebugGUI로 별도 유지한다.
+/// [에디터 테스트 전용] Canvas와 무관하게 새끼용 알 지급/배치를 조작하는 IMGUI 디버그 도구다(구 BabyDragonDebugGUI).
 /// 클래스명이 내용과 어긋나지만 여러 씬과 프리팹이 이 스크립트를 참조하고 있어 이름은 유지한다.
+/// 본문 전체가 #if UNITY_EDITOR 안에 있어 빌드에서는 컴파일되지 않는다
+/// (클래스 껍데기만 남아 씬/프리팹의 컴포넌트 참조가 Missing Script가 되지 않는다).
 /// </summary>
 public class TowerPopulationDebugGUI : MonoBehaviour
 {
+#if UNITY_EDITOR
     private enum SelectionKind
     {
         None,
@@ -386,5 +390,5 @@ public class TowerPopulationDebugGUI : MonoBehaviour
         GUI.enabled = previousEnabled;
         DrawBabyDragonWindow();
     }
-
+#endif
 }

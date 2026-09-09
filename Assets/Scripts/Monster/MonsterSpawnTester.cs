@@ -1,15 +1,20 @@
+using UnityEngine;
+
+#if UNITY_EDITOR
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using UnityEngine;
 using UnityEngine.Splines;
+#endif
 
 /// <summary>
-/// 테스트용 임시 스포너. 실제 웨이브 스포너 구현 전, 적이 스플라인 경로를
-/// 제대로 따라가는지 확인하기 위한 스크립트다.
+/// [에디터 테스트 전용] 임시 스포너. 적이 스플라인 경로를 제대로 따라가는지 확인하기 위한 스크립트다.
 /// 인스펙터에서 프리팹/데이터/경로/메인성을 연결하면 재생 시 적을 스폰한다.
+/// 본문 전체가 #if UNITY_EDITOR 안에 있어 빌드에서는 컴파일되지 않는다
+/// (클래스 껍데기만 남아 씬/프리팹의 컴포넌트 참조가 Missing Script가 되지 않는다).
 /// </summary>
 public class MonsterSpawnTester : MonoBehaviour
 {
+#if UNITY_EDITOR
     [SerializeField] private BaseMonster _monsterPrefab;
     [SerializeField] private MonsterData _data;
     [SerializeField] private SplineContainer _path;
@@ -46,4 +51,5 @@ public class MonsterSpawnTester : MonoBehaviour
         BaseMonster monster = Instantiate(_monsterPrefab);
         monster.Setup(_data, _path, _mainCastle);
     }
+#endif
 }

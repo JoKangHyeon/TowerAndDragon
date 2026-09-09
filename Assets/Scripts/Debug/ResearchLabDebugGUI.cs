@@ -1,13 +1,19 @@
-using System.Collections.Generic;
 using UnityEngine;
+
+#if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEngine.InputSystem;
+#endif
 
 /// <summary>
-/// Canvas와 무관하게 선택한 연구소의 인구와 연구 상태를 조작하는 IMGUI 디버그 도구다.
+/// [에디터 테스트 전용] Canvas와 무관하게 선택한 연구소의 인구와 연구 상태를 조작하는 IMGUI 디버그 도구다.
 /// 타워 인구 GUI와 마찬가지로 마지막으로 선택한 연구소를 유지한다.
+/// 본문 전체가 #if UNITY_EDITOR 안에 있어 빌드에서는 컴파일되지 않는다
+/// (클래스 껍데기만 남아 씬/프리팹의 컴포넌트 참조가 Missing Script가 되지 않는다).
 /// </summary>
 public sealed class ResearchLabDebugGUI : MonoBehaviour
 {
+#if UNITY_EDITOR
     private const int POPULATION_STEP = 1;
     private const float WINDOW_WIDTH = 430f;
     private const float WINDOW_HEIGHT = 570f;
@@ -244,4 +250,5 @@ public sealed class ResearchLabDebugGUI : MonoBehaviour
             _ => "research_state_invalid",
         };
     }
+#endif
 }

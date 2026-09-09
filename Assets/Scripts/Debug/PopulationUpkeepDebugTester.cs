@@ -1,7 +1,13 @@
 using UnityEngine;
 
+/// <summary>
+/// [에디터 테스트 전용] 인구 유지비 정산·식량 지급/제거를 ContextMenu로 확인하는 테스트 컴포넌트다.
+/// 본문 전체가 #if UNITY_EDITOR 안에 있어 빌드에서는 컴파일되지 않는다
+/// (클래스 껍데기만 남아 씬/프리팹의 컴포넌트 참조가 Missing Script가 되지 않는다).
+/// </summary>
 public class PopulationUpkeepDebugTester : MonoBehaviour
 {
+#if UNITY_EDITOR
     private const int TEST_FOOD_AMOUNT = 50;
 
     [SerializeField]
@@ -70,4 +76,5 @@ public class PopulationUpkeepDebugTester : MonoBehaviour
             $"가용 인구: {_populationManager.AvailablePopulation}"
         );
     }
+#endif
 }

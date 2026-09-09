@@ -1,11 +1,12 @@
 using UnityEngine;
 
-// 임시 디버그 GUI - 용 스킬트리 노드 상태 확인·해금 시도·테스트용 자원 지급.
-// ResearchLabDebugGUI와 동일한 IMGUI 관례(TowerAndDragon/Debug). 새끼용(#102·#103)이
-// 아직 없어 게이트 검증도 여기서 겸한다(강화/궁극은 임시로 항상 통과).
-// 제출 전 B-2(디버그 UI 비노출) 대상에 이 컴포넌트를 추가해야 한다.
+// [에디터 테스트 전용] 임시 디버그 GUI - 용 스킬트리 노드 상태 확인·해금 시도·테스트용 자원 지급.
+// ResearchLabDebugGUI와 동일한 IMGUI 관례(TowerAndDragon/Debug).
+// 본문 전체가 #if UNITY_EDITOR 안에 있어 빌드에서는 컴파일되지 않는다
+// (클래스 껍데기만 남아 씬/프리팹의 컴포넌트 참조가 Missing Script가 되지 않는다).
 public class DragonTreeDebugGUI : MonoBehaviour
 {
+#if UNITY_EDITOR
     private const int TEST_GRANT_AMOUNT = 999;
 
     private static readonly ResourceType[] TEST_RESOURCE_TYPES =
@@ -90,4 +91,5 @@ public class DragonTreeDebugGUI : MonoBehaviour
             _resourceManager.Add(type, TEST_GRANT_AMOUNT);
         }
     }
+#endif
 }
