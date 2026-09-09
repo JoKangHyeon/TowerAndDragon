@@ -40,6 +40,8 @@ public static class SaveSlotQuery
             return false;
         }
 
+        RenameLegacyFilesToSav(slotIndex);
+
         if (!SaveFileStore.Exists(SavePaths.SaveFilePath(slotIndex)))
         {
             return false;
@@ -56,7 +58,7 @@ public static class SaveSlotQuery
             return true;
         }
 
-        // 목록 조회에서는 손상 격리를 하지 않는다 - 격리하면 save.json이 사라져 다음 조회에서
+        // 목록 조회에서는 손상 격리를 하지 않는다 - 격리하면 save.sav이 사라져 다음 조회에서
         // "손상됨"이 아니라 "비어 있음"으로 보이고, 사용자가 무슨 일이 있었는지 알 수 없게 된다.
         if (TryReadSave(slotIndex, out SaveGameDto dto, out _, false))
         {
@@ -171,6 +173,9 @@ public static class SaveSlotQuery
         bool quarantineOnFailure = true)
     {
         dto = null;
+
+        RenameLegacyFilesToSav(slotIndex);
+
         string savePath = SavePaths.SaveFilePath(slotIndex);
 
         if (!SaveFileStore.Exists(savePath))
@@ -179,10 +184,15 @@ public static class SaveSlotQuery
             return false;
         }
 
-        if (!SaveFileStore.TryReadAllText(savePath, out string json, out string readError))
+        if (!SaveFileStore.TryReadRawText(savePath, out string payload, out string readError))
         {
             Debug.LogError($"[SaveSlotQuery] 세이브 읽기 실패(슬롯 {slotIndex}): {readError}");
             reason = SaveLoadFailureReason.FileReadFailed;
+            return false;
+        }
+
+        if (!TryUnwrapSaveJson(slotIndex, payload, quarantineOnFailure, out string json, out reason))
+        {
             return false;
         }
 
@@ -239,7 +249,7 @@ public static class SaveSlotQuery
     {
         if (SaveJson.TrySerialize(meta, out string metaJson, out _))
         {
-            SaveFileStore.TryWriteAtomic(SavePaths.MetaFilePath(slotIndex), metaJson, out _);
+            SaveFileStore.TryWriteProtectedAtomic(SavePaths.MetaFilePath(slotIndex), metaJson, out _);
         }
     }
 
@@ -247,8 +257,93 @@ public static class SaveSlotQuery
     {
         meta = null;
 
-        return SaveFileStore.TryReadAllText(SavePaths.MetaFilePath(slotIndex), out string json, out _) &&
+        return SaveFileStore.TryReadRawText(SavePaths.MetaFilePath(slotIndex), out string payload, out _) &&
+            TryUnwrapMetaJson(payload, out string json) &&
             SaveJson.TryDeserialize(json, out meta, out _);
+    }
+
+    /// <summary>
+    /// 세이브 본문 봉투를 풀어 평문 JSON을 얻는다.
+    ///
+    /// 봉투가 아니면(SaveCrypto 도입 이전 평문 세이브) 에디터·개발 빌드에서만 그대로 통과시킨다 -
+    /// 개발 중인 팀원 세이브가 깨지지 않게 하려는 것이고, 다음 저장부터 봉투로 덮인다.
+    /// 릴리스 빌드에서 평문을 받아 주면 "평문 JSON을 갖다 놓으면 그대로 먹힌다"가 되어 봉투가
+    /// 무의미해지므로, 무결성 실패와 같은 경로(격리 + IntegrityFailed)로 보낸다.
+    /// </summary>
+    private static bool TryUnwrapSaveJson(
+        int slotIndex,
+        string payload,
+        bool quarantineOnFailure,
+        out string json,
+        out SaveLoadFailureReason reason)
+    {
+        json = null;
+
+        if (SaveCrypto.IsProtected(payload))
+        {
+            if (SaveCrypto.TryUnprotect(payload, out json, out string cryptoError))
+            {
+                reason = SaveLoadFailureReason.None;
+                return true;
+            }
+
+            Debug.LogError($"[SaveSlotQuery] 세이브 무결성 검증 실패(슬롯 {slotIndex}): {cryptoError}");
+            Quarantine(slotIndex, quarantineOnFailure);
+            reason = SaveLoadFailureReason.IntegrityFailed;
+            return false;
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        json = payload;
+        reason = SaveLoadFailureReason.None;
+        return true;
+#else
+        Debug.LogError($"[SaveSlotQuery] 봉투가 아닌 세이브(슬롯 {slotIndex}) - 무결성 실패로 처리합니다.");
+        Quarantine(slotIndex, quarantineOnFailure);
+        reason = SaveLoadFailureReason.IntegrityFailed;
+        return false;
+#endif
+    }
+
+    // meta.sav은 검증을 거치지 않는 파생 캐시라, 무결성 실패든 구버전 평문이든 조용히 버린다 -
+    // 본문에서 되살아난다(TryGetSlot). 릴리스에서 평문 메타를 버리는 것도 본문 규칙과 같은 이유다.
+    private static bool TryUnwrapMetaJson(string payload, out string json)
+    {
+        if (SaveCrypto.IsProtected(payload))
+        {
+            return SaveCrypto.TryUnprotect(payload, out json, out _);
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        json = payload;
+        return true;
+#else
+        json = null;
+        return false;
+#endif
+    }
+
+    // 확장자가 .json이던 시절 저장된 슬롯을 .sav로 1회 개명한다. 조회·로드 양쪽 진입점에서 부른다.
+    // 내용(평문/봉투)은 건드리지 않는다 - SaveCrypto가 확장자가 아니라 매직으로 봉투 여부를 가르므로,
+    // 개명만으로 읽기 경로가 이어지고 다음 저장은 어차피 .sav로 나간다.
+    // .sav가 이미 있으면(= 이미 개명됐거나 새로 저장된 슬롯) 아무것도 하지 않는다.
+    private static void RenameLegacyFilesToSav(int slotIndex)
+    {
+        TryRenameIfCurrentMissing(SavePaths.LegacySaveFilePath(slotIndex), SavePaths.SaveFilePath(slotIndex));
+        TryRenameIfCurrentMissing(SavePaths.LegacyMetaFilePath(slotIndex), SavePaths.MetaFilePath(slotIndex));
+    }
+
+    private static void TryRenameIfCurrentMissing(string legacyPath, string currentPath)
+    {
+        if (SaveFileStore.Exists(currentPath) || !SaveFileStore.Exists(legacyPath))
+        {
+            return;
+        }
+
+        if (!SaveFileStore.TryRename(legacyPath, currentPath, out string error))
+        {
+            Debug.LogWarning($"[SaveSlotQuery] 구버전 세이브 파일명(.json -> .sav) 개명 실패: {error}");
+        }
     }
 
     // 손상된 세이브는 지우지 않고 옆으로 치운다 - 제보와 수동 복구의 여지를 남긴다.

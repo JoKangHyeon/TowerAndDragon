@@ -25,6 +25,9 @@ public enum SaveLoadFailureReason
     SchemaTooNew,
     SchemaTooOld,
     ValidationFailed,
+
+    /// <summary>봉투 복호화 또는 HMAC 무결성 검증에 실패했다 - 변조되었거나 다른 빌드가 만든 파일이다.</summary>
+    IntegrityFailed,
 }
 
 public readonly struct SaveResult
@@ -65,7 +68,7 @@ public readonly struct SaveLoadResult
 }
 
 /// <summary>
-/// 슬롯 목록 UI가 보는 읽기 전용 요약. 본문(save.json)이 깨져도 meta.json만으로 만들 수 있어야
+/// 슬롯 목록 UI가 보는 읽기 전용 요약. 본문(save.sav)이 깨져도 meta.sav만으로 만들 수 있어야
 /// "마지막 저장: ... (손상됨)"을 표시할 수 있다 - 메타 파일을 분리한 이유가 이것이다.
 /// </summary>
 public readonly struct SaveSlotInfo
@@ -125,7 +128,7 @@ public readonly struct SaveSlotInfo
 
         foreach (ResourceAmountDto amount in _resources)
         {
-            // meta.json은 손으로 고칠 수 있고 검증(TryNormalize)을 거치지 않는다 - 원소가 null이면
+            // meta.sav은 손으로 고칠 수 있고 검증(TryNormalize)을 거치지 않는다 - 원소가 null이면
             // 슬롯 목록을 그리는 도중 NRE가 나므로 여기서 건너뛴다.
             if (amount == null)
             {

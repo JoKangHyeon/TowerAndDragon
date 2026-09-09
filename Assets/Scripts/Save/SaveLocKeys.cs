@@ -33,6 +33,9 @@ public static class SaveLocKeys
     public const string LOAD_FAIL_PARSE = "load_fail_parse";
     public const string LOAD_FAIL_SCHEMA = "load_fail_schema";
 
+    /// <summary>봉투 복호화·무결성 검증에 걸려 복원을 거부했을 때. 변조 또는 다른 빌드의 파일이다.</summary>
+    public const string LOAD_FAIL_INTEGRITY = "load_fail_integrity";
+
     /// <summary>내용 검증에 걸려 복원을 거부했을 때. 주로 이 빌드가 모르는 뮤테이터가 담긴 세이브다.</summary>
     public const string LOAD_FAIL_VALIDATION = "load_fail_validation";
 
@@ -63,6 +66,7 @@ public static class SaveLocKeys
             SaveLoadFailureReason.SchemaTooNew => LOAD_FAIL_SCHEMA,
             SaveLoadFailureReason.SchemaTooOld => LOAD_FAIL_SCHEMA,
             SaveLoadFailureReason.ValidationFailed => LOAD_FAIL_VALIDATION,
+            SaveLoadFailureReason.IntegrityFailed => LOAD_FAIL_INTEGRITY,
             _ => LOAD_FAIL_GENERIC,
         };
     }

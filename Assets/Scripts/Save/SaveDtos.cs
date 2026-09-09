@@ -135,15 +135,15 @@ public sealed class SaveMetaDto
     /// <summary>
     /// 저장 당시의 새 게임 + 난이도 점수 합(RunModifierService.DifficultyScore).
     /// 복원은 이 값을 읽지 않는다 - 뮤테이터 목록은 본문 RunStateDto.Mutators에 있고 점수는 거기서
-    /// 다시 합산된다. meta.json만 읽는 슬롯 목록이 본문을 열지 않고도 NG+ 뱃지를 그릴 수 있게 하는
+    /// 다시 합산된다. meta.sav만 읽는 슬롯 목록이 본문을 열지 않고도 NG+ 뱃지를 그릴 수 있게 하는
     /// 것이 유일한 목적이다(아래 Resources 사본과 정확히 같은 이유).
     /// </summary>
     public int DifficultyScore;
 
     /// <summary>
     /// 슬롯 목록에 자원 보유량을 띄우기 위한 표시 전용 사본(본문 Resources와 같은 값).
-    /// 복원은 항상 save.json의 ResourceStateDto를 쓰므로 이 값은 읽지 않는다 -
-    /// meta.json만 읽는 슬롯 목록이 본문을 열지 않고도 자원을 그릴 수 있게 하는 것이 유일한 목적이다.
+    /// 복원은 항상 save.sav의 ResourceStateDto를 쓰므로 이 값은 읽지 않는다 -
+    /// meta.sav만 읽는 슬롯 목록이 본문을 열지 않고도 자원을 그릴 수 있게 하는 것이 유일한 목적이다.
     /// </summary>
     public List<ResourceAmountDto> Resources;
 }

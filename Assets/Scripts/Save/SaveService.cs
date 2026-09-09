@@ -673,6 +673,7 @@ public sealed class SaveService : MonoBehaviour
     // 스레드풀에서 실행된다. Unity API를 절대 만지면 안 되므로 경로를 완성된 문자열로,
     // 썸네일은 이미 인코딩된 바이트로 받는다
     // (SavePaths는 Application.persistentDataPath를 읽어 메인 스레드 전용이다).
+    // TryWriteProtectedAtomic이 태우는 SaveCrypto도 Unity API를 만지지 않으므로 여기서 안전하다.
     // 본문을 먼저 확정한 뒤 메타를 쓴다 - 반대 순서면 "새 메타 + 옛 본문" 상태가 잠깐 생긴다.
     private static string WriteSlotFiles(
         string savePath,
@@ -682,14 +683,14 @@ public sealed class SaveService : MonoBehaviour
         string metaJson,
         byte[] thumbnailPng)
     {
-        if (!SaveFileStore.TryWriteAtomic(savePath, saveJson, out string error))
+        if (!SaveFileStore.TryWriteProtectedAtomic(savePath, saveJson, out string error))
         {
             return error;
         }
 
         // 메타는 파생 캐시이므로 실패해도 저장 자체는 성공으로 본다.
         // 다음 슬롯 조회 때 본문에서 다시 만들어진다(TryGetSlot 참고).
-        SaveFileStore.TryWriteAtomic(metaPath, metaJson, out _);
+        SaveFileStore.TryWriteProtectedAtomic(metaPath, metaJson, out _);
 
         // 썸네일도 같은 이유로 실패를 무시한다. 다만 본문에서 되살릴 수 없으므로,
         // 이 슬롯은 다음에 저장할 때까지 썸네일 없이 표시된다.
