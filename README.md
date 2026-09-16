@@ -124,4 +124,4 @@
 **관련 코드:** [CsvDownloader](Assets/Scripts/Util/Editor/CsvDownloader.cs) / [StringTable](Assets/Scripts/Util/StringTable.cs)
 
 ## 프로젝트 실행
-[STOVE를 통해 플레이]()
+[STOVE를 통해 플레이](https://store.onstove.com/ko/games/105708)
